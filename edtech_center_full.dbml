@@ -1,0 +1,987 @@
+  // EdTech Center - Single Center
+  // Architecture: Modular monolith + PostgreSQL + Redis + MinIO + Judge Workers
+
+  Project edtech_center {
+    database_type: 'PostgreSQL'
+    Note: 'Database schema for a single training center implemented as a modular monolith with PostgreSQL, Redis, MinIO and isolated judge workers.'
+  }
+
+  // -----------------------------------------------------------------------------
+  // ENUMS
+  // -----------------------------------------------------------------------------
+
+  Enum user_role {
+    ADMIN
+    MANAGER
+    MENTOR
+    STUDENT
+  }
+
+  Enum user_status {
+    ACTIVE
+    SUSPENDED
+  }
+
+  Enum class_status {
+    DRAFT
+    OPEN
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+  }
+
+  Enum delivery_mode {
+    ONLINE
+    OFFLINE
+  }
+
+  Enum session_status {
+    SCHEDULED
+    COMPLETED
+    CANCELLED
+  }
+
+  Enum class_unit_status {
+    LOCKED
+    OPEN
+    COMPLETED
+  }
+
+  Enum unit_progress_status {
+    NOT_STARTED
+    IN_PROGRESS
+    COMPLETED
+  }
+
+  Enum enrollment_status {
+    PENDING_PAYMENT
+    ACTIVE
+    COMPLETED
+    CANCELLED
+  }
+
+  Enum order_status {
+    PENDING
+    PAID
+    EXPIRED
+    CANCELLED
+  }
+
+  Enum payment_status {
+    PENDING
+    SUCCEEDED
+    FAILED
+  }
+
+  Enum payment_type {
+    PAYOS
+    BANK_TRANSFER
+    CASH
+    MANUAL
+  }
+
+  Enum conversation_type {
+    GROUP
+    DIRECT
+  }
+
+  Enum chat_member_role {
+    OWNER
+    ADMIN
+    MEMBER
+  }
+
+  Enum chat_message_type {
+    TEXT
+    FILE
+    IMAGE
+    SYSTEM
+  }
+
+  Enum file_status {
+    PENDING_UPLOAD
+    READY
+    FAILED
+    DELETED
+  }
+
+  Enum file_kind {
+    GENERIC
+    IMAGE
+    VIDEO
+    AUDIO
+    PDF
+    DOCUMENT
+    PRESENTATION
+    SPREADSHEET
+    ARCHIVE
+    SOURCE_CODE
+  }
+
+  Enum file_processing_status {
+    PENDING
+    PROCESSING
+    READY
+    FAILED
+  }
+
+  Enum assignment_type {
+    TEXT
+    FILE
+    CODE
+  }
+
+  Enum submission_status {
+    DRAFT
+    SUBMITTED
+    GRADED
+  }
+
+  Enum attendance_status {
+    PRESENT
+    ABSENT
+    EXCUSED
+    LATE
+  }
+
+  Enum board_mode {
+    PRESENTATION
+    COLLABORATIVE
+  }
+
+  Enum judge_status {
+    QUEUED
+    RUNNING
+    COMPLETED
+    FAILED
+    CANCELLED
+  }
+
+  Enum judge_verdict {
+    PENDING
+    AC
+    WA
+    TLE
+    MLE
+    OLE
+    CE
+    RTE
+    SYSTEM_ERROR
+  }
+
+  // -----------------------------------------------------------------------------
+  // USERS
+  // -----------------------------------------------------------------------------
+
+  Table users {
+    id uuid [pk, note: 'Generate UUIDv7 in the application']
+    email varchar(320) [not null, unique]
+    phone varchar(32) [unique]
+    password_hash varchar(255) [not null]
+    display_name varchar(150) [not null]
+    role user_role [not null]
+    status user_status [not null, default: 'ACTIVE']
+    avatar_file_id uuid
+    last_login_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (role, status)
+    }
+  }
+
+  Table refresh_tokens {
+    id uuid [pk]
+    user_id uuid [not null]
+    token_hash varchar(255) [not null, unique]
+    expires_at timestamptz [not null]
+    revoked_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (user_id, expires_at)
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // COURSE, CLASS & SCHEDULE
+  // -----------------------------------------------------------------------------
+
+  Table courses {
+    id uuid [pk]
+    category_id uuid [not null]
+    code varchar(50) [not null, unique]
+    title varchar(250) [not null]
+    description text
+    price_amount bigint [not null, default: 0, note: 'VND integer amount shared by all classes of this course']
+    is_active boolean [not null, default: true]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+  }
+
+  Table course_categories {
+    id uuid [pk]
+    name varchar(150) [not null]
+    slug varchar(180) [not null, unique]
+    description text
+    is_active boolean [not null, default: true]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+  }
+
+  Table course_units {
+    id uuid [pk]
+    course_id uuid [not null]
+    unit_number integer [not null, note: 'Week or module number']
+    title varchar(250) [not null]
+    description text
+    required_score_percent decimal(5,2) [not null, default: 80.00]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (course_id, unit_number) [unique]
+    }
+  }
+
+  Table classes {
+    id uuid [pk]
+    course_id uuid [not null]
+    mentor_id uuid [not null]
+    code varchar(50) [not null, unique]
+    name varchar(250) [not null]
+    start_date date [not null]
+    end_date date [not null]
+    max_students integer [not null]
+    delivery_mode delivery_mode [not null]
+    meeting_url text
+    status class_status [not null, default: 'DRAFT']
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (course_id, status)
+      (mentor_id, start_date, end_date)
+    }
+  }
+
+  Table class_units {
+    id uuid [pk]
+    class_id uuid [not null]
+    course_unit_id uuid [not null]
+    position integer [not null]
+    unlock_at timestamptz
+    status class_unit_status [not null, default: 'LOCKED']
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (class_id, course_unit_id) [unique]
+      (class_id, position) [unique]
+      (course_unit_id)
+    }
+
+    Note: 'Created from the combination of a class and a shared course unit.'
+  }
+
+  Table class_sessions {
+    id uuid [pk]
+    class_unit_id uuid [not null]
+    session_number integer [not null]
+    title varchar(250) [not null]
+    starts_at timestamptz [not null]
+    ends_at timestamptz [not null]
+    room_name varchar(150)
+    meeting_url text
+    status session_status [not null, default: 'SCHEDULED']
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (class_unit_id, session_number) [unique]
+      (starts_at, ends_at)
+    }
+  }
+
+  Table enrollments {
+    id uuid [pk]
+    student_id uuid [not null]
+    class_id uuid [not null]
+    status enrollment_status [not null, default: 'PENDING_PAYMENT']
+    enrolled_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (student_id, class_id) [unique]
+      (class_id, status)
+    }
+  }
+
+  Table class_unit_progress {
+    id uuid [pk]
+    enrollment_id uuid [not null]
+    class_unit_id uuid [not null]
+    status unit_progress_status [not null, default: 'NOT_STARTED']
+    progress_percent decimal(5,2) [not null, default: 0.00]
+    completed_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (enrollment_id, class_unit_id) [unique]
+      (class_unit_id, status)
+    }
+
+    Note: 'Per-student learning progress for a class unit; this is not a purchase entitlement table.'
+  }
+
+  // -----------------------------------------------------------------------------
+  // ORDER & PAYMENT
+  // -----------------------------------------------------------------------------
+
+  Table orders {
+    id uuid [pk]
+    student_id uuid [not null]
+    order_code varchar(50) [not null, unique, note: 'Transfer description for VietQR']
+    total_amount bigint [not null, note: 'VND integer amount']
+    status order_status [not null, default: 'PENDING']
+    expires_at timestamptz
+    paid_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (student_id, created_at)
+      (status, expires_at)
+    }
+  }
+
+  Table order_details {
+    id uuid [pk]
+    order_id uuid [not null]
+    class_id uuid [not null]
+    course_title_snapshot varchar(250) [not null]
+    class_name_snapshot varchar(250) [not null]
+    price_snapshot bigint [not null, note: 'Course price captured when the order is created']
+    quantity integer [not null, default: 1]
+    total_amount bigint [not null]
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (order_id, class_id) [unique]
+      (class_id)
+    }
+  }
+
+  Table carts {
+    id uuid [pk]
+    student_id uuid [not null, unique]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+  }
+
+  Table cart_details {
+    id uuid [pk]
+    cart_id uuid [not null]
+    class_id uuid [not null]
+    price_snapshot bigint [not null, note: 'Displayed price when the class is added to cart; revalidate at checkout']
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (cart_id, class_id) [unique]
+      (class_id)
+    }
+  }
+
+  Table payment_transactions {
+    id uuid [pk]
+    order_id uuid [not null]
+    payment_type payment_type [not null]
+    reference_code varchar(150)
+    amount bigint [not null]
+    status payment_status [not null, default: 'PENDING']
+    raw_payload jsonb
+    paid_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (payment_type, reference_code) [unique]
+      (order_id, status)
+    }
+  }
+
+  Table payos_payment_details {
+    id uuid [pk]
+    payment_transaction_id uuid [not null, unique]
+    payos_order_code bigint [not null, unique]
+    payment_link_id varchar(150) [not null, unique]
+    checkout_url text
+    qr_code text
+    payos_status varchar(50) [not null]
+    raw_response jsonb
+    expires_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    Note: 'Exists only when payment_transactions.payment_type is PAYOS.'
+  }
+
+  // -----------------------------------------------------------------------------
+  // MINIO / S3 FILE OBJECTS & EXTRACTED METADATA
+  // -----------------------------------------------------------------------------
+
+  Table file_objects {
+    id uuid [pk]
+    owner_user_id uuid
+    bucket varchar(100) [not null]
+    object_key varchar(1024) [not null]
+    original_name varchar(500) [not null]
+    extension varchar(20)
+    mime_type varchar(150) [not null]
+    kind file_kind [not null, default: 'GENERIC']
+    size_bytes bigint [not null]
+    sha256 char(64)
+    status file_status [not null, default: 'PENDING_UPLOAD']
+    created_at timestamptz [not null, default: `now()`]
+    ready_at timestamptz
+    deleted_at timestamptz
+
+    indexes {
+      (bucket, object_key) [unique]
+      (owner_user_id, created_at)
+      (kind, status)
+      (sha256)
+    }
+
+    Note: 'Stores the object identity and upload lifecycle. Never persist a temporary presigned URL.'
+  }
+
+  Table file_metadata {
+    file_object_id uuid [pk]
+    processing_status file_processing_status [not null, default: 'PENDING']
+
+    duration_ms bigint [note: 'Video or audio duration']
+    width_px integer [note: 'Image or video width']
+    height_px integer [note: 'Image or video height']
+    page_count integer [note: 'PDF or word-processing document page count']
+    slide_count integer [note: 'Presentation slide count']
+    sheet_count integer [note: 'Spreadsheet sheet count']
+    word_count bigint [note: 'Extracted word count for text documents']
+
+    video_codec varchar(50)
+    audio_codec varchar(50)
+    bitrate_kbps integer
+    frame_rate decimal(8,3)
+
+    preview_file_id uuid [note: 'Thumbnail, poster frame or rendered first page stored as another file object']
+    properties jsonb [note: 'Less common metadata such as author, title, container, archive entry count or encryption flags']
+    processing_error text
+    extracted_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (processing_status)
+      (preview_file_id)
+    }
+
+    Note: 'One optional metadata row per file. Type-specific validation is performed from file_objects.kind in the application or migration constraints.'
+  }
+
+  // -----------------------------------------------------------------------------
+  // CHAT & NOTIFICATIONS
+  // -----------------------------------------------------------------------------
+
+  Table chat_conversations {
+    id uuid [pk]
+    type conversation_type [not null]
+    class_id uuid [note: 'Optional class-scoped group chat']
+    name varchar(200) [note: 'Required for group chat; null for direct message']
+    direct_key varchar(100) [unique, note: 'Sorted pair of user IDs for one unique DM conversation']
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (class_id, type)
+    }
+
+    Note: 'GROUP requires a name. DIRECT requires direct_key and exactly two active members; enforce in application or migration constraints.'
+  }
+
+  Table chat_members {
+    conversation_id uuid [not null]
+    user_id uuid [not null]
+    role chat_member_role [not null, default: 'MEMBER']
+    joined_at timestamptz [not null, default: `now()`]
+    left_at timestamptz
+    last_read_at timestamptz
+
+    indexes {
+      (conversation_id, user_id) [pk]
+      (user_id, left_at)
+    }
+  }
+
+  Table chat_messages {
+    id uuid [pk]
+    conversation_id uuid [not null]
+    sender_id uuid [not null]
+    reply_to_message_id uuid
+    type chat_message_type [not null, default: 'TEXT']
+    body text
+    file_object_id uuid
+    edited_at timestamptz
+    deleted_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (conversation_id, created_at)
+      (sender_id, created_at)
+      (reply_to_message_id)
+    }
+
+    Note: 'TEXT requires body; FILE or IMAGE requires file_object_id.'
+  }
+
+  Table notifications {
+    id uuid [pk]
+    user_id uuid [not null]
+    actor_id uuid
+    type varchar(80) [not null]
+    title varchar(250) [not null]
+    body text [not null]
+    data jsonb
+    read_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (user_id, read_at, created_at)
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // LMS, ASSIGNMENTS & ATTENDANCE
+  // -----------------------------------------------------------------------------
+
+  Table materials {
+    id uuid [pk]
+    course_unit_id uuid [not null]
+    file_object_id uuid [not null]
+    title varchar(250) [not null]
+    sort_order integer [not null, default: 0]
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (course_unit_id, sort_order)
+    }
+  }
+
+  Table assignments {
+    id uuid [pk]
+    class_session_id uuid [not null]
+    title varchar(250) [not null]
+    description text
+    type assignment_type [not null]
+    due_at timestamptz [not null]
+    allow_late boolean [not null, default: false]
+    max_score decimal(8,2) [not null, default: 100.00]
+    created_by uuid [not null]
+    published_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (class_session_id, due_at)
+    }
+  }
+
+  Table assignment_submissions {
+    id uuid [pk]
+    assignment_id uuid [not null]
+    student_id uuid [not null]
+    attempt_number integer [not null, default: 1]
+    text_content text
+    status submission_status [not null, default: 'DRAFT']
+    submitted_at timestamptz
+    is_late boolean [not null, default: false]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (assignment_id, student_id, attempt_number) [unique]
+    }
+  }
+
+  Table submission_files {
+    submission_id uuid [not null]
+    file_object_id uuid [not null]
+
+    indexes {
+      (submission_id, file_object_id) [pk]
+    }
+  }
+
+  Table grades {
+    id uuid [pk]
+    assignment_submission_id uuid [not null, unique]
+    grader_id uuid [not null]
+    score decimal(8,2) [not null]
+    feedback text
+    graded_at timestamptz [not null, default: `now()`]
+  }
+
+  Table attendance_records {
+    id uuid [pk]
+    enrollment_id uuid [not null]
+    class_session_id uuid [not null]
+    status attendance_status [not null]
+    checked_in_at timestamptz
+    recorded_by uuid
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (enrollment_id, class_session_id) [unique]
+      (class_session_id, status)
+    }
+  }
+
+  // -----------------------------------------------------------------------------
+  // MIRO-LIKE BOARD
+  // -----------------------------------------------------------------------------
+
+  Table boards {
+    id uuid [pk]
+    class_session_id uuid [not null, unique]
+    title varchar(250) [not null]
+    mode board_mode [not null, default: 'PRESENTATION']
+    current_version bigint [not null, default: 0]
+    student_draw_enabled boolean [not null, default: false]
+    presenter_user_id uuid
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+  }
+
+  Table board_snapshots {
+    id uuid [pk]
+    board_id uuid [not null]
+    version bigint [not null]
+    state_jsonb jsonb [note: 'Small board snapshot']
+    file_object_id uuid [note: 'Large snapshot stored in MinIO']
+    checksum char(64)
+    created_by uuid
+    created_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (board_id, version) [unique]
+    }
+
+    Note: 'Hot collaboration state and cursor presence stay in Redis. Durable snapshots are stored here.'
+  }
+
+  Table board_assets {
+    id uuid [pk]
+    board_id uuid [not null]
+    file_object_id uuid [not null]
+    element_id varchar(150)
+    asset_type varchar(30) [not null, note: 'IMAGE or PDF_PAGE']
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+  }
+
+  Table code_annotations {
+    id uuid [pk]
+    board_id uuid [not null]
+    code_submission_id uuid
+    file_path varchar(500) [not null]
+    start_line integer [not null]
+    start_column integer [not null]
+    end_line integer [not null]
+    end_column integer [not null]
+    payload jsonb [not null]
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+  }
+
+  // -----------------------------------------------------------------------------
+  // ONLINE IDE, COMPILER & JUDGE
+  // -----------------------------------------------------------------------------
+
+  Table code_runtimes {
+    code varchar(30) [pk, note: 'Examples: python-3.12, cpp-20, node-22, java-21']
+    language varchar(30) [not null, note: 'Stable language family such as python, cpp, javascript or java']
+    display_name varchar(100) [not null]
+    version varchar(50) [not null]
+    source_filename varchar(100) [not null]
+    docker_image varchar(255) [not null, note: 'Pinned image reference used for auditing; worker must still use an allowlist']
+    is_compiled boolean [not null, default: false]
+    is_enabled boolean [not null, default: true]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (language, is_enabled)
+    }
+
+    Note: 'Do not store arbitrary compile or run commands supplied by users. Judge workers resolve commands from trusted deployment configuration.'
+  }
+
+  Table problems {
+    id uuid [pk]
+    assignment_id uuid [not null]
+    position integer [not null, default: 1]
+    title varchar(250) [not null]
+    statement_markdown text [not null]
+    time_limit_ms integer [not null, default: 2000]
+    memory_limit_kb integer [not null, default: 262144]
+    max_output_bytes integer [not null, default: 65536]
+    created_by uuid [not null]
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (assignment_id, position) [unique]
+    }
+  }
+
+  Table problem_runtimes {
+    problem_id uuid [not null]
+    runtime_code varchar(30) [not null]
+    starter_code text
+
+    indexes {
+      (problem_id, runtime_code) [pk]
+    }
+
+    Note: 'Defines which runtimes are allowed for a problem and the starter code for each runtime.'
+  }
+
+  Table test_cases {
+    id uuid [pk]
+    problem_id uuid [not null]
+    position integer [not null]
+    is_sample boolean [not null, default: false]
+    input_text text [not null]
+    expected_output_text text [not null]
+    score_weight decimal(8,2) [not null]
+
+    indexes {
+      (problem_id, position) [unique]
+    }
+
+    Note: 'Never expose hidden input, expected output or internal diagnostics through student APIs.'
+  }
+
+  Table code_workspaces {
+    id uuid [pk]
+    problem_id uuid [not null]
+    student_id uuid [not null]
+    runtime_code varchar(30) [not null]
+    source_code text [not null]
+    revision bigint [not null, default: 0]
+    last_saved_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+
+    indexes {
+      (problem_id, student_id, runtime_code) [unique]
+      (student_id, updated_at)
+    }
+
+    Note: 'Stores the latest durable editor state. Live typing and presence may be synchronized through Redis/Yjs and periodically persisted here.'
+  }
+
+  Table code_runs {
+    id uuid [pk]
+    workspace_id uuid [not null]
+    requested_by uuid [not null]
+    runtime_code varchar(30) [not null]
+
+    source_code text [not null, note: 'Immutable source snapshot used by this run']
+    stdin_text text
+
+    status judge_status [not null, default: 'QUEUED']
+    verdict judge_verdict [not null, default: 'PENDING']
+    stdout_text text
+    stderr_text text
+    compiler_output text
+    exit_code integer
+    execution_time_ms integer
+    memory_used_kb integer
+    output_truncated boolean [not null, default: false]
+
+    queued_at timestamptz [not null, default: `now()`]
+    started_at timestamptz
+    finished_at timestamptz
+
+    indexes {
+      (status, queued_at)
+      (workspace_id, queued_at)
+      (requested_by, queued_at)
+    }
+
+    Note: 'Represents the Run button with optional custom input. It does not award assignment score.'
+  }
+
+  Table code_submissions {
+    id uuid [pk]
+    problem_id uuid [not null]
+    assignment_submission_id uuid [not null]
+    student_id uuid [not null]
+    runtime_code varchar(30) [not null]
+    source_code text [not null, note: 'Immutable submitted source snapshot']
+    source_sha256 char(64) [not null]
+    attempt_number integer [not null]
+    status judge_status [not null, default: 'QUEUED']
+    final_verdict judge_verdict [not null, default: 'PENDING']
+    score decimal(8,2)
+    submitted_at timestamptz [not null, default: `now()`]
+    judged_at timestamptz
+
+    indexes {
+      (problem_id, student_id, attempt_number) [unique]
+      (assignment_submission_id)
+      (status, submitted_at)
+    }
+
+    Note: 'Represents the Submit button. The source and runtime are immutable after creation.'
+  }
+
+  Table judge_runs {
+    id uuid [pk]
+    code_submission_id uuid [not null]
+    run_attempt integer [not null, default: 1]
+    worker_id varchar(100)
+    status judge_status [not null, default: 'QUEUED']
+    verdict judge_verdict [not null, default: 'PENDING']
+    compiler_output text
+    system_error_code varchar(80)
+    execution_time_ms integer [note: 'Total or aggregate execution time for the submission']
+    memory_used_kb integer [note: 'Maximum observed memory usage']
+    queued_at timestamptz [not null, default: `now()`]
+    started_at timestamptz
+    heartbeat_at timestamptz
+    finished_at timestamptz
+
+    indexes {
+      (code_submission_id, run_attempt) [unique]
+      (status, queued_at)
+      (worker_id, status)
+    }
+
+    Note: 'A submission may have multiple judge runs when infrastructure retries are required. Do not overwrite a previous run.'
+  }
+
+  Table test_results {
+    id uuid [pk]
+    judge_run_id uuid [not null]
+    test_case_id uuid [not null]
+    verdict judge_verdict [not null]
+    actual_output_text text
+    stderr_text text
+    exit_code integer
+    output_truncated boolean [not null, default: false]
+    execution_time_ms integer
+    memory_used_kb integer
+    score_awarded decimal(8,2) [not null, default: 0]
+
+    indexes {
+      (judge_run_id, test_case_id) [unique]
+    }
+
+    Note: 'For hidden tests, student APIs return only safe fields such as verdict, time and memory. Actual output and stderr remain private.'
+  }
+
+  // -----------------------------------------------------------------------------
+  // REFERENCES
+  // -----------------------------------------------------------------------------
+
+  Ref: users.avatar_file_id > file_objects.id
+  Ref: refresh_tokens.user_id > users.id
+
+  Ref: courses.category_id > course_categories.id
+  Ref: course_units.course_id > courses.id
+  Ref: classes.course_id > courses.id
+  Ref: classes.mentor_id > users.id
+  Ref: class_units.class_id > classes.id
+  Ref: class_units.course_unit_id > course_units.id
+  Ref: class_sessions.class_unit_id > class_units.id
+  Ref: enrollments.student_id > users.id
+  Ref: enrollments.class_id > classes.id
+  Ref: class_unit_progress.enrollment_id > enrollments.id
+  Ref: class_unit_progress.class_unit_id > class_units.id
+
+  Ref: orders.student_id > users.id
+  Ref: order_details.order_id > orders.id
+  Ref: order_details.class_id > classes.id
+  Ref: carts.student_id > users.id
+  Ref: cart_details.cart_id > carts.id
+  Ref: cart_details.class_id > classes.id
+  Ref: payment_transactions.order_id > orders.id
+  Ref: payos_payment_details.payment_transaction_id - payment_transactions.id
+
+  Ref: file_objects.owner_user_id > users.id
+  Ref: file_metadata.file_object_id - file_objects.id
+  Ref: file_metadata.preview_file_id > file_objects.id
+
+  Ref: chat_conversations.class_id > classes.id
+  Ref: chat_conversations.created_by > users.id
+  Ref: chat_members.conversation_id > chat_conversations.id
+  Ref: chat_members.user_id > users.id
+  Ref: chat_messages.conversation_id > chat_conversations.id
+  Ref: chat_messages.sender_id > users.id
+  Ref: chat_messages.reply_to_message_id > chat_messages.id
+  Ref: chat_messages.file_object_id > file_objects.id
+  Ref: notifications.user_id > users.id
+  Ref: notifications.actor_id > users.id
+
+  Ref: materials.course_unit_id > course_units.id
+  Ref: materials.file_object_id > file_objects.id
+  Ref: materials.created_by > users.id
+  Ref: assignments.class_session_id > class_sessions.id
+  Ref: assignments.created_by > users.id
+  Ref: assignment_submissions.assignment_id > assignments.id
+  Ref: assignment_submissions.student_id > users.id
+  Ref: submission_files.submission_id > assignment_submissions.id
+  Ref: submission_files.file_object_id > file_objects.id
+  Ref: grades.assignment_submission_id > assignment_submissions.id
+  Ref: grades.grader_id > users.id
+  Ref: attendance_records.enrollment_id > enrollments.id
+  Ref: attendance_records.class_session_id > class_sessions.id
+  Ref: attendance_records.recorded_by > users.id
+
+  Ref: boards.class_session_id > class_sessions.id
+  Ref: boards.presenter_user_id > users.id
+  Ref: boards.created_by > users.id
+  Ref: board_snapshots.board_id > boards.id
+  Ref: board_snapshots.file_object_id > file_objects.id
+  Ref: board_snapshots.created_by > users.id
+  Ref: board_assets.board_id > boards.id
+  Ref: board_assets.file_object_id > file_objects.id
+  Ref: board_assets.created_by > users.id
+  Ref: code_annotations.board_id > boards.id
+  Ref: code_annotations.code_submission_id > code_submissions.id
+  Ref: code_annotations.created_by > users.id
+
+  Ref: problems.assignment_id > assignments.id
+  Ref: problems.created_by > users.id
+  Ref: problem_runtimes.problem_id > problems.id
+  Ref: problem_runtimes.runtime_code > code_runtimes.code
+  Ref: test_cases.problem_id > problems.id
+  Ref: code_workspaces.problem_id > problems.id
+  Ref: code_workspaces.student_id > users.id
+  Ref: code_workspaces.runtime_code > code_runtimes.code
+  Ref: code_runs.workspace_id > code_workspaces.id
+  Ref: code_runs.requested_by > users.id
+  Ref: code_runs.runtime_code > code_runtimes.code
+  Ref: code_submissions.problem_id > problems.id
+  Ref: code_submissions.assignment_submission_id > assignment_submissions.id
+  Ref: code_submissions.student_id > users.id
+  Ref: code_submissions.runtime_code > code_runtimes.code
+  Ref: judge_runs.code_submission_id > code_submissions.id
+  Ref: test_results.judge_run_id > judge_runs.id
+  Ref: test_results.test_case_id > test_cases.id
