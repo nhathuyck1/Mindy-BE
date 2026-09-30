@@ -1,0 +1,318 @@
+{
+  "info": {
+    "_postman_id": "d2a802eb-f4f1-4a73-b463-c43837169a90",
+    "name": "Mindy BE — Phase 0 & 1",
+    "description": "Phase 0 health checks and Phase 1 cookie-based authentication/admin-user flow. Postman stores access_token and refresh_token in its cookie jar automatically; no token variable is required.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "test_user_email", "value": "" }, { "key": "test_user_id", "value": "" }],
+  "item": [
+    {
+      "name": "00 — Health",
+      "item": [
+        {
+          "name": "Liveness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Liveness returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health/live",
+            "description": "Process liveness; does not require the database."
+          }
+        },
+        {
+          "name": "Readiness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Readiness returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health/ready",
+            "description": "Database readiness."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 — Authentication",
+      "item": [
+        {
+          "name": "Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Logged in as ADMIN', () => { const body = pm.response.json(); pm.expect(body.user.email).to.eql(pm.environment.get('admin_email')); pm.expect(body.user.role).to.eql('ADMIN'); pm.expect(body.user.status).to.eql('ACTIVE'); });",
+                  "pm.test('Server sets cookies', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.exist);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"deviceName\": \"Postman\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/v1/auth/login",
+            "description": "Postman saves both HttpOnly cookies to its cookie jar automatically."
+          }
+        },
+        {
+          "name": "Current user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Current user is ADMIN', () => pm.expect(pm.response.json().role).to.eql('ADMIN'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Refresh cookies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Refresh returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response remains the admin user', () => pm.expect(pm.response.json().user.role).to.eql('ADMIN'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/refresh",
+            "description": "The refresh_token cookie is path-scoped and is sent automatically only to this endpoint."
+          }
+        },
+        {
+          "name": "Logout current session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Logout returns 204', () => pm.response.to.have.status(204));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/logout"
+          }
+        },
+        {
+          "name": "Me after logout — expect 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Revoked session returns 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Stable error code', () => pm.expect(pm.response.json().code).to.eql('AUTHENTICATION_REQUIRED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Logout all sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logout-all returns 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/api/v1/auth/logout-all",
+            "description": "Run Login admin again before this request if the current session was logged out."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Admin users",
+      "item": [
+        {
+          "name": "List users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('List returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is paginated', () => { const body = pm.response.json(); pm.expect(body.items).to.be.an('array'); pm.expect(body.total).to.be.a('number'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/admin/users?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "Create test student",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('test_user_email', `student+${Date.now()}@example.com`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Create returns 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) { const body = pm.response.json(); pm.collectionVariables.set('test_user_id', body.id); }",
+                  "pm.test('Response never contains password hash', () => pm.expect(pm.response.text()).not.to.include('passwordHash'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_user_email}}\",\n  \"phone\": null,\n  \"password\": \"{{test_user_password}}\",\n  \"displayName\": \"Postman Test Student\",\n  \"role\": \"STUDENT\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/v1/admin/users"
+          }
+        },
+        {
+          "name": "Get test student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ID matches created user', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('test_user_id')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/admin/users/{{test_user_id}}"
+          }
+        },
+        {
+          "name": "Suspend test student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Suspend returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is SUSPENDED', () => pm.expect(pm.response.json().status).to.eql('SUSPENDED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/v1/admin/users/{{test_user_id}}/status"
+          }
+        },
+        {
+          "name": "Reactivate test student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reactivate returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is ACTIVE', () => pm.expect(pm.response.json().status).to.eql('ACTIVE'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/v1/admin/users/{{test_user_id}}/status"
+          }
+        }
+      ]
+    }
+  ]
+}

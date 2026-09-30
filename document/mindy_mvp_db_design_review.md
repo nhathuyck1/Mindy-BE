@@ -1,4 +1,4 @@
-# EdTech Center – Database review và thiết kế bổ sung
+# Mindy Center – Database review và thiết kế bổ sung
 
 Phạm vi: một trung tâm, modular monolith, PostgreSQL + Redis + MinIO + Judge Worker.
 

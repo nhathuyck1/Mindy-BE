@@ -1,7 +1,7 @@
-  // EdTech Center - Single Center
+  // Mindy Center - Single Center
   // Architecture: Modular monolith + PostgreSQL + Redis + MinIO + Judge Workers
 
-  Project edtech_center {
+  Project mindy_center {
     database_type: 'PostgreSQL'
     Note: 'Database schema for a single training center implemented as a modular monolith with PostgreSQL, Redis, MinIO and isolated judge workers.'
   }

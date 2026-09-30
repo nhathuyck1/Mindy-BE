@@ -8,6 +8,8 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module.js';
+import { requestContextMiddleware } from './common/http/request-context.js';
+import { GlobalExceptionFilter } from './filters/global-exception.filter.js';
 import { setupSwagger } from './setup-swagger.js';
 
 async function bootstrap(): Promise<void> {
@@ -19,6 +21,7 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
+  app.use(requestContextMiddleware);
 
   app.setGlobalPrefix('api');
   app.enableVersioning({
@@ -33,6 +36,7 @@ async function bootstrap(): Promise<void> {
       errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
     }),
   );
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   const allowedOrigins = configService
     .getOrThrow<string>('CORS_ORIGINS')

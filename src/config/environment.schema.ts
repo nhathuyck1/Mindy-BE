@@ -14,8 +14,20 @@ export const environmentSchema = Joi.object({
   COOKIE_SECURE: Joi.boolean().default(true),
   ACCESS_TOKEN_TTL_SECONDS: Joi.number().integer().positive().default(900),
   REFRESH_TOKEN_TTL_SECONDS: Joi.number().integer().positive().default(2_592_000),
-  JWT_PRIVATE_KEY_BASE64: Joi.string().allow('').default(''),
-  JWT_PUBLIC_KEY_BASE64: Joi.string().allow('').default(''),
+  JWT_PRIVATE_KEY_BASE64: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schemas use the then key intentionally.
+    .when('NODE_ENV', { is: 'production', then: Joi.string().min(1).required() }),
+  JWT_PUBLIC_KEY_BASE64: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schemas use the then key intentionally.
+    .when('NODE_ENV', { is: 'production', then: Joi.string().min(1).required() }),
+  SEED_ADMIN_EMAIL: Joi.string().email().allow('').default(''),
+  SEED_ADMIN_PASSWORD: Joi.string().allow('').default(''),
+  SEED_ADMIN_DISPLAY_NAME: Joi.string().allow('').default(''),
+  SEED_ADMIN_CONFIRM: Joi.string().valid('YES', '').default(''),
   REDIS_ENABLED: Joi.boolean().default(false),
   REDIS_URL: Joi.string()
     .uri({ scheme: ['redis', 'rediss'] })
@@ -26,5 +38,5 @@ export const environmentSchema = Joi.object({
   MINIO_USE_SSL: Joi.boolean().default(false),
   MINIO_ACCESS_KEY: Joi.string().allow('').default(''),
   MINIO_SECRET_KEY: Joi.string().allow('').default(''),
-  MINIO_BUCKET: Joi.string().min(3).default('edtech-center'),
-}).unknown(false);
+  MINIO_BUCKET: Joi.string().min(3).default('mindy-center'),
+}).unknown(true);

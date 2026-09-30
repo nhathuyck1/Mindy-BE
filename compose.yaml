@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: edtech_center
-      POSTGRES_USER: edtech
-      POSTGRES_PASSWORD: edtech
+      POSTGRES_DB: mindy_center
+      POSTGRES_USER: mindy
+      POSTGRES_PASSWORD: mindy
     ports:
-      - '5432:5432'
+      - '5433:5432'
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U edtech -d edtech_center']
+      test: ['CMD-SHELL', 'pg_isready -U mindy -d mindy_center']
       interval: 5s
       timeout: 3s
       retries: 10

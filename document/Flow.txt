@@ -1,0 +1,33 @@
+Mentor 
++ Đăng ký thgian dạy , môn học, lịch làm calender, update profile: exp, feedback
++ Thời khóa biểu lịch dạy, 
++ flexible on both mentor take slot for class or admin assign slot for class
++ mentor book slot khác dạy bù(đăng ký nghỉ vào buổi bận, cần admin duyệt) 
+-> Cho chọn slot khác trong tuần và mail các student vào buổi đó. (Trước 1 ngày)
+
+Flow mentor quản lý class
++ View class => View class unit => manage class session(Buổi học) => Chứa toàn bộ board, code complier, btvn, assignment, materials, điểm danh
++ Q&A E class unit, chat tổng E class
+=> Cuối kì auto gen by system a certificate for the course
+
+Compiler run / Mentor chấm và fb
+
+Manager/Admin
++ Create course, course-unit, class. Import class from course-unit. 
++ Manage all above
++ Support customer about course
++ Support transactions(from transactions log) 
++ Manage schedule(Mentor's registration log, assign mentor to class, human resources)
+
+Student
+
++ Filled form for customer wants and recommend base on the analytics.
++ Form: Current semester, weak and strong, want, ... => compare similarity base on the customer need using AI/algorithim to rcm course
++ Browse course list -> register class and choose onl/off -> add to cart -> process order(full payment): can choose payment type(cash/PayOS)*add confirmation to mail for online transaction
+-> be added to the course unit(by manager)
+- Cash case: Cash pending(still got add automatic to class. Only see class unit title, class session title with timetable then go to offline classroon)
+ -> Mentor confirm order stt -> Can see the whole course 
+- Cash pending will be added to class group chat/mentor DM
++ View schedule (Fap calendar)
++ Browse class unit,session, attendance, homework, ... 
++ 

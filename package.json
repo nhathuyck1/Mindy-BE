@@ -1,5 +1,5 @@
 {
-  "name": "edtech-center-api",
+  "name": "mindy-center-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx watch src/main.ts",
+    "dev": "nest start --watch",
     "start": "node dist/main.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -22,6 +22,9 @@
     "migration:generate": "typeorm-ts-node-esm -d src/database/data-source.ts migration:generate",
     "migration:run": "typeorm-ts-node-esm -d src/database/data-source.ts migration:run",
     "migration:revert": "typeorm-ts-node-esm -d src/database/data-source.ts migration:revert",
+    "migration:run:build": "typeorm -d dist/database/data-source.js migration:run",
+    "migration:revert:build": "typeorm -d dist/database/data-source.js migration:revert",
+    "seed:admin": "tsx src/database/seed-admin.ts",
     "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build"
   },
   "dependencies": {
@@ -51,6 +54,7 @@
     "@types/compression": "1.8.1",
     "@types/cookie-parser": "1.4.10",
     "@types/node": "22.18.6",
+    "ts-node": "10.9.2",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vitest": "4.0.2"
