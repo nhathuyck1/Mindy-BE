@@ -11,6 +11,7 @@ import { UserStatus } from '../users/user-status.enum.js';
 import { normalizeEmail, UsersService } from '../users/users.service.js';
 import type { AuthenticatedUser, AuthenticationContext, AuthTokens } from './auth.types.js';
 import { AuthSessionEntity } from './auth-session.entity.js';
+import { AuthenticationMethod } from './authentication-method.enum.js';
 import type { LoginDto } from './dtos/login.dto.js';
 import {
   AuthenticationRequiredException,
@@ -20,6 +21,8 @@ import {
 import { RefreshTokenEntity } from './refresh-token.entity.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { PasswordService } from './services/password.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { SessionService } from './services/session.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { TokenService } from './services/token.service.js';
 
@@ -31,6 +34,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async login(
@@ -42,62 +46,19 @@ export class AuthService {
       throw new InvalidCredentialsException();
     }
 
-    const passwordValid = await this.passwordService.verifyPassword(
-      input.password,
-      user.passwordHash,
-    );
+    const passwordValid =
+      user.passwordHash !== null &&
+      (await this.passwordService.verifyPassword(input.password, user.passwordHash));
     if (!passwordValid) {
       throw new InvalidCredentialsException();
     }
 
-    const now = new Date();
-    const refreshTtlSeconds = this.config.getOrThrow<number>('REFRESH_TOKEN_TTL_SECONDS');
-    const accessPrincipalBase = { userId: user.id, role: user.role };
-
-    const result = await this.dataSource.transaction(async (manager) => {
-      const sessionRepository = manager.getRepository(AuthSessionEntity);
-      const refreshRepository = manager.getRepository(RefreshTokenEntity);
-      const session = await sessionRepository.save(
-        sessionRepository.create({
-          userId: user.id,
-          deviceName: context.deviceName,
-          userAgent: context.userAgent,
-          ipAddress: context.ipAddress,
-          lastSeenAt: now,
-          expiresAt: new Date(now.getTime() + refreshTtlSeconds * 1000),
-          revokedAt: null,
-        }),
-      );
-      const refreshToken = randomBytes(32).toString('base64url');
-      await refreshRepository.save(
-        refreshRepository.create({
-          sessionId: session.id,
-          tokenHash: this.passwordService.hashRefreshToken(refreshToken),
-          parentTokenId: null,
-          replacedByTokenId: null,
-          expiresAt: session.expiresAt,
-          usedAt: null,
-          revokedAt: null,
-        }),
-      );
-      await manager.update('users', { id: user.id }, { lastLoginAt: now });
-
-      return { sessionId: session.id, refreshToken, refreshTokenExpiresAt: session.expiresAt };
-    });
-
-    const accessToken = this.tokenService.signAccessToken({
-      ...accessPrincipalBase,
-      sessionId: result.sessionId,
-    });
-
+    const tokens = await this.dataSource.transaction((manager) =>
+      this.sessionService.create(manager, user, context, AuthenticationMethod.PASSWORD, null),
+    );
     return {
       userId: user.id,
-      tokens: {
-        accessToken: accessToken.token,
-        refreshToken: result.refreshToken,
-        accessTokenExpiresAt: accessToken.expiresAt,
-        refreshTokenExpiresAt: result.refreshTokenExpiresAt,
-      },
+      tokens,
     };
   }
 

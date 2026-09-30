@@ -25,3 +25,43 @@ export class InsufficientRoleException extends AppHttpException {
     super(HttpStatus.FORBIDDEN, 'INSUFFICIENT_ROLE', 'You do not have permission for this action');
   }
 }
+
+export class InvalidEmailVerificationTokenException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.BAD_REQUEST,
+      'INVALID_EMAIL_VERIFICATION_TOKEN',
+      'The email verification link is invalid or expired',
+    );
+  }
+}
+
+export class InvalidRegistrationIntentException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'INVALID_REGISTRATION_INTENT',
+      'The registration session is invalid or expired',
+    );
+  }
+}
+
+export class GoogleAuthenticationFailedException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNAUTHORIZED,
+      'GOOGLE_AUTHENTICATION_FAILED',
+      'Google authentication could not be completed',
+    );
+  }
+}
+
+export class MailDeliveryUnavailableException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.SERVICE_UNAVAILABLE,
+      'MAIL_DELIVERY_UNAVAILABLE',
+      'Verification email delivery is currently unavailable',
+    );
+  }
+}

@@ -17,13 +17,18 @@ Board and compiler/judge modules are explicitly excluded. Chat and notifications
 - Feature/domain folders own their entities, controllers, DTOs, commands/queries and exceptions.
 - Controllers remain thin; workflow logic lives in command handlers or focused application services.
 - UUID v4 is the initial project-wide decision because it matches the referenced NestJS rules. A later move to UUID v7 requires one recorded decision applied consistently to generation, validation and tests.
-- Cookie authentication uses RS256 access tokens plus rotated refresh tokens. Auth is a prerequisite slice, not part of the course/order domain itself.
+- Cookie authentication uses RS256 access tokens plus rotated refresh tokens. Phase 1
+  supports public `STUDENT` registration through verified email/password or Google
+  OIDC; both paths converge on the same internal user/session contract.
 
 ## Included tables
 
 ### Foundation
 
 - `users`
+- `user_identities`
+- `registration_intents`
+- `email_verification_tokens`
 - `auth_sessions`
 - `refresh_tokens`
 - `file_objects`
@@ -87,15 +92,31 @@ Tasks:
 
 1. Implement user, auth session and refresh token entities.
 2. Create the initial migration with enum types and constraints.
-3. Implement password hashing and generic login failure responses.
-4. Implement RS256 access tokens in `HttpOnly` cookies.
-5. Implement refresh-token hashing, rotation, reuse detection and session revocation.
-6. Add guards/decorators for role and authenticated user ID.
-7. Add rate limiting for auth endpoints using a shared store before horizontal production deployment.
+3. Implement public email/password registration as `STUDENT`, verification-token
+   hashing, generic register/resend responses and email verification before activation.
+4. Implement password hashing and generic login failure responses.
+5. Implement Google OIDC Authorization Code + PKCE with state/nonce validation.
+6. For a new Google user, create a short-lived registration intent, prefill verified
+   email/name/avatar hints and require the shared profile form before account creation.
+7. Link an existing account by verified email without duplicating the user; identify
+   later Google logins by provider `sub`, never mutable email.
+8. Implement RS256 access tokens in `HttpOnly` cookies.
+9. Implement refresh-token hashing, rotation, reuse detection and session revocation.
+10. Add guards/decorators for role and authenticated user ID.
+11. Add rate limiting for registration/auth endpoints using a shared store before
+    horizontal production deployment.
 
 Required tests:
 
 - Successful login and cookie attributes.
+- Email registration remains pending until one-time email verification succeeds.
+- Register/resend responses do not allow account enumeration.
+- New Google user is not authenticated until profile completion; verified Google
+  fields prefill the shared registration form.
+- Existing/pending accounts merge safely by verified email without duplicate users.
+- Google claiming a pending email registration clears its unverified password hash,
+  preventing pre-registration account takeover.
+- Invalid/replayed OAuth state, nonce, code and onboarding intents are rejected.
 - Invalid credentials without account enumeration.
 - Refresh rotation and old-token reuse detection.
 - Logout one session and logout all sessions.
@@ -274,12 +295,13 @@ Implement attendance only after enrollment and class sessions are stable.
 Prefer several reviewable migrations over one generated migration containing every table:
 
 1. `identity-foundation`
-2. `course-catalog`
-3. `class-operations`
-4. `file-materials`
-5. `commerce-orders`
-6. `payments-enrollment`
-7. `attendance`
+2. `registration-and-google-identity`
+3. `course-catalog`
+4. `class-operations`
+5. `file-materials`
+6. `commerce-orders`
+7. `payments-enrollment`
+8. `attendance`
 
 Every migration requires a reviewed `up` and `down`, a clean-database CI run and explicit foreign-key delete behavior. Never enable TypeORM `synchronize`.
 

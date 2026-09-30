@@ -7,7 +7,9 @@ NestJS modular monolith for course operations, class management, enrollment, ord
 - Node.js 22 and pnpm, pinned by the repository.
 - NestJS 11 with TypeScript strict mode and ESM.
 - TypeORM with PostgreSQL; production never uses `synchronize`.
-- Cookie-based authentication will use short-lived JWT access tokens and rotated refresh tokens.
+- Identity uses short-lived RS256 access cookies and rotated refresh tokens. The Phase 1
+  plan includes public `STUDENT` registration by verified email/password and Google
+  OIDC with mandatory profile completion for new Google users.
 - Redis and MinIO are optional infrastructure modules and are not initialized until their feature flags are enabled.
 - Board and compiler/judge features are intentionally outside the first implementation plan.
 
@@ -43,8 +45,9 @@ pnpm check
 
 ## Identity bootstrap
 
-Phase 1 does not expose public registration. Create a development/admin account with
-the one-off seed command after migrations have run:
+The current implementation uses a one-off seed for the development admin. Public
+registration and Google onboarding are specified in the remaining Phase 1 plan but
+must not replace production admin bootstrap:
 
 ```text
 SEED_ADMIN_EMAIL=admin@example.com

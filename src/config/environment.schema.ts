@@ -24,6 +24,39 @@ export const environmentSchema = Joi.object({
     .default('')
     // biome-ignore lint/suspicious/noThenProperty: Joi conditional schemas use the then key intentionally.
     .when('NODE_ENV', { is: 'production', then: Joi.string().min(1).required() }),
+  GOOGLE_AUTH_ENABLED: Joi.boolean().default(false),
+  GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
+  GOOGLE_CLIENT_SECRET: Joi.string().allow('').default(''),
+  GOOGLE_REDIRECT_URI: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default(''),
+  GOOGLE_OAUTH_STATE_TTL_SECONDS: Joi.number().integer().positive().max(900).default(600),
+  REGISTRATION_INTENT_TTL_SECONDS: Joi.number().integer().positive().max(3600).default(900),
+  FRONTEND_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3001'),
+  GOOGLE_REGISTRATION_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/register/complete'),
+  GOOGLE_AUTH_SUCCESS_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/'),
+  GOOGLE_AUTH_ERROR_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/login'),
+  MAIL_ENABLED: Joi.boolean().default(false),
+  SMTP_HOST: Joi.string().hostname().default('localhost'),
+  SMTP_PORT: Joi.number().integer().min(1).max(65_535).default(1025),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow('').default(''),
+  SMTP_PASSWORD: Joi.string().allow('').default(''),
+  MAIL_FROM: Joi.string().min(3).default('Mindy Center <no-reply@mindy.local>'),
+  EMAIL_VERIFICATION_TTL_SECONDS: Joi.number().integer().positive().max(86_400).default(1800),
+  EMAIL_RESEND_COOLDOWN_SECONDS: Joi.number().integer().positive().max(3600).default(60),
+  EMAIL_VERIFICATION_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/verify-email'),
   SEED_ADMIN_EMAIL: Joi.string().email().allow('').default(''),
   SEED_ADMIN_PASSWORD: Joi.string().allow('').default(''),
   SEED_ADMIN_DISPLAY_NAME: Joi.string().allow('').default(''),

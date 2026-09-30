@@ -16,8 +16,8 @@ export class UserEntity extends TimestampedEntity {
   @Column({ name: 'phone', type: 'varchar', length: 32, nullable: true, unique: true })
   phone!: string | null;
 
-  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
-  passwordHash!: string;
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, nullable: true, select: false })
+  passwordHash!: string | null;
 
   @Column({ name: 'display_name', type: 'varchar', length: 150 })
   displayName!: string;

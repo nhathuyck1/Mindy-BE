@@ -6,7 +6,21 @@ This document defines the business rules for the first delivery scope: course/cl
 
 ### Identity
 
-Owns `users`, `auth_sessions` and `refresh_tokens`. Authentication uses cookie-based JWT access tokens and rotated refresh tokens. Other modules receive a user ID and role; they do not read cookies or JWTs directly.
+Owns `users`, `user_identities`, `registration_intents`,
+`email_verification_tokens`, `auth_sessions` and `refresh_tokens`. Public registration
+always creates a `STUDENT` through one of two paths: email/password remains pending
+until email verification, while Google OIDC uses a verified email and requires profile
+completion after prefill before creating the user. Both paths then use the same
+cookie-based JWT access tokens and rotated refresh tokens. Other modules receive a user
+ID and role; they do not read cookies, OAuth claims or JWTs directly.
+
+Google `sub` is the durable external identity key. Email is used only to prevent
+duplicate internal accounts during first link/registration. Google profile fields are
+untrusted suggestions for the registration form: verified email is read-only,
+display name may be edited, avatar is only previewed until the file module owns it.
+If Google completes an email that has a pending password registration, the unverified
+password hash is discarded before activation so an attacker cannot pre-register the
+victim's email and retain a password credential.
 
 ### Catalog
 
@@ -134,6 +148,7 @@ The unique `(student_id, class_id)` enrollment constraint is the final defense a
 | Action | Allowed actors |
 |---|---|
 | Read public active courses/open classes | Public |
+| Register through email/password or Google | Public; resulting role is always `STUDENT` |
 | Manage categories/courses/units/materials | `ADMIN`, `MANAGER` |
 | Create classes and schedules | `ADMIN`, `MANAGER` |
 | Read assigned class operations | Assigned `MENTOR`, `ADMIN`, `MANAGER` |

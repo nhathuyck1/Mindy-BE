@@ -231,6 +231,20 @@ new ValidationPipe({
 - **BẮT BUỘC** hash password bằng thuật toán thích hợp như bcrypt/Argon2 với cost được benchmark; không mã hóa hoặc lưu plaintext.
 - Login thất bại **BẮT BUỘC** trả lỗi chung, không tiết lộ email/user tồn tại hay không.
 - **BẮT BUỘC** áp dụng rate limit mạnh hơn cho login, register, reset password và OTP.
+- Public registration **BẮT BUỘC** gán role cố định phía server; không nhận role/status
+  từ client. Account email/password chỉ được active sau khi verify email bằng token
+  ngẫu nhiên, hash-at-rest, có TTL và dùng một lần.
+- Với OIDC/OAuth login, **BẮT BUỘC** dùng Authorization Code flow, kiểm tra state,
+  nonce, issuer, audience, expiry và chữ ký; dùng PKCE khi provider hỗ trợ. Không tin
+  profile/ID token do frontend tự gửi và không dùng email thay cho provider subject.
+- OAuth callback **KHÔNG ĐƯỢC** tự tạo account hoàn chỉnh nếu sản phẩm yêu cầu thêm hồ
+  sơ. Phải dùng registration intent ngắn hạn, one-time; chỉ cấp auth session sau khi
+  user submit và server validate form hoàn thiện đăng ký.
+- Khi prefill từ provider, verified email có thể read-only; các field như name/avatar
+  chỉ là gợi ý và không được tự overwrite dữ liệu nội bộ hiện hữu.
+- Nếu verified provider email claim một registration email/password chưa verify,
+  **BẮT BUỘC** loại bỏ credential chưa được chứng minh hoặc yêu cầu proof riêng; không
+  giữ password pending vì có thể dẫn đến pre-registration account takeover.
 - **BẮT BUỘC** kiểm tra quyền sở hữu resource bên cạnh role; RBAC không thay thế object-level authorization.
 - **BẮT BUỘC** endpoint ghi dữ liệu khai báo rõ role/quyền. Endpoint public phải được đánh dấu rõ và được review.
 - Với cookie auth, **BẮT BUỘC** cấu hình `HttpOnly`, `Secure`, `SameSite` và CSRF protection phù hợp.

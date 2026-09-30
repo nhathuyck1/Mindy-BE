@@ -11,16 +11,16 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({ type: String, example: '0901234567', minLength: 7, maxLength: 32 })
   @IsOptional()
-  @ApiProperty({ type: String, format: 'password', minLength: 12, maxLength: 128 })
   @IsString()
   @Length(7, 32)
   readonly phone?: string;
 
-  @ApiProperty({ type: String, example: 'Test Student', minLength: 1, maxLength: 150 })
+  @ApiProperty({ type: String, format: 'password', minLength: 12, maxLength: 128 })
   @IsString()
   @Length(12, 128)
   readonly password!: string;
 
+  @ApiProperty({ type: String, example: 'Test Student', minLength: 1, maxLength: 150 })
   @IsString()
   @Length(1, 150)
   readonly displayName!: string;

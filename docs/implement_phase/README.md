@@ -6,7 +6,7 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 ## Thứ tự thực hiện
 
 1. [Phase 0 — Foundation, database và deployment baseline](./PHASE_0_FOUNDATION.md)
-2. [Phase 1 — Users, authentication và authorization baseline](./PHASE_1_IDENTITY_AUTH.md)
+2. [Phase 1 — Registration, users, Google/password authentication và authorization baseline](./PHASE_1_IDENTITY_AUTH.md)
 
 Các phase sau chỉ bắt đầu khi exit criteria của phase trước đã đạt. Mỗi phase phải là
 một vertical slice chạy được từ migration đến API và test, không triển khai toàn bộ

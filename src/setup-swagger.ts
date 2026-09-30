@@ -11,7 +11,8 @@ export function setupSwagger(app: INestApplication): void {
       {
         type: 'apiKey',
         in: 'cookie',
-        description: 'HttpOnly access cookie set by POST /api/v1/auth/login',
+        description:
+          'HttpOnly access cookie set after password login, email verification, or Google authentication',
       },
       'access_token',
     )
@@ -23,6 +24,15 @@ export function setupSwagger(app: INestApplication): void {
         description: 'HttpOnly refresh cookie sent only to /api/v1/auth/refresh',
       },
       'refresh_token',
+    )
+    .addCookieAuth(
+      'registration_intent',
+      {
+        type: 'apiKey',
+        in: 'cookie',
+        description: 'Short-lived HttpOnly cookie used only to complete Google registration',
+      },
+      'registration_intent',
     )
     .build();
 

@@ -15,5 +15,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit-data:/data
+
 volumes:
   postgres-data:
+  mailpit-data:
