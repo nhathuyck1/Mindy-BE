@@ -1,29 +1,28 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 Phase 0: Hạ tầng và quy ước chung
-    ↓
+↓
 Phase 1: Registration + User + Authentication
-    ↓
-Phase 2: Course Catalog
-    ↓
-Phase 3: Class Management
-    ↓
-Phase 4: File + Materials
-    ↓
-Phase 5: Cart + Checkout + Order
-    ↓
-Phase 6: Payment + Enrollment
-    ↓
-Phase 7: Attendance + Operational Queries
-    ↓
-Phase 8: Production Hardening + Deploy
-
-Phase 9: Chat / Notification
+↓
+Phase 2: Course Catalog + Class Registration + Cart + Full Payment + Enrollment
+↓
+Phase 3: File + Materials
+↓
+Phase 4: Attendance + Operational Queries
+↓
+Phase 5: Production Hardening + Deploy
+↓
+Phase 6: Chat / Notification
 Whiteboard
 Assignment
 Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-02: Added a detailed Phase 2 plan under `docs/implement_phase/` for
+  course/class browsing, cart, checkout, full cash/PayOS payment and enrollment.
+  It separates planning, migrations and implementation, and leaves live PayOS
+  merchant configuration to a later step. This is planned scope, not an
+  implementation-complete claim.
 - 2026-09-29: Added detailed implementation specifications for Phase 0 (foundation,
   database and deployment baseline) and Phase 1 (users, authentication and
   authorization) under `docs/implement_phase/`.

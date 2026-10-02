@@ -5,6 +5,7 @@ pnpm migration:run
 pnpm seed:admin
 pnpm dev
 This is the command for build and run the project
+
 Host: localhost
 Port: 5433
 Database: mindy_center
