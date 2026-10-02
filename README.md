@@ -91,5 +91,11 @@ keep the production `DATABASE_URL` secret and do not publish port `5432` publicl
 Start it with an explicit deployment environment file:
 
 ```text
-docker compose --env-file .env.production -f compose.production.yaml up -d
+cp .env.production.example .env.production
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
+docker compose --env-file .env.production -f compose.production.yaml up -d --build
 ```
+
+Set `SWAGGER_ENABLED=true`. Use `API_BIND_ADDRESS=0.0.0.0` for direct access at
+`http://VPS_IP:3000/docs`, or `API_BIND_ADDRESS=127.0.0.1` when publishing
+`https://api.example.com/docs` through Nginx/Caddy.

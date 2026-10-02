@@ -58,9 +58,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_LOGGING: 'false'
-      SWAGGER_ENABLED: 'false'
     ports:
-      - '127.0.0.1:${API_PORT:-3000}:3000'
+      - '${API_BIND_ADDRESS:-0.0.0.0}:${API_PORT:-3000}:3000'
     depends_on:
       migration:
         condition: service_completed_successfully

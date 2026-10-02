@@ -53,3 +53,8 @@ Compiler / Judge
   production-only dependencies, non-root runtime with an init process, readiness
   healthcheck, one-off migration gate, loopback-only API publishing, read-only API
   filesystem and a VPS deployment guide with production environment requirements.
+- 2026-10-02 — Rechecked the VPS deployment path: production Swagger is controlled by
+  `.env.production`, API publishing supports either a public or loopback bind address,
+  the production environment template is tracked by Git, and deployment documentation
+  covers Compose validation, direct Swagger smoke testing, HTTPS proxying and secret
+  rotation.

@@ -2,12 +2,14 @@
 
 The production stack builds one immutable backend image, runs database migrations once,
 then starts the API only after PostgreSQL is healthy and the migration job succeeds.
-PostgreSQL is private to Docker. The API listens on VPS loopback so Nginx or Caddy can
-provide HTTPS without exposing port 3000 directly to the Internet.
+PostgreSQL is private to Docker. The API bind address is configurable: use `0.0.0.0`
+to expose Swagger directly on the VPS port, or `127.0.0.1` when Nginx/Caddy provides
+the public HTTPS endpoint.
 
 ## 1. Prepare `.env.production`
 
-Create `.env.production` on the VPS. Do not commit it. Start from `.env.example`, then
+Create `.env.production` on the VPS. Do not commit it. Start from
+`.env.production.example`, then
 set production values for every item below:
 
 ```dotenv
@@ -15,6 +17,7 @@ set production values for every item below:
 POSTGRES_DB=mindy_center
 POSTGRES_USER=mindy
 POSTGRES_PASSWORD=CHANGE_TO_A_LONG_RANDOM_PASSWORD
+API_BIND_ADDRESS=0.0.0.0
 API_PORT=3000
 IMAGE_TAG=latest
 
@@ -22,7 +25,7 @@ IMAGE_TAG=latest
 NODE_ENV=production
 PORT=3000
 CORS_ORIGINS=https://app.example.com
-SWAGGER_ENABLED=false
+SWAGGER_ENABLED=true
 DATABASE_URL=postgresql://mindy:URL_ENCODED_PASSWORD@postgres:5432/mindy_center
 DATABASE_LOGGING=false
 COOKIE_SECURE=true
@@ -72,24 +75,49 @@ MINIO_BUCKET=mindy-center
 If the PostgreSQL password contains reserved URL characters, percent-encode it in
 `DATABASE_URL`. Keep the original value in `POSTGRES_PASSWORD`.
 
+Generate a dedicated RSA key pair for production instead of copying development keys:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+openssl rsa -pubout -in private.pem -out public.pem
+base64 -w 0 private.pem
+base64 -w 0 public.pem
+rm private.pem public.pem
+```
+
+Put the two one-line Base64 outputs into `JWT_PRIVATE_KEY_BASE64` and
+`JWT_PUBLIC_KEY_BASE64`. Rotate any credential that has ever been committed, pasted in
+chat, or shared outside the VPS secret store.
+
 ## 2. Build and start
 
 Run from the repository directory on the VPS:
 
 ```bash
+cp .env.production.example .env.production
+# Edit every CHANGE_ME value and all public URLs before continuing.
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
 docker compose --env-file .env.production -f compose.production.yaml up -d --build
 docker compose --env-file .env.production -f compose.production.yaml ps
 docker compose --env-file .env.production -f compose.production.yaml logs migration
 docker compose --env-file .env.production -f compose.production.yaml logs -f api
 ```
 
-The API should become healthy at `http://127.0.0.1:3000/api/v1/health/ready`.
+With `API_BIND_ADDRESS=0.0.0.0`, allow TCP port `API_PORT` in the VPS firewall/security
+group. Swagger is then available at `http://VPS_IP:3000/docs` and readiness at
+`http://VPS_IP:3000/api/v1/health/ready`.
+
+Direct HTTP publishing is useful for a short smoke test, but authentication cookies
+configured with `COOKIE_SECURE=true` require HTTPS. For a normal public deployment,
+set `API_BIND_ADDRESS=127.0.0.1`, keep `COOKIE_SECURE=true`, and use the reverse proxy
+configuration below.
 
 ## 3. Reverse proxy
 
 Configure Nginx or Caddy to proxy the public API hostname to `127.0.0.1:3000` and issue
 an HTTPS certificate. Only ports 22, 80 and 443 should normally be public. Do not expose
-PostgreSQL port 5432.
+PostgreSQL port 5432. Swagger will be available at `https://api.example.com/docs` when
+`SWAGGER_ENABLED=true`.
 
 ## 4. Updating
 
