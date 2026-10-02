@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { Repository } from 'typeorm';
+import { In, type Repository } from 'typeorm';
 import type { CreateUserDto } from './dtos/create-user.dto.js';
 import type { UserPageOptionsDto } from './dtos/user-page-options.dto.js';
 import {
@@ -9,6 +9,7 @@ import {
   UserPhoneAlreadyExistsException,
 } from './exceptions/user.exceptions.js';
 import { UserEntity } from './user.entity.js';
+import type { UserRole } from './user-role.enum.js';
 import { UserStatus } from './user-status.enum.js';
 
 export function normalizeEmail(email: string): string {
@@ -42,6 +43,18 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async findActiveByRole(id: string, role: UserRole): Promise<UserEntity | null> {
+    return this.users.findOne({ where: { id, role, status: UserStatus.ACTIVE } });
+  }
+
+  async findByIds(ids: readonly string[]): Promise<UserEntity[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.users.findBy({ id: In([...ids]) });
   }
 
   async createUser(input: CreateUserDto, passwordHash: string): Promise<UserEntity> {

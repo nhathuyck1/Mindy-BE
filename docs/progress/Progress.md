@@ -57,3 +57,34 @@ Compiler / Judge
   the production environment template is tracked by Git, and deployment documentation
   covers Compose validation, direct Swagger smoke testing, HTTPS proxying and secret
   rotation.
+- Phase 2 detail (structure, flows, APIs, tests, remaining work): PHASE_2_PROGRESS.md in this folder.
+- 2026-10-02 — Phase 2 implemented up to checkout only (catalog, class management, cart,
+  checkout, seat hold/expiry). Payment is intentionally not started: no `PaymentsModule`,
+  no payment tables, no PayOS/cash confirmation, no preview endpoint, no confirmation email.
+  - Modules: `catalog`, `classes` (class/unit/session aggregate; services split into
+    command, schedule, read and offers), `enrollments` (seat holds), `course-browse` (public
+    browse) and `commerce` (cart, checkout, orders, expiry job). Each module keeps
+    `controllers/ services/ entities/ enums/ dtos/ exceptions/ domain/`.
+  - Migrations: `course-catalog`, `class-operations`, `commerce-orders` and
+    `enrollment-seat-holds`. Deviation from the plan: `enrollments` is created now (with
+    `order_detail_id` and the partial unique index) because checkout holds seats through
+    PENDING_PAYMENT enrollments. The later `payments-enrollment` migration only needs the
+    payment tables and `class_unit_progress`.
+  - Checkout creates PENDING orders and seat holds but no `payment_transactions` row; the
+    payment step must create it when it is implemented.
+  - Verified: migrations up/down/up on a dedicated test database; 29 unit tests and 35
+    PostgreSQL integration tests (rollback, price revalidation, cash split per mentor,
+    last-seat concurrency, deadlock-free lock order, expiry and re-checkout, constraints);
+    two HTTP smoke runs (42 and 81 checks, including the expiry job running in the app and
+    the Swagger document) against the built app (roles, 401/403/404/409/422, public DTOs
+    without meeting URLs). Integration tests need `TEST_DATABASE_URL` pointing at a database
+    whose name ends with `_test`; they are skipped without it and CI now provides one.
+  - Demo data in src/database/seed: pnpm seed:account (two mentors, three students)
+    then pnpm seed:course-class (programming categories, courses and classes with timetables
+    taught by those mentors). Both are idempotent.
+  - Role cleanup: the `MANAGER` role was removed (enum, guards, docs and migration
+    `remove-manager-role`); `ADMIN` holds every management permission. The migration refuses
+    to run while a user still has the role.
+  - Not done: automated HTTP E2E tests (Vitest/esbuild does not emit decorator metadata, so
+    booting Nest in tests needs an SWC plugin decision), Postman collection update, staging
+    smoke. Phase 1 exit criteria are still open as noted above.

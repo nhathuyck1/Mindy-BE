@@ -9,7 +9,7 @@ Browse course -> chọn class ONLINE/OFFLINE -> add to cart -> checkout
   -> thanh toán đủ bằng PayOS hoặc tiền mặt -> được quyền học trong class
 ```
 
-Admin/manager tạo category, course, course unit, class và lịch học. Student chỉ mua
+Admin tạo category, course, course unit, class và lịch học. Student chỉ mua
 class đang `OPEN`, không mua trực tiếp course template. Một cart có thể chứa nhiều
 class. Giá và tổng tiền do server tính bằng số nguyên VND, không nhận giá từ client.
 
@@ -28,7 +28,7 @@ whiteboard, assignment và compiler vẫn ở phase sau.
 
 - Phase 0 migration workflow và PostgreSQL test database dùng được.
 - Phase 1 cung cấp authenticated principal (`userId`, `role`), guard và active
-  `STUDENT`; admin/manager/mentor test accounts có thể được provision an toàn.
+  `STUDENT`; admin/mentor test accounts có thể được provision an toàn.
 - API prefix `/api/v1`, error response, validation pipe và Swagger đã hoạt động.
 - Có SMTP adapter hoặc local mail sink để test email; live PayOS credentials không
   phải điều kiện để bắt đầu viết code và test bằng fake provider.
@@ -205,7 +205,7 @@ trả lỗi service unavailable rõ ràng, không ghi payment attempt rỗng.
 
 Danh sách public và danh sách order đều phân trang; student không truyền
   `studentId`, `price`, `status`, `mentorId` hoặc `paidAt`. API riêng cho mentor dùng
-snapshot mentor của cash order để lọc. Admin/manager có quyền quản trị catalog/class
+snapshot mentor của cash order để lọc. Admin có quyền quản trị catalog/class
 và xem đối soát, không tự xác nhận cash thay mentor trong Phase 2.
 
 ### 5.5 Error và security contract
@@ -274,6 +274,12 @@ thứ tự phụ thuộc, không sửa các migration Phase 1 đã chạy:
 5. Review `down` theo thứ tự ngược FK/enum. Database có order thật không được
    tự động chạy destructive rollback; dùng forward migration để sửa schema.
 
+> Ghi chú triển khai (2026-10-02): checkout cần seat hold nên bảng `enrollments` (kèm
+> `order_detail_id` và partial unique) đã được tạo sớm trong migration
+> `enrollment-seat-holds`, ngay sau `commerce-orders`. Migration `payments-enrollment` chỉ
+> còn các bảng payment và `class_unit_progress`. Checkout hiện chưa tạo
+> `payment_transactions`; bước payment sẽ bổ sung.
+
 DBML thiết kế cần được cập nhật cùng migration để phản ánh order payment method,
 enrollment-order link, partial uniqueness và mail/webhook tables. Đây là việc của
 giai đoạn triển khai, chưa thay DBML khi review plan.
@@ -283,7 +289,7 @@ giai đoạn triển khai, chưa thay DBML khi review plan.
 ### 7.1 Catalog và class management
 
 ```text
-Admin/manager tạo category -> tạo inactive course -> thêm/reorder units
+Admin tạo category -> tạo inactive course -> thêm/reorder units
   -> activate course -> tạo class từ course -> copy units trong transaction
   -> gán mentor/mode/lịch -> OPEN -> hiện trong public list
 ```
@@ -336,7 +342,7 @@ trong một transaction, trừ audit actor là provider. Return URL frontend ch�
 trạng thái từ API; không dùng query params của redirect để tự đánh dấu đã thanh toán.
 
 Nếu callback đến trễ, ghi payment/event cần đối soát, giữ order `EXPIRED` và
-enrollment không active. Admin/manager có danh sách đối soát; không thực hiện refund
+enrollment không active. Admin có danh sách đối soát; không thực hiện refund
 tự động trong Phase 2.
 
 ### 7.5 Expiry, access và confirmation email
@@ -446,7 +452,7 @@ state contract trước khi code song song; một người duy nhất sửa mỗ
 
 - [ ] Bốn migrations chạy từ DB rỗng, revert/rerun được trên test DB, constraints
       và FK delete behavior đã review.
-- [ ] Admin/manager tạo và mở được course/class; public browse được class theo mode.
+- [ ] Admin tạo và mở được course/class; public browse được class theo mode.
 - [ ] Student checkout multi-class, cash split theo mentor, giá/tổng tiền server-side
       và checkout lặp không tạo order trùng.
 - [ ] Seat hold không oversell, hết hạn được release an toàn.

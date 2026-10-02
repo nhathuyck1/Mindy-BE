@@ -43,6 +43,7 @@ import { UserIdentityEntity } from './user-identity.entity.js';
     PasswordService,
     TokenService,
   ],
-  exports: [AccessTokenGuard, RolesGuard, PasswordService, TokenService],
+  // AuthService is exported because AccessTokenGuard depends on it wherever the guard is used.
+  exports: [AccessTokenGuard, RolesGuard, PasswordService, TokenService, AuthService],
 })
 export class AuthModule {}

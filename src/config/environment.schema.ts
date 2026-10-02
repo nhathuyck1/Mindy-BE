@@ -57,6 +57,20 @@ export const environmentSchema = Joi.object({
   EMAIL_VERIFICATION_PATH: Joi.string()
     .pattern(/^\/(?!\/)/)
     .default('/verify-email'),
+  APP_TIME_ZONE: Joi.string()
+    .custom((value: string, helpers) => {
+      try {
+        new Intl.DateTimeFormat('en-CA', { timeZone: value });
+        return value;
+      } catch {
+        return helpers.error('any.invalid');
+      }
+    })
+    .default('Asia/Ho_Chi_Minh'),
+  ORDER_PAYOS_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(86_400).default(900),
+  ORDER_CASH_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(2_592_000).default(172_800),
+  ORDER_EXPIRY_JOB_ENABLED: Joi.boolean().default(true),
+  ORDER_EXPIRY_JOB_INTERVAL_SECONDS: Joi.number().integer().min(5).max(3600).default(60),
   SEED_ADMIN_EMAIL: Joi.string().email().allow('').default(''),
   SEED_ADMIN_PASSWORD: Joi.string().allow('').default(''),
   SEED_ADMIN_DISPLAY_NAME: Joi.string().allow('').default(''),

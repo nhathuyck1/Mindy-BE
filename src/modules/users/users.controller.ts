@@ -36,7 +36,7 @@ import { UsersService } from './users.service.js';
 @ApiTags('admin-users')
 @Controller('admin/users')
 @UseGuards(AccessTokenGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.MANAGER)
+@Roles(UserRole.ADMIN)
 @ApiCookieAuth('access_token')
 export class UsersController {
   constructor(

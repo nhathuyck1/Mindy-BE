@@ -82,7 +82,6 @@ adapter/guard; module nghiệp vụ sau chỉ nhận principal đã xác thực.
 
 ```text
 ADMIN
-MANAGER
 MENTOR
 STUDENT
 ```
@@ -389,7 +388,7 @@ Required scope:
   rõ login methods, nhưng không trả identity subject hoặc provider token.
 - List có pagination, filter role/status và stable sort.
 - Public registration chỉ tạo `STUDENT`; admin endpoint vẫn là đường duy nhất tạo
-  `ADMIN`, `MANAGER` hoặc `MENTOR`.
+  `ADMIN` hoặc `MENTOR`.
 - Nếu admin provision email đang có account `PENDING_VERIFICATION`, phải dùng explicit
   admin claim flow, thay credential/profile bằng dữ liệu admin cung cấp và ghi audit;
   không giữ password chưa verify từ public registration.
