@@ -243,6 +243,12 @@ pnpm seed:course-class   # 3 category, 6 course, 7 class có thời khóa biểu
 
 ## 7. Kiểm thử
 
+Kiểm tra lại ngày 2026-10-04: `pnpm check` pass bằng Node 22.20.0/pnpm 12.6.0,
+64/64 tests pass (29 unit + 35 integration, không skip), lint/type-check/build pass.
+Integration dùng PostgreSQL 17 container mới, database `mindy_center_test` riêng;
+không dùng DB development hoặc VPS. Đã sửa LF checkout và format DTO đăng ký;
+không thay đổi business logic Phase 2.
+
 | Loại | Vị trí | Số lượng |
 |---|---|---|
 | Unit | cạnh file nguồn, `*.spec.ts` | 29 (gồm test Phase 1 có sẵn) |
@@ -270,6 +276,12 @@ trong app; trùng lịch mentor; phân quyền và mã lỗi qua HTTP; Swagger c
 
 ## 9. Việc còn lại
 
+- 2026-10-04: Đã review nhánh `Feat/Webhooktest` và lập kế hoạch tiếp nối tại
+  `docs/implement_phase/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md`: receiver test VPS →
+  PayOS confirm-webhook → tích hợp BE → deploy và giao dịch nhỏ. Đây là kế hoạch;
+  chưa test VPS hoặc triển khai payment. Baseline mới: type-check/build và 29 test
+  pass, 35 integration test skip; `pnpm check` vướng format CRLF, Node local chưa
+  đúng phiên bản yêu cầu. Xem chi tiết và điều kiện nghiệm thu trong plan.
 - Payment: `PaymentsModule`, `payment_transactions`, PayOS link/webhook, mentor xác nhận
   cash, kích hoạt enrollment, `class_unit_progress`, email xác nhận, đối soát.
 - Preview giới hạn cho cash pending.

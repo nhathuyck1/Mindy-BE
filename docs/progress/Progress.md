@@ -18,6 +18,19 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-04: Reviewed Phase 2 code at `577af2f` on `Feat/Webhooktest` against
+  project rules and added `docs/implement_phase/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md`.
+  The plan gates standalone VPS webhook/PayOS confirmation before BE payment
+  integration, then fake/DB/HTTP tests and a VPS payment release with a small real
+  PayOS smoke test. No VPS access, webhook test, payment implementation or deployment
+  has been performed. PayOS has no separate sandbox per its current official docs.
+  Local recheck: type-check/build passed; 29 tests passed and 35 PostgreSQL tests
+  skipped without TEST_DATABASE_URL. Full check failed on CRLF formatter diagnostics;
+  lint/assist passed with formatter disabled for diagnosis only. Local Node 20.20.0
+  differs from the pinned Node 22.20.0 baseline; both issues remain release prerequisites.
+  User confirmed Git pull + Docker Compose on the VPS and no PayOS channel yet.
+  The plan preserves that deployment workflow, selects HTTPS/reverse proxy with
+  separate staging data, and leaves real PayOS confirmation pending channel setup.
 - 2026-10-02: Added a detailed Phase 2 plan under `docs/implement_phase/` for
   course/class browsing, cart, checkout, full cash/PayOS payment and enrollment.
   It separates planning, migrations and implementation, and leaves live PayOS
@@ -34,6 +47,18 @@ Compiler / Judge
 
 ## Implementation status
 
+- 2026-10-04 — Fixed the Windows checkout quality gate: added `.gitattributes`
+  (`text=auto eol=lf`), explicitly set Biome LF, normalized tracked text files locally
+  and formatted `register.dto.ts` (quotes/import layout only). Existing Node version
+  files already pinned 22.20.0. Installed/selected Node 22.20.0 with nvm-windows and
+  pnpm 12.6.0; confirmed the Node version used through pnpm. Frozen-lockfile install
+  succeeded without dependency/lockfile changes. Full `pnpm check` passed: lint,
+  type-check, all 64 tests (29 unit + 35 PostgreSQL integration, none skipped) and build.
+  Integration tests used a new, disposable PostgreSQL 17 container on a dynamic
+  loopback port with its own `mindy_center_test` database, not an existing project DB.
+  Migration up/down/up, checkout concurrency/rollback and expiry tests passed.
+  README now explains runtime selection, LF and the full-test database requirement.
+  These are local results; no merge, push or VPS deployment was performed.
 - 2026-09-30 — Phase 0 implementation and local runtime smoke checks pass: source and
   production migration commands, PostgreSQL readiness, non-root Docker image startup,
   persistent local volume and `pnpm check` were verified. Phase 0 is not formally

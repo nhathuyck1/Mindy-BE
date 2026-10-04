@@ -23,6 +23,12 @@ NestJS modular monolith for course operations, class management, enrollment, ord
 6. Apply database migrations with `pnpm migration:run`.
 7. Run the API with `pnpm dev`.
 
+Use Node.js **22.20.0** (`.nvmrc` / `.node-version`) and pnpm **12.6.0**.
+On Windows with nvm-windows, run `nvm install 22.20.0` then `nvm use 22.20.0`.
+Check `node --version`, `pnpm --version` and `pnpm exec node --version` in the
+terminal used for checks. Git attributes and EditorConfig keep text files at LF;
+Biome enforces the same line ending.
+
 The liveness endpoint is `GET /api/v1/health/live`. Swagger is available at `/docs` only when `SWAGGER_ENABLED=true`.
 
 ## Quality commands
@@ -34,6 +40,19 @@ pnpm test
 pnpm build
 pnpm check
 ```
+
+For a full check, provide `TEST_DATABASE_URL` for a dedicated PostgreSQL database
+whose name ends with `_test`. The integration suite wipes that database's public
+schema and reruns migrations; it skips without this variable. Never point it at
+development, staging or production data. In PowerShell, for example:
+
+```powershell
+$env:TEST_DATABASE_URL = 'postgresql://mindy:mindy@127.0.0.1:5433/mindy_center_test'
+pnpm check
+```
+
+Create that test database separately before running the example; the normal local
+Compose database is `mindy_center`, not `mindy_center_test`.
 
 ## Project documentation
 
