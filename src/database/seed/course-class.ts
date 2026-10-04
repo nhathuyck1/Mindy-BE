@@ -17,11 +17,13 @@ import { UserEntity } from '../../modules/users/user.entity.js';
 import { UserRole } from '../../modules/users/user-role.enum.js';
 import { UserStatus } from '../../modules/users/user-status.enum.js';
 import dataSource from '../data-source.js';
+import { COURSE_IMAGE_URLS, seedCourseImages } from './helpers/course-images.js';
 
 /**
  * Development seed for the catalog and classes: programming categories, courses with units
  * and classes with a weekly timetable, taught by the mentors of the account seed. Safe to run repeatedly: rows are matched
- * by slug, code or email and existing ones are left untouched.
+ * by slug, code or email. Existing course images are filled only when missing;
+ * other existing data is left untouched.
  *
  *   pnpm seed:account        (once, creates the mentors)
  *   pnpm seed:course-class
@@ -316,6 +318,7 @@ async function seedCourses(
         code: seed.code,
         title: seed.title,
         description: seed.description,
+        imgUrl: COURSE_IMAGE_URLS[seed.code] ?? null,
         priceAmount: seed.priceAmount,
         isActive: seed.isActive,
       }),
@@ -438,14 +441,16 @@ async function seedCoursesAndClasses(source: DataSource): Promise<void> {
   const summary = await source.transaction(async (manager) => {
     const categories = await seedCategories(manager);
     const courses = await seedCourses(manager, categories);
+    const images = await seedCourseImages(manager);
     const mentors = await findMentors(manager);
     const classes = await seedClasses(manager, mentors, startDate);
-    return { courses, classes };
+    return { courses, classes, images };
   });
 
   console.log(
     `Course/class seed done: ${summary.courses} course(s) and ${summary.classes} class(es) created; ` +
-      `new classes start on ${startDate}. Existing rows were left untouched.`,
+      `${summary.images} missing course image(s) filled; new classes start on ${startDate}. ` +
+      'Existing images and other existing data were preserved.',
   );
 }
 

@@ -14,6 +14,8 @@ import { ClassOperations1790900000001 } from '../../src/database/migrations/1790
 import { CommerceOrders1790900000002 } from '../../src/database/migrations/1790900000002-commerce-orders.js';
 import { EnrollmentSeatHolds1790900000003 } from '../../src/database/migrations/1790900000003-enrollment-seat-holds.js';
 import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/1790900000004-remove-manager-role.js';
+import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
+import { CourseDto, CourseManagementDetailDto } from '../../src/modules/catalog/dtos/course.dto.js';
 import { CourseEntity } from '../../src/modules/catalog/entities/course.entity.js';
 import { CourseCategoryEntity } from '../../src/modules/catalog/entities/course-category.entity.js';
 import { CourseUnitEntity } from '../../src/modules/catalog/entities/course-unit.entity.js';
@@ -41,6 +43,7 @@ import { CheckoutService } from '../../src/modules/commerce/services/checkout.se
 import { OrderExpiryService } from '../../src/modules/commerce/services/order-expiry.service.js';
 import { OrderExpiryWorker } from '../../src/modules/commerce/services/order-expiry.worker.js';
 import { OrdersService } from '../../src/modules/commerce/services/orders.service.js';
+import { PublicCourseDetailDto } from '../../src/modules/course-browse/dtos/public-course-detail.dto.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
 import { EnrollmentsService } from '../../src/modules/enrollments/services/enrollments.service.js';
@@ -61,7 +64,7 @@ if (databaseUrl.length > 0 && !isTestDatabase) {
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const DAY_MS = 86_400_000;
-const PHASE_2_MIGRATION_COUNT = 5;
+const PHASE_2_MIGRATION_COUNT = 6;
 
 const config = {
   getOrThrow<T>(key: string): T {
@@ -132,6 +135,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         CommerceOrders1790900000002,
         EnrollmentSeatHolds1790900000003,
         RemoveManagerRole1790900000004,
+        AddCourseImgUrl1791072000000,
       ],
     });
     await dataSource.initialize();
@@ -278,6 +282,49 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
   });
 
   describe('catalog and class management', () => {
+    it('persists course images, exposes them publicly and preserves or clears them on update', async () => {
+      const category = await categoriesService.create({ name: 'Course images' });
+      const created = await coursesService.create({
+        categoryId: category.id,
+        code: 'IMG-101',
+        title: 'Course with image',
+        priceAmount: 100_000,
+      });
+      expect(created.course.imgUrl).toBeNull();
+
+      const imgUrl = 'https://cdn.example.com/courses/web101.jpg';
+      const withImage = await coursesService.create({
+        categoryId: category.id,
+        code: 'IMG-102',
+        title: 'Image supplied at creation',
+        priceAmount: 100_000,
+        imgUrl,
+      });
+      expect((await coursesService.getManagementDetail(withImage.course.id)).course.imgUrl).toBe(
+        imgUrl,
+      );
+
+      await coursesService.update(created.course.id, { imgUrl });
+      const renamed = await coursesService.update(created.course.id, { title: 'Renamed course' });
+      expect(renamed.course.imgUrl).toBe(imgUrl);
+      expect(
+        new CourseManagementDetailDto(renamed.course, renamed.category, renamed.units).imgUrl,
+      ).toBe(imgUrl);
+      await coursesService.addUnit(created.course.id, { title: 'Image course unit' });
+      await coursesService.activate(created.course.id);
+      const publicDetail = await coursesService.getActiveDetail(created.course.id);
+      expect(new PublicCourseDetailDto(publicDetail, []).imgUrl).toBe(imgUrl);
+      const publicList = await coursesService.listActive({ page: 1, pageSize: 100 });
+      const item = publicList.items.find(({ course }) => course.id === created.course.id);
+      expect(item).toBeDefined();
+      if (item !== undefined) {
+        expect(new CourseDto(item.course, item.category).imgUrl).toBe(imgUrl);
+      }
+      const cleared = await coursesService.update(created.course.id, { imgUrl: null });
+      expect(cleared.course.imgUrl).toBeNull();
+      expect((await coursesService.getActiveDetail(created.course.id)).course.imgUrl).toBeNull();
+    });
+
     it('creates a course inactive and activates it only with a unit', async () => {
       const category = await categoriesService.create({ name: 'Lập trình Web' });
       expect(category.slug).toBe('lap-trinh-web');

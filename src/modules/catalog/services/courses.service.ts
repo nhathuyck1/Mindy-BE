@@ -63,6 +63,7 @@ export class CoursesService {
           code,
           title: input.title.trim(),
           description: normalizeOptionalText(input.description),
+          imgUrl: input.imgUrl ?? null,
           priceAmount: input.priceAmount,
           isActive: false,
         }),
@@ -88,6 +89,9 @@ export class CoursesService {
       }
       if (input.description !== undefined) {
         course.description = normalizeOptionalText(input.description);
+      }
+      if (input.imgUrl !== undefined) {
+        course.imgUrl = input.imgUrl;
       }
       if (input.priceAmount !== undefined) {
         course.priceAmount = input.priceAmount;

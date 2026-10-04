@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Length,
   Matches,
@@ -37,6 +38,18 @@ export class CreateCourseDto {
   @IsString()
   @MaxLength(10_000)
   readonly description?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uri',
+    nullable: true,
+    maxLength: 2048,
+    example: 'https://cdn.example.com/courses/web101.jpg',
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, disallow_auth: true })
+  @MaxLength(2048)
+  readonly imgUrl?: string | null;
 
   @ApiProperty({
     type: Number,

@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Length,
   Max,
@@ -35,6 +36,18 @@ export class UpdateCourseDto {
   @IsString()
   @MaxLength(10_000)
   readonly description?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uri',
+    nullable: true,
+    maxLength: 2048,
+    description: 'Send null to clear the course image; omit to keep the current image',
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, disallow_auth: true })
+  @MaxLength(2048)
+  readonly imgUrl?: string | null;
 
   @ApiPropertyOptional({
     type: Number,

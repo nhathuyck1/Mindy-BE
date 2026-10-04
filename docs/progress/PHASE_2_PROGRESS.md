@@ -92,6 +92,7 @@ course-browse ──► classes, catalog
 | `1790900000002-commerce-orders` | `carts`, `cart_details`, `orders`, `order_details` |
 | `1790900000003-enrollment-seat-holds` | `enrollments` + partial unique `(student_id, class_id)` |
 | `1790900000004-remove-manager-role` | bỏ `MANAGER` khỏi `user_role_enum` |
+| `1791072000000-add-course-img-url` | thêm `courses.img_url` nullable, tối đa 2048 ký tự |
 
 Khác kế hoạch gốc: bảng `enrollments` được tạo sớm (migration thứ tư) vì checkout giữ
 chỗ bằng enrollment `PENDING_PAYMENT`. Migration `payments-enrollment` sau này chỉ còn
@@ -217,6 +218,22 @@ client gửi field không cho phép (giá, tổng tiền, `studentId`, status).
 
 ## 5. Cấu hình mới
 
+### Course image (bổ sung 2026-10-04)
+
+`POST /api/v1/admin/courses` và `PATCH /api/v1/admin/courses/:courseId` nhận
+`imgUrl` tùy chọn, URL tuyệt đối HTTP/HTTPS tối đa 2048 ký tự, không chứa credential.
+POST bỏ qua field lưu `null`; PATCH bỏ qua field giữ ảnh hiện tại, gửi `null` xóa ảnh.
+Course list/detail của public và admin đều trả `imgUrl: string | null`.
+
+```json
+{
+  "imgUrl": "https://cdn.example.com/courses/web101.jpg"
+}
+```
+
+Đây là URL ảnh, chưa có upload ảnh trong scope này. Khi deploy, chạy migration mới
+trước khi khởi động code mới; Compose production đã có migration job cho bước đó.
+
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
 | `APP_TIME_ZONE` | `Asia/Ho_Chi_Minh` | múi giờ của trung tâm, dùng cho ngày của class |
@@ -227,6 +244,23 @@ client gửi field không cho phép (giá, tổng tiền, `studentId`, status).
 | `SEED_ACCOUNT_PASSWORD` | — | mật khẩu các tài khoản của `pnpm seed:account` |
 
 ## 6. Seed dữ liệu dev
+
+Lệnh tổng hợp (admin + accounts + course/class + ảnh):
+
+```bash
+pnpm migration:run  # sau khi drop/recreate DB, tạo schema trước
+pnpm seed:data
+```
+
+Đặt `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_DISPLAY_NAME` và
+`SEED_ACCOUNT_PASSWORD` trong `.env`. Lệnh tổng hợp dừng khi một seed lỗi.
+Seed tạo 1 admin, 2 mentor, 3 student, 3 category, 6 course/27 unit,
+7 class/47 session; cả 6 course (kể cả TypeScript inactive) có link ảnh Unsplash
+cố định đã kiểm tra HTTP 200/JPEG ngày 2026-10-04. Chạy lại không tạo bản ghi trùng;
+account seed đặt lại password demo theo env, admin hiện có được giữ nguyên.
+
+`pnpm seed:course-images` chỉ bổ sung ảnh cho các course demo có `img_url` null,
+không ghi đè ảnh đã chỉnh riêng và không cần seed lại accounts/class.
 
 Chạy theo thứ tự, cả hai chạy lại được nhiều lần:
 
@@ -242,6 +276,10 @@ pnpm seed:course-class   # 3 category, 6 course, 7 class có thời khóa biểu
 - Admin vẫn tạo bằng `pnpm seed:admin`.
 
 ## 7. Kiểm thử
+
+Sau bổ sung `imgUrl` ngày 2026-10-04: full `pnpm check` pass, 67/67 tests
+(31 unit + 36 integration), gồm validation URL, lưu/đọc DTO public/admin,
+PATCH giữ/xóa ảnh và migration up/down/up. Test dùng PostgreSQL 17 container riêng.
 
 Kiểm tra lại ngày 2026-10-04: `pnpm check` pass bằng Node 22.20.0/pnpm 12.6.0,
 64/64 tests pass (29 unit + 35 integration, không skip), lint/type-check/build pass.

@@ -78,6 +78,30 @@ pnpm seed:admin
 Do not put production credentials in Git or in a normal application image. Production
 bootstrap requires `SEED_ADMIN_CONFIRM=YES` explicitly.
 
+## Seed all demo data
+
+After recreating the database, run migrations, then one seed command:
+
+```bash
+pnpm migration:run
+pnpm seed:data
+```
+
+Configure `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_DISPLAY_NAME`
+and `SEED_ACCOUNT_PASSWORD` in `.env` first. `seed:data` runs admin → accounts →
+course/class → course images, stopping if a step fails. It creates one admin,
+two mentors, three students, three categories, six courses with Unsplash images,
+27 course units, seven classes and 47 sessions.
+
+Rerunning does not duplicate rows. The existing admin is preserved; demo account
+passwords are reset to `SEED_ACCOUNT_PASSWORD` by the account seed. Course/class
+data and existing images are preserved; missing demo course images are filled.
+Use `pnpm seed:course-images` to fill images only, without seeding accounts/classes.
+The image seed stores fixed Unsplash CDN URLs; it does not fetch images at runtime.
+
+For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`
+and `SEED_DEMO_CONFIRM=YES` to run the full demo seed.
+
 ## Manual API verification
 
 Start PostgreSQL, apply migrations, seed the local admin and run the API:

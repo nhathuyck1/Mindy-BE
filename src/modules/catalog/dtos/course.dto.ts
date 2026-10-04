@@ -60,6 +60,9 @@ export class CourseDto {
   @ApiProperty({ type: String, nullable: true })
   readonly description: string | null;
 
+  @ApiProperty({ type: String, format: 'uri', nullable: true, maxLength: 2048 })
+  readonly imgUrl: string | null;
+
   @ApiProperty({ type: Number, example: 2_500_000, description: 'Integer VND amount' })
   readonly priceAmount: number;
 
@@ -71,6 +74,7 @@ export class CourseDto {
     this.code = course.code;
     this.title = course.title;
     this.description = course.description;
+    this.imgUrl = course.imgUrl;
     this.priceAmount = course.priceAmount;
     this.category = new CourseCategoryRefDto(category);
   }

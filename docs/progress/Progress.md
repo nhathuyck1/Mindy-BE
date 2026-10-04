@@ -47,6 +47,30 @@ Compiler / Judge
 
 ## Implementation status
 
+- 2026-10-04 — Added fixed Unsplash image URLs for all six demo courses, verified
+  each URL with a successful HTTP 200 JPEG GET (1200×675 requested). Course/class
+  seed includes images for new courses and fills missing images for existing demo
+  courses without replacing custom images. Added `pnpm seed:course-images` and
+  `pnpm seed:data` (admin → accounts → course/class → images, fail-fast).
+  Verified full reseeding and rerun on a dedicated disposable PostgreSQL 17 DB:
+  6 users, 3 categories, 6 courses, 27 course units, 7 classes, 47 sessions,
+  6 courses with images; no duplicate rows, null-image backfill and custom-image
+  preservation passed. Full `pnpm check` after image seed implementation passed
+  all 67 tests plus lint/type-check/build; aggregate seed command and final lint
+  also passed. Local development DB migrations were applied, but its catalog was
+  empty; seed execution verification used the disposable DB with test credentials.
+  No VPS seed/deployment was performed. README documents seed env requirements
+  and the existing demo-account password-reset behavior.
+- 2026-10-04 — Added optional course `imgUrl` across admin create/update and
+  public/admin course list/detail responses. New migration `1791072000000-add-course-img-url`
+  adds nullable `courses.img_url` varchar(2048), preserving existing courses without
+  images. HTTP/HTTPS URLs only, explicit protocol, no embedded credentials, max 2048
+  characters; omitted PATCH values preserve the image and null clears it. Updated
+  DBML and Phase 2 API notes. Full `pnpm check` passed under Node 22.20.0/pnpm 12.6.0:
+  lint, type-check, 67 tests (31 unit + 36 PostgreSQL integration, none skipped) and
+  build. Integration includes image persistence/mapping/update/clear and migration
+  up/down/up on a dedicated disposable PostgreSQL 17 test container. No VPS migration
+  or deployment has been performed.
 - 2026-10-04 — Fixed the Windows checkout quality gate: added `.gitattributes`
   (`text=auto eol=lf`), explicitly set Biome LF, normalized tracked text files locally
   and formatted `register.dto.ts` (quotes/import layout only). Existing Node version
