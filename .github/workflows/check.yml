@@ -8,6 +8,23 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mindy_center_test
+          POSTGRES_USER: mindy
+          POSTGRES_PASSWORD: mindy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mindy -d mindy_center_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # Integration tests migrate this dedicated database from empty on every run.
+      TEST_DATABASE_URL: postgresql://mindy:mindy@localhost:5432/mindy_center_test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

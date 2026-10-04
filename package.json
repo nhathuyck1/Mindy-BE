@@ -25,6 +25,8 @@
     "migration:run:build": "typeorm -d dist/database/data-source.js migration:run",
     "migration:revert:build": "typeorm -d dist/database/data-source.js migration:revert",
     "seed:admin": "tsx src/database/seed-admin.ts",
+    "seed:account": "tsx src/database/seed/account.ts",
+    "seed:course-class": "tsx src/database/seed/course-class.ts",
     "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build"
   },
   "dependencies": {

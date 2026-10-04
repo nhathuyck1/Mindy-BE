@@ -12,7 +12,6 @@
 
   Enum user_role {
     ADMIN
-    MANAGER
     MENTOR
     STUDENT
   }
@@ -241,7 +240,7 @@
     updated_at timestamptz [not null, default: `now()`]
 
     indexes {
-      (course_id, unit_number) [unique]
+      (course_id, unit_number) [unique, note: 'DEFERRABLE INITIALLY IMMEDIATE so one UPDATE can renumber units']
     }
   }
 
@@ -308,13 +307,14 @@
     id uuid [pk]
     student_id uuid [not null]
     class_id uuid [not null]
+    order_detail_id uuid [not null, unique, note: 'Order line whose checkout created this seat hold']
     status enrollment_status [not null, default: 'PENDING_PAYMENT']
     enrolled_at timestamptz
     created_at timestamptz [not null, default: `now()`]
     updated_at timestamptz [not null, default: `now()`]
 
     indexes {
-      (student_id, class_id) [unique]
+      (student_id, class_id) [unique, note: 'Partial: WHERE status IN (PENDING_PAYMENT, ACTIVE, COMPLETED); CANCELLED rows are history']
       (class_id, status)
     }
   }
@@ -347,7 +347,9 @@
     order_code varchar(50) [not null, unique, note: 'Transfer description for VietQR']
     total_amount bigint [not null, note: 'VND integer amount']
     status order_status [not null, default: 'PENDING']
-    expires_at timestamptz
+    payment_type payment_type [not null, note: 'Phase 2 orders accept PAYOS or CASH only']
+    cash_mentor_id uuid [note: 'Mentor snapshot allowed to confirm cash; required for CASH, null for PAYOS']
+    expires_at timestamptz [not null, note: 'Seat hold deadline; must be after created_at']
     paid_at timestamptz
     created_at timestamptz [not null, default: `now()`]
     updated_at timestamptz [not null, default: `now()`]
@@ -355,6 +357,7 @@
     indexes {
       (student_id, created_at)
       (status, expires_at)
+      (cash_mentor_id, status)
     }
   }
 

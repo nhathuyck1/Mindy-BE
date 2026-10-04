@@ -212,7 +212,7 @@ Tasks:
 2. Validate file size, extension and MIME signature before marking `READY`.
 3. Add async metadata extraction behind `MINIO_ENABLED`.
 4. Allow a material to reference only a ready file.
-5. Authorize material access through active enrollment or management role.
+5. Authorize material access through active enrollment or the admin role.
 
 MinIO network operations must not run inside a PostgreSQL transaction.
 
@@ -287,7 +287,7 @@ Implement attendance only after enrollment and class sessions are stable.
 
 - Record one attendance row per `(enrollment_id, class_session_id)`.
 - Validate that enrollment and session belong to the same class.
-- Restrict writes to assigned mentor or management roles.
+- Restrict writes to assigned mentor or the admin role.
 - Add paginated class roster, schedule and revenue/order operational queries.
 
 ## Migration strategy

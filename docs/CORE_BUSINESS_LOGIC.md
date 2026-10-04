@@ -46,7 +46,7 @@ Owns `file_objects` and `file_metadata`. The first course implementation only re
 
 ### Create a course
 
-1. An admin or manager creates or selects an active category.
+1. An admin creates or selects an active category.
 2. The system validates that course code is unique and price is non-negative.
 3. The course is created inactive by default in the application flow, even if the database has a technical default.
 4. Units are added with a unique `unit_number` inside the course.
@@ -149,13 +149,15 @@ The unique `(student_id, class_id)` enrollment constraint is the final defense a
 |---|---|
 | Read public active courses/open classes | Public |
 | Register through email/password or Google | Public; resulting role is always `STUDENT` |
-| Manage categories/courses/units/materials | `ADMIN`, `MANAGER` |
-| Create classes and schedules | `ADMIN`, `MANAGER` |
-| Read assigned class operations | Assigned `MENTOR`, `ADMIN`, `MANAGER` |
+| Manage categories/courses/units/materials | `ADMIN` |
+| Create classes and schedules | `ADMIN` |
+| Read assigned class operations | Assigned `MENTOR`, `ADMIN` |
 | Manage own cart and checkout | Active `STUDENT` |
 | Read own orders/payments | Order owner |
 | Process payment callback | Verified provider adapter only |
-| Manually confirm cash/bank transfer | Authorized `ADMIN` or `MANAGER`, with audit data |
+| Manually confirm cash/bank transfer | Authorized `ADMIN`, with audit data |
+
+There is no separate manager role: `ADMIN` holds every management permission.
 
 Role checks never replace ownership checks. A student must not access another student's cart, order, payment or enrollment by guessing an ID.
 
