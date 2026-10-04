@@ -213,6 +213,7 @@
     code varchar(50) [not null, unique]
     title varchar(250) [not null]
     description text
+    img_url varchar(2048) [note: 'Optional HTTP/HTTPS image URL']
     price_amount bigint [not null, default: 0, note: 'VND integer amount shared by all classes of this course']
     is_active boolean [not null, default: true]
     created_at timestamptz [not null, default: `now()`]

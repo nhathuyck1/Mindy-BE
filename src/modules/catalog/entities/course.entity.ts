@@ -22,6 +22,9 @@ export class CourseEntity extends TimestampedEntity {
   @Column({ name: 'description', type: 'text', nullable: true })
   description!: string | null;
 
+  @Column({ name: 'img_url', type: 'varchar', length: 2048, nullable: true })
+  imgUrl!: string | null;
+
   /** Integer VND amount shared by every class of this course. */
   @Column({
     name: 'price_amount',

@@ -27,6 +27,8 @@
     "seed:admin": "tsx src/database/seed-admin.ts",
     "seed:account": "tsx src/database/seed/account.ts",
     "seed:course-class": "tsx src/database/seed/course-class.ts",
+    "seed:course-images": "tsx src/database/seed/course-images.ts",
+    "seed:data": "pnpm seed:admin && pnpm seed:account && pnpm seed:course-class && pnpm seed:course-images",
     "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build"
   },
   "dependencies": {
