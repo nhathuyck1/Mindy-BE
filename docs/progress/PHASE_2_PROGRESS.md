@@ -314,6 +314,13 @@ trong app; trùng lịch mentor; phân quyền và mã lỗi qua HTTP; Swagger c
 
 ## 9. Việc còn lại
 
+- 2026-10-04: Tạo file riêng `docs/implement_phase/PHASE_2_1_WEBHOOK_VPS_PAYOS.md`
+  theo yêu cầu user, bốn bước và dừng review sau mỗi bước. Bước 1 đã chuẩn bị
+  receiver SDK PayOS riêng ở `tools/webhook-probe`, Compose/Dockerfile và VPS runbook;
+  tooling type-check/lint, 6/6 HTTP test key giả, frozen install và Docker build local pass.
+  Chưa truy cập/test VPS, chưa confirm hoặc tích hợp payment vào BE. Bước 2–4 chưa làm;
+  chờ user check bước 1 và cung cấp domain/SSH/thư mục deploy để test trên server.
+
 - 2026-10-04: Đã review nhánh `Feat/Webhooktest` và lập kế hoạch tiếp nối tại
   `docs/implement_phase/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md`: receiver test VPS →
   PayOS confirm-webhook → tích hợp BE → deploy và giao dịch nhỏ. Đây là kế hoạch;

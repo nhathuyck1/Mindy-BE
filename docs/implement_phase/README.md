@@ -8,6 +8,7 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 1. [Phase 0 — Foundation, database và deployment baseline](./PHASE_0_FOUNDATION.md)
 2. [Phase 1 — Registration, users, Google/password authentication và authorization baseline](./PHASE_1_IDENTITY_AUTH.md)
 3. [Phase 2 — Course registration, checkout, payment và enrollment](./PHASE_2_COURSE_TO_PAYMENT.md)
+4. [Phase 2.1 — Test webhook PayOS trên server, từng bước 1–4](./PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
 
 Kế hoạch tiếp nối sau checkout:
 [Webhook VPS → PayOS BE → deploy test](./PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).

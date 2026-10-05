@@ -18,6 +18,23 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-04: Phase 2.1 step 2 discovery via user-provided VPS outputs confirmed
+  Cloudflare Tunnel `cloudflare-mindy`, shared Docker network `mindy-be_backend`,
+  and API ingress `api.quanh123.id.vn -> http://mindy-be-api-1:3000`. Added a
+  separate Compose tunnel override with alias `mindy-payos-probe` and updated
+  runbook. Receiver code is still local; no remote deploy/tunnel mutation/confirm
+  or real payment has occurred. The VPS uses clean `dev` at `e63bf92`.
+
+- 2026-10-04: Created `docs/implement_phase/PHASE_2_1_WEBHOOK_VPS_PAYOS.md` as a
+  separate Phase 2.1 plan with four numbered steps and a user review stop after
+  each step. User now has Casso and a verified PayOS account. Completed step 1
+  preparation only: standalone `tools/webhook-probe` with pinned SDK 2.0.5,
+  signature verification, bounded JSON input/timeouts, redacted correlation logs,
+  isolated loopback Compose deployment and VPS runbook. Tooling type-check/lint,
+  6/6 synthetic HTTP tests, frozen-lockfile install and local Docker image build
+  passed. No VPS access/deployment, PayOS confirm or real payment was performed;
+  steps 2–4 have not started. Waiting for user review before continuing.
+
 - 2026-10-04: Reviewed Phase 2 code at `577af2f` on `Feat/Webhooktest` against
   project rules and added `docs/implement_phase/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md`.
   The plan gates standalone VPS webhook/PayOS confirmation before BE payment
