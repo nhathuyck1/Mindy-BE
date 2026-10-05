@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { ConfigService } from '@nestjs/config';
-import { PayOS } from '@payos/node';
+import { APIError, PayOS } from '@payos/node';
 import { describe, expect, it, vi } from 'vitest';
 import { environmentSchema } from '../../../config/environment.schema.js';
 import { PayosAdapter } from './payos.adapter.js';
@@ -44,6 +44,32 @@ async function signed(d: typeof data & Record<string, unknown> = data) {
 }
 
 describe('payOS adapter signature and configuration', () => {
+  it.each([
+    { code: '101', desc: 'Mã thanh toán không tồn tại' },
+    { code: '231', desc: 'Payment link not found' },
+  ])('treats explicit missing-link response $code as absent', async (response) => {
+    vi.spyOn(PayOS.prototype, 'request').mockRejectedValue(
+      new APIError(200, response, undefined, new Headers()),
+    );
+    await expect(new PayosAdapter(new ConfigService(values)).get(1000000000)).resolves.toBeNull();
+  });
+
+  it.each([
+    { status: 200, code: '101', desc: 'Unspecified error' },
+    { status: 503, code: '101', desc: 'Mã thanh toán không tồn tại' },
+    { status: 401, code: '401', desc: 'Credentials rejected' },
+    { status: 429, code: '429', desc: 'Rate limited' },
+  ])(
+    'keeps ambiguous/provider errors unavailable ($status/$code)',
+    async ({ status, ...response }) => {
+      vi.spyOn(PayOS.prototype, 'request').mockRejectedValue(
+        new APIError(status, response, undefined, new Headers()),
+      );
+      await expect(new PayosAdapter(new ConfigService(values)).get(1000000000)).rejects.toThrow(
+        'Payment is temporarily unavailable',
+      );
+    },
+  );
   it('verifies with official SDK and recognizes the complete signed confirm sample', async () => {
     const adapter = new PayosAdapter(new ConfigService(values));
     expect((await adapter.verify(await signed())).isConfirmSample).toBe(true);

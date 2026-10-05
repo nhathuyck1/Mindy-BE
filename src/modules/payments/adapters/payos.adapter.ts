@@ -123,8 +123,16 @@ export class PayosAdapter implements PayosProvider {
         transactions: link.transactions.map((t) => ({ reference: t.reference, amount: t.amount })),
       };
     } catch (error: unknown) {
-      // payOS 231 = payment link not found. Other failures are ambiguous: never create blindly.
-      if (error instanceof APIError && error.code === '231') return null;
+      // VPS evidence: GET for a missing code returns HTTP 200/code 101 with this desc.
+      // Keep legacy 231 support; unrelated 101/errors must not trigger blind CREATE.
+      if (
+        error instanceof APIError &&
+        (error.code === '231' ||
+          (error.status === 200 &&
+            error.code === '101' &&
+            error.desc === 'Mã thanh toán không tồn tại'))
+      )
+        return null;
       throw new PaymentUnavailableException();
     }
   }

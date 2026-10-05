@@ -1,9 +1,31 @@
 # Phase 2.2 — Tiến độ tích hợp payOS BE và giao dịch thật
 
-Cập nhật: 2026-10-05.
+Cập nhật: 2026-10-06.
 Kế hoạch: [Phase 2.2](../implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md).
 
 ## Hiện trạng
+
+### Increment sửa lỗi tạo QR — 2026-10-06
+
+- User đã pull/deploy; screenshot migration báo no pending migrations. Public
+  callback sau đổi tunnel trả 400 `INVALID_PAYMENT_WEBHOOK`, chứng minh route vào
+  BE. `CONFIRM_OK` screenshot trước đó được chạy khi callback còn vào probe;
+  không dùng làm bằng chứng BE đã nhận confirm sau đổi route.
+- Env container PAYOS_ENABLED/CREATE_LINK_ENABLED=true và credentials/return/cancel
+  đều SET. Chẩn đoán SDK GET payment mapping của order trên VPS trả HTTP 200,
+  code `101`, desc `Mã thanh toán không tồn tại`. Đây là response provider thực
+  do user cung cấp; adapter chỉ nhận `231` nên workflow dừng trước CREATE với 503.
+- Sửa adapter nhận thêm đúng HTTP 200/code 101/desc đã quan sát như missing link.
+  Giữ nguyên attempt/code, GET-first, amount/deadline, signature và transaction.
+  101 không rõ nghĩa hoặc server/auth/rate-limit errors tiếp tục trả unavailable.
+- Local `pnpm check` pass 102 tests (42 unit + 60 PostgreSQL integration, không
+  skip) trên container PostgreSQL 17/DB riêng. Regression dùng adapter thực, mock
+  SDK network: GET 101 → CREATE cùng code → persist QR → reuse không gọi lại mạng.
+  Built-app HTTP tests pass 4/4. Không dùng credentials thật hoặc tạo giao dịch
+  PayOS trong test.
+- Bản sửa còn ở workspace; cần commit/push, pull/build/recreate API trên VPS.
+  Không cần migration mới/đổi env/đổi tunnel/confirm lại vì bản sửa này. Order cũ
+  đã hết hạn cần checkout mới; chưa có evidence tạo QR/live PAID/ACTIVE/mail.
 
 - Đã kiểm tra: plan tích hợp có sẵn trong mục B–D của kế hoạch tiếp nối và bước 4
   Phase 2.1; đã tách thành plan Phase 2.2 hiện hành.
