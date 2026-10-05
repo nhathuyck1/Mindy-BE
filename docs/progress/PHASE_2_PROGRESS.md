@@ -1,11 +1,67 @@
 # Phase 2 — Tiến độ: Course → Class → Cart → Checkout
 
-Cập nhật: 2026-10-02. Kế hoạch gốc: `docs/implement_phase/PHASE_2_COURSE_TO_PAYMENT.md`.
+Cập nhật: 2026-10-05. Kế hoạch gốc: `docs/implement_phase/PHASE_2_COURSE_TO_PAYMENT.md`.
+
+## Cập nhật Phase 2.1 / Phase 2.2
+
+- Webhook receiver độc lập đã test trên server; SDK confirm và callback mẫu 200
+  verified pass ngày 2026-10-05. Evidence/giới hạn A1 trong
+  [Phase 2.1](../implement_phase/PHASE_2_1_WEBHOOK_VPS_PAYOS.md).
+- Đã có thiết kế payOS BE ở plan cũ; đã tách thành
+  [Phase 2.2](../implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md), đối chiếu toàn bộ
+  `document/Flow.txt`: full payment, class onl/off, email online, mentor confirm
+  cash và preview pending. Chat/DM pending vẫn ở phase chat.
+  Tiến độ riêng: [Phase 2.2 progress](./PHASE_2_2_PROGRESS.md).
+- Phase 2.2 đã implement/test local: SDK/module/migration, link/retry, verified
+  settlement/activation/progress, full access, mail outbox và ADMIN reconciliation.
+  `pnpm check` pass 91 tests, HTTP E2E pass 3 tests; Docker runtime migration/health
+  pass trên DB test riêng. VPS route/live giao dịch chờ user tự deploy theo runbook.
+  Phần baseline checkout bên dưới là lịch sử Phase 2 ban đầu.
+
+### Kết quả đã thực hiện — webhook VPS (2026-10-05)
+
+1. **Chuẩn bị tooling:** receiver độc lập tại `tools/webhook-probe`, SDK
+   `@payos/node` 2.0.5, Dockerfile/Compose/runbook riêng; không kết nối DB hoặc
+   thay đổi order/enrollment. Local type-check/lint, 6/6 HTTP tests, frozen install
+   và Docker build pass. Đây là kiểm tra tooling, không phải payment BE.
+2. **Deploy trên VPS:** user lấy tooling về
+   `/home/mindycode/mindycoding/Mindy-BE/tools/webhook-probe`, cấu hình `.env.probe`
+   với credentials PayOS và chạy hai file Compose. Container
+   `mindy-webhook-probe-probe-1` healthy, bind host `127.0.0.1:3100`, dùng chung
+   mạng `mindy-be_backend` với `cloudflare-mindy`; alias `mindy-payos-probe:3100`
+   trả HTTP 200/ready.
+3. **Public routing:** tunnel `flowzy-quanh123` có route hostname
+   `api.quanh123.id.vn`, path regex `^/api/v1/payment-callbacks/payos$`, service
+   `http://mindy-payos-probe:3100`, đứng trước route BE tổng quát. URL thực:
+   `https://api.quanh123.id.vn/api/v1/payment-callbacks/payos`. Frontend và các
+   route API khác tiếp tục dùng service cũ; không sửa Nginx `parking-api`.
+4. **Kiểm thử receiver:** POST `{}` từ máy ngoài VPS trả 400 `invalid_webhook`.
+   Signed fixtures gửi qua public HTTPS từ VPS: valid/duplicate 200 verified;
+   tampered/missing signature 400; invalid JSON 400; body quá lớn 413. Receiver
+   vẫn ready sau các ca lỗi. Sau restart probe: healthy, public callback vẫn nhận
+   request và BE readiness vẫn ok. Năm concurrent signed requests đều 200 verified,
+   có requestId riêng; latency end-to-end 517–2351 ms.
+5. **PayOS confirm thực:** user chạy SDK `webhooks.confirm()` trong container
+   trên VPS, nhận `CONFIRM_OK` lúc `2026-10-05T15:06:34.588Z` (22:06:34 giờ
+   Asia/Bangkok). Receiver ghi callback mẫu lúc `15:06:34.302Z`, status 200,
+   outcome verified, requestId `cb1f34be-0dd1-4750-b057-fb9c6947d6fb`, handler
+   latency 0.53 ms. Đã chứng minh PayOS gọi được VPS và SDK xác minh chữ ký mẫu.
+
+**Giới hạn nghiệm thu:** một concurrent request vượt mục tiêu 2 giây; chưa đối
+chiếu latency của toàn bộ fixture với log receiver, chưa có signed fixture gửi từ
+máy ngoài VPS hoặc test proxy reload riêng. Không đánh dấu toàn bộ Gate A1 pass.
+PayOS confirm mẫu đã pass (bước 3); không có giao dịch tiền thật, order PAID,
+activation/progress/email hoặc settlement BE được kiểm thử. Callback hiện vẫn
+trỏ tới probe. Dừng chờ user review; bước tích hợp payment tiếp theo chưa bắt đầu.
+
+Evidence chi tiết và lịch sử từng checkpoint nằm trong
+[Phase 2.1](../implement_phase/PHASE_2_1_WEBHOOK_VPS_PAYOS.md).
 
 ## 1. Phạm vi
 
-Phase 2 được triển khai **tới hết bước checkout**. Sau checkout, student có order
-`PENDING` và chỗ đã được giữ; phần thanh toán chưa bắt đầu.
+Baseline Phase 2 ban đầu được triển khai **tới hết bước checkout**. Phase 2.2 hiện
+đã thêm payment runtime và verified settlement, nhưng chưa nghiệm thu giao dịch thật
+trên VPS. Sau checkout, student có order `PENDING` và hold cho đến khi settle.
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -14,9 +70,11 @@ Phase 2 được triển khai **tới hết bước checkout**. Sau checkout, st
 | Public browse course/class | Xong |
 | Cart | Xong |
 | Checkout, giữ chỗ, hết hạn order | Xong |
-| Payment: PayOS, webhook, xác nhận cash, email xác nhận, đối soát | Chưa làm (cố ý) |
+| Webhook probe trên VPS, PayOS confirm mẫu | Functional test/confirm pass; giới hạn A1 ghi riêng |
+| Payment BE: PayOS link/settlement/access/mail/reconciliation | Implement/test local pass; deploy/live smoke chờ user |
+| Cash confirmation và cash preview | Chưa implement; giữ yêu cầu mentor confirm trong Flow.txt |
 | Preview giới hạn cho cash pending (`GET /me/classes/:classId/preview`) | Chưa làm |
-| `class_unit_progress`, kích hoạt enrollment `ACTIVE` | Chưa làm (thuộc payment) |
+| `class_unit_progress`, kích hoạt enrollment `ACTIVE` | Implement/test trong Phase 2.2, còn chờ evidence live |
 
 ## 2. Cấu trúc
 
@@ -318,8 +376,9 @@ trong app; trùng lịch mentor; phân quyền và mã lỗi qua HTTP; Swagger c
   theo yêu cầu user, bốn bước và dừng review sau mỗi bước. Bước 1 đã chuẩn bị
   receiver SDK PayOS riêng ở `tools/webhook-probe`, Compose/Dockerfile và VPS runbook;
   tooling type-check/lint, 6/6 HTTP test key giả, frozen install và Docker build local pass.
-  Chưa truy cập/test VPS, chưa confirm hoặc tích hợp payment vào BE. Bước 2–4 chưa làm;
-  chờ user check bước 1 và cung cấp domain/SSH/thư mục deploy để test trên server.
+  Tại mốc này chưa test VPS/confirm. Cập nhật 2026-10-05: đã deploy và chạy các ca
+  receiver trên VPS, bước 3 confirm mẫu pass như mục kết quả phía trên; payment BE
+  và giao dịch thật vẫn chưa thực hiện.
 
 - 2026-10-04: Đã review nhánh `Feat/Webhooktest` và lập kế hoạch tiếp nối tại
   `docs/implement_phase/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md`: receiver test VPS →

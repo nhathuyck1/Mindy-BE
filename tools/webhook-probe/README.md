@@ -108,7 +108,41 @@ chỉ từ localhost hoặc request bị reject.
 Sau bước 2, kiểm tra URL webhook hiện tại của kênh và ghi URL cũ để rollback.
 Không trỏ kênh đang phục vụ hệ thống khác sang probe. Dùng SDK chính thức
 `webhooks.confirm(httpsUrl)` bằng credentials trên VPS; không tự đăng ký khi boot.
-Command confirm sẽ được bổ sung và review ở bước 3 sau khi endpoint thực đã pass.
+User đồng ý chuyển bước 3 ngày 2026-10-05; các giới hạn Gate A1 còn thiếu được giữ
+trong Phase 2.1, không đánh dấu đã pass toàn bộ. Chạy command dưới đây trên VPS với
+credentials của kênh `Mindy VPS Test`. Nếu có URL cũ, ghi lại trước để có thể phục hồi.
+Lệnh sẽ đăng ký URL cho kênh; không tạo payment link hay giao dịch.
+
+```bash
+docker exec -i mindy-webhook-probe-probe-1 node --input-type=module <<'NODE'
+import { PayOS } from '@payos/node';
+
+const url = 'https://api.quanh123.id.vn/api/v1/payment-callbacks/payos';
+console.log('CONFIRM_START', new Date().toISOString());
+try {
+  const payos = new PayOS({
+    clientId: process.env.PAYOS_CLIENT_ID,
+    apiKey: process.env.PAYOS_API_KEY,
+    checksumKey: process.env.PAYOS_CHECKSUM_KEY,
+    timeout: 30000,
+    maxRetries: 0,
+    logLevel: 'off',
+  });
+  const result = await payos.webhooks.confirm(url);
+  if (result.webhookUrl !== url) throw new Error('UnexpectedWebhookUrl');
+  console.log('CONFIRM_OK', result.webhookUrl, new Date().toISOString());
+} catch (error) {
+  console.error('CONFIRM_FAILED', error.name);
+  process.exitCode = 1;
+}
+NODE
+
+docker logs --since 2m mindy-webhook-probe-probe-1
+```
+
+Output chỉ chứa thời điểm, URL và tên lỗi; không in toàn bộ response chứa thông tin
+ngân hàng hoặc credential. Đối chiếu callback `verified`/200 trong cửa sổ confirm,
+không gửi fixture khác đồng thời; lưu requestId và latencyMs từ log receiver.
 
 Lưu kết quả đã redact, thời điểm, requestId của callback mẫu và outcome `verified`.
 Mẫu confirm không phải giao dịch đã thanh toán. Không bỏ verify để confirm thành công.

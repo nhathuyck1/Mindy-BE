@@ -1,5 +1,12 @@
 # Core business logic
 
+Updated 2026-10-05 against all of `document/Flow.txt`, implemented checkout and
+[Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
+confirmation passed; BE payments are implemented and locally tested; VPS release
+and real settlement remain pending user execution. Full payment and
+online confirmation email are required; pending cash preview and mentor confirmation
+remain required in the later cash increment. Pending group chat/DM belongs to chat.
+
 This document defines the business rules for the first delivery scope: course/class management and the complete order-to-enrollment flow. It intentionally excludes whiteboard, compiler/judge, chat and notification behavior.
 
 ## 1. Domain boundaries
@@ -28,7 +35,9 @@ Owns `course_categories`, `courses`, `course_units` and `materials`. It defines 
 
 ### Class operations
 
-Owns `classes`, `class_units`, `class_sessions`, `enrollments`, `class_unit_progress` and `attendance_records`. A class is a scheduled delivery of one course. Enrollment is the access entitlement for one student in one class.
+Owns `classes`, `class_units`, `class_sessions` and planned `attendance_records`.
+A class is a scheduled delivery of one course. EnrollmentsModule separately owns
+`enrollments` and `class_unit_progress`, including checkout holds and learning access.
 
 ### Commerce
 
@@ -36,7 +45,10 @@ Owns `carts`, `cart_details`, `orders` and `order_details`. Cart data is mutable
 
 ### Payment
 
-Owns `payment_transactions` and `payos_payment_details`. It verifies provider callbacks and is the only domain allowed to move an order from `PENDING` to `PAID`.
+Owns `payment_transactions`, `payos_payment_details`,
+`payment_webhook_events` and `payment_confirmation_emails`. It verifies provider
+callbacks and coordinates settlement via exported Commerce/Enrollments providers.
+Only verified settlement or authorized mentor cash confirmation can make an order PAID.
 
 ### Files
 
@@ -88,8 +100,8 @@ The use case validates:
 
 - The actor is an active student.
 - The class status is `OPEN`.
-- The class has not reached capacity, using active enrollment count.
-- The student is not already actively enrolled.
+- The class has not reached capacity, counting active enrollments and valid pending holds.
+- The student has no effective active enrollment or pending hold for the class.
 - The same class is not already in the cart.
 - `cart_details.price_snapshot` is recorded for display only and is not authoritative at checkout.
 
@@ -102,13 +114,16 @@ Checkout is a single database transaction:
 1. Lock or otherwise serialize the student's cart and selected class rows.
 2. Load the current course/class data and revalidate class status, capacity, existing enrollment and current price.
 3. Reject an empty cart or any invalid item; do not create a partial order.
-4. Create one `orders` row with status `PENDING` and a unique business `order_code`.
+4. Create one PAYOS order for the cart, or split CASH orders by mentor snapshot;
+   each order is PENDING with a unique business order_code and hold deadline.
 5. Create immutable `order_details` snapshots for every selected class.
 6. Set `orders.total_amount` from the sum of detail totals calculated by the server.
-7. Remove the checked-out cart details.
+7. Create PENDING_PAYMENT enrollment holds and remove the checked-out cart details.
 8. Commit before calling PayOS.
 
 Creating the remote PayOS payment link happens after the order transaction. If the provider call fails, the order remains `PENDING` and the client may retry idempotently with the same order ID. The retry must not create another order.
+The link API reserves/reuses an attempt and numeric provider code in a separate
+short transaction. Checkout does not create payment_transactions in this increment.
 
 ## 4. Payment and enrollment flow
 
@@ -129,16 +144,23 @@ Provider callbacks are untrusted until their signature and amount are verified. 
 3. If the order is already `PAID`, return success without duplicating side effects.
 4. Mark `payment_transactions.status = SUCCEEDED` and record `paid_at`.
 5. Mark `orders.status = PAID` and record `paid_at`.
-6. For every order detail, create an `ACTIVE` enrollment if one does not already exist.
+6. For every order detail, activate its existing PENDING_PAYMENT hold, after checking
+   the server deadline and class/order state under the shared lock order.
 7. Initialize `class_unit_progress` for every unit in the purchased class.
-8. Commit all database writes together.
-9. Publish email/notification work only after commit; use an outbox when that integration is introduced.
+8. Insert a unique payment confirmation email outbox event and commit all writes together.
+9. Send online confirmation email through a retryable worker after commit;
+   notifications/chat remain deferred. Email failures do not roll back payment.
 
-The unique `(student_id, class_id)` enrollment constraint is the final defense against duplicate callbacks or concurrent purchases.
+The partial unique student/class index for effective enrollments, unique order-detail
+mapping, provider reference/event key, enrollment/unit progress and outbox event
+constraints defend against duplicate callbacks/concurrent purchases. Expired or
+cancelled holds are never silently recreated; late/mismatched payments require review.
 
 ### Failed and expired payments
 
-- A failed payment marks only that payment transaction as `FAILED`; another payment attempt may be created while the order remains valid.
+- A confirmed failed payment affects only the attempt; retry policy must ensure the
+  old provider link cannot still settle before issuing another attempt. An ambiguous
+  timeout must query/reuse the same provider code, not create another active attempt.
 - An unpaid order becomes `EXPIRED` after `expires_at`.
 - Expiring an order never deletes it or its details.
 - A callback received after expiry requires an explicit reconciliation path; it must not silently create access without checking provider settlement.
@@ -155,9 +177,16 @@ The unique `(student_id, class_id)` enrollment constraint is the final defense a
 | Manage own cart and checkout | Active `STUDENT` |
 | Read own orders/payments | Order owner |
 | Process payment callback | Verified provider adapter only |
-| Manually confirm cash/bank transfer | Authorized `ADMIN`, with audit data |
+| Confirm full cash payment | Assigned `MENTOR` from the order snapshot, with audit data |
+| Inspect transactions/reconciliation | `ADMIN`; refund/manual bank-transfer scope is separate |
 
 There is no separate manager role: `ADMIN` holds every management permission.
+
+Flow.txt's manager assignment wording is implemented by the existing Phase 2
+decision to activate class enrollment/progress automatically after verified PayOS
+settlement. It does not add a manual manager approval step or enroll students into
+course templates. For cash, pending students see only class-unit/session titles and
+timetable until mentor confirmation; full learning content remains blocked.
 
 Role checks never replace ownership checks. A student must not access another student's cart, order, payment or enrollment by guessing an ID.
 

@@ -1,7 +1,10 @@
 # Phase 2.1 — Test webhook PayOS trên server
 
-Cập nhật: 2026-10-04. Thực hiện lần lượt **1 → 2 → 3 → 4**; xong mỗi bước
-phải dừng để user check và đồng ý trước khi bắt đầu bước kế tiếp.
+Cập nhật: 2026-10-05. Webhook server đã test ổn và bước 3 confirm đã pass.
+Phần tích hợp BE/deploy/giao dịch thật của bước 4 được tách thành
+[Phase 2.2](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md) theo yêu cầu hiện tại.
+Quy trình review từng bước dưới đây là lịch sử Phase 2.1; yêu cầu lập Phase 2.2
+hiện tại cho phép tiếp tục lập kế hoạch, không cần confirm lại bước 3.
 
 ## Phạm vi và hiện trạng
 
@@ -18,7 +21,7 @@ phải dừng để user check và đồng ý trước khi bắt đầu bước 
 - Kế thừa các yêu cầu Gate A–D của
   [kế hoạch chi tiết trước đó](./PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).
 
-## 1. Chuẩn bị receiver và runbook — chờ user review
+## 1. Chuẩn bị receiver và runbook — đã hoàn tất
 
 ### Công việc
 
@@ -42,7 +45,7 @@ phải dừng để user check và đồng ý trước khi bắt đầu bước 
 - **Dừng sau bước 1** để user review; bước 2 cần domain, SSH host/user hoặc alias,
   thư mục deploy, proxy hiện tại và key đặt trên VPS (không gửi chat).
 
-## 2. Deploy receiver và test ingress trên VPS — chưa làm
+## 2. Deploy receiver và test ingress trên VPS — đã test chức năng, còn giới hạn A1
 
 1. Kiểm tra SSH, DNS A/AAAA, TLS chain, reverse proxy hiện tại, Docker Compose,
    port 3100, BE readiness và ảnh hưởng route trước khi chỉnh cấu hình.
@@ -59,7 +62,7 @@ phải dừng để user check và đồng ý trước khi bắt đầu bước 
 kết quả từng ca đã redact. Không gọi A1 pass chỉ từ localhost hoặc request sai bị reject.
 Chưa đăng ký URL PayOS. **Dừng để user check** trước bước 3.
 
-## 3. Confirm webhook từ PayOS tới VPS — chưa làm
+## 3. Confirm webhook từ PayOS tới VPS — đã pass 2026-10-05
 
 1. Kiểm tra kênh/credentials thật trên VPS, URL webhook cũ và liệu kênh có phục vụ
    hệ thống khác không. Không thay URL kênh đang hoạt động bằng probe thiếu xử lý payment.
@@ -72,7 +75,12 @@ Chưa đăng ký URL PayOS. **Dừng để user check** trước bước 3.
 **Nghiệm thu:** có evidence PayOS thực sự gọi VPS, chữ ký hợp lệ và confirm thành công.
 Callback mẫu không chứng minh order đã PAID. **Dừng để user check** trước bước 4.
 
-## 4. Tích hợp BE, deploy và test giao dịch nhỏ — chưa làm
+## 4. Tích hợp BE, deploy và test giao dịch nhỏ — chuyển sang Phase 2.2
+
+Code BE đã implement/test local; chưa deploy payment hoặc nhận tiền thật.
+Kế hoạch thực thi và checklist hiện hành nằm trong
+[Phase 2.2 — payOS BE và giao dịch thật](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md).
+Các bước dưới đây giữ làm tham chiếu; user tự deploy theo runbook Phase 2.2.
 
 1. Sau Gate A, triển khai payment theo mục B của kế hoạch chi tiết: module/adapter,
    mapping numeric provider orderCode, migrations mới, create link, callback transaction,
@@ -93,10 +101,10 @@ HTTP 200 đơn lẻ không đủ. **Dừng để user check** kết quả cuối
 
 | Bước | Trạng thái | Evidence |
 |---|---|---|
-| 1 | Hoàn tất chuẩn bị, chờ user check | Type-check/lint pass, 6/6 HTTP tests pass; frozen install và Docker build pass trên máy local |
-| 2 | Đang khảo sát qua kết quả user gửi | Đã xác định domain/tunnel/mạng Docker; chưa deploy receiver hoặc test ingress |
-| 3 | Chưa bắt đầu | Chưa gọi confirm-webhook |
-| 4 | Chưa bắt đầu | Chưa tích hợp payment hoặc giao dịch thật |
+| 1 | Hoàn tất chuẩn bị | Type-check/lint pass, 6/6 HTTP tests pass; frozen install và Docker build pass trên máy local |
+| 2 | Receiver/HTTPS/signature/restart/concurrency đã test; full A1 còn giới hạn | Xem evidence bên dưới; chưa xác minh signed fixture ngoài VPS và toàn bộ mục tiêu latency/routing |
+| 3 | Hoàn tất confirm; user xác nhận webhook server ổn | CONFIRM_OK và callback mẫu 200 verified trên VPS, ngày 2026-10-05 |
+| 4 | Phase 2.2 đã implement/test local; chờ user deploy | Code payment/settlement có test; chưa có giao dịch thật trên VPS |
 
 ### Kết quả bước 1 (2026-10-04)
 
@@ -123,3 +131,97 @@ Nguồn: [SDK PayOS chính thức](https://github.com/payOSHQ/payos-lib-node),
 - Thêm `compose.tunnel.yaml` dùng mạng external `mindy-be_backend`, alias
   `mindy-payos-probe`. Cần đưa tooling lên VPS, đặt env và chạy receiver trước khi
   thêm route callback. Chưa thay đổi tunnel, chưa confirm PayOS hoặc giao dịch thật.
+
+### Receiver trên VPS — bằng chứng user gửi (2026-10-05)
+
+- User đã fetch tooling từ `origin/Feat/Webhooktest`, cấu hình env PayOS trên VPS
+  và build/start Compose với `compose.yaml` + `compose.tunnel.yaml`.
+- Container `mindy-webhook-probe-probe-1`, image `mindy-webhook-probe:step1`,
+  trạng thái healthy; host port bind `127.0.0.1:3100`.
+- Curl loopback `/health` trả `ready`, requestId `4a2a2388-05a7-4887-a9c1-bcb2ae1fc57e`.
+- Container kiểm tra trên mạng `mindy-be_backend` gọi
+  `http://mindy-payos-probe:3100/health`, HTTP 200 + ready,
+  requestId `25575bea-900c-4c3d-a565-217d133f9e38`.
+- Đây là evidence health/network trên VPS, chưa xác nhận callback có chữ ký qua
+  HTTPS public. Tiếp theo thêm exact callback path vào tunnel hiện tại, giữ route BE.
+  Bước 2 còn đang làm; chưa chuyển bước 3/confirm hoặc bước 4/thanh toán.
+
+### HTTPS ingress — 2026-10-05
+
+- User đã thêm route trong tunnel `flowzy-quanh123`: hostname `api.quanh123.id.vn`,
+  path regex `^/api/v1/payment-callbacks/payos$`, service `http://mindy-payos-probe:3100`,
+  đứng trước route API tổng quát. Các hostname frontend/BE vẫn giữ nguyên service.
+- Assistant gửi POST JSON `{}` qua URL public từ máy ngoài VPS: HTTP 400,
+  `invalid_webhook`, requestId `f3a90981-f02d-4725-89fd-dfb03c747a1b`.
+- Kiểm tra readiness public của BE: HTTP 200, status ok.
+- Chỉ chứng minh public request được route tới probe và input sai bị reject;
+  signed fixture/tamper/duplicate và các ca vận hành VPS còn cần chạy trước Gate A1.
+  Chưa gọi PayOS confirm; bước 2 chưa hoàn tất.
+
+### Signed fixture qua HTTPS từ VPS — 2026-10-05
+
+- User chạy synthetic fixture trong container probe, ký bằng checksum key trong env,
+  gửi qua URL HTTPS public (không gọi payment API, không tạo giao dịch tiền thật).
+- Screenshot kết quả: VALID 200 verified; TAMPERED 400 verification_failed;
+  MISSING_SIGNATURE 400 invalid_webhook; DUPLICATE 200 verified.
+- VALID requestId `5f7c1eb9-b84f-448f-8383-3a810b47cfe4`;
+  DUPLICATE requestId `20605dd4-71d0-4cb0-8770-31d81a2f65f9`.
+- Đây là fixture tự ký, chưa phải callback của PayOS. Ca JSON lỗi/body quá lớn,
+  concurrency và restart còn chờ. Signed fixture chạy từ VPS qua public URL;
+  chưa ghi nhận signed request từ một máy ngoài VPS. Không đánh dấu Gate A1 hoàn tất.
+
+### Input limits trên VPS — 2026-10-05
+
+- Screenshot user: INVALID_JSON HTTP 400 `invalid_json`, requestId
+  `8642a7a3-85ee-4d99-9802-83dd56929323`.
+- OVERSIZED HTTP 413 `body_too_large`, requestId
+  `bee2fcd7-9bc6-4bd0-b934-450c52bd3d3c`.
+- Health sau test vẫn ready, requestId `aaebfdfc-5ad7-49f9-8e08-7d4a4a9e10c9`.
+- Chưa có evidence concurrent signed requests hoặc recovery sau restart.
+
+### Recovery sau restart probe — 2026-10-05
+
+- Screenshot user sau restart/Compose wait: probe healthy; loopback health ready,
+  requestId `34d1ad6f-ff6b-4b8c-b536-52eb0fac7b9f`.
+- POST `{}` qua public callback vẫn HTTP 400 `invalid_webhook`, requestId
+  `4a4494e4-935c-40aa-8a10-2ddc1f06f61a`.
+- BE public readiness `status: ok`, timestamp `2026-10-05T15:02:06.676Z`.
+- Recovery của probe đã được user kiểm chứng; concurrency còn cần chạy.
+
+### Concurrent delivery — 2026-10-05, dừng review bước 2
+
+- Screenshot user: 5 concurrent synthetic signed callbacks qua HTTPS từ VPS đều
+  HTTP 200 `verified`, mỗi request có requestId riêng.
+- Latency theo thứ tự request 1–5: 696, 1672, 1055, 517, 2351 ms.
+- Functional concurrency pass. Một request vượt mục tiêu 2 giây; đây là thời gian
+  end-to-end từ sender, chưa tách latency mạng/Cloudflare và thời gian receiver.
+  Chưa kết luận đạt mục tiêu latency; cần đối chiếu log latencyMs của receiver.
+- Dừng review theo yêu cầu user, chưa chuyển bước 3. Các bằng chứng hiện có:
+  health/network, public routing, signed/tampered/missing/duplicate callbacks,
+  input limits, restart recovery, concurrency. Chưa gọi confirm của PayOS.
+- Không đánh dấu toàn bộ Gate A1 đạt: còn signed fixture từ máy ngoài VPS,
+  đối chiếu log requestId/latency và mục tiêu <2 giây; chưa kiểm thử proxy reload
+  riêng (VPS sử dụng managed tunnel, không chỉnh Nginx).
+
+### Chuyển bước 3 theo yêu cầu user — 2026-10-05
+
+- User yêu cầu "Qua bước 3" sau concurrent fixture. Chuyển sang confirm với PayOS;
+  giữ nguyên các giới hạn bước 2 chưa kiểm chứng, không đánh dấu full Gate A1 pass.
+- Đã chuẩn bị command dùng SDK 2.0.5 trong container đang chạy; timeout 30 giây,
+  không retry tự động, log SDK off và output redact. Không đăng ký khi app boot.
+- Confirm sẽ đăng ký URL của kênh test. Cần lưu URL cũ nếu có, chạy command rồi
+  đối chiếu CONFIRM_OK với callback mẫu 200 verified trong log cùng cửa sổ thời gian.
+- Chưa có evidence confirm thành công; dừng review sau khi user gửi kết quả bước 3.
+
+### Kết quả bước 3 — 2026-10-05
+
+- User chạy SDK confirm trên VPS: `CONFIRM_OK` cho
+  `https://api.quanh123.id.vn/api/v1/payment-callbacks/payos`, kết thúc
+  `2026-10-05T15:06:34.588Z` (22:06:34 giờ Asia/Bangkok).
+- Log receiver cùng cửa sổ confirm: timestamp `2026-10-05T15:06:34.302Z`,
+  requestId `cb1f34be-0dd1-4750-b057-fb9c6947d6fb`, status 200,
+  outcome verified, latencyMs 0.53. Các log ready kế cận là healthcheck, không phải callback.
+- Bước 3 pass theo evidence confirm + callback verify trên VPS. Chưa có giao dịch
+  tiền thật hoặc settlement/order/enrollment; bước 4 chưa bắt đầu.
+- Dừng review theo yêu cầu user. Các giới hạn Gate A1/bước 2 vẫn được giữ trong
+  tài liệu, không dùng confirm để tự đánh dấu các ca vận hành chưa chạy đã pass.

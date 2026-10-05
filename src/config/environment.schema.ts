@@ -1,5 +1,32 @@
 import Joi from 'joi';
 
+const payosSecret = () =>
+  Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('PAYOS_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') });
+const payosUrl = () =>
+  Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default('')
+    .when('PAYOS_ENABLED', {
+      is: true,
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['http', 'https'] })
+        .required()
+        .invalid(''),
+    })
+    .when('NODE_ENV', {
+      is: 'production',
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['https'] })
+        .allow(''),
+    });
+
 export const environmentSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'staging', 'production')
@@ -70,6 +97,16 @@ export const environmentSchema = Joi.object({
   ORDER_PAYOS_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(86_400).default(900),
   ORDER_CASH_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(2_592_000).default(172_800),
   ORDER_EXPIRY_JOB_ENABLED: Joi.boolean().default(true),
+  PAYOS_ENABLED: Joi.boolean().default(false),
+  PAYOS_CREATE_LINK_ENABLED: Joi.boolean().default(true),
+  PAYOS_CLIENT_ID: payosSecret(),
+  PAYOS_API_KEY: payosSecret(),
+  PAYOS_CHECKSUM_KEY: payosSecret(),
+  PAYOS_RETURN_URL: payosUrl(),
+  PAYOS_CANCEL_URL: payosUrl(),
+  PAYOS_WEBHOOK_URL: payosUrl(),
+  PAYMENT_MAIL_JOB_ENABLED: Joi.boolean().default(true),
+  PAYMENT_MAIL_JOB_INTERVAL_SECONDS: Joi.number().integer().min(5).max(3600).default(30),
   ORDER_EXPIRY_JOB_INTERVAL_SECONDS: Joi.number().integer().min(5).max(3600).default(60),
   SEED_ADMIN_EMAIL: Joi.string().email().allow('').default(''),
   SEED_ADMIN_PASSWORD: Joi.string().allow('').default(''),

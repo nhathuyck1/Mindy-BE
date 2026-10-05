@@ -1,59 +1,20 @@
 import 'reflect-metadata';
 
-import { HttpStatus, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import compression from 'compression';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module.js';
-import { requestContextMiddleware } from './common/http/request-context.js';
-import { GlobalExceptionFilter } from './filters/global-exception.filter.js';
-import { setupSwagger } from './setup-swagger.js';
+import { configureApp } from './configure-app.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    bodyParser: false,
   });
   const configService = app.get(ConfigService);
 
-  app.use(helmet());
-  app.use(compression());
-  app.use(cookieParser());
-  app.use(requestContextMiddleware);
-
-  app.setGlobalPrefix('api');
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-  });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-    }),
-  );
-  app.useGlobalFilters(new GlobalExceptionFilter());
-
-  const allowedOrigins = configService
-    .getOrThrow<string>('CORS_ORIGINS')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter((origin) => origin.length > 0);
-
-  app.enableCors({
-    origin: allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  });
-  app.enableShutdownHooks();
-
-  if (configService.getOrThrow<boolean>('SWAGGER_ENABLED')) {
-    setupSwagger(app);
-  }
+  configureApp(app);
 
   const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);

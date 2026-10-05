@@ -15,6 +15,7 @@ import { CartService } from './services/cart.service.js';
 import { CheckoutService } from './services/checkout.service.js';
 import { OrderExpiryService } from './services/order-expiry.service.js';
 import { OrderExpiryWorker } from './services/order-expiry.worker.js';
+import { OrderSettlementService } from './services/order-settlement.service.js';
 import { OrdersService } from './services/orders.service.js';
 
 @Module({
@@ -26,6 +27,14 @@ import { OrdersService } from './services/orders.service.js';
     TypeOrmModule.forFeature([CartEntity, CartDetailEntity, OrderEntity, OrderDetailEntity]),
   ],
   controllers: [CartController, OrdersController],
-  providers: [CartService, CheckoutService, OrdersService, OrderExpiryService, OrderExpiryWorker],
+  providers: [
+    CartService,
+    CheckoutService,
+    OrdersService,
+    OrderExpiryService,
+    OrderExpiryWorker,
+    OrderSettlementService,
+  ],
+  exports: [OrderSettlementService],
 })
 export class CommerceModule {}

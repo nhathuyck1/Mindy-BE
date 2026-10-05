@@ -8,14 +8,20 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 1. [Phase 0 — Foundation, database và deployment baseline](./PHASE_0_FOUNDATION.md)
 2. [Phase 1 — Registration, users, Google/password authentication và authorization baseline](./PHASE_1_IDENTITY_AUTH.md)
 3. [Phase 2 — Course registration, checkout, payment và enrollment](./PHASE_2_COURSE_TO_PAYMENT.md)
-4. [Phase 2.1 — Test webhook PayOS trên server, từng bước 1–4](./PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
+4. [Phase 2.1 — Test webhook PayOS trên server, confirm đã pass](./PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
+5. [Phase 2.2 — Tích hợp payOS vào BE và nghiệm thu giao dịch thật](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md)
 
 Kế hoạch tiếp nối sau checkout:
 [Webhook VPS → PayOS BE → deploy test](./PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).
-Kế hoạch này ghi rõ hiện trạng trên `Feat/Webhooktest`, các gate kiểm thử và phần
-còn chờ cấu hình VPS/kênh PayOS; chưa phải báo cáo đã triển khai payment.
+Kế hoạch tiếp nối giữ thiết kế B–D và baseline lịch sử. Ngày 2026-10-05 webhook
+server đã confirm pass; payment BE đã implement/test local theo Phase 2.2,
+VPS payment/giao dịch thật chờ user thực hiện theo runbook. Các giới hạn test A1
+vẫn được ghi riêng; xem progress riêng của Phase 2.2 để phân biệt evidence.
 
-Các phase sau chỉ bắt đầu khi exit criteria của phase trước đã đạt. Mỗi phase phải là
+Mặc định các phase sau bắt đầu khi prerequisites/exit criteria liên quan đã đạt;
+ngoại lệ và hạng mục còn mở phải ghi rõ. User đã yêu cầu lập Phase 2.2 sau confirm
+webhook; các test A1 còn thiếu được kiểm chứng trước nghiệm thu live BE, không
+đánh dấu toàn bộ Phase 0/1/2 đã hoàn tất. Mỗi phase phải là
 một vertical slice chạy được từ migration đến API và test, không triển khai toàn bộ
 entity trước rồi mới quay lại làm controller/service.
 
@@ -29,5 +35,8 @@ entity trước rồi mới quay lại làm controller/service.
   command/query handler.
 - Không trả TypeORM entity trực tiếp ra API.
 - Không dùng database production cho development hoặc integration test.
-- Hoàn tất một phase phải cập nhật `docs/Progress.md` và chạy `pnpm check`.
+- Hoàn tất triển khai một phase phải cập nhật `docs/progress/Progress.md` và chạy
+  `pnpm check`; thay đổi chỉ tài liệu kiểm tra diff/link, không ghi là đã chạy test BE.
+- Đọc toàn bộ `document/Flow.txt` trước khi chốt rule nghiệp vụ; ghi rõ diễn giải
+  triển khai và yêu cầu được hoãn, không bỏ cash preview/mentor confirmation/mail.
 

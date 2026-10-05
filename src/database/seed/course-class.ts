@@ -91,7 +91,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'frontend-web',
     title: 'HTML & CSS từ con số 0',
     description: 'Dựng trang web tĩnh hoàn chỉnh, responsive trên mọi thiết bị.',
-    priceAmount: 1_500_000,
+    priceAmount: 1000,
     isActive: true,
     units: [
       'Cấu trúc trang HTML và thẻ ngữ nghĩa',
@@ -106,7 +106,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'frontend-web',
     title: 'JavaScript cơ bản',
     description: 'Nắm vững JavaScript hiện đại và thao tác với trang web qua DOM.',
-    priceAmount: 2_000_000,
+    priceAmount: 2000,
     isActive: true,
     units: [
       'Biến, kiểu dữ liệu và toán tử',
@@ -122,7 +122,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'frontend-web',
     title: 'ReactJS thực chiến',
     description: 'Xây dựng single-page application với React, hooks và React Router.',
-    priceAmount: 3_500_000,
+    priceAmount: 3000,
     isActive: true,
     units: [
       'JSX, component và props',
@@ -137,7 +137,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'backend-web',
     title: 'Node.js & Express API',
     description: 'Thiết kế REST API với Node.js, Express và PostgreSQL.',
-    priceAmount: 3_200_000,
+    priceAmount: 3200,
     isActive: true,
     units: [
       'Node.js runtime, module và npm',
@@ -152,7 +152,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'lap-trinh-co-ban',
     title: 'Python cho người mới bắt đầu',
     description: 'Làm quen tư duy lập trình qua Python với các bài tập thực hành.',
-    priceAmount: 1_800_000,
+    priceAmount: 4000,
     isActive: true,
     units: [
       'Cài đặt môi trường, biến và kiểu dữ liệu',
@@ -167,7 +167,7 @@ const COURSES: readonly CourseSeed[] = [
     categorySlug: 'frontend-web',
     title: 'TypeScript nâng cao',
     description: 'Hệ thống kiểu của TypeScript cho dự án JavaScript lớn.',
-    priceAmount: 2_800_000,
+    priceAmount: 5000,
     isActive: false,
     units: ['Kiểu cơ bản, interface và type alias', 'Generics và utility types'],
   },

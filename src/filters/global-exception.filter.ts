@@ -41,6 +41,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private getStatus(exception: unknown): number {
+    if (typeof exception === 'object' && exception !== null && 'type' in exception) {
+      if (exception.type === 'entity.parse.failed') return HttpStatus.BAD_REQUEST;
+      if (exception.type === 'entity.too.large') return HttpStatus.PAYLOAD_TOO_LARGE;
+    }
     if (exception instanceof HttpException) {
       return exception.getStatus();
     }
@@ -58,6 +62,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private getBody(exception: unknown): Record<string, unknown> {
+    if (
+      typeof exception === 'object' &&
+      exception !== null &&
+      'type' in exception &&
+      (exception.type === 'entity.parse.failed' || exception.type === 'entity.too.large')
+    ) {
+      return { code: 'INVALID_JSON_BODY', message: 'JSON body is invalid or too large' };
+    }
     if (exception instanceof HttpException) {
       const response = exception.getResponse();
       if (typeof response === 'string') {

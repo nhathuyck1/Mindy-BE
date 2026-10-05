@@ -1,11 +1,40 @@
 {
   "info": {
     "_postman_id": "d2a802eb-f4f1-4a73-b463-c43837169a90",
-    "name": "Mindy BE — Phase 0 & 1",
-    "description": "Phase 0 health checks and Phase 1 cookie-based authentication/admin-user flow. Postman stores access_token and refresh_token in its cookie jar automatically; no token variable is required.",
+    "name": "Mindy BE — Phase 0, 1, 2.2",
+    "description": "Phase 0 health checks and Phase 1 cookie-based authentication/admin-user flow. Postman stores access_token and refresh_token in its cookie jar automatically; no token variable is required.\nPhase 2.2: student checkout/link/status/access and ADMIN reconciliation. Real payment is manual; provider callbacks are not simulated against live orders.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [{ "key": "test_user_email", "value": "" }, { "key": "test_user_id", "value": "" }],
+  "variable": [
+    {
+      "key": "test_user_email",
+      "value": ""
+    },
+    {
+      "key": "test_user_id",
+      "value": ""
+    },
+    {
+      "key": "student_email",
+      "value": ""
+    },
+    {
+      "key": "student_password",
+      "value": ""
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "order_id",
+      "value": ""
+    },
+    {
+      "key": "payment_id",
+      "value": ""
+    }
+  ],
   "item": [
     {
       "name": "00 — Health",
@@ -74,11 +103,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"deviceName\": \"Postman\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{base_url}}/api/v1/auth/login",
             "description": "Postman saves both HttpOnly cookies to its cookie jar automatically."
@@ -233,11 +271,20 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{test_user_email}}\",\n  \"phone\": null,\n  \"password\": \"{{test_user_password}}\",\n  \"displayName\": \"Postman Test Student\",\n  \"role\": \"STUDENT\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{base_url}}/api/v1/admin/users"
           }
@@ -278,11 +325,20 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"SUSPENDED\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{base_url}}/api/v1/admin/users/{{test_user_id}}/status"
           }
@@ -303,13 +359,185 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"ACTIVE\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": "{{base_url}}/api/v1/admin/users/{{test_user_id}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Phase 2.2 payOS (manual live payment)",
+      "item": [
+        {
+          "name": "Login student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add selected class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/me/cart/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"{{class_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Checkout PAYOS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/me/cart/checkout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"PAYOS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('order_id', pm.response.json().orders[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create or reuse payOS link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/me/orders/{{order_id}}/payments/payos",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Link returns 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('payment_id', pm.response.json().paymentId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read own order after manual payment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "Read my active class",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes/{{class_id}}"
+          }
+        },
+        {
+          "name": "ADMIN review queue — login admin first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/admin/payments/reconciliation?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "ADMIN reconcile missing webhook — login admin first",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/admin/payments/{{payment_id}}/reconcile",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           }
         }
       ]

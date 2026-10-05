@@ -18,6 +18,75 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-05: Expanded `docs/progress/PHASE_2_PROGRESS.md` with the completed
+  Phase 2.1 tooling, VPS deployment, Cloudflare routing, signature/input/restart/
+  concurrent test evidence, and successful provider confirm callback. Retained
+  A1 latency/coverage limitations and the distinction between probe verification
+  and unimplemented BE settlement/real payment. Updated the old step-1 entry to
+  point to current server results while preserving its historical date.
+
+- 2026-10-05: Reviewed the existing payment plan and current BE source; PayOS
+  integration was already designed in the continuation plan B–D but is not in the
+  BE runtime. Created `PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md` and a separate
+  `PHASE_2_2_PROGRESS.md` as the current plan/progress for
+  schema/module contracts, link/retry, verified atomic settlement, existing-hold
+  activation/progress, access, email outbox, reconciliation, tests and VPS/live smoke.
+  Read all of `document/Flow.txt`; recorded full payment, online confirmation mail,
+  class onl/off, mentor cash confirmation, pending preview and deferred chat/DM.
+  Updated rules, phase index, Phase 2/2.1/continuation/core docs and progress to
+  reflect server webhook confirmation passed, with A1 limitations preserved.
+  This is documentation only; no SDK/payment implementation, migration, VPS route
+  switch or real payment was performed. Validation: Markdown local links and
+  git diff whitespace checks; no BE tests run for this documentation change.
+
+- 2026-10-05: Phase 2.1 step 3 passed based on user VPS screenshot: PayOS SDK
+  CONFIRM_OK for public callback URL at 15:06:34.588Z, matching receiver callback
+  200 verified at 15:06:34.302Z (requestId cb1f34be-0dd1-4750-b057-fb9c6947d6fb,
+  handler latency 0.53 ms). Stopping for user review. No payment transaction,
+  order settlement or enrollment activation was tested; step 4 has not started.
+
+- 2026-10-05: User explicitly requested moving to Phase 2.1 step 3. Prepared a
+  VPS SDK confirm command in the probe runbook with bounded timeout/no automatic
+  retries and redacted output. Step 2 limitations remain documented; full Gate A1
+  is not retroactively marked passed. Waiting for user to run command and provide
+  provider-confirm plus callback-log evidence; no actual confirm result yet.
+
+- 2026-10-05: User concurrent synthetic callback test on VPS returned 5/5 HTTP
+  200 verified with distinct request IDs; latencies 696/1672/1055/517/2351 ms.
+  Functional concurrency passed, but one request exceeded the internal 2-second
+  goal. Recorded limitations in Phase 2.1; full Gate A1 is not marked passed
+  (external signed sender and receiver log/latency correlation remain pending).
+  Stopping for user review, without starting PayOS confirm or real payment.
+
+- 2026-10-05: User screenshot confirms receiver recovery after restart: Compose
+  healthy, loopback ready, public callback empty JSON still returns 400, and BE
+  public readiness remains ok. Recorded evidence in Phase 2.1. Concurrent signed
+  delivery remains pending; no PayOS confirm or real payment is evidenced.
+
+- 2026-10-05: User screenshot confirms public HTTPS invalid JSON rejected with
+  400 and oversized input rejected with 413; probe loopback health remains ready.
+  Recorded request IDs in Phase 2.1. Concurrent delivery and restart recovery
+  checks are pending; no provider confirm or payment has been performed.
+
+- 2026-10-05: User screenshot confirms four synthetic signed fixture checks via
+  public HTTPS from VPS: valid and duplicate ACK 200, tampered data rejected 400,
+  missing signature rejected 400. Recorded evidence in Phase 2.1. This is not a
+  provider callback or real payment; remaining ingress/operational checks are
+  pending, and step 2 remains in progress.
+
+- 2026-10-05: User added and reordered the exact PayOS callback route in tunnel
+  `flowzy-quanh123` ahead of the general API route. External public HTTPS POST with
+  empty JSON returned HTTP 400 `invalid_webhook` from probe (requestId recorded
+  in Phase 2.1); BE public readiness returned 200. Signed fixture/server operations
+  testing is still pending, so step 2 is not complete; PayOS confirm has not run.
+
+- 2026-10-05: User deployed the Phase 2.1 probe on VPS using both Compose files.
+  Screenshots show `mindy-webhook-probe-probe-1` healthy, loopback health ready,
+  and HTTP 200/ready through alias `mindy-payos-probe:3100` on `mindy-be_backend`.
+  Recorded server evidence in the Phase 2.1 plan. Step 2 remains in progress:
+  public callback routing and signed ingress tests are pending. No PayOS confirm
+  or real payment has been evidenced.
+
 - 2026-10-04: Phase 2.1 step 2 discovery via user-provided VPS outputs confirmed
   Cloudflare Tunnel `cloudflare-mindy`, shared Docker network `mindy-be_backend`,
   and API ingress `api.quanh123.id.vn -> http://mindy-be-api-1:3000`. Added a
@@ -63,6 +132,27 @@ Compiler / Judge
   this entry is planned scope, not an implementation-complete claim.
 
 ## Implementation status
+
+- 2026-10-05 — Implemented Phase 2.2 payOS in BE: pinned SDK 2.0.5; additive
+  `1791158400000-payos-payments` migration; persistent single attempt/order and
+  numeric sequence/channel mapping; leased link creation with GET-first recovery;
+  verified callback/atomic PAID + hold activation + progress + confirmation outbox;
+  duplicate/reference-collision/late-payment review; private class/session access;
+  shared auth/payment mail transport with retry worker; ADMIN reconciliation command
+  and paginated review queue. Added env validation, separate create-link kill switch,
+  64 KiB JSON limit, sanitized callback logging, Postman and user deployment runbook.
+  Node 22.20.0/pnpm 12.6.0: frozen install and full `pnpm check` passed (36 unit +
+  55 PostgreSQL integration = 91 tests, none skipped); built-app HTTP E2E passed
+  3 tests with real guards/SDK verifier and test-only fake provider, including outbox
+  failure → 503, rollback and successful retry. Parallel suite evaluation on Windows
+  produced partial-module errors, resolved by serial test files; concurrency within
+  tests remains enabled. Test databases live only in a new disposable PostgreSQL 17
+  container with separate regression/payment/HTTP/runtime DBs. Docker production
+  image `mindy-be:phase22-check` built, all 10 migrations applied on empty runtime
+  test DB; readonly/non-root `node` API was healthy, ready 200, payOS-disabled callback
+  503. User chose self-deployment: no VPS migration/routing change/BE confirm, real
+  provider payment request or money transfer performed. Cash confirmation/preview
+  and Phase 0/1 hardening remain open. Detailed status: PHASE_2_2_PROGRESS.md.
 
 - 2026-10-04 — Added fixed Unsplash image URLs for all six demo courses, verified
   each URL with a successful HTTP 200 JPEG GET (1200×675 requested). Course/class

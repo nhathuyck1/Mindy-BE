@@ -1,6 +1,11 @@
 # Kế hoạch tiếp nối Phase 2: webhook VPS → PayOS BE → deploy test
 
-Cập nhật: 2026-10-04. Trạng thái: **kế hoạch, chưa triển khai/test trên VPS**.
+Cập nhật trạng thái: 2026-10-05. Webhook probe đã chạy/test trên VPS và PayOS
+confirm đã pass; payment runtime BE **đã implement/test local**, deploy và giao
+dịch thật chờ user thực hiện theo [runbook](../PAYOS_PHASE_2_2_DEPLOYMENT.md).
+Phần B–D hiện được kế thừa bởi
+[Phase 2.2](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). Các mô tả baseline ngày
+2026-10-04 dưới đây là lịch sử, không phủ định evidence Phase 2.1.
 Nhánh đã đọc: `Feat/Webhooktest`; commit nền: `577af2f`.
 
 ## 1. Kết quả đọc tài liệu và code
@@ -36,7 +41,8 @@ hóa LF, cấu hình Biome LF và sửa format `register.dto.ts`. Chạy full `p
 bằng Node 22.20.0/pnpm 12.6.0 với PostgreSQL 17 container riêng: lint/type-check/build
 pass, 64/64 tests pass (29 unit + 35 integration, không skip). Frozen-lockfile install
 pass. Các kết quả dưới đây là lịch sử trước khi sửa; prerequisites runtime/format/test
-local đã được giải quyết, còn Gate A–D về VPS/PayOS chưa thực hiện.
+local đã được giải quyết. Cập nhật 2026-10-05: A2 confirm pass, A1 đã có functional
+evidence nhưng còn giới hạn; B–D chưa thực hiện, kế hoạch hiện hành ở Phase 2.2.
 
 - `pnpm type-check`: pass; `pnpm build`: pass.
 - `pnpm test`: 29 pass, 35 PostgreSQL integration tests **skip** vì chưa cấp
@@ -47,7 +53,7 @@ local đã được giải quyết, còn Gate A–D về VPS/PayOS chưa thực 
   không dùng tắt formatter để nghiệm thu.
 - Node local là `20.20.0`, khác yêu cầu `>=22.20.0 <23`; pnpm là `12.6.0`.
   Chạy gate chính thức bằng Node 22.20.0/pnpm 12.6.0 hoặc image tương ứng.
-- Chưa truy cập VPS, chưa xác nhận DNS/TLS/proxy, chưa đăng ký URL PayOS.
+- Tại baseline 2026-10-04 chưa xác nhận VPS/URL; evidence 2026-10-05 xem Phase 2.1.
 
 ### Những chỗ cần kế thừa đúng
 
@@ -93,7 +99,8 @@ Nguồn chính thức kiểm tra ngày 2026-10-04:
   Checkout đúng commit release sau fetch/pull, build image một lần trên VPS, chạy
   smoke trên chính image đó và giữ image/tag cũ. Không cần registry để bắt đầu;
   registry/promote có thể bổ sung sau, không bắt rebuild mỗi lần smoke.
-- Chưa có kênh PayOS. A1 có thể thực hiện trước với fixtures; A2 chờ user tạo/xác thực
+- Thông tin ban đầu chưa có kênh PayOS (đã được thay thế: user có tài khoản xác
+  thực và confirm pass ngày 2026-10-05). Kế hoạch ban đầu: A1 với fixtures; A2 chờ
   kênh và đặt credentials trực tiếp trên VPS. Không tự đăng ký tài khoản hay thực hiện
   xác thực danh tính thay user. Chưa mở Gate A cho tích hợp BE bằng kết quả fixture.
 - Hướng public: dùng `api-staging.<domain-sở-hữu>` cho test và `api.<domain-sở-hữu>`
@@ -360,8 +367,10 @@ vào progress với branch/commit/image. Không kết luận pass từ mỗi HTT
 | C–D | Image release, deploy runbook, VPS/real callback evidence, rollback | Gate C–D pass |
 | Sau PayOS | Cash preview/mentor confirmation và exit criteria còn lại | Kế hoạch riêng, không gộp trạng thái |
 
-Hiện đã hoàn thành đọc/đối chiếu và lập kế hoạch. A–D đều chưa triển khai.
-Đã biết BE dùng Git pull + Docker Compose trên VPS và chưa có kênh PayOS. Quyết định
-public/staging đã ghi ở mục 3. Còn cần domain thực, trạng thái proxy/DNS/TLS, kênh
-PayOS và đường SSH được cấu hình an toàn trước khi chạy VPS test. Không đưa
-credentials vào tài liệu này.
+Ngày 2026-10-05: receiver đã test chức năng trên VPS, exact callback qua Cloudflare
+tunnel và A2 confirm pass tại `api.quanh123.id.vn`; full A1 còn giới hạn được ghi
+trong Phase 2.1. User xác nhận webhook server ổn và yêu cầu plan Phase 2.2.
+B đã implement/test local; C–D chờ user thực hiện theo runbook Phase 2.2,
+kế thừa workflow Git + Docker
+Compose. Trước rollout payment cần xác minh môi trường/kênh/DB có dữ liệu thật hay
+không và phương án callback/rollback bền. Không đưa credentials vào tài liệu.

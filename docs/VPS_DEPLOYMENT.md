@@ -129,3 +129,9 @@ IMAGE_TAG=$(git rev-parse --short HEAD) docker compose --env-file .env.productio
 ```
 
 The migration container must finish successfully before the API is started.
+
+## Phase 2.2 payment release
+
+For payOS migration, exact Cloudflare callback routing, BE re-confirmation, live smoke
+and rollback while retaining pending settlements, follow the
+[Phase 2.2 deployment runbook](./PAYOS_PHASE_2_2_DEPLOYMENT.md).

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, type EntityManager, In } from 'typeorm';
 
 import { isUniqueViolation } from '../../../common/database/postgres-error.js';
+import { ClassUnitProgressEntity } from '../entities/class-unit-progress.entity.js';
 import {
   EFFECTIVE_ENROLLMENT_STATUSES,
   EnrollmentEntity,
@@ -24,6 +25,74 @@ export interface SeatHoldRequest {
 @Injectable()
 export class EnrollmentsService {
   constructor(private readonly dataSource: DataSource) {}
+
+  async hasActiveAccess(
+    studentId: string,
+    classId: string,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<boolean> {
+    return manager
+      .getRepository(EnrollmentEntity)
+      .existsBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
+  }
+
+  async canActivateHolds(
+    manager: EntityManager,
+    studentId: string,
+    holds: readonly { classId: string; orderDetailId: string; unitIds: readonly string[] }[],
+  ): Promise<boolean> {
+    if (holds.length === 0 || holds.some((h) => h.unitIds.length === 0)) return false;
+    const rows = await manager
+      .getRepository(EnrollmentEntity)
+      .findBy({ orderDetailId: In(holds.map((h) => h.orderDetailId)) });
+    return (
+      rows.length === holds.length &&
+      rows.every(
+        (row) =>
+          row.studentId === studentId &&
+          row.status === EnrollmentStatus.PENDING_PAYMENT &&
+          holds.some((h) => h.orderDetailId === row.orderDetailId && h.classId === row.classId),
+      )
+    );
+  }
+
+  /** Caller holds class/order locks. Missing, released or mismatched holds never grant access. */
+  async activateHolds(
+    manager: EntityManager,
+    studentId: string,
+    holds: readonly { classId: string; orderDetailId: string; unitIds: readonly string[] }[],
+    now: Date,
+  ): Promise<void> {
+    const rows = await manager
+      .getRepository(EnrollmentEntity)
+      .createQueryBuilder('enrollment')
+      .setLock('pessimistic_write')
+      .where('enrollment.orderDetailId IN (:...ids)', { ids: holds.map((h) => h.orderDetailId) })
+      .orderBy('enrollment.id', 'ASC')
+      .getMany();
+    if (
+      rows.length !== holds.length ||
+      holds.some((h) => h.unitIds.length === 0) ||
+      rows.some(
+        (row) =>
+          row.studentId !== studentId ||
+          row.status !== EnrollmentStatus.PENDING_PAYMENT ||
+          !holds.some((h) => h.orderDetailId === row.orderDetailId && h.classId === row.classId),
+      )
+    ) {
+      throw new Error('PAYMENT_HOLD_INVARIANT');
+    }
+    for (const row of rows) {
+      const hold = holds.find((h) => h.orderDetailId === row.orderDetailId);
+      if (!hold) throw new Error('PAYMENT_HOLD_INVARIANT');
+      await manager
+        .getRepository(EnrollmentEntity)
+        .update(row.id, { status: EnrollmentStatus.ACTIVE, enrolledAt: now });
+      await manager
+        .getRepository(ClassUnitProgressEntity)
+        .insert(hold.unitIds.map((classUnitId) => ({ enrollmentId: row.id, classUnitId })));
+    }
+  }
 
   /** Seats taken per class: pending holds plus active enrollments. */
   async countOccupiedSeats(

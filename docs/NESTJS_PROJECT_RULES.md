@@ -14,6 +14,25 @@
 
 ## 2. Nguyên tắc nền tảng
 
+### Nguồn nghiệp vụ và trạng thái Phase 2 (2026-10-05)
+
+- **BẮT BUỘC** đọc toàn bộ `document/Flow.txt` cùng plan liên quan trước khi sửa
+  commerce/payment/access. Ghi rõ diễn giải so với flow và yêu cầu được hoãn.
+- Phase 2.1 đã test webhook server và confirm PayOS mẫu pass. Probe không có DB;
+  HTTP 200/confirm không chứng minh order PAID, enrollment ACTIVE hoặc nhận tiền.
+- Kế hoạch payment BE/giao dịch thật hiện hành là
+  [Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md); đã implement/test
+  local, còn chờ user deploy và nghiệm thu live theo [runbook](./PAYOS_PHASE_2_2_DEPLOYMENT.md).
+  Kế thừa checkout/hold hiện tại, không tạo lại enrollments hoặc sửa migration đã chạy.
+- Full payment cash/PayOS; amount từ server. Cash pending chỉ preview titles/timetable,
+  assigned mentor xác nhận mới mở full access; chat/DM pending hoãn tới phase chat.
+- PayOS chỉ mở quyền sau verified atomic settlement; activate holds hiện hữu và
+  progress từng class unit, ghi mail outbox cùng commit. Redirect không xác nhận tiền.
+- **BẮT BUỘC** giữ idempotency/race-expiry/reconciliation, không gọi provider/SMTP
+  trong DB transaction; dừng tạo link phải giữ khả năng nhận callback link đã phát hành.
+- **BẮT BUỘC** cập nhật `docs/progress/Progress.md`, phân biệt plan/local test/VPS
+  evidence/live transaction. Không đánh dấu pass các ca A1 hoặc Phase 0/1 còn thiếu.
+
 1. **BẮT BUỘC** chia hệ thống theo feature/domain, không chia toàn bộ dự án thành các thư mục kỹ thuật khổng lồ như `controllers/`, `services/`, `entities/`.
 2. **BẮT BUỘC** giữ controller mỏng, business logic nằm trong service/use case/CQRS handler.
 3. **BẮT BUỘC** dùng Dependency Injection của NestJS; không tự khởi tạo service, repository hoặc client bên trong business logic.
