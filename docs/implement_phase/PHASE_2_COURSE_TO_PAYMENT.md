@@ -198,6 +198,7 @@ DELETE /api/v1/me/cart/items/:classId
 POST   /api/v1/me/cart/checkout
 GET    /api/v1/me/orders
 GET    /api/v1/me/orders/:orderId
+GET    /api/v1/me/orders/payment-result?orderCode=<numericPayosCode>
 GET    /api/v1/me/classes/:classId/preview
 
 POST   /api/v1/me/orders/:orderId/payments/payos
@@ -481,6 +482,11 @@ state contract trước khi code song song; một người duy nhất sửa mỗ
       trạng thái. Live PayOS smoke chờ user cấu hình merchant account/webhook.
 
 ## 14. Ngoài scope
+
+Theo yêu cầu chỉ tới hết Phase 2 ngày 2026-10-05, enrolled-class listing riêng và
+API đọc/cập nhật progress chưa triển khai trong increment này. Phase 2 tạo
+progress khi thanh toán; quy tắc cập nhật tiến độ học cần chốt ở learning phase.
+Contract FE hiện hành và backlog: [Phase 2 FE contract](../PHASE_2_FE_CONTRACT.md).
 
 - Tạo PayOS merchant account, điền credential thật, đăng ký live webhook và giao
   dịch tiền thật; user sẽ tự cấu hình phần này sau.

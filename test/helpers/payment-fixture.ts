@@ -51,6 +51,7 @@ import { PaymentConfirmationEmailEntity } from '../../src/modules/payments/entit
 import { PaymentTransactionEntity } from '../../src/modules/payments/entities/payment-transaction.entity.js';
 import { PaymentWebhookEventEntity } from '../../src/modules/payments/entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from '../../src/modules/payments/entities/payos-payment-detail.entity.js';
+import { CashPaymentsService } from '../../src/modules/payments/services/cash-payments.service.js';
 import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
 import { PaymentReconciliationService } from '../../src/modules/payments/services/payment-reconciliation.service.js';
 import { PaymentSettlementService } from '../../src/modules/payments/services/payment-settlement.service.js';
@@ -256,6 +257,7 @@ export function paymentFixture(db: DataSource) {
     checkout,
     settlement,
     links,
+    cash: new CashPaymentsService(db, orders, offers, read, enrollments),
     user,
     order,
     access: new StudentClassService(enrollments, read),

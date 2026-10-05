@@ -73,6 +73,7 @@ const hash = await passwords.hashPassword('Http-test-password1!');
 for (const [email, role] of [
   ['student@http.test', 'STUDENT'],
   ['other@http.test', 'STUDENT'],
+  ['cash@http.test', 'STUDENT'],
   ['admin@http.test', 'ADMIN'],
   ['mentor@http.test', 'MENTOR'],
 ])

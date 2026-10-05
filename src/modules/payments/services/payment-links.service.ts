@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { OrderStatus } from '../../commerce/enums/order-status.enum.js';
 import { PaymentType } from '../../commerce/enums/payment-type.enum.js';
+import { OrderNotFoundException } from '../../commerce/exceptions/commerce.exceptions.js';
 // biome-ignore lint/style/useImportType: Exported commerce provider.
 import { OrderSettlementService } from '../../commerce/services/order-settlement.service.js';
 import { PAYOS_PROVIDER, type PayosProvider } from '../domain/payos-provider.js';
@@ -28,13 +29,30 @@ export class PaymentLinksService {
     @Inject(PAYOS_PROVIDER) private readonly provider: PayosProvider,
   ) {}
 
+  async resolveOrder(studentId: string, code: string): Promise<string> {
+    const providerOrderCode = Number(code);
+    if (!Number.isSafeInteger(providerOrderCode)) throw new OrderNotFoundException();
+    const detail = await this.db
+      .getRepository(PayosPaymentDetailEntity)
+      .findOneBy({ providerOrderCode });
+    if (!detail) throw new OrderNotFoundException();
+    const payment = await this.db
+      .getRepository(PaymentTransactionEntity)
+      .findOneByOrFail({ id: detail.paymentId });
+    await this.orders.read(this.db.manager, payment.orderId, studentId);
+    return payment.orderId;
+  }
+
   async get(studentId: string, orderId: string): Promise<PaymentDto | null> {
     const { order } = await this.orders.read(this.db.manager, orderId, studentId);
     const p = await this.db.getRepository(PaymentTransactionEntity).findOneBy({ orderId });
     if (!p) return null;
-    const d = await this.db
-      .getRepository(PayosPaymentDetailEntity)
-      .findOneByOrFail({ paymentId: p.id });
+    const d =
+      order.paymentType === PaymentType.CASH
+        ? null
+        : await this.db
+            .getRepository(PayosPaymentDetailEntity)
+            .findOneByOrFail({ paymentId: p.id });
     return new PaymentDto(
       p,
       d,

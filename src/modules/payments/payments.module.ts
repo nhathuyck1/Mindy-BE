@@ -9,6 +9,10 @@ import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { PayosAdapter } from './adapters/payos.adapter.js';
 import {
+  CashPaymentsController,
+  CashPreviewController,
+} from './controllers/cash-payments.controller.js';
+import {
   PaymentCallbacksController,
   PaymentReconciliationController,
   PaymentsController,
@@ -18,6 +22,7 @@ import { PaymentConfirmationEmailEntity } from './entities/payment-confirmation-
 import { PaymentTransactionEntity } from './entities/payment-transaction.entity.js';
 import { PaymentWebhookEventEntity } from './entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from './entities/payos-payment-detail.entity.js';
+import { CashPaymentsService } from './services/cash-payments.service.js';
 import { PaymentEmailService } from './services/payment-email.service.js';
 import { PaymentEmailWorker } from './services/payment-email.worker.js';
 import { PaymentLinksService } from './services/payment-links.service.js';
@@ -40,8 +45,15 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
       PaymentConfirmationEmailEntity,
     ]),
   ],
-  controllers: [PaymentsController, PaymentCallbacksController, PaymentReconciliationController],
+  controllers: [
+    PaymentsController,
+    PaymentCallbacksController,
+    PaymentReconciliationController,
+    CashPaymentsController,
+    CashPreviewController,
+  ],
   providers: [
+    CashPaymentsService,
     PayosAdapter,
     { provide: PAYOS_PROVIDER, useExisting: PayosAdapter },
     PaymentLinksService,
