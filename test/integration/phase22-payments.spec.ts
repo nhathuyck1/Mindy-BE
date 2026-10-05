@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
+import { APIError, PayOS } from '@payos/node';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
@@ -7,10 +9,12 @@ import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.j
 import { OrderEntity } from '../../src/modules/commerce/entities/order.entity.js';
 import { OrderStatus } from '../../src/modules/commerce/enums/order-status.enum.js';
 import { PaymentType } from '../../src/modules/commerce/enums/payment-type.enum.js';
+import { OrderSettlementService } from '../../src/modules/commerce/services/order-settlement.service.js';
 import { ClassUnitProgressEntity } from '../../src/modules/enrollments/entities/class-unit-progress.entity.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
 import { EnrollmentsService } from '../../src/modules/enrollments/services/enrollments.service.js';
+import { PayosAdapter } from '../../src/modules/payments/adapters/payos.adapter.js';
 import type { VerifiedPayment } from '../../src/modules/payments/domain/payos-provider.js';
 import { PaymentConfirmationEmailEntity } from '../../src/modules/payments/entities/payment-confirmation-email.entity.js';
 import { PaymentTransactionEntity } from '../../src/modules/payments/entities/payment-transaction.entity.js';
@@ -18,6 +22,7 @@ import { PaymentWebhookEventEntity } from '../../src/modules/payments/entities/p
 import { PayosPaymentDetailEntity } from '../../src/modules/payments/entities/payos-payment-detail.entity.js';
 import { PaymentStatus } from '../../src/modules/payments/enums/payment-status.enum.js';
 import { PaymentEmailService } from '../../src/modules/payments/services/payment-email.service.js';
+import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import type { MailService } from '../../src/shared/mail/mail.service.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
@@ -51,6 +56,64 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     return { ...o, payment, d, event };
   }
   const settle = (event: VerifiedPayment) => f.settlement.settle(event, 'WEBHOOK', null);
+
+  it('creates and persists QR after actual-adapter GET returns observed 101, then reuses the same link', async () => {
+    const o = await f.order();
+    const config = new ConfigService({
+      ...f.values,
+      PAYOS_CLIENT_ID: 'test-client',
+      PAYOS_API_KEY: 'test-key',
+      PAYOS_CHECKSUM_KEY: 'test-checksum',
+      PAYOS_RETURN_URL: 'https://example.test/paid',
+      PAYOS_CANCEL_URL: 'https://example.test/cancel',
+    });
+    const adapter = new PayosAdapter(config);
+    const links = new PaymentLinksService(db, new OrderSettlementService(), config, adapter);
+    const spy = vi.spyOn(PayOS.prototype, 'request');
+    spy.mockRejectedValueOnce(
+      new APIError(
+        200,
+        { code: '101', desc: 'Mã thanh toán không tồn tại' },
+        undefined,
+        new Headers(),
+      ),
+    );
+    spy.mockImplementationOnce(async () => {
+      const p = await db
+        .getRepository(PaymentTransactionEntity)
+        .findOneByOrFail({ orderId: o.order.id });
+      const d = await db
+        .getRepository(PayosPaymentDetailEntity)
+        .findOneByOrFail({ paymentId: p.id });
+      return {
+        paymentLinkId: 'test101link',
+        orderCode: d.providerOrderCode,
+        amount: o.order.totalAmount,
+        currency: 'VND',
+        status: 'PENDING',
+        checkoutUrl: 'https://pay.payos.vn/web/test101link',
+        qrCode: 'test-qr-payload',
+      };
+    });
+    try {
+      const payment = await links.create(o.student.id, o.order.id);
+      expect(payment).toMatchObject({
+        status: PaymentStatus.PENDING,
+        qrCode: 'test-qr-payload',
+        checkoutUrl: 'https://pay.payos.vn/web/test101link',
+      });
+      expect(spy.mock.calls[0]?.[0]).toMatchObject({ method: 'GET' });
+      expect(spy.mock.calls[1]?.[0]).toMatchObject({ method: 'POST' });
+      expect(await links.create(o.student.id, o.order.id)).toEqual(payment);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(
+        await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id }),
+      ).toBe(1);
+      expect(await paid(o.order.id)).toBe(OrderStatus.PENDING);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   async function paid(id: string) {
     return (await db.getRepository(OrderEntity).findOneByOrFail({ id })).status;
   }

@@ -18,6 +18,15 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-06: Sửa lỗi PayOS GET-first ngăn tạo QR trên VPS. Evidence user:
+  env container đã bật/đủ biến; SDK GET trả HTTP 200, code `101`, desc
+  `Mã thanh toán không tồn tại`. Adapter trước chỉ nhận `231`, nên trả 503 trước
+  CREATE. Bổ sung đúng response 200/101/desc đã quan sát; lỗi 101 khác, auth,
+  rate limit và lỗi tạm thời vẫn không tạo link mù. `pnpm check` pass 102 tests
+  (42 unit, 60 PostgreSQL integration, không skip); thêm test adapter và workflow
+  DB GET→CREATE→persist QR→reuse; built-app HTTP tests pass 4/4. Chưa deploy bản
+  sửa hoặc xác nhận payment thật.
+
 - 2026-10-05: Hoàn thiện increment CASH/preview và PayOS return mapping trong
   phạm vi Phase 2 theo yêu cầu user. Thêm mentor cash list/confirm, transaction
   idempotent với audit/activation/progress; lookup numeric provider orderCode →
