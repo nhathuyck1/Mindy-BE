@@ -10,6 +10,7 @@ import { PaymentType } from '../../src/modules/commerce/enums/payment-type.enum.
 import { ClassUnitProgressEntity } from '../../src/modules/enrollments/entities/class-unit-progress.entity.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
+import { EnrollmentsService } from '../../src/modules/enrollments/services/enrollments.service.js';
 import type { VerifiedPayment } from '../../src/modules/payments/domain/payos-provider.js';
 import { PaymentConfirmationEmailEntity } from '../../src/modules/payments/entities/payment-confirmation-email.entity.js';
 import { PaymentTransactionEntity } from '../../src/modules/payments/entities/payment-transaction.entity.js';
@@ -78,6 +79,121 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
       1,
     );
+  });
+
+  it('resolves redirect codes for the owner even after settlement; rejects other owners and unknown codes', async () => {
+    const o = await payable();
+    expect(o.payment.providerOrderCode).toBe(o.d.providerOrderCode);
+    expect(await f.links.resolveOrder(o.student.id, String(o.d.providerOrderCode))).toBe(
+      o.order.id,
+    );
+    const other = await f.user();
+    await expect(
+      f.links.resolveOrder(other.id, String(o.d.providerOrderCode)),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(f.links.resolveOrder(o.student.id, '9007199254740992')).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(f.links.resolveOrder(o.student.id, '1')).rejects.toMatchObject({ status: 404 });
+    await settle(o.event);
+    expect(await f.links.resolveOrder(o.student.id, String(o.d.providerOrderCode))).toBe(
+      o.order.id,
+    );
+  });
+
+  it('confirms full cash atomically and idempotently with mentor audit and initializes all progress', async () => {
+    const o = await f.order({ count: 2, paymentType: PaymentType.CASH });
+    expect(await f.cash.preview(o.student.id, o.classIds[0] ?? '')).toBeDefined();
+    const confirmations = await Promise.all(
+      Array.from({ length: 3 }, () => f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount)),
+    );
+    expect(confirmations.every((c) => c.order.status === OrderStatus.PAID)).toBe(true);
+    expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
+      1,
+    );
+    const payment = await f.links.get(o.student.id, o.order.id);
+    expect(payment).toMatchObject({
+      status: PaymentStatus.SUCCEEDED,
+      providerOrderCode: null,
+      checkoutUrl: null,
+    });
+    const rows = await db.getRepository(EnrollmentEntity).findBy({ studentId: o.student.id });
+    expect(rows.every((e) => e.status === EnrollmentStatus.ACTIVE)).toBe(true);
+    for (const row of rows)
+      expect(
+        await db.getRepository(ClassUnitProgressEntity).countBy({ enrollmentId: row.id }),
+      ).toBe(2);
+    expect(
+      await db.getRepository(PaymentConfirmationEmailEntity).countBy({ orderId: o.order.id }),
+    ).toBe(0);
+    await expect(f.cash.preview(o.student.id, o.classIds[0] ?? '')).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(f.access.get(o.student.id, o.classIds[0] ?? '')).resolves.toBeDefined();
+  });
+
+  it('rejects cash wrong mentor, partial/extra amount, expired and cancelled classes without activation', async () => {
+    const o = await f.order({ paymentType: PaymentType.CASH });
+    const other = await f.user(UserRole.MENTOR);
+    await expect(f.cash.confirm(other.id, o.order.id, o.order.totalAmount)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount - 1),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount + 1),
+    ).rejects.toMatchObject({ status: 409 });
+    await db
+      .getRepository(ClassEntity)
+      .update(o.classIds[0] ?? '', { status: ClassStatus.CANCELLED });
+    await expect(
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(f.cash.preview(o.student.id, o.classIds[0] ?? '')).rejects.toMatchObject({
+      status: 403,
+    });
+    await db.getRepository(ClassEntity).update(o.classIds[0] ?? '', { status: ClassStatus.OPEN });
+    await db.getRepository(OrderEntity).update(o.order.id, {
+      createdAt: new Date(Date.now() - 10000),
+      expiresAt: new Date(Date.now() - 1000),
+    });
+    await expect(
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(await paid(o.order.id)).toBe(OrderStatus.PENDING);
+    await expect(f.cash.preview(o.student.id, o.classIds[0] ?? '')).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
+      0,
+    );
+  });
+
+  it('rolls back cash payment and all activations on progress failure; retry recovers', async () => {
+    const o = await f.order({ count: 2, paymentType: PaymentType.CASH });
+    const activate = vi
+      .spyOn(f.enrollments, 'activateHolds')
+      .mockImplementationOnce(async (...args) => {
+        await EnrollmentsService.prototype.activateHolds.apply(f.enrollments, args);
+        throw new Error('progress failure');
+      });
+    await expect(f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount)).rejects.toThrow(
+      'progress failure',
+    );
+    activate.mockRestore();
+    expect(await paid(o.order.id)).toBe(OrderStatus.PENDING);
+    expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
+      0,
+    );
+    expect(
+      (await db.getRepository(EnrollmentEntity).findBy({ studentId: o.student.id })).every(
+        (e) => e.status === EnrollmentStatus.PENDING_PAYMENT,
+      ),
+    ).toBe(true);
+    await expect(
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+    ).resolves.toBeDefined();
   });
 
   it('recovers a lost provider response using the same code/attempt', async () => {

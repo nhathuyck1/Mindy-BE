@@ -33,6 +33,22 @@
     {
       "key": "payment_id",
       "value": ""
+    },
+    {
+      "key": "provider_order_code",
+      "value": ""
+    },
+    {
+      "key": "mentor_email",
+      "value": ""
+    },
+    {
+      "key": "mentor_password",
+      "value": ""
+    },
+    {
+      "key": "received_amount",
+      "value": ""
     }
   ],
   "item": [
@@ -491,6 +507,15 @@
                   "pm.collectionVariables.set('payment_id', pm.response.json().paymentId);"
                 ]
               }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"provider_order_code\", pm.response.json().providerOrderCode);"
+                ]
+              }
             }
           ]
         },
@@ -538,6 +563,194 @@
                 }
               }
             }
+          }
+        },
+        {
+          "name": "Resolve PayOS return orderCode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/orders/payment-result?orderCode={{provider_order_code}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Phase 2 CASH confirmation and preview",
+      "item": [
+        {
+          "name": "Login student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Add selected class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/me/cart/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"{{class_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Checkout CASH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/me/cart/checkout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentType\": \"CASH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) { const o = pm.response.json().orders[0]; pm.collectionVariables.set(\"order_id\", o.id); pm.collectionVariables.set(\"received_amount\", o.totalAmount); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pending cash preview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/preview"
+          }
+        },
+        {
+          "name": "Login assigned mentor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{mentor_email}}\",\n  \"password\": \"{{mentor_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List my CASH orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/mentor/cash-orders?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "Confirm collected full CASH amount",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/mentor/cash-orders/{{order_id}}/confirm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receivedAmount\": {{received_amount}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login student again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Read own CASH order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/orders/{{order_id}}"
+          }
+        },
+        {
+          "name": "Read full class after confirmation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes/{{class_id}}"
           }
         }
       ]

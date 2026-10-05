@@ -18,6 +18,15 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-05: Hoàn thiện increment CASH/preview và PayOS return mapping trong
+  phạm vi Phase 2 theo yêu cầu user. Thêm mentor cash list/confirm, transaction
+  idempotent với audit/activation/progress; lookup numeric provider orderCode →
+  internal orderId theo owner, không settle từ redirect. Payment summary đọc được
+  cả CASH. Contract/backlog tại `docs/PHASE_2_FE_CONTRACT.md`; chưa làm materials,
+  attendance, enrolled-class listing hoặc progress read/write. Local quality gate
+  pass 95 tests (59 PostgreSQL integration, không skip), HTTP built-app pass 4
+  tests; chưa deploy/live payment. Không thay trạng thái A1/Phase 0/1 còn thiếu.
+
 - 2026-10-05: Expanded `docs/progress/PHASE_2_PROGRESS.md` with the completed
   Phase 2.1 tooling, VPS deployment, Cloudflare routing, signature/input/restart/
   concurrent test evidence, and successful provider confirm callback. Retained

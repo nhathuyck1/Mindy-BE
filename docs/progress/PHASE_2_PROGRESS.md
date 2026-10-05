@@ -4,6 +4,17 @@ Cập nhật: 2026-10-05. Kế hoạch gốc: `docs/implement_phase/PHASE_2_COUR
 
 ## Cập nhật Phase 2.1 / Phase 2.2
 
+- Increment cuối Phase 2 ngày 2026-10-05: thêm lookup PayOS redirect → own order,
+  `providerOrderCode` trong payment DTO; mentor list/confirm CASH đúng snapshot,
+  full amount, deadline, idempotent transaction/payment/enrollment/progress và
+  audit reference; pending CASH preview chỉ titles/timetable/room. Không thêm
+  schema/migration, không triển khai Phase 3/4. Contract FE và backlog rõ tại
+  [Phase 2 FE contract](../PHASE_2_FE_CONTRACT.md).
+- Verification increment: `pnpm check` pass 95 tests (36 unit, 59 integration),
+  `pnpm test:http` pass 4 tests; PostgreSQL 17 container riêng, dedicated `_test`
+  DB, không skip integration. HTTP chạy built app với real guards/validation và
+  fake provider. Chưa deploy VPS hoặc kiểm chứng thanh toán thật.
+
 - Webhook receiver độc lập đã test trên server; SDK confirm và callback mẫu 200
   verified pass ngày 2026-10-05. Evidence/giới hạn A1 trong
   [Phase 2.1](../implement_phase/PHASE_2_1_WEBHOOK_VPS_PAYOS.md).
@@ -72,8 +83,8 @@ trên VPS. Sau checkout, student có order `PENDING` và hold cho đến khi set
 | Checkout, giữ chỗ, hết hạn order | Xong |
 | Webhook probe trên VPS, PayOS confirm mẫu | Functional test/confirm pass; giới hạn A1 ghi riêng |
 | Payment BE: PayOS link/settlement/access/mail/reconciliation | Implement/test local pass; deploy/live smoke chờ user |
-| Cash confirmation và cash preview | Chưa implement; giữ yêu cầu mentor confirm trong Flow.txt |
-| Preview giới hạn cho cash pending (`GET /me/classes/:classId/preview`) | Chưa làm |
+| Cash confirmation và cash preview | Implement/test local; chờ deploy/smoke |
+| Preview giới hạn cho cash pending (`GET /me/classes/:classId/preview`) | Owner CASH còn hạn, titles/timetable/room; HTTP privacy test pass |
 | `class_unit_progress`, kích hoạt enrollment `ACTIVE` | Implement/test trong Phase 2.2, còn chờ evidence live |
 
 ## 2. Cấu trúc

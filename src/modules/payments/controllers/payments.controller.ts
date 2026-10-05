@@ -38,6 +38,8 @@ import type { OrderWithDetails } from '../../commerce/services/checkout.service.
 import { OrderSettlementService } from '../../commerce/services/order-settlement.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import { PaymentDto, WebhookAckDto } from '../dtos/payment.dto.js';
+// biome-ignore lint/style/useImportType: Nest request validation requires runtime DTO.
+import { PaymentResultQueryDto } from '../dtos/payment-result-query.dto.js';
 import { ReconciliationPageDto, ReconciliationResultDto } from '../dtos/reconciliation.dto.js';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime constructor.
 import { PaymentLinksService } from '../services/payment-links.service.js';
@@ -75,6 +77,17 @@ export class PaymentsController {
     private readonly orders: OrderSettlementService,
     private readonly db: DataSource,
   ) {}
+  @Get('payment-result')
+  @ApiOperation({
+    summary: 'Resolve payOS redirect orderCode to my order; redirect never confirms payment',
+  })
+  @ApiOkResponse({ type: OrderPaymentDto })
+  async result(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PaymentResultQueryDto,
+  ): Promise<OrderPaymentDto> {
+    return this.get(user, await this.links.resolveOrder(user.userId, query.orderCode));
+  }
   @Get(':orderId')
   @ApiOkResponse({ type: OrderPaymentDto })
   async get(

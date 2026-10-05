@@ -26,6 +26,16 @@ export interface SeatHoldRequest {
 export class EnrollmentsService {
   constructor(private readonly dataSource: DataSource) {}
 
+  async hasPendingHold(
+    studentId: string,
+    classId: string,
+    orderDetailId: string,
+  ): Promise<boolean> {
+    return this.dataSource
+      .getRepository(EnrollmentEntity)
+      .existsBy({ studentId, classId, orderDetailId, status: EnrollmentStatus.PENDING_PAYMENT });
+  }
+
   async hasActiveAccess(
     studentId: string,
     classId: string,

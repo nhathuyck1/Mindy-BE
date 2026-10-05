@@ -13,6 +13,8 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
   let studentCookie: string;
   let otherCookie: string;
   let adminCookie: string;
+  let mentorCookie: string;
+  let cashCookie: string;
   const sdk = new PayOS({
     clientId: 'http-client',
     apiKey: 'http-key',
@@ -85,6 +87,8 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     studentCookie = await login('student@http.test');
     otherCookie = await login('other@http.test');
     adminCookie = await login('admin@http.test');
+    mentorCookie = await login('mentor@http.test');
+    cashCookie = await login('cash@http.test');
   }, 30000);
   afterAll(async () => {
     if (db?.isInitialized) await db.destroy();
@@ -126,7 +130,24 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     expect((await request(path, studentCookie, { amount: 1, success: true })).status).toBe(422);
     const created = await request(path, studentCookie, {});
     expect(created.status).toBe(201);
-    const payment = (await created.json()) as { paymentId: string; checkoutUrl: string };
+    const payment = (await created.json()) as {
+      paymentId: string;
+      checkoutUrl: string;
+      providerOrderCode: number;
+    };
+    const resultPath = `/me/orders/payment-result?orderCode=${payment.providerOrderCode}`;
+    expect((await request(resultPath)).status).toBe(401);
+    expect((await request(resultPath, otherCookie)).status).toBe(403);
+    const resolved = await request(resultPath, studentCookie);
+    expect(resolved.status).toBe(200);
+    expect(await resolved.json()).toMatchObject({ id, status: 'PENDING' });
+    for (const code of ['abc', '0', '-1', '1.5', '1e9'])
+      expect(
+        (await request(`/me/orders/payment-result?orderCode=${code}`, studentCookie)).status,
+      ).toBe(422);
+    expect((await request('/me/orders/payment-result?orderCode=1', studentCookie)).status).toBe(
+      404,
+    );
     const retry = await request(path, studentCookie, {});
     expect(retry.status).toBe(201);
     expect(((await retry.json()) as { paymentId: string }).paymentId).toBe(payment.paymentId);
@@ -198,6 +219,43 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     const publicText = await browse.text();
     expect(browse.status).toBe(200);
     expect(publicText).not.toContain('paid-class');
+  });
+
+  it('cash preview hides private URLs; only mentor confirms full amount and retries preserve one payment', async () => {
+    await request('/me/cart/items', cashCookie, { classId });
+    const checkout = await request('/me/cart/checkout', cashCookie, { paymentType: 'CASH' });
+    expect(checkout.status).toBe(201);
+    const { orders } = (await checkout.json()) as { orders: { id: string; totalAmount: number }[] };
+    const order = orders[0];
+    if (!order) throw new Error('Missing cash order');
+    const preview = `/me/classes/${classId}/preview`;
+    expect((await request(preview, otherCookie)).status).toBe(403);
+    const pending = await request(preview, cashCookie);
+    expect(pending.status).toBe(200);
+    const content = await pending.text();
+    expect(content).toContain('Session');
+    expect(content).not.toContain('meetingUrl');
+    expect(content).not.toContain('paid-session');
+    expect((await request(`/me/classes/${classId}`, cashCookie)).status).toBe(403);
+    const path = `/mentor/cash-orders/${order.id}/confirm`;
+    const body = { receivedAmount: order.totalAmount };
+    expect((await request(path, cashCookie, body)).status).toBe(403);
+    expect((await request(path, adminCookie, body)).status).toBe(403);
+    expect((await request(path, mentorCookie, { ...body, status: 'PAID' })).status).toBe(422);
+    expect(
+      (await request(path, mentorCookie, { receivedAmount: order.totalAmount - 1 })).status,
+    ).toBe(409);
+    const list = await request('/mentor/cash-orders', mentorCookie);
+    expect(list.status).toBe(200);
+    expect(await list.json()).toMatchObject({ items: [{ id: order.id }] });
+    for (let n = 0; n < 2; n++) expect((await request(path, mentorCookie, body)).status).toBe(200);
+    expect((await request(`/me/classes/${classId}`, cashCookie)).status).toBe(200);
+    const own = await request(`/me/orders/${order.id}`, cashCookie);
+    expect(own.status).toBe(200);
+    expect(await own.json()).toMatchObject({
+      status: 'PAID',
+      payment: { status: 'SUCCEEDED', providerOrderCode: null },
+    });
   });
 
   it('maps JSON parse/body limits to 400/413 without requiring browser credentials', async () => {
