@@ -2,6 +2,20 @@
 
 NestJS modular monolith for course operations, class management, enrollment, ordering and payment.
 
+Phase 2.2 implements payOS links, verified atomic payment/enrollment settlement,
+progress, private class access, confirmation email outbox and ADMIN reconciliation.
+`PAYOS_ENABLED=false` by default. Configure provider credentials/URLs only on the
+server; `PAYOS_CREATE_LINK_ENABLED=false` pauses new links while keeping callbacks
+enabled. Deploy and live-payment evidence remain separate from local tests:
+[payOS deployment runbook](docs/PAYOS_PHASE_2_2_DEPLOYMENT.md),
+[Phase 2.2 progress](docs/progress/PHASE_2_2_PROGRESS.md).
+
+Run `pnpm check` and `pnpm test:http` with a dedicated `TEST_DATABASE_URL` ending in
+`_test`; payment/HTTP suites create additional `*_payments_test`/`*_http_test`
+databases using the same test PostgreSQL server (CREATE DATABASE permission needed).
+HTTP E2E uses the built Nest application, real guards and SDK verifier with a test-only
+fake provider; it does not call real payOS or require merchant credentials.
+
 ## Technology decisions
 
 - Node.js 22 and pnpm, pinned by the repository.

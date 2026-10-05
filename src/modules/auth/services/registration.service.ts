@@ -5,6 +5,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, IsNull } from 'typeorm';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { MailService } from '../../../shared/mail/mail.service.js';
 import { UserPhoneAlreadyExistsException } from '../../users/exceptions/user.exceptions.js';
 import { UserEntity } from '../../users/user.entity.js';
 import { UserRole } from '../../users/user-role.enum.js';
@@ -23,8 +25,6 @@ import {
 import { RegistrationIntentEntity } from '../registration-intent.entity.js';
 import { IdentityProvider, UserIdentityEntity } from '../user-identity.entity.js';
 import type { GoogleProfile } from './google-oidc.service.js';
-// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
-import { MailService } from './mail.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { PasswordService } from './password.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.

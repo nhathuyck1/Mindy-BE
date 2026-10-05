@@ -8,6 +8,7 @@ import { CoursesService } from '../../catalog/services/courses.service.js';
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
 import { isClassOpenForPurchase } from '../domain/class-lifecycle.js';
 import { ClassEntity } from '../entities/class.entity.js';
+import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 import type { DeliveryMode } from '../enums/delivery-mode.enum.js';
 import {
@@ -48,6 +49,13 @@ export class ClassOffersService {
     private readonly enrollmentsService: EnrollmentsService,
     private readonly readService: ClassReadService,
   ) {}
+
+  async unitIds(manager: EntityManager, classId: string): Promise<string[]> {
+    const units = await manager
+      .getRepository(ClassUnitEntity)
+      .find({ where: { classId }, order: { position: 'ASC' }, select: { id: true } });
+    return units.map((unit) => unit.id);
+  }
 
   /** Reads offers without locking; unknown classes are omitted. */
   async findOffers(

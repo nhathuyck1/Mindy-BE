@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
-import { MailDeliveryUnavailableException } from '../exceptions/auth.exceptions.js';
+import { MailDeliveryUnavailableException } from './mail.exception.js';
 
 @Injectable()
 export class MailService {
@@ -20,12 +20,29 @@ export class MailService {
       host: this.config.getOrThrow<string>('SMTP_HOST'),
       port: this.config.getOrThrow<number>('SMTP_PORT'),
       secure: this.config.getOrThrow<boolean>('SMTP_SECURE'),
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 10_000,
       ...(user.length === 0 ? {} : { auth: { user, pass: password } }),
     });
   }
 
   assertEnabled(): void {
     if (this.transporter === null) {
+      throw new MailDeliveryUnavailableException();
+    }
+  }
+
+  async sendPaymentConfirmation(email: string, orderCode: string, amount: number): Promise<void> {
+    if (!this.transporter) throw new MailDeliveryUnavailableException();
+    try {
+      await this.transporter.sendMail({
+        from: this.config.getOrThrow<string>('MAIL_FROM'),
+        to: email,
+        subject: `Mindy payment confirmed: ${orderCode}`,
+        text: `Payment received for order ${orderCode}: ${amount.toLocaleString('en-US')} VND.\nYour purchased class access is now active.\nOpen Mindy to view your class and timetable.`,
+      });
+    } catch {
       throw new MailDeliveryUnavailableException();
     }
   }

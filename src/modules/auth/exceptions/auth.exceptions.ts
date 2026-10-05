@@ -56,12 +56,4 @@ export class GoogleAuthenticationFailedException extends AppHttpException {
   }
 }
 
-export class MailDeliveryUnavailableException extends AppHttpException {
-  constructor() {
-    super(
-      HttpStatus.SERVICE_UNAVAILABLE,
-      'MAIL_DELIVERY_UNAVAILABLE',
-      'Verification email delivery is currently unavailable',
-    );
-  }
-}
+export { MailDeliveryUnavailableException } from '../../../shared/mail/mail.exception.js';

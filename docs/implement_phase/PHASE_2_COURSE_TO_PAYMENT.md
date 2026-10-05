@@ -1,5 +1,13 @@
 # Phase 2 — Course registration, checkout, payment và enrollment
 
+> Cập nhật 2026-10-05: code BE đã tới checkout/hold/expiry; webhook probe trên VPS
+> và PayOS confirm mẫu đã pass. Payment runtime Phase 2.2 đã implement/test local;
+> deploy và giao dịch thật chờ user thực hiện theo runbook;
+> kế hoạch thực thi hiện hành là [Phase 2.2](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md),
+> kế thừa mục B–D của plan tiếp nối. PayOS được ưu tiên trước cash confirmation.
+> Đã đối chiếu toàn bộ `document/Flow.txt`; giữ full payment, email online,
+> preview cash pending và mentor confirmation. Chat/DM cash pending ở phase chat.
+
 ## 1. Mục tiêu
 
 Hoàn thành một vertical slice cho student:
@@ -32,7 +40,7 @@ whiteboard, assignment và compiler vẫn ở phase sau.
 - API prefix `/api/v1`, error response, validation pipe và Swagger đã hoạt động.
 - Có SMTP adapter hoặc local mail sink để test email; live PayOS credentials không
   phải điều kiện để bắt đầu viết code và test bằng fake provider.
-- Phase 1 hiện chưa đạt toàn bộ exit criteria trong `docs/Progress.md`; các hạng mục
+- Phase 1 hiện chưa đạt toàn bộ exit criteria trong `docs/progress/Progress.md`; các hạng mục
   auth/security còn thiếu phải được hoàn tất trước khi nghiệm thu Phase 2.
 
 ## 3. Quyết định nghiệp vụ và tài liệu nguồn
@@ -73,8 +81,10 @@ CatalogModule
   owns: course_categories, courses, course_units
 
 ClassesModule
-  owns: classes, class_units, class_sessions, enrollments,
-        class_unit_progress
+  owns: classes, class_units, class_sessions
+
+EnrollmentsModule
+  owns: enrollments, class_unit_progress
 
 CommerceModule
   owns: carts, cart_details, orders, order_details
@@ -120,7 +130,8 @@ module khác hoặc tạo vòng phụ thuộc. HTTP cookie/JWT không đi vào d
   lực. `cart_details.price_snapshot` chỉ để hiển thị, không cam kết giá.
 - Trong một transaction, lock cart và các class theo ID tăng dần, revalidate toàn
   bộ items, giá, enrollment và sức chứa; tạo order/detail, pending enrollment và
-  một `payment_transactions` `PENDING` cho mỗi order, rồi xóa cart details. Một item
+  xóa cart details; không tạo payment attempt ở checkout. Phase 2.2 reserve attempt
+  PAYOS khi gọi API tạo link bằng transaction riêng. Một item
   lỗi làm rollback toàn bộ checkout.
 - Sau commit, cart đã rỗng và các order ở trạng thái `PENDING`. Checkout lại không
   tạo order trùng cho class đang có pending enrollment; client lấy các order chờ
@@ -305,7 +316,8 @@ STUDENT add class -> cart display snapshot
   -> checkout(paymentType)
   -> lock cart/class -> revalidate all items -> split cash by mentor if needed
   -> create order(s) + details + pending enrollments
-  -> create pending payment transactions -> clear cart -> commit
+  -> clear cart -> commit (chưa tạo payment attempt)
+  -> PAYOS link API reserve/reuse attempt -> provider call ngoài transaction
 ```
 
 Class locks luôn theo thứ tự ID để giảm deadlock. Hai checkout tranh chỗ cuối cùng
@@ -333,7 +345,8 @@ xử lý ngoại lệ ngoài Phase 2 hoặc student checkout lại.
 PayOS adapter nhận config tên `PAYOS_ENABLED`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`,
 `PAYOS_CHECKSUM_KEY`, frontend return/cancel URL và webhook URL. Config phải fail
 fast khi bật mà thiếu giá trị; `.env.example` chỉ có placeholder, không chứa secret.
-User sẽ tự cung cấp credential và đăng ký live webhook sau khi review/triển khai.
+User đã cấu hình kênh và confirm webhook probe pass ngày 2026-10-05. Khi deploy
+Phase 2.2 phải confirm lại handler BE; credential vẫn được cấu hình trực tiếp trên VPS.
 
 Payment link được tạo ngoài DB transaction; response lưu provider identifiers và
 expiry. Khi provider call lỗi, order vẫn `PENDING`, có thể retry idempotently. Webhook
@@ -425,11 +438,13 @@ Các response DTO map field tường minh và không trả TypeORM entity/raw pr
 2. Tạo `course-catalog` migration/entity, admin và public catalog API.
 3. Tạo `class-operations` migration/entity, class creation/schedule và public class API.
 4. Tạo `commerce-orders` migration/entity, cart, checkout và seat hold/expiry.
-5. Tạo `payments-enrollment` migration/entity, cash confirmation và access policy.
-6. Implement PayOS adapter/link/webhook sau khi cash transaction flow ổn định.
+5. Theo Phase 2.2, tạo migration mới cho payment/progress/events/outbox; không tạo
+   lại enrollments đã có. Chốt public provider contracts và access policy.
+6. Implement PayOS adapter/link/webhook trước; cash preview/mentor confirmation
+   còn là increment riêng, không dùng làm prerequisite của PayOS.
 7. Implement confirmation email outbox/worker, reconciliation list và Swagger.
 8. Chạy integration/E2E/concurrency suite, `pnpm check`, staging smoke rồi cập
-   nhật `docs/Progress.md`. Live PayOS config do user thực hiện sau.
+   nhật `docs/progress/Progress.md`. Deploy/confirm lại BE và live smoke theo Phase 2.2.
 
 ## 12. Phân công hai người
 
@@ -462,7 +477,7 @@ state contract trước khi code song song; một người duy nhất sửa mỗ
       bật feature khi có config, tắt feature không ảnh hưởng cash.
 - [ ] Email xác nhận PayOS được queue một lần sau commit và retry an toàn.
 - [ ] Role/ownership, Swagger, unit/integration/E2E tests và `pnpm check` pass.
-- [ ] Staging smoke test với provider fake pass; `docs/Progress.md` cập nhật đúng
+- [ ] Staging smoke test với provider fake pass; `docs/progress/Progress.md` cập nhật đúng
       trạng thái. Live PayOS smoke chờ user cấu hình merchant account/webhook.
 
 ## 14. Ngoài scope

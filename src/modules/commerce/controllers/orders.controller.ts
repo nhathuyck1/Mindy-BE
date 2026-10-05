@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
@@ -46,16 +38,5 @@ export class OrdersController {
       options.pageSize,
       result.total,
     );
-  }
-
-  @Get(':orderId')
-  @ApiOperation({ summary: 'Get one of my orders' })
-  @ApiOkResponse({ type: OrderDto })
-  @ApiErrors(HttpStatus.NOT_FOUND)
-  async get(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('orderId', new ParseUUIDPipe()) orderId: string,
-  ): Promise<OrderDto> {
-    return new OrderDto(await this.ordersService.getForStudent(user.userId, orderId));
   }
 }

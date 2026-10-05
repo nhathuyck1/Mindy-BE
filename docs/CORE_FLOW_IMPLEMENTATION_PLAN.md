@@ -1,5 +1,13 @@
 # Core flow implementation plan
 
+Current Phase 2 continuation (2026-10-05): standalone VPS webhook verification and
+payOS sample confirmation passed; BE payment is implemented/tested locally, while
+VPS release and real settlement remain pending user execution.
+Follow [Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md) for the
+current execution order/contracts. It carries forward Flow.txt full payment,
+online confirmation email, pending cash preview and assigned-mentor cash confirmation.
+PayOS integration comes before the remaining cash increment; chat/DM is deferred.
+
 ## Goal
 
 Implement the database-backed main flows in vertical slices:
@@ -252,7 +260,7 @@ Checkout transaction tests must cover price changes, duplicate checkout retry, f
 
 ## Milestone 6 — Payment to enrollment vertical slice
 
-Modules: `payments`, `classes`.
+Modules: `payments`, `commerce`, `enrollments`, `classes`.
 
 Tables: `payment_transactions`, `payos_payment_details`, `enrollments`, `class_unit_progress`.
 
@@ -268,7 +276,7 @@ Initial endpoints:
 ```text
 POST /api/v1/me/orders/:orderId/payments/payos
 POST /api/v1/payment-callbacks/payos
-POST /api/v1/admin/orders/:orderId/manual-payment
+POST /api/v1/mentor/orders/:orderId/confirm-cash-payment
 ```
 
 The PayOS callback handler must:
@@ -276,7 +284,8 @@ The PayOS callback handler must:
 - Verify the provider signature before database mutation.
 - Lock the order/payment rows.
 - Return success when an already-processed callback is replayed.
-- Atomically mark payment/order paid and create enrollment/progress rows.
+- Atomically mark payment/order paid, activate the existing checkout holds and
+  initialize progress/email outbox rows; EnrollmentsModule owns enrollment/progress.
 - Never call email or another remote system while holding the transaction.
 
 Required integration tests include duplicate callbacks, mismatched amount, invalid signature, expired order, existing enrollment and a transaction rollback during progress initialization.

@@ -1,5 +1,12 @@
 # Mindy Postman checks
 
+Phase 2.2 adds `03 — Phase 2.2 payOS (manual live payment)`. Set collection variables
+`student_email`, `student_password`, `class_id`; login student, add class, checkout,
+create/reuse link, then **manually** pay via the checkout URL. Checkout/link requests
+save `order_id`/`payment_id`. Read own order/class after the provider webhook commits.
+Login ADMIN before review/reconcile requests. Do not post synthetic paid callbacks
+to live orders. For deployment, see [payOS runbook](../docs/PAYOS_PHASE_2_2_DEPLOYMENT.md).
+
 ## Import
 
 Import both files into Postman:
