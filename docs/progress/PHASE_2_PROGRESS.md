@@ -4,6 +4,15 @@ Cập nhật: 2026-10-05. Kế hoạch gốc: `docs/implement_phase/PHASE_2_COUR
 
 ## Cập nhật Phase 2.1 / Phase 2.2
 
+- Increment mentor collection ngày 2026-10-09: thêm hai API đọc cho mentor,
+  `GET /mentor/classes` và `GET /mentor/classes/:classId/students`, phân trang,
+  kiểm tra class assignment và lọc payment type/order status. Roster trả
+  orderId, student display name và tổng order để dùng lại cash confirm theo
+  toàn bộ order; không đổi schema hoặc rule snapshot cash mentor. Kiểm tra local
+  targeted Biome/type-check/build pass, 42 unit tests pass; 61 integration tests
+  bị skip vì thiếu test PostgreSQL. Full `pnpm check` bị chặn bởi CRLF có sẵn
+  trong nhiều file cũ. Chưa chạy HTTP/DB hoặc deploy/VPS smoke.
+
 - Increment cuối Phase 2 ngày 2026-10-05: thêm lookup PayOS redirect → own order,
   `providerOrderCode` trong payment DTO; mentor list/confirm CASH đúng snapshot,
   full amount, deadline, idempotent transaction/payment/enrollment/progress và

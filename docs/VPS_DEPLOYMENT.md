@@ -130,6 +130,30 @@ IMAGE_TAG=$(git rev-parse --short HEAD) docker compose --env-file .env.productio
 
 The migration container must finish successfully before the API is started.
 
+### GitHub Actions runner
+
+`.github/workflows/deploy.yml` runs when `dev` receives a push (including a
+merge). It calls the reusable `Check` workflow first, then deploys on a
+**Linux self-hosted runner on the VPS** only if all checks pass. It can also be
+started manually from `dev` once the workflow file is also on the repository's
+default branch (GitHub requirement for the manual Run workflow button). The
+runner user needs Git write access to the existing BE checkout, Docker access
+and permission to create a backup beside that checkout.
+The default checkout path is `/home/mindycode/mindycoding/Mindy-BE`; set the GitHub
+repository variable `DEPLOY_DIR` if the real path differs. Keep `.env.production`
+only in that VPS checkout, outside Git. The workflow does not copy it into the
+Actions workspace or print the expanded Compose configuration.
+
+The workflow requires a clean `dev` checkout, fast-forwards it to the exact
+commit that passed the checks, builds one image, starts PostgreSQL, saves and
+validates a `pg_dump` in `../mindy-backups`, runs the one-off migration, then
+updates the API and checks readiness. It preserves the existing Compose project
+name and PostgreSQL volume by running from the same directory. If the migration
+fails, the old API remains running. An API failure after migration needs manual
+diagnosis or a forward fix; the workflow does not revert a database with payment
+history. It does not change Cloudflare routing, confirm the payOS webhook or
+initiate a real payment.
+
 ## Phase 2.2 payment release
 
 For payOS migration, exact Cloudflare callback routing, BE re-confirmation, live smoke

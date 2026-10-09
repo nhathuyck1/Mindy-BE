@@ -12,6 +12,7 @@ import {
   CashPaymentsController,
   CashPreviewController,
 } from './controllers/cash-payments.controller.js';
+import { MentorClassRosterController } from './controllers/mentor-class-roster.controller.js';
 import {
   PaymentCallbacksController,
   PaymentReconciliationController,
@@ -23,6 +24,7 @@ import { PaymentTransactionEntity } from './entities/payment-transaction.entity.
 import { PaymentWebhookEventEntity } from './entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from './entities/payos-payment-detail.entity.js';
 import { CashPaymentsService } from './services/cash-payments.service.js';
+import { MentorClassRosterService } from './services/mentor-class-roster.service.js';
 import { PaymentEmailService } from './services/payment-email.service.js';
 import { PaymentEmailWorker } from './services/payment-email.worker.js';
 import { PaymentLinksService } from './services/payment-links.service.js';
@@ -51,9 +53,11 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
     PaymentReconciliationController,
     CashPaymentsController,
     CashPreviewController,
+    MentorClassRosterController,
   ],
   providers: [
     CashPaymentsService,
+    MentorClassRosterService,
     PayosAdapter,
     { provide: PAYOS_PROVIDER, useExisting: PayosAdapter },
     PaymentLinksService,

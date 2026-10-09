@@ -1,0 +1,84 @@
+name: Deploy
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-deploy
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/dev'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 45
+    env:
+      # Set the repository variable DEPLOY_DIR if the existing VPS checkout differs.
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/home/mindycode/mindycoding/Mindy-BE' }}
+      RELEASE_SHA: ${{ github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check VPS checkout and release
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$RELEASE_SHA"
+          [[ "$DEPLOY_DIR" = /* ]]
+          test -d "$DEPLOY_DIR/.git"
+          test -f "$DEPLOY_DIR/.env.production"
+          test -f "$DEPLOY_DIR/compose.production.yaml"
+          test "$(git -C "$DEPLOY_DIR" branch --show-current)" = dev
+          test -z "$(git -C "$DEPLOY_DIR" status --porcelain)"
+          docker info >/dev/null
+          docker compose version
+
+          # Fetch from the checked-out commit on this runner, then fast-forward only.
+          git -C "$DEPLOY_DIR" fetch --no-tags "$GITHUB_WORKSPACE" HEAD
+          git -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD
+          test "$(git -C "$DEPLOY_DIR" rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Build, back up, migrate and start API
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG="$RELEASE_SHA"
+          compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          # Quiet validation avoids printing interpolated production secrets.
+          "${compose[@]}" config --quiet
+          docker build --target runtime -t "mindy-center-api:$IMAGE_TAG" .
+          "${compose[@]}" up -d --wait --wait-timeout 120 postgres
+
+          backup_dir="$(dirname "$DEPLOY_DIR")/mindy-backups"
+          mkdir -p "$backup_dir"
+          backup_file="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_SHA:0:12}.dump"
+          "${compose[@]}" exec -T postgres sh -c \
+            'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_file"
+          test -s "$backup_file"
+          "${compose[@]}" exec -T postgres pg_restore -l < "$backup_file" > /dev/null
+
+          # A failed migration leaves the old API running. Do not roll back the DB.
+          "${compose[@]}" run --rm --no-deps -T migration
+          "${compose[@]}" up -d --no-build --no-deps --wait --wait-timeout 120 api
+          "${compose[@]}" exec -T api node -e \
+            'fetch("http://127.0.0.1:3000/api/v1/health/ready", {signal: AbortSignal.timeout(5000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))'
+
+          echo "Deployed $RELEASE_SHA; PostgreSQL backup: $backup_file"

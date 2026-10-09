@@ -18,6 +18,45 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-09: Aligned CI/CD with the VPS checkout on `dev`: `Deploy` runs on
+  pushes to `dev` (including merges), calls the reusable `Check` workflow for
+  that exact commit, then deploys only if checks pass. Manual runs require
+  `dev`; the VPS checkout must also be on `dev`. `Check` remains standalone for
+  PRs and `main` pushes. This is local workflow editing only; no push or VPS run
+  was performed.
+
+- 2026-10-09: Added `.github/workflows/deploy.yml` for the connected Linux
+  self-hosted GitHub Actions runner. It deploys the exact checked commit on
+  `dev` (or a manual run on `dev`) through the existing VPS checkout,
+  validates Compose quietly, builds one immutable image, creates/validates a
+  PostgreSQL backup, runs the migration once, then updates the API and checks
+  readiness. Documented the default `DEPLOY_DIR` and runner permissions in
+  `docs/VPS_DEPLOYMENT.md`. This is workflow authoring only; no push, runner
+  execution, VPS migration, routing change or live transaction was performed.
+
+- 2026-10-09: Bổ sung Phase 2 mentor collection view: `GET /mentor/classes`
+  liệt kê lớp hiện được phân công và `GET /mentor/classes/:classId/students`
+  liệt kê enrollment còn hiệu lực, student name, order/payment status và
+  `orderId` để dùng API CASH confirm sẵn có. Có phân trang/lọc, kiểm tra class
+  assignment và hiển thị tổng order khi một cash order gồm nhiều lớp; không đổi
+  schema hay quyền confirm theo mentor snapshot. Local targeted Biome, type-check,
+  42 unit tests và build pass. 61 PostgreSQL integration tests (gồm case roster
+  mới) bị skip vì không có `TEST_DATABASE_URL`; Docker/PostgreSQL không chạy trên
+  máy này. `pnpm check` toàn repo dừng ở lint vì nhiều file cũ đang có CRLF;
+  chưa có kiểm chứng HTTP/DB, VPS hay live payment cho increment này.
+
+- 2026-10-09: Đọc toàn bộ `document/Flow.txt`, sơ đồ
+  `document/usecase-course.drawio` và các quyết định/tiến độ Phase 2 hiện hành;
+  tạo `document/COURSE_FLOW.md` làm bản course flow để user kiểm tra trước Phase 3.
+  Tài liệu tách flow nghiệp vụ khỏi trạng thái triển khai, giữ CASH pending preview,
+  mentor confirm, PayOS/email, chat deferred và liệt kê các điểm cần chốt về
+  material ownership/access. Theo yêu cầu bổ sung, đối chiếu tiếp
+  `document/mindy_center_full.dbml` và use case: thêm flow điểm danh theo
+  Enrollment + Class Session, trạng thái/unique key, quyền ghi/xem, liên hệ với
+  buổi bù và chứng chỉ; làm rõ DBML hiện gắn material với Course Unit và các
+  quy tắc điểm danh cần chốt ở Phase 4. Chỉ thay đổi tài liệu; chưa bắt đầu
+  Phase 3/4, chưa chạy BE tests hoặc deploy.
+
 - 2026-10-06: Sửa lỗi PayOS GET-first ngăn tạo QR trên VPS. Evidence user:
   env container đã bật/đủ biến; SDK GET trả HTTP 200, code `101`, desc
   `Mã thanh toán không tồn tại`. Adapter trước chỉ nhận `231`, nên trả 503 trước

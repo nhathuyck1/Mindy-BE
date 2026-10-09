@@ -3,8 +3,11 @@
 Increment cuối Phase 2 thêm folder CASH và lookup return URL. Link response lưu
 `provider_order_code`; request result dùng mã này, không dùng mã Mindy `MD...`.
 CASH: login student → add class → checkout CASH → preview → login mentor snapshot
-→ list CASH → confirm đủ `received_amount` → login student → đọc own order/full
-class. Mentor confirm ghi nhận tiền thật đã thu; chỉ chạy sau khi đã thu đủ tiền.
+→ list assigned classes → list students in `class_id` filtered `CASH/PENDING`
+→ use the row's `orderId` and **full `orderTotalAmount`** to confirm → login
+student → đọc own order/full class. One cash order can cover multiple classes;
+mentor confirms the full order once. Mentor confirm ghi nhận tiền thật đã thu;
+chỉ chạy sau khi đã thu đủ tiền.
 Contract và backlog ngoài Phase 2: [FE contract](../docs/PHASE_2_FE_CONTRACT.md).
 
 Phase 2.2 adds `03 — Phase 2.2 payOS (manual live payment)`. Set collection variables

@@ -21,6 +21,7 @@ import { PaymentTransactionEntity } from '../../src/modules/payments/entities/pa
 import { PaymentWebhookEventEntity } from '../../src/modules/payments/entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from '../../src/modules/payments/entities/payos-payment-detail.entity.js';
 import { PaymentStatus } from '../../src/modules/payments/enums/payment-status.enum.js';
+import { MentorClassRosterService } from '../../src/modules/payments/services/mentor-class-roster.service.js';
 import { PaymentEmailService } from '../../src/modules/payments/services/payment-email.service.js';
 import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
@@ -193,6 +194,64 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
       status: 403,
     });
     await expect(f.access.get(o.student.id, o.classIds[0] ?? '')).resolves.toBeDefined();
+  });
+
+  it('lists assigned mentor classes and per-class cash students with the full order amount', async () => {
+    const o = await f.order({ count: 2, paymentType: PaymentType.CASH });
+    const roster = new MentorClassRosterService(db, f.read);
+    const classes = await roster.classes(o.mentor.id, { page: 1, pageSize: 1 });
+    expect(classes.total).toBe(2);
+    expect(classes.items).toHaveLength(1);
+    const classId = o.classIds[0] ?? '';
+    const pending = await roster.students(o.mentor.id, classId, { page: 1, pageSize: 20 });
+    expect(pending.total).toBe(1);
+    expect(pending.items[0]).toMatchObject({
+      studentId: o.student.id,
+      orderId: o.order.id,
+      paymentType: PaymentType.CASH,
+      orderStatus: OrderStatus.PENDING,
+      classAmount: 5000,
+      orderTotalAmount: 10000,
+      orderClassCount: 2,
+      canConfirmCash: true,
+    });
+    expect(
+      (
+        await roster.students(o.mentor.id, classId, {
+          page: 1,
+          pageSize: 20,
+          paymentType: PaymentType.PAYOS,
+        })
+      ).total,
+    ).toBe(0);
+    const other = await f.user(UserRole.MENTOR);
+    await expect(
+      roster.students(other.id, classId, { page: 1, pageSize: 20 }),
+    ).rejects.toMatchObject({ status: 404 });
+    const otherClassId = o.classIds[1] ?? '';
+    await db.getRepository(ClassEntity).update(otherClassId, { status: ClassStatus.CANCELLED });
+    expect(
+      (await roster.students(o.mentor.id, classId, { page: 1, pageSize: 20 })).items[0],
+    ).toMatchObject({ canConfirmCash: false });
+    await db.getRepository(ClassEntity).update(otherClassId, { status: ClassStatus.OPEN });
+    await f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount);
+    const paid = await roster.students(o.mentor.id, classId, {
+      page: 1,
+      pageSize: 20,
+      orderStatus: OrderStatus.PAID,
+    });
+    expect(paid.items[0]).toMatchObject({ orderStatus: OrderStatus.PAID, canConfirmCash: false });
+
+    const reassigned = await f.order({ paymentType: PaymentType.CASH });
+    const newMentor = await f.user(UserRole.MENTOR);
+    const reassignedClassId = reassigned.classIds[0] ?? '';
+    await db.getRepository(ClassEntity).update(reassignedClassId, { mentorId: newMentor.id });
+    await expect(
+      roster.students(reassigned.mentor.id, reassignedClassId, { page: 1, pageSize: 20 }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(
+      (await roster.students(newMentor.id, reassignedClassId, { page: 1, pageSize: 20 })).items[0],
+    ).toMatchObject({ orderId: reassigned.order.id, canConfirmCash: false });
   });
 
   it('rejects cash wrong mentor, partial/extra amount, expired and cancelled classes without activation', async () => {

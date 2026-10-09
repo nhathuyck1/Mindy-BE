@@ -686,6 +686,22 @@
           }
         },
         {
+          "name": "List my assigned classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/mentor/classes?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "List class students awaiting CASH collection",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/students?page=1&pageSize=20&paymentType=CASH&orderStatus=PENDING"
+          }
+        },
+        {
           "name": "List my CASH orders",
           "request": {
             "method": "GET",
