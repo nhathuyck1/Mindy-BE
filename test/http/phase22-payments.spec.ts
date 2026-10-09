@@ -117,6 +117,42 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     });
   }
 
+  it('lets admins create managers who can authenticate without inheriting other role permissions', async () => {
+    const input = {
+      email: 'manager@http.test',
+      password: 'Http-test-password1!',
+      displayName: 'Material Manager',
+      role: 'MANAGER',
+    };
+    expect((await request('/admin/users', mentorCookie, input)).status).toBe(403);
+    const created = await request('/admin/users', adminCookie, input);
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ email: input.email, role: 'MANAGER' });
+
+    const login = await request('/auth/login', undefined, {
+      email: input.email,
+      password: input.password,
+    });
+    expect(login.status).toBe(200);
+    const cookie = login.headers
+      .getSetCookie()
+      .map((value) => value.split(';')[0])
+      .join('; ');
+    const me = await request('/auth/me', cookie);
+    expect(me.status).toBe(200);
+    expect(await me.json()).toMatchObject({ role: 'MANAGER' });
+    const refresh = await request('/auth/refresh', cookie, {});
+    expect(refresh.status).toBe(200);
+    const rotated = refresh.headers
+      .getSetCookie()
+      .map((value) => value.split(';')[0])
+      .join('; ');
+    expect((await request('/auth/me', rotated)).status).toBe(200);
+    expect((await request('/admin/users', rotated)).status).toBe(403);
+    expect((await request('/admin/courses', rotated)).status).toBe(403);
+    expect((await request('/me/cart', rotated)).status).toBe(403);
+  });
+
   it('enforces auth/ownership/DTO, signed callback, own-order summary, full access and public privacy', async () => {
     expect((await request(`/me/classes/${classId}`)).status).toBe(401);
     expect((await request(`/me/classes/${classId}`, studentCookie)).status).toBe(403);

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, type Repository } from 'typeorm';
+import { type EntityManager, In, type Repository } from 'typeorm';
 import type { CreateUserDto } from './dtos/create-user.dto.js';
 import type { UserPageOptionsDto } from './dtos/user-page-options.dto.js';
 import {
@@ -45,8 +45,13 @@ export class UsersService {
     return user;
   }
 
-  async findActiveByRole(id: string, role: UserRole): Promise<UserEntity | null> {
-    return this.users.findOne({ where: { id, role, status: UserStatus.ACTIVE } });
+  async findActiveByRole(
+    id: string,
+    role: UserRole,
+    manager?: EntityManager,
+  ): Promise<UserEntity | null> {
+    const repository = manager?.getRepository(UserEntity) ?? this.users;
+    return repository.findOne({ where: { id, role, status: UserStatus.ACTIVE } });
   }
 
   async findByIds(ids: readonly string[]): Promise<UserEntity[]> {

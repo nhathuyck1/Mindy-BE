@@ -1,3 +1,7 @@
 allowBuilds:
   '@scarf/scarf': false
   esbuild: true
+  ffmpeg-static: true
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-s3@3.1148.0'
+  - '@aws-sdk/s3-request-presigner@3.1148.0'

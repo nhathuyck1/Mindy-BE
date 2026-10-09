@@ -2,7 +2,9 @@
 
 Ngày lập: **2026-10-09**. Trạng thái: **đã lập kế hoạch; chưa triển khai**.
 Tiến độ: [PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md).
-Thứ tự: **Phase 2/2.2 → Phase 2.3 → Phase 3 File + Materials**.
+Điều phối cập nhật 2026-10-09: **người khác làm Phase 2.3; user làm Phase 3 song
+song trên baseline Phase 2/2.2**. Phase 2.3 không chặn bắt đầu P3; navigation và
+materials tích hợp trước nghiệm thu toàn hành trình FE.
 
 ## 1. Mục tiêu
 

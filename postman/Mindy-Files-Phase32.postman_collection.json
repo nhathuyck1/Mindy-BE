@@ -1,0 +1,75 @@
+{
+  "info": {
+    "name": "04 — Phase 3.2 Files",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local Manager/assigned Mentor cookie auth upload flow. Select the binary file manually in PUT. Signed URLs are sensitive; clear them after testing. READY is not material approval or Student access."
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "manager_email", "value": "" },
+    { "key": "manager_password", "value": "" },
+    { "key": "course_unit_id", "value": "" },
+    { "key": "file_id", "value": "" },
+    { "key": "upload_url", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Login Manager (existing account)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{manager_email}}\",\n  \"password\": \"{{manager_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create upload intent (adjust filename, MIME and exact byte length)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/api/v1/files/upload-intents",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"courseUnitId\": \"{{course_unit_id}}\",\n  \"originalFilename\": \"source.txt\",\n  \"declaredMimeType\": \"text/plain\",\n  \"declaredSizeBytes\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 201) { const data = pm.response.json(); pm.collectionVariables.set('file_id', data.fileId); pm.collectionVariables.set('upload_url', data.uploadUrl); pm.collectionVariables.set('upload_content_type', data.requiredHeaders['content-type']); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PUT binary — manually select the declared local file",
+      "request": {
+        "method": "PUT",
+        "auth": { "type": "noauth" },
+        "header": [{ "key": "Content-Type", "value": "{{upload_content_type}}" }],
+        "url": "{{upload_url}}",
+        "body": { "mode": "file", "file": { "src": "" } }
+      }
+    },
+    {
+      "name": "Complete (202 PROCESSING / 200 READY)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/api/v1/files/{{file_id}}/complete",
+        "body": { "mode": "raw", "raw": "{}" }
+      }
+    },
+    {
+      "name": "Poll status (READY or FAILED)",
+      "request": { "method": "GET", "url": "{{base_url}}/api/v1/files/{{file_id}}" }
+    }
+  ]
+}

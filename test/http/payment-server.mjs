@@ -114,8 +114,22 @@ await classes.scheduleSession(view.classEntity.id, {
 });
 await classes.open(view.classEntity.id);
 await app.listen(0, '127.0.0.1');
-process.send?.({ url: await app.getUrl(), classId: view.classEntity.id });
+process.send?.({
+  url: await app.getUrl(),
+  classId: view.classEntity.id,
+  classUnitId: view.units[0].unit.id,
+  courseUnitId: view.units[0].unit.courseUnitId,
+});
 process.on('message', async (msg) => {
+  if (msg === 'files-process') {
+    const { FileProcessingService } = await import(
+      '../../dist/modules/files/services/file-processing.service.js'
+    );
+    const processing = app.get(FileProcessingService);
+    const claim = await processing.claim();
+    if (claim) await processing.process(claim);
+    process.send?.({ processed: claim?.fileId ?? null });
+  }
   if (msg === 'close') {
     await app.close();
     process.exit(0);

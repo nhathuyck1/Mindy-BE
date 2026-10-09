@@ -31,7 +31,36 @@ victim's email and retain a password credential.
 
 ### Catalog
 
-Owns `course_categories`, `courses`, `course_units` and `materials`. It defines reusable course content and list price. A course is a template; it is not a scheduled class and does not itself grant learning access.
+Owns `course_categories`, `courses` and `course_units`. It defines reusable course
+content and list price. A course is a template; it is not a scheduled class and
+does not itself grant learning access.
+
+### Materials — Phase 3.1 policy implemented, HTTP/persistence pending
+
+`MaterialsModule` now exports `MaterialPolicyService`; the domain layer implements
+access, draft/review/publication transitions, audit event output and the closed MVP
+file declaration contract. Catalog and Classes expose entity-free ancestry views;
+the facade uses current account roles/assignment and ACTIVE enrollment. There is
+no Materials HTTP controller or persistence yet. Transitions must later run under
+row locks/expected-revision checks with durable audit in Phase 3.3. Server-owned
+file references/snapshots are inputs to policy, never raw client JSON.
+
+Owns planned `materials` and material review/audit. The user approved D1–D6 on
+2026-10-09 in [Phase 3.1](./implement_phase/PHASE_3_1_POLICY_CONTRACT.md).
+One Course Unit has many Materials; every Material has a required Course Unit
+owner and is the main shared document of that unit across classes. Optional
+Session association does not change ownership or make that main document private
+to a class. Session assignment/Q&A/student code are separate features.
+
+`MANAGER` manages, edits and approves shared material. Assigned mentors may upload
+for a Course Unit taught in their class and submit drafts for Manager review;
+mentors cannot self-approve/publish or edit approved shared content. File `READY`
+only means binary validation passed, not that content was approved. Student reads
+require current-revision Manager approval/publication, ACTIVE enrollment, a
+non-cancelled class, an OPEN/COMPLETED Class Unit, elapsed unlock/availability times
+and a READY file. Editing approved content invalidates approval/publication until
+reviewed again. Enrollment COMPLETED is not newly entitled; Class COMPLETED with
+ACTIVE enrollment uses the same material gates. No external-link material in MVP.
 
 ### Class operations
 
@@ -52,7 +81,15 @@ Only verified settlement or authorized mentor cash confirmation can make an orde
 
 ### Files
 
-Owns `file_objects` and `file_metadata`. The first course implementation only requires files for materials. Binary content is stored in MinIO; relational tables store identity, lifecycle and extracted metadata.
+Owns `file_objects`, `file_metadata` and `file_processing_jobs`. Phase 3.2 implements
+Manager/assigned Mentor uploads scoped to Course Unit, private versioned MinIO,
+complete/status and durable bounded validation. Owner/scope/declaration/provenance
+are immutable; READY pins verified bytes/version/hash and atomically creates
+metadata PENDING + one EXTRACT job. Only VALIDATE runs in 3.2; extraction/cleanup
+is 3.5. READY does not imply review/publication or Student access.
+Materials uses the Files upload policy facade and transactional
+`FilesService.assertReadyReference`; there is no Files → Materials dependency.
+See [setup and handoff](./PHASE_3_2_FILES_RUNBOOK.md).
 
 ## 2. Course management flow
 
@@ -171,7 +208,10 @@ cancelled holds are never silently recreated; late/mismatched payments require r
 |---|---|
 | Read public active courses/open classes | Public |
 | Register through email/password or Google | Public; resulting role is always `STUDENT` |
-| Manage categories/courses/units/materials | `ADMIN` |
+| Manage categories/courses/units | `ADMIN` |
+| Create managed accounts, including Manager | `ADMIN`; MANAGER role restored in source/new migration |
+| Manage/edit/review/publish Course Unit material | `MANAGER` (approved Phase 3 design, API pending) |
+| Upload/submit own material draft | Assigned `MENTOR`, or `MANAGER` for direct upload (Phase 3 API pending) |
 | Create classes and schedules | `ADMIN` |
 | Read assigned class operations | Assigned `MENTOR`, `ADMIN` |
 | Read class roster and payment status | Currently assigned `MENTOR` for that class; roster includes effective enrollments only |
@@ -181,7 +221,11 @@ cancelled holds are never silently recreated; late/mismatched payments require r
 | Confirm full cash payment | Assigned `MENTOR` from the order snapshot, with audit data |
 | Inspect transactions/reconciliation | `ADMIN`; refund/manual bank-transfer scope is separate |
 
-There is no separate manager role: `ADMIN` holds every management permission.
+`MANAGER` is a separate role restored by a new migration on 2026-10-09 for
+material management. It does not inherit ADMIN, MENTOR or STUDENT permissions.
+Public registration still creates STUDENT. Existing category/course/class/user
+and reconciliation routes retain their role checks; manager material routes are
+to be implemented in Phase 3. Historical removal migration is unchanged.
 
 Flow.txt's manager assignment wording is implemented by the existing Phase 2
 decision to activate class enrollment/progress automatically after verified PayOS

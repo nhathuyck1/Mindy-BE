@@ -7,6 +7,10 @@ Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../implement_phase/PHASE_2_3_MY
 
 **Đã lập kế hoạch; chưa triển khai API, DTO hoặc migration Phase 2.3.**
 
+- Cập nhật điều phối: user giao 2.3 cho người khác và phụ trách P3; hai phase làm
+  song song. Ghi chú ưu tiên 2.3 trước P3 bên dưới là lịch sử lượt planning trước;
+  điều kiện hiện hành là tích hợp trước nghiệm thu hành trình FE, không chặn code P3.
+
 - User ưu tiên hoàn thiện luồng đăng ký lớp → My Classes → detail → lịch trước
   Phase 3 File + Materials; lượt này chỉ yêu cầu planning vào Markdown.
 - Đã đọc Flow.txt, FE contract, nguồn class/enrollment/CASH/order và đối chiếu
