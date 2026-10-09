@@ -18,6 +18,22 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-09: Aligned CI/CD with the VPS checkout on `dev`: `Deploy` runs on
+  pushes to `dev` (including merges), calls the reusable `Check` workflow for
+  that exact commit, then deploys only if checks pass. Manual runs require
+  `dev`; the VPS checkout must also be on `dev`. `Check` remains standalone for
+  PRs and `main` pushes. This is local workflow editing only; no push or VPS run
+  was performed.
+
+- 2026-10-09: Added `.github/workflows/deploy.yml` for the connected Linux
+  self-hosted GitHub Actions runner. It deploys the exact checked commit on
+  `dev` (or a manual run on `dev`) through the existing VPS checkout,
+  validates Compose quietly, builds one immutable image, creates/validates a
+  PostgreSQL backup, runs the migration once, then updates the API and checks
+  readiness. Documented the default `DEPLOY_DIR` and runner permissions in
+  `docs/VPS_DEPLOYMENT.md`. This is workflow authoring only; no push, runner
+  execution, VPS migration, routing change or live transaction was performed.
+
 - 2026-10-09: Bổ sung Phase 2 mentor collection view: `GET /mentor/classes`
   liệt kê lớp hiện được phân công và `GET /mentor/classes/:classId/students`
   liệt kê enrollment còn hiệu lực, student name, order/payment status và
