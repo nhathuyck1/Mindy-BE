@@ -18,6 +18,48 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-09: Theo yêu cầu planning, tạo Phase 2.3 My Classes + Personal Schedule
+  tại `docs/implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md` và progress riêng
+  `docs/progress/PHASE_2_3_PROGRESS.md`, ưu tiên trước Phase 3. Plan tái dùng full
+  detail/CASH preview, đề xuất enrollment-based list và lịch nhiều lớp, contract
+  filter/range/timezone, expiry/access/history, module read projections, milestones,
+  test và rollout. Không mở entitlement COMPLETED/pending PAYOS; không làm materials,
+  attendance hoặc sửa settlement. Cập nhật index/FE backlog và liên kết prerequisite
+  Phase 3. Chỉ tài liệu và kiểm tra diff/link; chưa code, migrate, test BE hoặc deploy.
+
+- 2026-10-09: Lập kế hoạch Phase 3 File + Materials từ DBML, COURSE_FLOW,
+  Flow.txt và usecase-course.drawio, đối chiếu code/config/progress hiện hành.
+  Plan tại `docs/implement_phase/PHASE_3_FILES_MATERIALS.md`, progress riêng tại
+  `docs/progress/PHASE_3_PROGRESS.md`: đề xuất material ba scope, mentor assignment,
+  ACTIVE entitlement + unit/material release, upload/validation/metadata async,
+  lifecycle/cleanup, API, migration, milestones, tests và rollout. Các lựa chọn
+  ownership/access còn mở được ghi là đề xuất, chưa đổi business rules/schema.
+  Giữ CASH preview/confirm và PayOS/email; không nhận evidence roster deploy làm
+  bằng chứng payment live. Chỉ thay đổi tài liệu, kiểm tra diff/link; chưa chạy BE
+  tests, tạo migration, triển khai storage hoặc deploy Phase 3.
+
+- 2026-10-09: In Cloudflare zone `quanh123.id.vn`, deployed active Cache Rule
+  `Bypass cache Swagger UI init` matching host `api.quanh123.id.vn` and exact
+  path `/docs/swagger-ui-init.js`, with edge cache eligibility and browser TTL
+  both set to bypass. Five subsequent public requests across SIN/HKG returned
+  the new mentor route document with `CF-Cache-Status: DYNAMIC`; Chrome Swagger
+  UI displayed both mentor-class endpoints. No backend deployment was needed.
+
+- 2026-10-09: Post-deploy read-only check for mentor roster APIs: GitHub Actions
+  deploy run `37880983054` succeeded on self-hosted runner `mindycode` for `dev`
+  commit `0e2e780c`; its VPS checkout/release and internal API readiness steps
+  passed. Public `GET /api/v1/mentor/classes` and
+  `GET /api/v1/mentor/classes/{classId}/students` return 401 without login,
+  while an unknown mentor route returns 404; public `/docs-json` lists both
+  operations. The Swagger UI initializer at `/docs/swagger-ui-init.js` first
+  returned an older Cloudflare cache HIT (no mentor routes, `max-age=14400`),
+  whereas a cache-busted request returned the new spec. A later public request
+  returned `EXPIRED` with the new mentor routes, but subsequent repeated
+  requests proved the cache is inconsistent across Cloudflare edges: HKG
+  returned the new initializer while SIN still returned the old `HIT` copy
+  (age about 3985 seconds). Direct VPS SSH was unavailable
+  from this workstation; no Cloudflare settings or production state were changed.
+
 - 2026-10-09: Aligned CI/CD with the VPS checkout on `dev`: `Deploy` runs on
   pushes to `dev` (including merges), calls the reusable `Check` workflow for
   that exact commit, then deploys only if checks pass. Manual runs require

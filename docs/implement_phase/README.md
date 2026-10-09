@@ -10,6 +10,17 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 3. [Phase 2 — Course registration, checkout, payment và enrollment](./PHASE_2_COURSE_TO_PAYMENT.md)
 4. [Phase 2.1 — Test webhook PayOS trên server, confirm đã pass](./PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
 5. [Phase 2.2 — Tích hợp payOS vào BE và nghiệm thu giao dịch thật](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md)
+6. [Phase 2.3 — My Classes + Personal Schedule](./PHASE_2_3_MY_CLASSES_SCHEDULE.md)
+7. [Phase 3 — File + Materials](./PHASE_3_FILES_MATERIALS.md)
+
+Ưu tiên Phase 2.3 trước Phase 3: hoàn thiện Student đăng ký lớp → danh sách lớp
+→ detail/preview → lịch cá nhân tổng hợp. Plan ngày 2026-10-09, chưa implement;
+xem [PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md).
+
+Phase 3 đã có kế hoạch ngày 2026-10-09, chưa triển khai. Kế hoạch đề xuất material
+dùng chung ở Course Unit và riêng ở Class Unit/Session; policy scope/quản lý/mở
+quyền cần được ghi quyết định trước khi code. Theo dõi tại
+[PHASE_3_PROGRESS.md](../progress/PHASE_3_PROGRESS.md).
 
 Kế hoạch tiếp nối sau checkout:
 [Webhook VPS → PayOS BE → deploy test](./PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).

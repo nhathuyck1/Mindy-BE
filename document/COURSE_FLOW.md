@@ -5,6 +5,10 @@
 > Nguồn quyết định triển khai hiện hành: [`CORE_BUSINESS_LOGIC.md`](../docs/CORE_BUSINESS_LOGIC.md), [`PHASE_2_FE_CONTRACT.md`](../docs/PHASE_2_FE_CONTRACT.md), [`Progress.md`](../docs/progress/Progress.md).  
 > Tài liệu này mô tả **flow mong muốn**; các mục ghi “chưa triển khai” không phải API/tính năng đã có.
 
+> Tiếp nối 2026-10-09: đã lập [kế hoạch Phase 3 File + Materials](../docs/implement_phase/PHASE_3_FILES_MATERIALS.md)
+> từ flow này, DBML và use case. Các điểm 1–3 của mục 8 có đề xuất cụ thể
+> trong plan, chưa phải xác nhận cuối cùng; chưa triển khai Phase 3.
+
 ## 1. Khái niệm và quan hệ
 
 | Khái niệm | Vai trò trong flow |

@@ -72,6 +72,10 @@ Preview sau khi thanh toán trả 403; FE chuyển sang endpoint full class.
 
 ## Backlog ngoài increment Phase 2 này
 
+Ngày 2026-10-09 đã có [plan Phase 2.3 — My Classes + Personal Schedule](./implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md)
+để hoàn thiện lớp đã đăng ký và lịch tổng hợp trước Phase 3. Đây là kế hoạch,
+chưa triển khai route collection/calendar; full detail và CASH preview giữ hiện trạng.
+
 Phase 2 chỉ khởi tạo progress khi payment thành công. Chưa có API tự cập nhật
 progress và chưa chốt cách tính từ attendance/homework để tránh FE tự chứng nhận
 hoàn thành. Danh sách lớp riêng chưa thuộc endpoint set Phase 2 hiện hành; tạm
