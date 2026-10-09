@@ -174,6 +174,7 @@ cancelled holds are never silently recreated; late/mismatched payments require r
 | Manage categories/courses/units/materials | `ADMIN` |
 | Create classes and schedules | `ADMIN` |
 | Read assigned class operations | Assigned `MENTOR`, `ADMIN` |
+| Read class roster and payment status | Currently assigned `MENTOR` for that class; roster includes effective enrollments only |
 | Manage own cart and checkout | Active `STUDENT` |
 | Read own orders/payments | Order owner |
 | Process payment callback | Verified provider adapter only |

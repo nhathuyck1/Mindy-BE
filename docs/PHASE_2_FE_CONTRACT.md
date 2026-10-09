@@ -33,6 +33,24 @@ integer; 422: query thiếu/sai định dạng. Response tạo/reuse link đã b
 
 ## CASH
 
+### Màn hình Mentor: lớp → học viên → thu tiền
+
+| API | Quyền | Contract |
+|---|---|---|
+| `GET /api/v1/mentor/classes?page=1&pageSize=20&status=OPEN` | MENTOR đang được gán cho Class | Danh sách lớp phân trang, chỉ lớp của chính mentor; gồm trạng thái Class. `status` tùy chọn. |
+| `GET /api/v1/mentor/classes/:classId/students?page=1&pageSize=20&paymentType=CASH&orderStatus=PENDING` | MENTOR đang được gán cho Class | Danh sách enrollment còn hiệu lực của lớp; `paymentType`/`orderStatus` tùy chọn. Lớp không thuộc mentor trả 404. |
+
+Mỗi dòng học viên có `studentId`, `studentName`, `enrollmentId/status`,
+`paymentType`, `orderId`, `orderCode`, `orderStatus`, `classAmount`,
+`orderTotalAmount`, `orderClassCount`, `expiresAt`, `paidAt` và `canConfirmCash`.
+`canConfirmCash` chỉ là gợi ý cho UI tại thời điểm đọc; endpoint confirm vẫn kiểm
+tra lại quyền, hạn, amount, trạng thái và giữ chỗ trong transaction. Không trả
+email/số điện thoại hoặc meeting URL trong roster. Nếu một order CASH gồm nhiều
+lớp của cùng mentor, **thu và confirm toàn bộ `orderTotalAmount` một lần bằng
+`orderId`**, không thu `classAmount` riêng cho mỗi dòng/lớp. Khi Admin đổi mentor
+của Class, mentor mới thấy roster nhưng không được confirm cash order đã chụp
+mentor cũ; mentor cũ vẫn thấy order trong `GET /mentor/cash-orders` để xử lý.
+
 | API | Quyền | Contract |
 |---|---|---|
 | `GET /api/v1/mentor/cash-orders?page=1&pageSize=20` | MENTOR snapshot của order | `{items: OrderDto[], page, pageSize, total}`, mới nhất trước; gồm lịch sử các trạng thái |
