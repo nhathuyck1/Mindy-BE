@@ -41,7 +41,7 @@ jobs:
       - name: Start MinIO for file integration tests
         run: |
           pnpm files:local:up
-          curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 --max-time 5 \
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 --max-time 5 \
             http://127.0.0.1:19000/minio/health/ready
       - run: pnpm test
       - run: pnpm build
