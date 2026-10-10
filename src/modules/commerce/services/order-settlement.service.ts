@@ -11,6 +11,13 @@ import {
 } from '../exceptions/commerce.exceptions.js';
 import type { OrderWithDetails } from './checkout.service.js';
 
+export interface PendingCashDetail {
+  readonly detailId: string;
+  readonly orderId: string;
+  readonly orderCode: string;
+  readonly expiresAt: Date;
+}
+
 /** Public commerce API; callers supply the transaction manager. */
 @Injectable()
 export class OrderSettlementService {
@@ -39,23 +46,32 @@ export class OrderSettlementService {
     };
   }
 
+  /** The student's unexpired pending CASH order line for the class, if any. */
   async pendingCashDetail(
     manager: EntityManager,
     studentId: string,
     classId: string,
-  ): Promise<string | null> {
-    const detail = await manager
+    now: Date = new Date(),
+  ): Promise<PendingCashDetail | null> {
+    const row = await manager
       .getRepository(OrderDetailEntity)
       .createQueryBuilder('detail')
       .innerJoin(OrderEntity, 'order', 'order.id = detail.orderId')
+      .select('detail.id', 'detailId')
+      .addSelect('order.id', 'orderId')
+      .addSelect('order.orderCode', 'orderCode')
+      .addSelect('order.expiresAt', 'expiresAt')
       .where('detail.classId = :classId', { classId })
       .andWhere('order.studentId = :studentId', { studentId })
       .andWhere('order.paymentType = :method', { method: PaymentType.CASH })
       .andWhere('order.status = :status', { status: OrderStatus.PENDING })
-      .andWhere('order.expiresAt > :now', { now: new Date() })
-      .getOne();
-    return detail?.id ?? null;
+      .andWhere('order.expiresAt > :now', { now })
+      .orderBy('order.createdAt', 'DESC')
+      .addOrderBy('order.id', 'ASC')
+      .getRawOne<PendingCashDetail>();
+    return row ?? null;
   }
+
   async read(
     manager: EntityManager,
     orderId: string,

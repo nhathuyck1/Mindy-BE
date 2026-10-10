@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -19,11 +20,11 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
-import { ClassDetailDto } from '../../classes/dtos/class.dto.js';
 import { OrderDto, OrderPageDto } from '../../commerce/dtos/order.dto.js';
 import { UserRole } from '../../users/user-role.enum.js';
 // biome-ignore lint/style/useImportType: Nest validation requires runtime DTO.
 import { ConfirmCashDto } from '../dtos/confirm-cash.dto.js';
+import { StudentClassPreviewDto } from '../dtos/student-class-preview.dto.js';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime constructor.
 import { CashPaymentsService } from '../services/cash-payments.service.js';
 
@@ -82,12 +83,15 @@ export class CashPaymentsController {
 export class CashPreviewController {
   constructor(private readonly cash: CashPaymentsService) {}
   @Get(':classId/preview')
-  @ApiOperation({ summary: 'Pending CASH owner sees titles/timetable/room only' })
-  @ApiOkResponse({ type: ClassDetailDto })
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary: 'Pending CASH owner sees titles/timetable/room only (accessMode CASH_PREVIEW)',
+  })
+  @ApiOkResponse({ type: StudentClassPreviewDto })
   async preview(
     @CurrentUser() user: AuthenticatedUser,
     @Param('classId', new ParseUUIDPipe()) id: string,
-  ): Promise<ClassDetailDto> {
-    return new ClassDetailDto(await this.cash.preview(user.userId, id));
+  ): Promise<StudentClassPreviewDto> {
+    return new StudentClassPreviewDto(await this.cash.preview(user.userId, id));
   }
 }

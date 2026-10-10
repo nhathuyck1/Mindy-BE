@@ -18,6 +18,7 @@ Compiler / Judge
 
 ## Documentation updates
 
+<<<<<<< HEAD
 - 2026-10-10: Viết `docs/api_flow/PHASE_3_2_FLOW.md` và
   `PHASE_3_2_flow-api-breakdown.md` cho FE: create intent → raw PUT MinIO → complete
   → poll status, request/response trực tiếp, errors/state/retry/expiry/polling và
@@ -39,6 +40,40 @@ Compiler / Judge
   Phân biệt API đã code/kế hoạch cùng evidence local/deploy; cập nhật hai tài liệu
   khi flow/API thay đổi. Đây là thay đổi rule tài liệu, chưa tạo breakdown cho các
   phase hiện hữu; không thay source/API, chạy runtime tests, migration hoặc deploy.
+=======
+- 2026-10-10: Đồng bộ `origin/dev` (Phase 3.1/3.2) vào `Feat/class-schedule` cho
+  PR #9. Resolve 6 conflict, giữ StudentLearning + Materials trong AppModule,
+  fixture mở rộng và migration MANAGER từ dev, nội dung progress của cả hai phase
+  và cấu trúc thư mục docs mới. Giữ `hasActiveAccess` để Materials dùng cùng
+  `findActive` của Phase 2.3; entitlement ACTIVE và transaction manager không đổi.
+  Sửa liên kết plan/progress/FE contract liên quan sau rename. Local:
+  frozen-lockfile install pass, `pnpm check` pass **243/243 tests (22 suites)**,
+  `pnpm test:http` pass **20/20 (2 suites)**, không skip; PostgreSQL DB `_test`
+  riêng và MinIO fixture local. Không migrate development/VPS hoặc thanh toán thật.
+
+- 2026-10-10: Kiểm chứng Phase 2.3 trên PostgreSQL local với DB test riêng.
+  Log user xác nhận migration Phase 2.2 `PayosPayments1791158400000` COMMIT thành công;
+  HTTP test ban đầu skip vì thiếu `TEST_DATABASE_URL`. Tạo `mindy_center_test` tại
+  `127.0.0.1:5433` và chạy các suite bằng biến môi trường process: `pnpm test` pass
+  **127/127** (60 unit + 67 PostgreSQL, gồm 6 ca Phase 2.3), `pnpm test:http` build
+  và **5/5 HTTP test pass**, không skip. Không reset DB development hoặc sửa code
+  nghiệp vụ. Còn query-plan review, staging/VPS smoke và coverage luồng PayOS settlement
+  → My Classes/calendar; không có deploy hoặc giao dịch thật trong lượt này.
+  Chi tiết: `docs/progress/phase 2/PHASE_2_3_PROGRESS.md`.
+
+- 2026-10-09: Triển khai Phase 2.3 My Classes + Personal Schedule ở local. Thêm
+  `StudentLearningModule` với `GET /api/v1/me/classes` (enrollment-based, view
+  current/history/all, filter, order summary, accessMode/reason, `asOf`) và
+  `GET /api/v1/me/schedule` (range `[from, to)` ≤ 31 ngày có timezone, chỉ FULL/
+  CASH_PREVIEW, không meeting URL). Detail/preview thêm field additive; response
+  cá nhân `Cache-Control: private, no-store`. Không migration, không đổi settlement/
+  expiry/entitlement. Contract FE `docs/PHASE_2_3_FE_CONTRACT.md`, Postman folder 05.
+  **Local checks:** `pnpm check` pass (lint, type-check, 60 unit test, build).
+  **Chưa chạy:** suite PostgreSQL mới (`phase23-my-classes-schedule`) và
+  `pnpm test:http` — skip vì không có `TEST_DATABASE_URL`; không tính là pass.
+  **VPS/live:** chưa deploy, không có giao dịch thật. Chi tiết:
+  `docs/progress/phase 2/PHASE_2_3_PROGRESS.md`.
+>>>>>>> Feat/class-schedule
 
 - 2026-10-09: Tiếp tục và hoàn tất Phase 3.2 local từ lượt bị ngắt. Files API
   intent/complete/status, upload policy Materials → Files, private versioned MinIO,
@@ -155,7 +190,7 @@ Compiler / Judge
 
 - 2026-10-09: Theo yêu cầu planning, tạo Phase 2.3 My Classes + Personal Schedule
   tại `docs/implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md` và progress riêng
-  `docs/progress/PHASE_2_3_PROGRESS.md`, ưu tiên trước Phase 3. Plan tái dùng full
+  `docs/progress/phase 2/PHASE_2_3_PROGRESS.md`, ưu tiên trước Phase 3. Plan tái dùng full
   detail/CASH preview, đề xuất enrollment-based list và lịch nhiều lớp, contract
   filter/range/timezone, expiry/access/history, module read projections, milestones,
   test và rollout. Không mở entitlement COMPLETED/pending PAYOS; không làm materials,

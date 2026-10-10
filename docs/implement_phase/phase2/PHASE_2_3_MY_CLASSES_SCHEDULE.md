@@ -1,7 +1,9 @@
 # Phase 2.3 — My Classes + Personal Schedule
 
-Ngày lập: **2026-10-09**. Trạng thái: **đã lập kế hoạch; chưa triển khai**.
-Tiến độ: [PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md).
+Ngày lập: **2026-10-09**. Trạng thái: **đã implement và pass `pnpm check` ở local;
+suite PostgreSQL/HTTP pass ngày 2026-10-10, còn query-plan review và deploy/smoke**.
+Tiến độ: [PHASE_2_3_PROGRESS.md](../../progress/phase%202/PHASE_2_3_PROGRESS.md).
+Contract FE đã chốt: [PHASE_2_3_FE_CONTRACT.md](../../PHASE_2_3_FE_CONTRACT.md).
 Điều phối cập nhật 2026-10-09: **người khác làm Phase 2.3; user làm Phase 3 song
 song trên baseline Phase 2/2.2**. Phase 2.3 không chặn bắt đầu P3; navigation và
 materials tích hợp trước nghiệm thu toàn hành trình FE.
@@ -34,18 +36,18 @@ Không làm UI frontend trong phạm vi BE; contract và acceptance flow phải 
 
 ## 2. Căn cứ và baseline
 
-- [Flow.txt](../../document/Flow.txt): Student đăng ký Class, thanh toán toàn bộ,
+- [Flow.txt](../../../document/Flow.txt): Student đăng ký Class, thanh toán toàn bộ,
   xem lịch; CASH pending chỉ xem tiêu đề unit/session và thời khóa biểu; mentor
   confirm mới mở nội dung. Online payment có email; pending chat/DM để phase Chat.
-- [Course flow](../../document/COURSE_FLOW.md): Class → Class Unit → Session;
+- [Course flow](../../../document/COURSE_FLOW.md): Class → Class Unit → Session;
   enrollment cấp quyền, Order chỉ thể hiện giao dịch.
-- [DBML](../../document/mindy_center_full.dbml): tái dùng `enrollments`,
+- [DBML](../../../document/mindy_center_full.dbml): tái dùng `enrollments`,
   `order_details`, `orders`, `classes`, `class_units`, `course_units`, `class_sessions`,
   `courses`, `users`; không cần bảng lịch cá nhân hoặc enrollment mới.
-- [FE contract Phase 2](../PHASE_2_FE_CONTRACT.md): My Classes còn là backlog;
+- [FE contract Phase 2](../../PHASE_2_FE_CONTRACT.md): My Classes còn là backlog;
   workaround hiện dùng Order PAID để lấy classId, không thay thế enrollment query.
-- [Phase 2.2 progress](../progress/PHASE_2_2_PROGRESS.md) và
-  [progress chung](../progress/Progress.md): phân biệt code/local checks với VPS/live.
+- [Phase 2.2 progress](../../progress/phase%202/PHASE_2_2_PROGRESS.md) và
+  [progress chung](../../progress/Progress.md): phân biệt code/local checks với VPS/live.
 
 Đã có trong source ngày lập plan:
 

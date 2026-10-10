@@ -1,3 +1,4 @@
+import type { EnrollmentStatus } from '../../enrollments/enums/enrollment-status.enum.js';
 import type { ClassEntity } from '../entities/class.entity.js';
 import type { ClassSessionEntity } from '../entities/class-session.entity.js';
 import type { ClassUnitEntity } from '../entities/class-unit.entity.js';
@@ -18,4 +19,16 @@ export interface ClassUnitView {
 
 export interface ClassDetailView extends ClassView {
   readonly units: ClassUnitView[];
+}
+
+/** The signed-in student's enrollment that authorizes a class read. */
+export interface LearnerEnrollmentView {
+  readonly id: string;
+  readonly status: EnrollmentStatus;
+  readonly enrolledAt: Date | null;
+}
+
+/** Full class detail for a student with an ACTIVE enrollment. */
+export interface StudentClassView extends ClassDetailView {
+  readonly enrollment: LearnerEnrollmentView;
 }
