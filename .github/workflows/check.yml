@@ -35,6 +35,11 @@ jobs:
         with:
           node-version: 22.20.0
           cache: pnpm
+      - name: Install media validation dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+          /usr/bin/ffprobe -version
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm type-check
