@@ -17,6 +17,8 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 
 Phase 2.3 đã implement; các suite PostgreSQL/HTTP hiện có pass local ngày 2026-10-10.
 Xem [contract FE](../PHASE_2_3_FE_CONTRACT.md) và progress bên dưới.
+FE navigation/lịch: [Flow 2.3](../api_flow/PHASE_2_3_FLOW.md) và
+[API breakdown 2.3](../api_flow/PHASE_2_3_flow-api-breakdown.md).
 
 Điều phối hiện hành: người khác làm Phase 2.3, user làm Phase 3 song song;
 thứ tự danh sách trên là roadmap, không yêu cầu chờ 2.3 để bắt đầu P3.

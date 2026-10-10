@@ -5,12 +5,14 @@
 
 FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
 [API breakdown 3.2](PHASE_3_2_flow-api-breakdown.md).
+FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
+[API breakdown 2.3](PHASE_2_3_flow-api-breakdown.md).
 
 ## 1. Mỗi phase cung cấp gì?
 
 | Phase | Mục tiêu | Đã có trong checkout này | Phần còn thiếu |
 |---|---|---|---|
-| 2.3 | Student tìm lớp đã đăng ký, xem detail và lịch cá nhân | Plan; API full detail và CASH preview kế thừa Phase 2/2.2 | Collection My Classes, lịch nhiều lớp, DTO access context và gate riêng 2.3 |
+| 2.3 | Student tìm lớp đã đăng ký, xem detail và lịch cá nhân | StudentLearningModule, collection My Classes, lịch nhiều lớp, DTO access context, full detail/CASH preview; suite local pass | Query-plan review trên fixture lớn, coverage PayOS settlement → list/lịch và staging/VPS smoke |
 | 3.1 | Quy định ai được tạo, sửa, duyệt và đọc tài liệu | Role MANAGER + migration; MaterialsModule/MaterialPolicyService; context providers; domain review/revision/access và test | Material entity, DB persistence, HTTP CRUD/review và Student download thuộc các slice sau |
 | 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, validation worker, retry/lease/reference locks và test | Material CRUD/review ở 3.3; Student đọc/tải ở 3.4; metadata extraction/cleanup ở 3.5; rollout/tích hợp ở 3.6 |
 
@@ -33,10 +35,12 @@ flowchart TD
     EN --> DETAIL["Full class detail: Class → Class Unit → Session"]
     CP -->|"Mentor confirm CASH"| EN
     PP -->|"Thanh toán được xác minh"| EN
-    EN -.-> MY["2.3 chưa triển khai: My Classes + lịch cá nhân"]
-    CP -.-> MY
-    PP -.->|"My Classes summary; không có lịch"| MY
-    MY -.-> DETAIL
+    EN --> MY["GET /me/classes: enrollment + accessMode"]
+    CP --> MY
+    PP -->|"My Classes summary; không có lịch"| MY
+    MY -->|FULL| DETAIL
+    MY -->|CASH_PREVIEW| CP
+    MY -->|"FULL / CASH_PREVIEW"| CAL["GET /me/schedule → event → refetch detail/preview"]
   end
   subgraph AUTHOR["Manager / Mentor — chuẩn bị file"]
     U["Chọn Course Unit; Mentor chọn Class + Class Unit đang được phân công"] --> AUTH["Kiểm role hiện hành, assignment, ancestry và declaration"]
@@ -68,10 +72,10 @@ không phải API upload multipart của NestJS.
 | `POST /me/orders/:orderId/payments/payos` | Student | Tạo/tái dùng payment link theo policy hiện hành | Có, nền tảng 2.2 |
 | `POST /payment-callbacks/payos` | Provider callback | Xác minh callback và xử lý settlement; redirect FE không tự cấp quyền | Có, nền tảng 2.2 |
 | `POST /mentor/cash-orders/:orderId/confirm` | Mentor có quyền với order | Xác nhận CASH và kích hoạt enrollment | Có, nền tảng 2.2 |
-| `GET /me/classes/:classId` | Student ACTIVE | Full detail, units/sessions/timetable và meeting URL | Có từ trước 2.3 |
-| `GET /me/classes/:classId/preview` | Student CASH pending còn hạn | Title/timetable/room; không meeting URL | Có từ trước 2.3 |
-| `GET /me/classes` | Student | Danh sách enrollment, current/history/all, access hints | Kế hoạch 2.3; chưa có collection route |
-| `GET /me/schedule?from=…&to=…` | Student | Lịch tổng hợp Session của các lớp có quyền; không meeting URL | Kế hoạch 2.3; chưa có route |
+| `GET /me/classes/:classId` | Student ACTIVE | Full detail, units/sessions/timetable, meeting URL và context enrollment/FULL | Đã code; context bổ sung 2.3 |
+| `GET /me/classes/:classId/preview` | Student CASH pending còn hạn | Title/timetable/room + context hold/order/CASH_PREVIEW; không meeting URL | Đã code; context bổ sung 2.3 |
+| `GET /me/classes` | Student | Danh sách enrollment, current/history/all, access hints | Đã code 2.3, local DB/HTTP verified |
+| `GET /me/schedule?from=…&to=…` | Student | Lịch tổng hợp Session của các lớp có quyền; không meeting URL | Đã code 2.3, local DB/HTTP verified |
 | `POST /files/upload-intents` | Manager / Mentor được phân công | Tạo intent; trả fileId, URL PUT và requiredHeaders | Đã code 3.2 |
 | `POST /files/:fileId/complete` | Manager / Mentor đủ quyền hiện hành | Enqueue VALIDATE một lần; 202 khi PROCESSING, 200 khi READY | Đã code 3.2 |
 | `GET /files/:fileId` | Manager / Mentor đủ quyền hiện hành | Status, errorCode và metadataStatus; không trả download URL | Đã code 3.2 |
@@ -88,16 +92,18 @@ Contract API trong plan không có nghĩa route đã tồn tại.
    Hết hạn/hủy hold không còn quyền preview, dù timer chưa persist expiry.
 3. Khi payment được xác minh/confirm đúng, Enrollment chuyển ACTIVE. Student có
    thể gọi full detail nếu Class không CANCELLED.
-4. Theo plan 2.3, FE gọi My Classes để lấy enrollment và accessMode. FULL mở
+4. FE gọi My Classes để lấy enrollment và accessMode. FULL mở
    detail; CASH_PREVIEW mở preview; NONE chỉ hiển thị summary/trạng thái phù hợp.
-5. Theo plan, lịch cá nhân chỉ gồm các lớp FULL hoặc CASH_PREVIEW; pending PayOS,
+5. Lịch cá nhân chỉ gồm các lớp FULL hoặc CASH_PREVIEW; pending PayOS,
    expired/cancelled, COMPLETED enrollment và Class CANCELLED không được cấp lịch
-   private theo contract đề xuất hiện tại. Collection/list history khác quyền nội dung.
+   private theo contract hiện hành. Collection/list history khác quyền nội dung.
 6. Khi bấm buổi học, FE dùng classId để refetch detail/preview và định vị sessionId
-   trong units/sessions. Calendar dự kiến không trả meeting URL.
+   trong units/sessions. Calendar không trả meeting URL.
 
-Các accessMode và query collection/calendar ở bước 4–6 vẫn là **contract đề xuất**,
-chưa phải API/DTO triển khai trong checkout này. FULL cũng không tự mở Material.
+Các API/DTO ở bước 4–6 **đã implement**. List mặc định pageSize 20, calendar 100,
+tối đa 100; lịch yêu cầu range có timezone, `[from, to)` ≤31 ngày. Sau PAID/CASH
+confirm, refetch list/lịch; hint tại `asOf` không thay việc kiểm quyền lại ở detail.
+FULL không tự mở Material. Xem breakdown 2.3 để tích hợp từng endpoint/lỗi.
 
 ## 5. Những rule đã code ở 3.1
 
@@ -172,8 +178,19 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
 - CI dùng MinIO fixture riêng; không phụ thuộc flag/MinIO của VPS.
 - Muốn Student thực sự đọc/tải tài liệu vẫn cần 3.3 + 3.4 và cấu hình/rollout tương ứng.
 
-## 8. Nguồn đối chiếu
+## 8. Nhật ký đối chiếu
 
+- 2026-10-10: Cập nhật phần 2.3 từ “kế hoạch/chưa triển khai” thành API đã code,
+  sửa diagram/route table/Student flow và liên kết flow/breakdown riêng.
+  Progress đã có evidence local: full check 243/243, HTTP 20/20 sau ghép dev;
+  riêng DB 2.3 6/6. Đây là evidence lượt trước, không chạy lại runtime tests trong
+  lượt tài liệu; chưa xác minh release/VPS hoặc thanh toán thật.
+
+## 9. Nguồn đối chiếu
+
+- [Flow 2.3](PHASE_2_3_FLOW.md)
+- [API breakdown 2.3](PHASE_2_3_flow-api-breakdown.md)
+- [Contract FE 2.3](../PHASE_2_3_FE_CONTRACT.md)
 - [Progress 2.3](../progress/phase%202/PHASE_2_3_PROGRESS.md)
 - [Plan 2.3](../implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md)
 - [Progress 3.1](../progress/phase%203/PHASE_3_1_PROGRESS.md)

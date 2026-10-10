@@ -18,7 +18,15 @@ Compiler / Judge
 
 ## Documentation updates
 
-<<<<<<< HEAD
+- 2026-10-10: Review đồng bộ Phase 2.3 trong progress/API flow. Progress đã có
+  implementation và evidence local; flow tổng hợp còn ghi collection/calendar
+  chưa code. Sửa `docs/api_flow/PHASE_2_3_TO_3_2_FLOW.md` theo source và tạo
+  `PHASE_2_3_FLOW.md`, `PHASE_2_3_flow-api-breakdown.md` cho 4 GET list/detail/
+  preview/schedule: query/response, access/current/history, pagination/timezone,
+  errors, FE refetch/polling, checkout/payment/expiry và liên hệ Phase 3.
+  Liên kết hai chiều với FE contract/progress; kiểm link, ví dụ JSON và diff.
+  Chỉ sửa tài liệu, không thay API, chạy lại runtime tests, migration hoặc deploy.
+
 - 2026-10-10: Viết `docs/api_flow/PHASE_3_2_FLOW.md` và
   `PHASE_3_2_flow-api-breakdown.md` cho FE: create intent → raw PUT MinIO → complete
   → poll status, request/response trực tiếp, errors/state/retry/expiry/polling và
@@ -40,7 +48,6 @@ Compiler / Judge
   Phân biệt API đã code/kế hoạch cùng evidence local/deploy; cập nhật hai tài liệu
   khi flow/API thay đổi. Đây là thay đổi rule tài liệu, chưa tạo breakdown cho các
   phase hiện hữu; không thay source/API, chạy runtime tests, migration hoặc deploy.
-=======
 - 2026-10-10: Đồng bộ `origin/dev` (Phase 3.1/3.2) vào `Feat/class-schedule` cho
   PR #9. Resolve 6 conflict, giữ StudentLearning + Materials trong AppModule,
   fixture mở rộng và migration MANAGER từ dev, nội dung progress của cả hai phase
@@ -73,7 +80,6 @@ Compiler / Judge
   `pnpm test:http` — skip vì không có `TEST_DATABASE_URL`; không tính là pass.
   **VPS/live:** chưa deploy, không có giao dịch thật. Chi tiết:
   `docs/progress/phase 2/PHASE_2_3_PROGRESS.md`.
->>>>>>> Feat/class-schedule
 
 - 2026-10-09: Tiếp tục và hoàn tất Phase 3.2 local từ lượt bị ngắt. Files API
   intent/complete/status, upload policy Materials → Files, private versioned MinIO,

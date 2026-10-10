@@ -3,6 +3,8 @@
 Chốt ngày **2026-10-09** (bước 2.3.1), triển khai cùng ngày ở local. Kế hoạch:
 [PHASE_2_3_MY_CLASSES_SCHEDULE.md](./implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
 Contract Phase 2 trước đó vẫn hiệu lực: [PHASE_2_FE_CONTRACT.md](./PHASE_2_FE_CONTRACT.md).
+Flow Student: [PHASE_2_3_FLOW.md](./api_flow/PHASE_2_3_FLOW.md).
+API breakdown cho FE: [PHASE_2_3_flow-api-breakdown.md](./api_flow/PHASE_2_3_flow-api-breakdown.md).
 
 Mọi route dưới `/api/v1`, cookie auth, role **STUDENT**. Không gửi `studentId`
 (query thừa → 422). Mọi response cá nhân có `Cache-Control: private, no-store`.
@@ -69,7 +71,8 @@ mời trả lần nữa. `isHoldExpired=true` khi hold đã quá hạn dù DB ch
 
 `canViewClass = canViewSchedule = accessMode !== 'NONE'`. COMPLETED chưa mở lại
 private detail/lịch (quyền học lại để quyết định riêng). Unit LOCKED không ẩn tiêu đề
-hay lịch Session ở Phase 2.3; materials/attendance/progress chưa tồn tại.
+hay lịch Session ở Phase 2.3; read/write materials/attendance/progress không thuộc
+API 2.3. Phase 3 đã có policy và Files upload; Student Material/download còn ở slice sau.
 
 ## Detail/preview (bổ sung additive)
 
