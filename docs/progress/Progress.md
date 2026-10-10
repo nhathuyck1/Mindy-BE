@@ -18,6 +18,16 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-10: Kiểm chứng Phase 2.3 trên PostgreSQL local với DB test riêng.
+  Log user xác nhận migration Phase 2.2 `PayosPayments1791158400000` COMMIT thành công;
+  HTTP test ban đầu skip vì thiếu `TEST_DATABASE_URL`. Tạo `mindy_center_test` tại
+  `127.0.0.1:5433` và chạy các suite bằng biến môi trường process: `pnpm test` pass
+  **127/127** (60 unit + 67 PostgreSQL, gồm 6 ca Phase 2.3), `pnpm test:http` build
+  và **5/5 HTTP test pass**, không skip. Không reset DB development hoặc sửa code
+  nghiệp vụ. Còn query-plan review, staging/VPS smoke và coverage luồng PayOS settlement
+  → My Classes/calendar; không có deploy hoặc giao dịch thật trong lượt này.
+  Chi tiết: `docs/progress/PHASE_2_3_PROGRESS.md`.
+
 - 2026-10-09: Triển khai Phase 2.3 My Classes + Personal Schedule ở local. Thêm
   `StudentLearningModule` với `GET /api/v1/me/classes` (enrollment-based, view
   current/history/all, filter, order summary, accessMode/reason, `asOf`) và

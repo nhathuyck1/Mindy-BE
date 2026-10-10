@@ -1,24 +1,25 @@
 # Phase 2.3 — Tiến độ My Classes + Personal Schedule
 
-Cập nhật: **2026-10-09**.
+Cập nhật: **2026-10-10**.
 Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
 Contract FE: [PHASE_2_3_FE_CONTRACT.md](../PHASE_2_3_FE_CONTRACT.md).
 
 ## Hiện trạng
 
-**Đã implement code + test ở local; chưa chạy được suite PostgreSQL/HTTP, chưa deploy.**
+**Đã implement và chạy pass các suite local hiện có, gồm PostgreSQL/HTTP; chưa review
+query plan trên fixture lớn, chưa deploy.**
 
 | Loại bằng chứng | Trạng thái |
 |---|---|
 | Plan/contract | Chốt contract 2.3.1, viết FE contract. |
-| Local checks | `pnpm check` pass: lint, type-check, 60 unit test, build. 3 suite DB **skip** (không có `TEST_DATABASE_URL`). |
-| PostgreSQL integration | Đã viết `test/integration/phase23-my-classes-schedule.spec.ts` (6 ca), **chưa chạy**. |
-| Built-app HTTP | Đã thêm ca Phase 2.3 vào `test/http/phase22-payments.spec.ts`, **chưa chạy** `pnpm test:http`. |
+| Local checks | `pnpm check` pass: lint, type-check, 60 unit test, build. Sau khi cấu hình DB test, `pnpm test` pass **127/127**, không skip. |
+| PostgreSQL integration | **67/67 pass**: Phase 2 (36), Phase 2.2 (25), Phase 2.3 (6). |
+| Built-app HTTP | `pnpm test:http` pass **5/5**, gồm luồng Phase 2.3 CASH preview → FULL. |
 | VPS/staging | Chưa deploy, chưa smoke. |
 | Payment thật | Không liên quan; PayOS live vẫn là nghiệm thu Phase 2.2 riêng. |
 
-Critical suite đang skip **không** được tính pass. Cần chạy với DB `_test` riêng trước
-nghiệm thu (xem mục “Việc còn lại”).
+Ngày 2026-10-10 đã chạy các suite với DB `_test` riêng trên PostgreSQL local.
+Kết quả này không chứng minh staging/VPS hoặc thanh toán PayOS thật.
 
 ## Quyết định 2.3.1 (diễn giải Flow.txt)
 
@@ -50,10 +51,10 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
 |---|---|---|
 | Planning | Hoàn tất | Plan + progress riêng. |
 | 2.3.1 Contract/policy | Hoàn tất (local) | Quyết định trên + `docs/PHASE_2_3_FE_CONTRACT.md`. |
-| 2.3.2 My Classes | Code + unit test; DB test chưa chạy | `GET /me/classes` trong `StudentLearningModule`. |
-| 2.3.3 Detail continuity | Code; DB/HTTP test chưa chạy | Field additive cho detail/preview. |
-| 2.3.4 Personal Schedule | Code + unit test; DB/HTTP test chưa chạy | `GET /me/schedule`. |
-| 2.3.5 Quality gate/rollout | Một phần | `pnpm check` pass; còn DB/HTTP, query plan, staging smoke. |
+| 2.3.2 My Classes | Code + local tests pass | `GET /me/classes` trong `StudentLearningModule`. |
+| 2.3.3 Detail continuity | Code + local DB/HTTP tests pass | Field additive cho detail/preview. |
+| 2.3.4 Personal Schedule | Code + local tests pass | `GET /me/schedule`. |
+| 2.3.5 Quality gate/rollout | Một phần | Các suite local hiện có pass; còn query plan, staging smoke. |
 
 ## Đã triển khai
 
@@ -81,12 +82,9 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
 
 ## Việc còn lại trước nghiệm thu
 
-1. Tạo DB test riêng rồi chạy:
-   `TEST_DATABASE_URL=postgresql://mindy:mindy@127.0.0.1:5433/mindy_center_test pnpm test`
-   và `pnpm test:http` (suite tạo thêm `*_learning_test`, `*_http_test`).
-2. Review query plan (`EXPLAIN ANALYZE`) trên fixture đủ lớn; chỉ thêm index additive nếu
+1. Review query plan (`EXPLAIN ANALYZE`) trên fixture đủ lớn; chỉ thêm index additive nếu
    có bằng chứng (ứng viên: `enrollments(student_id, created_at, id)`).
-3. Deploy qua pipeline hiện có; smoke staging/VPS bằng tài khoản test: list, detail/preview,
+2. Deploy qua pipeline hiện có; smoke staging/VPS bằng tài khoản test: list, detail/preview,
    lịch, 401/403/422, expiry, refresh sau settlement; kiểm tra Cloudflare không cache
    `/api/v1/me/*`.
 
@@ -98,3 +96,17 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
   TypeORM đổi tên cột.
 - Chuẩn hóa line ending CRLF → LF cho file working tree lệch `.gitattributes`
   (index vốn LF, không đổi nội dung git) để `pnpm lint` pass.
+
+## Kiểm chứng local ngày 2026-10-10
+
+- Log user: `pnpm migration:run` thực thi `PayosPayments1791158400000` thành công và
+  COMMIT; đây là migration Phase 2.2, không phải migration mới của Phase 2.3.
+- Log user: `pnpm test:http` ban đầu skip 5/5 do thiếu `TEST_DATABASE_URL`.
+- Kết nối PostgreSQL local `127.0.0.1:5433`, tạo DB riêng `mindy_center_test` và đặt
+  `TEST_DATABASE_URL` trong process chạy test. Suite dùng thêm `mindy_center_payments_test`,
+  `mindy_center_learning_test`, `mindy_center_http_test`; không reset DB development.
+- `pnpm test`: **18 file, 127 test pass**, không skip (60 unit + 67 PostgreSQL).
+- `pnpm test:http`: build pass, **1 file, 5 test pass**, không skip; fake provider,
+  không gọi merchant thật. Ca Phase 2.3 kiểm chứng list, preview, calendar, quyền role,
+  query validation, no-store và CASH confirmation → FULL.
+- Không sửa code nghiệp vụ; chưa EXPLAIN trên fixture lớn, deploy hoặc thanh toán thật.
