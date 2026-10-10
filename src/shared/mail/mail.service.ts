@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { MailDeliveryUnavailableException } from './mail.exception.js';
+import { renderPaymentConfirmationEmail, renderVerificationEmail } from './mail.templates.js';
 
 @Injectable()
 export class MailService {
@@ -33,14 +34,36 @@ export class MailService {
     }
   }
 
-  async sendPaymentConfirmation(email: string, orderCode: string, amount: number): Promise<void> {
+  async sendPaymentConfirmation(
+    email: string,
+    orderCode: string,
+    amount: number,
+    orderId: string,
+  ): Promise<void> {
     if (!this.transporter) throw new MailDeliveryUnavailableException();
+    const path = this.config.getOrThrow<string>('ORDER_DETAILS_PATH');
+    const orderUrl = new URL(
+      path.replace(':orderId', encodeURIComponent(orderId)),
+      this.config.getOrThrow<string>('FRONTEND_BASE_URL'),
+    ).toString();
+    const formattedAmount = `${amount.toLocaleString('vi-VN')} VND`;
     try {
       await this.transporter.sendMail({
         from: this.config.getOrThrow<string>('MAIL_FROM'),
         to: email,
-        subject: `Mindy payment confirmed: ${orderCode}`,
-        text: `Payment received for order ${orderCode}: ${amount.toLocaleString('en-US')} VND.\nYour purchased class access is now active.\nOpen Mindy to view your class and timetable.`,
+        subject: `Mindycoding | Thanh toán thành công — ${orderCode}`,
+        text: [
+          'Thanh toán thành công!',
+          `Mã đơn hàng: ${orderCode}`,
+          `Số tiền đã thanh toán: ${formattedAmount}`,
+          'Quyền truy cập các lớp học đã mua đã được kích hoạt.',
+          '',
+          'Xem chi tiết đơn hàng:',
+          orderUrl,
+          '',
+          'Đăng nhập bằng tài khoản đã mua hàng để xem chi tiết đơn.',
+        ].join('\n'),
+        html: renderPaymentConfirmationEmail(orderCode, formattedAmount, orderUrl),
       });
     } catch {
       throw new MailDeliveryUnavailableException();
@@ -56,20 +79,25 @@ export class MailService {
     const path = this.config.getOrThrow<string>('EMAIL_VERIFICATION_PATH');
     const verificationUrl = new URL(path, frontendBaseUrl);
     verificationUrl.searchParams.set('token', rawToken);
+    const expiryMinutes = Math.ceil(
+      this.config.getOrThrow<number>('EMAIL_VERIFICATION_TTL_SECONDS') / 60,
+    );
 
     try {
       await transporter.sendMail({
         from: this.config.getOrThrow<string>('MAIL_FROM'),
         to: email,
-        subject: 'Verify your Mindy Center account',
+        subject: 'Mindycoding | Xác thực email của bạn',
         text: [
-          'Welcome to Mindy Center.',
+          'Chào mừng bạn đến với Mindycoding.',
           '',
-          'Verify your email address by opening this link:',
+          'Xác thực địa chỉ email bằng cách mở liên kết này:',
           verificationUrl.toString(),
           '',
-          'If you did not request this account, you can ignore this email.',
+          `Liên kết có hiệu lực trong ${expiryMinutes} phút.`,
+          'Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email.',
         ].join('\n'),
+        html: renderVerificationEmail(verificationUrl.toString(), expiryMinutes),
       });
     } catch {
       throw new MailDeliveryUnavailableException();

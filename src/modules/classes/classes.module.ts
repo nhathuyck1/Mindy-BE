@@ -11,6 +11,7 @@ import { StudentClassesController } from './controllers/student-classes.controll
 import { ClassEntity } from './entities/class.entity.js';
 import { ClassSessionEntity } from './entities/class-session.entity.js';
 import { ClassUnitEntity } from './entities/class-unit.entity.js';
+import { ClassContentContextService } from './services/class-content-context.service.js';
 import { ClassOffersService } from './services/class-offers.service.js';
 import { ClassReadService } from './services/class-read.service.js';
 import { ClassScheduleService } from './services/class-schedule.service.js';
@@ -33,8 +34,9 @@ import { StudentClassService } from './services/student-class.service.js';
     ClassScheduleService,
     ClassReadService,
     ClassOffersService,
+    ClassContentContextService,
     StudentClassService,
   ],
-  exports: [ClassReadService, ClassOffersService],
+  exports: [ClassReadService, ClassOffersService, ClassContentContextService],
 })
 export class ClassesModule {}

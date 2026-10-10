@@ -15,6 +15,12 @@ export class ClassUnitNotFoundException extends AppHttpException {
   }
 }
 
+export class ClassSessionNotFoundException extends AppHttpException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'CLASS_SESSION_NOT_FOUND', 'The class session was not found');
+  }
+}
+
 export class ClassCodeAlreadyExistsException extends AppHttpException {
   constructor() {
     super(HttpStatus.CONFLICT, 'CLASS_CODE_ALREADY_EXISTS', 'The class code is already in use');

@@ -18,6 +18,161 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-09: Tiếp tục và hoàn tất Phase 3.2 local từ lượt bị ngắt. Files API
+  intent/complete/status, upload policy Materials → Files, private versioned MinIO,
+  SQL provenance/identity constraints, pinned version/hash, bounded binary parser,
+  durable VALIDATE lease/fencing/retry/expiry + READY reference lock đã triển khai.
+  Siết Office OPC/XML/CRC/ZIP bounds, sửa HTTP fixture/type-check, giữ parser
+  operational errors retryable; bỏ thư mục preview tmp khỏi lint. Đồng bộ
+  DBML/env/Swagger/Postman/runbook/index/progress. `pnpm check` pass 217 tests/18
+  suites + lint/type-check/build; sau thêm crash-copy/concurrent-claim và trigger
+  staging immutability, focused Files 42/42 pass; HTTP 19/19 pass, không skip.
+  Chỉ migrate test DB/bucket riêng, setup bucket local; chưa migrate development,
+  VPS deploy, browser staging, extraction/cleanup hay payment live.
+  Bàn giao tiếp theo 3.3 Materials CRUD/review; xem PHASE_3_2_PROGRESS.md.
+
+- 2026-10-09: Đổi màu cả email đăng ký/thanh toán theo `docs/pallete3.png` từ
+  Mindy-FE branch `Huy/Feat/UIredesign` do user cung cấp. Đọc ảnh palette và lấy
+  chính xác màu pixel: #355872 (text/CTA), #7AAACE (header accent/summary border),
+  #9CD5FF (logo dot/dividers/card border), #F7F8F0 (background/summary/CTA text),
+  card trắng trung tính. Giữ wordmark Mindycoding 34px và header 14px, cập nhật
+  hai HTML preview. Lint/diff check pass; chỉ đổi màu, không đổi flow/link/mail API.
+
+- 2026-10-09: Chỉnh nhận diện cả hai email theo feedback: tên `Mindycoding`
+  viết hoa M, wordmark 34px (trước 28px); dòng header nhỏ 14px (trước 11px),
+  line-height 1.5 và letter-spacing 1px để dễ đọc tiếng Việt. Đồng bộ tên trong
+  nội dung/subject/footer và cập nhật hai HTML preview ở tmp. Lint hai file mail
+  và 6 mail tests pass; đây là thay đổi nội dung/giao diện, chưa thử SMTP thật.
+
+- 2026-10-09: Nâng cấp email xác thực đăng ký và xác nhận thanh toán online sang
+  mẫu HTML tiếng Việt dùng chung nhận diện Mindy, table layout/CSS inline, nút CTA,
+  preheader, link dự phòng và plain-text alternative. Email thanh toán hiển thị mã
+  đơn/số tiền VND và dẫn tới `FRONTEND_BASE_URL` + `ORDER_DETAILS_PATH`, mặc định
+  `/orders/:orderId` theo route FE user xác nhận; worker truyền UUID từ outbox.
+  Thêm schema/env examples và README; giữ token verification, settlement và retry.
+  Local: 6 mail tests pass; lint 8 file liên quan và type-check riêng mail/payment
+  email service pass; `pnpm test` 109 pass, 68 integration tests skip vì thiếu
+  `TEST_DATABASE_URL`. Kiểm tra hiển thị hai mẫu bằng browser với dữ liệu giả.
+  `pnpm check` bị chặn ở lint các thay đổi Files/Materials và code ngoài phạm vi;
+  global type-check/build gặp module `express` và `../files/files.module.js` thiếu
+  trong phần Files/Materials đang triển khai. Chưa kiểm SMTP thật/Gmail/Outlook,
+  frontend redirect sau đăng nhập, VPS deploy hoặc giao dịch thật.
+
+- 2026-10-09: Rà soát plan 3.2 sau user xác nhận 3.1 hoàn tất/pass; đối chiếu
+  source và evidence 3.1 pnpm check 171 tests/16 suites + HTTP 5/5, không skip.
+  Bỏ gate chờ bàn giao, ghi rõ baseline đã đạt và 3.2 sẵn sàng triển khai.
+  Plan chọn chuyển upload policy sang Files-owned provider, facade Materials
+  giữ contract và delegate để tránh cycle; giữ errors ancestry 404/422,
+  declaration MIME/filename theo assertions 3.1, không thêm yêu cầu compile/parse
+  source. Bổ sung bounded copy candidate history cho retry/orphan recovery.
+  Đồng bộ plan/progress/index; chỉ kiểm diff/link, chưa refactor source hoặc
+  chạy lại BE/DB/MinIO tests, không migrate/deploy/payment live.
+
+- 2026-10-09: Theo yêu cầu hoàn tất full 3.1 D1–D6 trước khi đụng 3.2, triển khai
+  MaterialsModule/MaterialPolicyService, entity-free Catalog/Classes context providers,
+  domain Course Unit ownership, Manager/Mentor permissions, Student ACTIVE/release/
+  review/publication/READY gates và review transitions/revision/audit output.
+  firstApprovedAt giữ tài liệu đã duyệt thuộc quyền sửa Manager; origin class là
+  provenance, không đổi owner. Thêm declaration allowlist/limits MVP file-only.
+  61 domain + 6 PostgreSQL integration tests mới; pnpm check pass 171 tests/16
+  suites, lint/type-check/build; test:http 5/5 pass. Chỉ dùng test DB riêng.
+  Đồng bộ plan/progress/core/course flow. 3.1 local hoàn tất; persistence/atomic
+  revision locking thuộc 3.3, HTTP access thuộc 3.4. Chuẩn bị dependencies 3.2
+  đã hoàn nguyên; chưa upload/storage/binary verification/deploy/dev migration.
+  Giữ plan/progress 3.2 đã lập, chưa bắt đầu code 3.2.
+
+- 2026-10-09: Theo yêu cầu user lập plan 3.2 khi 3.1 đang làm, tạo
+  `docs/implement_phase/PHASE_3_2_SAFE_UPLOAD.md` và tiến độ riêng
+  `docs/progress/PHASE_3_2_PROGRESS.md`. Scope Manager/Mentor upload private cho
+  Course Unit, intent/complete/status, binary validation, version pinning,
+  DB jobs/lease/fencing/retry/crash recovery và READY reference provider.
+  Ghi gate bàn giao role/policy/context 3.1, schema/DTO/config/milestones/test;
+  READY khác review, extraction/cleanup ở 3.5. Đồng bộ index/plan/progress tổng;
+  giữ các thay đổi code đang có của 3.1/2.3. Chỉ kiểm diff/link, không chạy BE/
+  DB/MinIO tests, sửa source/schema/config/migration, deploy hoặc payment live.
+
+- 2026-10-09: User duyệt D1–D6 Phase 3.1 và yêu cầu role MANAGER: Manager sửa/
+  quản lý/duyệt Material chính shared của Course Unit, Mentor upload chờ duyệt;
+  ACTIVE/release/shared live/enrollment COMPLETED/MVP giữ đúng quyết định user.
+  Bổ sung UserRole.MANAGER, DBML enum, migration mới
+  `1791504000000-restore-manager-role.ts`; không sửa logic migration lịch sử hoặc
+  promote account. Admin tạo Manager qua /admin/users; public registration vẫn STUDENT,
+  Manager không kế thừa Admin/payment/CASH. Đồng bộ plan tổng/3.1/Course flow/core docs;
+  review draft/submit/approve/reject/revision còn là contract cho 3.2–3.3, chưa API.
+  Evidence local: pnpm check pass (104 tests/14 suites, không skip), test:http
+  5/5 pass; role clean migration/down-up/refused rollback và admin-create/login/
+  refresh/role-denial có regression. Chuẩn hóa CRLF baseline thành LF để full lint
+  pass, không thay logic ngoài scope. Chỉ dùng database mindy_phase31_test và fixture
+  suffix test riêng; chưa apply migration dev/VPS, storage, deploy hoặc payment live.
+
+- 2026-10-09: User làm rõ Material là tài liệu chính của Course Unit, quan hệ
+  Course Unit 1–N Material; đã kiểm DBML materials dòng 607–619/Ref dòng 984.
+  User chọn Session link tùy chọn, không đổi Course Unit owner. Sửa plan 3.1
+  schema/policy/API/DTO tương ứng; bỏ đề xuất owner Class Unit/Session, giữ
+  course_unit_id NOT NULL. Session theo dõi assignment/Q&A/student code riêng;
+  quyền Mentor sửa tài liệu chung còn chờ duyệt. Đồng bộ progress và ghi plan
+  3.1 thay thế các đề xuất ownership cũ trong plan tổng. Chỉ sửa tài liệu;
+  chưa code/migrate/deploy, chưa có evidence BE/DB/MinIO hoặc payment live.
+
+- 2026-10-09: Soạn planning chi tiết Phase 3.1 tại
+  `docs/implement_phase/PHASE_3_1_POLICY_CONTRACT.md` và tiến độ riêng
+  `docs/progress/PHASE_3_1_PROGRESS.md`; chờ user duyệt trước khi triển khai.
+  User xác nhận Unit 1–N Material; plan đề xuất Unit bắt buộc + Session tùy chọn
+  cùng Unit, loại Unit/cách gắn Session còn chờ xác nhận. Có policy/provider/API/DTO,
+  HTTP 422 theo baseline, allowlist/limits/TTL và ma trận quyền/threat cases.
+  Đồng bộ liên kết plan tổng/index/progress; chỉ kiểm diff/link, chưa đổi source,
+  DBML, migration, env, chạy BE/storage tests hoặc deploy.
+
+- 2026-10-09: Theo yêu cầu chia nhỏ P3 và điều phối user làm P3/người khác làm
+  2.3, mở rộng mục 7 plan P3 thành Phase 3.1–3.6 có phạm vi/đầu ra/exit gate riêng.
+  Ưu tiên quyền/contract, upload an toàn, quản lý và Student đọc/tải trước metadata
+  nâng cao; validation bảo mật/test không hoãn tới cuối. Đổi dependency 2.3 → P3
+  thành triển khai song song/tích hợp trước nghiệm thu FE; đồng bộ index và plan/
+  progress hai phase. Chỉ sửa tài liệu, kiểm diff/link; chưa code, migrate, test BE
+  hoặc deploy. Giữ ghi chú ưu tiên cũ như lịch sử, không coi là policy hiện hành.
+
+- 2026-10-09: Theo yêu cầu planning, tạo Phase 2.3 My Classes + Personal Schedule
+  tại `docs/implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md` và progress riêng
+  `docs/progress/PHASE_2_3_PROGRESS.md`, ưu tiên trước Phase 3. Plan tái dùng full
+  detail/CASH preview, đề xuất enrollment-based list và lịch nhiều lớp, contract
+  filter/range/timezone, expiry/access/history, module read projections, milestones,
+  test và rollout. Không mở entitlement COMPLETED/pending PAYOS; không làm materials,
+  attendance hoặc sửa settlement. Cập nhật index/FE backlog và liên kết prerequisite
+  Phase 3. Chỉ tài liệu và kiểm tra diff/link; chưa code, migrate, test BE hoặc deploy.
+
+- 2026-10-09: Lập kế hoạch Phase 3 File + Materials từ DBML, COURSE_FLOW,
+  Flow.txt và usecase-course.drawio, đối chiếu code/config/progress hiện hành.
+  Plan tại `docs/implement_phase/PHASE_3_FILES_MATERIALS.md`, progress riêng tại
+  `docs/progress/PHASE_3_PROGRESS.md`: đề xuất material ba scope, mentor assignment,
+  ACTIVE entitlement + unit/material release, upload/validation/metadata async,
+  lifecycle/cleanup, API, migration, milestones, tests và rollout. Các lựa chọn
+  ownership/access còn mở được ghi là đề xuất, chưa đổi business rules/schema.
+  Giữ CASH preview/confirm và PayOS/email; không nhận evidence roster deploy làm
+  bằng chứng payment live. Chỉ thay đổi tài liệu, kiểm tra diff/link; chưa chạy BE
+  tests, tạo migration, triển khai storage hoặc deploy Phase 3.
+
+- 2026-10-09: In Cloudflare zone `quanh123.id.vn`, deployed active Cache Rule
+  `Bypass cache Swagger UI init` matching host `api.quanh123.id.vn` and exact
+  path `/docs/swagger-ui-init.js`, with edge cache eligibility and browser TTL
+  both set to bypass. Five subsequent public requests across SIN/HKG returned
+  the new mentor route document with `CF-Cache-Status: DYNAMIC`; Chrome Swagger
+  UI displayed both mentor-class endpoints. No backend deployment was needed.
+
+- 2026-10-09: Post-deploy read-only check for mentor roster APIs: GitHub Actions
+  deploy run `37880983054` succeeded on self-hosted runner `mindycode` for `dev`
+  commit `0e2e780c`; its VPS checkout/release and internal API readiness steps
+  passed. Public `GET /api/v1/mentor/classes` and
+  `GET /api/v1/mentor/classes/{classId}/students` return 401 without login,
+  while an unknown mentor route returns 404; public `/docs-json` lists both
+  operations. The Swagger UI initializer at `/docs/swagger-ui-init.js` first
+  returned an older Cloudflare cache HIT (no mentor routes, `max-age=14400`),
+  whereas a cache-busted request returned the new spec. A later public request
+  returned `EXPIRED` with the new mentor routes, but subsequent repeated
+  requests proved the cache is inconsistent across Cloudflare edges: HKG
+  returned the new initializer while SIN still returned the old `HIT` copy
+  (age about 3985 seconds). Direct VPS SSH was unavailable
+  from this workstation; no Cloudflare settings or production state were changed.
+
 - 2026-10-09: Aligned CI/CD with the VPS checkout on `dev`: `Deploy` runs on
   pushes to `dev` (including merges), calls the reusable `Check` workflow for
   that exact commit, then deploys only if checks pass. Manual runs require

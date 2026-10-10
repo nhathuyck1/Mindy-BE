@@ -120,6 +120,8 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
   }
 
   it('migrates new tables up/down/up without dropping existing hold schema', async () => {
+    // The manager-role migration now follows payment tables in the current schema.
+    await db.undoLastMigration();
     await db.undoLastMigration();
     expect(await db.query("SELECT to_regclass('payment_transactions') AS name")).toEqual([
       { name: null },
@@ -547,6 +549,12 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     const emails = new PaymentEmailService(db, mail, f.users);
     await Promise.all([emails.sendBatch(), emails.sendBatch()]);
     expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      p.student.email,
+      p.order.orderCode,
+      p.order.totalAmount,
+      p.order.id,
+    );
     expect(await paid(p.order.id)).toBe(OrderStatus.PAID);
     await db
       .getRepository(PaymentConfirmationEmailEntity)

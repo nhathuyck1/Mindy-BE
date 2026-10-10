@@ -290,6 +290,15 @@ export class CoursesService {
     return new Map(units.map((unit) => [unit.id, unit]));
   }
 
+  /** Public content ancestry; callers never need a Catalog repository or entity. */
+  async getUnitContext(
+    courseUnitId: string,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<{ readonly courseUnitId: string; readonly courseId: string } | null> {
+    const unit = await manager.getRepository(CourseUnitEntity).findOneBy({ id: courseUnitId });
+    return unit === null ? null : { courseUnitId: unit.id, courseId: unit.courseId };
+  }
+
   private async lockCourse(manager: EntityManager, courseId: string): Promise<CourseEntity> {
     const course = await manager
       .getRepository(CourseEntity)

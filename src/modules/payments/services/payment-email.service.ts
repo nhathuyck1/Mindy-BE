@@ -49,7 +49,12 @@ export class PaymentEmailService {
     if (!job) return 0;
     try {
       const student = await this.users.findById(job.studentId);
-      await this.mail.sendPaymentConfirmation(student.email, job.orderCode, job.amount);
+      await this.mail.sendPaymentConfirmation(
+        student.email,
+        job.orderCode,
+        job.amount,
+        job.orderId,
+      );
       await this.db
         .getRepository(PaymentConfirmationEmailEntity)
         .update(
