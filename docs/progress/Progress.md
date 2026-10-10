@@ -18,6 +18,14 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-10: Viết `docs/api_flow/PHASE_3_2_FLOW.md` và
+  `PHASE_3_2_flow-api-breakdown.md` cho FE: create intent → raw PUT MinIO → complete
+  → poll status, request/response trực tiếp, errors/state/retry/expiry/polling và
+  prerequisite VPS. Đối chiếu public Course units/Mentor roster: Mentor chưa có
+  read API đủ mapping Class Unit → Course Unit cho UI chọn unit đầy đủ. Ghi rõ
+  Material CRUD/review/download còn thuộc 3.3/3.4; không đổi source/API/env hoặc
+  deploy, không chạy lại runtime tests; kiểm link và diff tài liệu.
+
 - 2026-10-10: Theo yêu cầu user, chốt `docs/api_flow/` là thư mục ghi flow/API
   của từng phase. Đồng bộ `Agent.md` và rules: mỗi lượt planning/code/fix/review/
   test/docs/deploy phải cập nhật tài liệu phase ở đây; flow và API breakdown dùng

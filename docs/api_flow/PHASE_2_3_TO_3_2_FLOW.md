@@ -3,6 +3,9 @@
 Đối chiếu source và progress trong checkout hiện tại ngày 2026-10-10.
 “Đã code” bên dưới chỉ nói về repo; không khẳng định đã deploy hoặc bật trên VPS.
 
+FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
+[API breakdown 3.2](PHASE_3_2_flow-api-breakdown.md).
+
 ## 1. Mỗi phase cung cấp gì?
 
 | Phase | Mục tiêu | Đã có trong checkout này | Phần còn thiếu |

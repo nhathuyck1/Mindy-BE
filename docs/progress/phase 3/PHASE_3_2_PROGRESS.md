@@ -30,7 +30,20 @@ Plan: [PHASE_3_2_SAFE_UPLOAD.md](../implement_phase/PHASE_3_2_SAFE_UPLOAD.md).
 - Migration author: Codex. Rà soát SQL/constraints/rollback/locks trong lượt này;
   human PR review trước merge còn riêng, không coi local tests là review đã merge.
 
-Các ghi chú planning dưới đây là lịch sử trước triển khai, không phải trạng thái hiện tại.
+## Hướng dẫn tích hợp FE — 2026-10-10
+
+- Bổ sung [flow FE upload](../../api_flow/PHASE_3_2_FLOW.md) và
+  [API breakdown](../../api_flow/PHASE_3_2_flow-api-breakdown.md): request/response,
+  raw PUT MinIO, complete async, polling READY/FAILED, quyền/error/retry và config VPS.
+- Đối chiếu source: public Course active detail có Course Unit IDs; Mentor class
+  list chưa có đầy đủ mapping Class Unit → Course Unit cho màn hình chọn unit.
+  Không dùng role Admin hoặc title/position để thay nguồn context đúng quyền.
+- Lượt này chỉ viết tài liệu; không triển khai read API còn thiếu, không sửa FE,
+  source/env hoặc deploy. Chưa xác minh browser/VPS; kiểm liên kết và diff tài liệu.
+
+## Ghi chú planning lịch sử
+
+Các ghi chú dưới đây là lịch sử trước triển khai, không phải trạng thái hiện tại.
 
 - Scope: Manager/Mentor đúng assignment upload private cho Course Unit; intent,
   complete, status và VALIDATE job đưa file về READY/FAILED.
