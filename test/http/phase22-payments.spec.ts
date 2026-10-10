@@ -15,6 +15,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
   let adminCookie: string;
   let mentorCookie: string;
   let cashCookie: string;
+  let learnerCookie: string;
   const sdk = new PayOS({
     clientId: 'http-client',
     apiKey: 'http-key',
@@ -89,6 +90,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     adminCookie = await login('admin@http.test');
     mentorCookie = await login('mentor@http.test');
     cashCookie = await login('cash@http.test');
+    learnerCookie = await login('learner@http.test');
   }, 30000);
   afterAll(async () => {
     if (db?.isInitialized) await db.destroy();
@@ -358,5 +360,124 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     }
     expect((await request('/payment-callbacks/payos', undefined, body)).status).toBe(200);
     expect((await request(`/me/classes/${classId}`, otherCookie)).status).toBe(200);
+  });
+  it('Phase 2.3: My Classes and schedule follow CASH preview → FULL without leaking private data', async () => {
+    for (const path of [
+      '/me/classes',
+      '/me/schedule?from=2026-10-01T00:00:00Z&to=2026-10-02T00:00:00Z',
+    ]) {
+      expect((await request(path)).status).toBe(401);
+      expect((await request(path, mentorCookie)).status).toBe(403);
+    }
+    const empty = await request('/me/classes', learnerCookie);
+    expect(empty.status).toBe(200);
+    expect(empty.headers.get('cache-control')).toBe('private, no-store');
+    expect(await empty.json()).toMatchObject({ items: [], page: 1, pageSize: 20, total: 0 });
+
+    expect((await request('/me/cart/items', learnerCookie, { classId })).status).toBe(201);
+    const checkout = await request('/me/cart/checkout', learnerCookie, { paymentType: 'CASH' });
+    const order = ((await checkout.json()) as { orders: { id: string; totalAmount: number }[] })
+      .orders[0];
+    if (!order) throw new Error('Missing cash order');
+
+    type Row = {
+      enrollmentId: string;
+      classId: string;
+      startDate: string;
+      accessMode: string;
+      canViewSchedule: boolean;
+      order: { orderId: string; orderStatus: string };
+    };
+    const listed = await request('/me/classes', learnerCookie);
+    const listText = await listed.text();
+    expect(listText).not.toContain('meet.example.test');
+    const row = (JSON.parse(listText) as { items: Row[] }).items[0];
+    expect(row).toMatchObject({
+      classId,
+      accessMode: 'CASH_PREVIEW',
+      accessReason: 'PENDING_CASH',
+      canViewSchedule: true,
+      order: { orderId: order.id, orderStatus: 'PENDING', paymentType: 'CASH' },
+    });
+    if (!row) throw new Error('Missing My Classes row');
+
+    const preview = await request(`/me/classes/${classId}/preview`, learnerCookie);
+    expect(preview.headers.get('cache-control')).toBe('private, no-store');
+    expect(await preview.json()).toMatchObject({
+      id: classId,
+      accessMode: 'CASH_PREVIEW',
+      enrollmentId: row.enrollmentId,
+      orderId: order.id,
+      classStatus: 'OPEN',
+    });
+
+    const from = new Date(`${row.startDate}T00:00:00+07:00`);
+    const to = new Date(from.getTime() + 86_400_000);
+    const range = `from=${from.toISOString()}&to=${to.toISOString()}`;
+    const events = await request(`/me/schedule?${range}&classId=${classId}`, learnerCookie);
+    expect(events.status).toBe(200);
+    expect(events.headers.get('cache-control')).toBe('private, no-store');
+    const eventsText = await events.text();
+    expect(eventsText).not.toContain('meet.example.test');
+    expect(eventsText).not.toContain('meetingUrl');
+    expect(JSON.parse(eventsText)).toMatchObject({
+      timeZone: 'Asia/Ho_Chi_Minh',
+      total: 1,
+      pageSize: 100,
+      items: [{ classId, enrollmentId: row.enrollmentId, accessMode: 'CASH_PREVIEW' }],
+    });
+    const offsetRange = `from=${encodeURIComponent(`${row.startDate}T00:00:00+07:00`)}&to=${to.toISOString()}`;
+    expect(
+      (
+        (await (await request(`/me/schedule?${offsetRange}`, learnerCookie)).json()) as {
+          total: number;
+        }
+      ).total,
+    ).toBe(1);
+    expect((await request(`/me/schedule?${range}&classId=${classId}`, otherCookie)).status).toBe(
+      200,
+    );
+
+    for (const query of [
+      `from=${row.startDate}T00:00:00&to=${to.toISOString()}`,
+      `from=${to.toISOString()}&to=${from.toISOString()}`,
+      `from=${from.toISOString()}&to=${new Date(from.getTime() + 32 * 86_400_000).toISOString()}`,
+      `${range}&classId=not-a-uuid`,
+      `${range}&includeCancelled=maybe`,
+      `${range}&studentId=${row.enrollmentId}`,
+      'to=2026-10-02T00:00:00Z',
+    ])
+      expect((await request(`/me/schedule?${query}`, learnerCookie)).status).toBe(422);
+    for (const query of ['view=archived', 'pageSize=101', 'courseId=1', 'studentId=x'])
+      expect((await request(`/me/classes?${query}`, learnerCookie)).status).toBe(422);
+    expect((await request('/me/classes?classStatus=CANCELLED', learnerCookie)).status).toBe(200);
+
+    const confirm = await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, {
+      receivedAmount: order.totalAmount,
+    });
+    expect(confirm.status).toBe(200);
+    const after = (await (await request('/me/classes', learnerCookie)).json()) as {
+      items: Row[];
+    };
+    expect(after.items[0]).toMatchObject({
+      enrollmentId: row.enrollmentId,
+      accessMode: 'FULL',
+      enrollmentStatus: 'ACTIVE',
+      order: { orderStatus: 'PAID' },
+    });
+    expect((await request(`/me/classes/${classId}/preview`, learnerCookie)).status).toBe(403);
+    const detail = await request(`/me/classes/${classId}`, learnerCookie);
+    expect(detail.headers.get('cache-control')).toBe('private, no-store');
+    expect(await detail.json()).toMatchObject({
+      accessMode: 'FULL',
+      enrollmentId: row.enrollmentId,
+      enrollmentStatus: 'ACTIVE',
+      classStatus: 'OPEN',
+      meetingUrl: 'https://meet.example.test/paid-class',
+    });
+    const fullEvents = (await (await request(`/me/schedule?${range}`, learnerCookie)).json()) as {
+      items: { accessMode: string }[];
+    };
+    expect(fullEvents.items.map((event) => event.accessMode)).toEqual(['FULL']);
   });
 });

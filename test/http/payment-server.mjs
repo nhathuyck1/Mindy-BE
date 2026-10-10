@@ -74,6 +74,7 @@ for (const [email, role] of [
   ['student@http.test', 'STUDENT'],
   ['other@http.test', 'STUDENT'],
   ['cash@http.test', 'STUDENT'],
+  ['learner@http.test', 'STUDENT'],
   ['admin@http.test', 'ADMIN'],
   ['mentor@http.test', 'MENTOR'],
 ])

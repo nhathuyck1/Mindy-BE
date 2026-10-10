@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "d2a802eb-f4f1-4a73-b463-c43837169a90",
-    "name": "Mindy BE — Phase 0, 1, 2.2",
-    "description": "Phase 0 health checks and Phase 1 cookie-based authentication/admin-user flow. Postman stores access_token and refresh_token in its cookie jar automatically; no token variable is required.\nPhase 2.2: student checkout/link/status/access and ADMIN reconciliation. Real payment is manual; provider callbacks are not simulated against live orders.",
+    "name": "Mindy BE — Phase 0, 1, 2.2, 2.3",
+    "description": "Phase 0 health checks and Phase 1 cookie-based authentication/admin-user flow. Postman stores access_token and refresh_token in its cookie jar automatically; no token variable is required.\nPhase 2.2: student checkout/link/status/access and ADMIN reconciliation. Real payment is manual; provider callbacks are not simulated against live orders.\nPhase 2.3: My Classes (current/history/all) and the personal schedule range; open detail or preview according to accessMode.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -49,6 +49,14 @@
     {
       "key": "received_amount",
       "value": ""
+    },
+    {
+      "key": "schedule_from",
+      "value": "2026-10-11T17:00:00Z"
+    },
+    {
+      "key": "schedule_to",
+      "value": "2026-10-18T17:00:00Z"
     }
   ],
   "item": [
@@ -767,6 +775,78 @@
             "method": "GET",
             "header": [],
             "url": "{{base_url}}/api/v1/me/classes/{{class_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Phase 2.3 My Classes + schedule",
+      "item": [
+        {
+          "name": "My Classes (current) — login student first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20&view=current"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) { const row = pm.response.json().items[0]; if (row) pm.collectionVariables.set(\"class_id\", row.classId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Classes history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20&view=history"
+          }
+        },
+        {
+          "name": "My Classes all, filtered ACTIVE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20&view=all&enrollmentStatus=ACTIVE"
+          }
+        },
+        {
+          "name": "Open class — accessMode FULL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes/{{class_id}}"
+          }
+        },
+        {
+          "name": "Open class — accessMode CASH_PREVIEW",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/preview"
+          }
+        },
+        {
+          "name": "Personal schedule (range ≤ 31 days)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/schedule?from={{schedule_from}}&to={{schedule_to}}&page=1&pageSize=100"
+          }
+        },
+        {
+          "name": "Personal schedule for one class, without cancelled sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/me/schedule?from={{schedule_from}}&to={{schedule_to}}&classId={{class_id}}&includeCancelled=false"
           }
         }
       ]

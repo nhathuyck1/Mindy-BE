@@ -44,5 +44,3 @@ course unit -> Tạo class unit -> Tạo class session tự động(chưa có l�
 
 Admin Tạo ra trước 1 bộ course unit cho từng course => tạo class => sinh ra class unit.
 Admin duyệt mentor dạy course, và assign class thì mentor toàn quyền cho cái class và class unit đấy.
-
-

@@ -1,5 +1,13 @@
-import { Controller, Get, HttpStatus, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Header,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator.js';
@@ -25,6 +33,8 @@ import { StudentClassService } from '../services/student-class.service.js';
 export class StudentClassesController {
   constructor(private readonly classes: StudentClassService) {}
   @Get(':classId')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ summary: 'ACTIVE student reads full class detail (accessMode FULL)' })
   @ApiOkResponse({ type: StudentClassDto })
   async get(
     @CurrentUser() user: AuthenticatedUser,
