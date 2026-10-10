@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import Joi from 'joi';
 
 const payosSecret = () =>
@@ -84,6 +86,9 @@ export const environmentSchema = Joi.object({
   EMAIL_VERIFICATION_PATH: Joi.string()
     .pattern(/^\/(?!\/)/)
     .default('/verify-email'),
+  ORDER_DETAILS_PATH: Joi.string()
+    .pattern(/^\/(?!\/)[^\\\r\n]*:orderId(?=\/|[?&#]|$)[^\\\r\n]*$/)
+    .default('/orders/:orderId'),
   APP_TIME_ZONE: Joi.string()
     .custom((value: string, helpers) => {
       try {
@@ -120,7 +125,38 @@ export const environmentSchema = Joi.object({
   MINIO_ENDPOINT: Joi.string().hostname().default('localhost'),
   MINIO_PORT: Joi.number().integer().min(1).max(65_535).default(9000),
   MINIO_USE_SSL: Joi.boolean().default(false),
-  MINIO_ACCESS_KEY: Joi.string().allow('').default(''),
-  MINIO_SECRET_KEY: Joi.string().allow('').default(''),
+  MINIO_ACCESS_KEY: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('MINIO_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') }),
+  MINIO_SECRET_KEY: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('MINIO_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') }),
   MINIO_BUCKET: Joi.string().min(3).default('mindy-center'),
+  MINIO_PUBLIC_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default('')
+    .when('NODE_ENV', {
+      is: 'production',
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['https'] })
+        .allow(''),
+    }),
+  FILE_PUT_TTL_SECONDS: Joi.number().integer().min(30).max(600).default(600),
+  FILE_INTENT_TTL_SECONDS: Joi.number().integer().min(600).max(3600).default(1800),
+  FILE_MAX_OPEN_INTENTS: Joi.number().integer().min(1).max(100).default(20),
+  FILE_JOB_ENABLED: Joi.boolean().default(true),
+  FILE_JOB_POLL_SECONDS: Joi.number().integer().min(1).max(60).default(5),
+  FILE_JOB_CONCURRENCY: Joi.number().integer().min(1).max(4).default(2),
+  FILE_JOB_LEASE_SECONDS: Joi.number().integer().min(60).max(600).default(300),
+  FILE_JOB_HEARTBEAT_SECONDS: Joi.number().integer().min(5).max(30).default(30),
+  FILE_JOB_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  FILE_JOB_TIMEOUT_SECONDS: Joi.number().integer().min(30).max(240).default(180),
+  FILE_VALIDATION_TIMEOUT_SECONDS: Joi.number().integer().min(5).max(120).default(60),
+  FILE_SCRATCH_DIRECTORY: Joi.string().min(1).default(join(tmpdir(), 'mindy-file-validation')),
 }).unknown(true);

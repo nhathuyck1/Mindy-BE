@@ -11,6 +11,7 @@ import { CommerceModule } from './modules/commerce/commerce.module.js';
 import { CourseBrowseModule } from './modules/course-browse/course-browse.module.js';
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { MaterialsModule } from './modules/materials/materials.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
 import { UsersModule } from './modules/users/users.module.js';
@@ -40,6 +41,7 @@ import { UsersModule } from './modules/users/users.module.js';
     CommerceModule,
     PaymentsModule,
     StudentLearningModule,
+    MaterialsModule,
   ],
 })
 export class AppModule {}

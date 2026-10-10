@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
-import { DataSource } from 'typeorm';
+import { DataSource, type MigrationInterface } from 'typeorm';
 import { IdentityFoundation1790640000000 } from '../../src/database/migrations/1790640000000-identity-foundation.js';
 import { AddUserUpdatedAt1790640000001 } from '../../src/database/migrations/1790640000001-add-user-updated-at.js';
 import { RegistrationAndGoogleIdentity1790760000000 } from '../../src/database/migrations/1790760000000-registration-and-google-identity.js';
@@ -11,6 +11,7 @@ import { EnrollmentSeatHolds1790900000003 } from '../../src/database/migrations/
 import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/1790900000004-remove-manager-role.js';
 import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
 import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
+import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -69,7 +70,13 @@ export function separateTestUrl(suffix: string): string {
   return url.toString();
 }
 
-export async function paymentDatabase(suffix = 'payments'): Promise<DataSource> {
+export async function paymentDatabase(
+  suffix = 'payments',
+  extra: {
+    readonly entities?: readonly (new () => object)[];
+    readonly migrations?: readonly (new () => MigrationInterface)[];
+  } = {},
+): Promise<DataSource> {
   const url = separateTestUrl(suffix);
   const admin = new DataSource({ type: 'postgres', url: process.env.TEST_DATABASE_URL });
   await admin.initialize();
@@ -104,6 +111,7 @@ export async function paymentDatabase(suffix = 'payments'): Promise<DataSource> 
       PaymentWebhookEventEntity,
       PayosPaymentDetailEntity,
       UserEntity,
+      ...(extra.entities ?? []),
     ],
     migrations: [
       IdentityFoundation1790640000000,
@@ -116,6 +124,8 @@ export async function paymentDatabase(suffix = 'payments'): Promise<DataSource> 
       RemoveManagerRole1790900000004,
       AddCourseImgUrl1791072000000,
       PayosPayments1791158400000,
+      RestoreManagerRole1791504000000,
+      ...(extra.migrations ?? []),
     ],
     synchronize: false,
   });

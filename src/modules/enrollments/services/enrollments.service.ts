@@ -48,6 +48,17 @@ export class EnrollmentsService {
       .findOneBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
   }
 
+  /** Boolean entitlement check used by material policy; joins the caller's transaction. */
+  async hasActiveAccess(
+    studentId: string,
+    classId: string,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<boolean> {
+    return manager
+      .getRepository(EnrollmentEntity)
+      .existsBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
+  }
+
   async canActivateHolds(
     manager: EntityManager,
     studentId: string,

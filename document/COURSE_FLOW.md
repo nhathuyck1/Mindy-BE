@@ -1,13 +1,17 @@
 # Course flow — bản để kiểm tra trước Phase 3
 
-> Trạng thái: **đề xuất để người dùng kiểm tra**, chưa phải xác nhận bắt đầu Phase 3.  
+> Trạng thái: **D1–D6 Phase 3 đã duyệt; các quyết định attendance/bù/chứng chỉ còn mở**.
 > Nguồn nghiệp vụ và mô hình dữ liệu: [`Flow.txt`](./Flow.txt), [`usecase-course.drawio`](./usecase-course.drawio) và [`mindy_center_full.dbml`](./mindy_center_full.dbml).  
 > Nguồn quyết định triển khai hiện hành: [`CORE_BUSINESS_LOGIC.md`](../docs/CORE_BUSINESS_LOGIC.md), [`PHASE_2_FE_CONTRACT.md`](../docs/PHASE_2_FE_CONTRACT.md), [`Progress.md`](../docs/progress/Progress.md).  
 > Tài liệu này mô tả **flow mong muốn**; các mục ghi “chưa triển khai” không phải API/tính năng đã có.
 
 > Tiếp nối 2026-10-09: đã lập [kế hoạch Phase 3 File + Materials](../docs/implement_phase/PHASE_3_FILES_MATERIALS.md)
-> từ flow này, DBML và use case. Các điểm 1–3 của mục 8 có đề xuất cụ thể
-> trong plan, chưa phải xác nhận cuối cùng; chưa triển khai Phase 3.
+> từ flow này, DBML và use case. User đã duyệt D1–D6 tại
+> [Phase 3.1](../docs/implement_phase/PHASE_3_1_POLICY_CONTRACT.md): Material chính
+> thuộc Course Unit 1–N, shared giữa các lớp; Manager quản lý/sửa/duyệt, Mentor
+> upload chờ duyệt; ACTIVE + unit release + approval/publication mới đọc được.
+> Role MANAGER được bổ sung bằng migration mới; policy/contract/providers 3.1 đã
+> code và test local. Upload/storage/review/material HTTP API chưa có.
 
 ## 1. Khái niệm và quan hệ
 
@@ -46,7 +50,9 @@ flowchart LR
 - **Email Service:** gửi xác nhận thanh toán online và thông báo đổi buổi học theo sự kiện nghiệp vụ.
 - **System/Timer:** xử lý hết hạn đơn/giữ chỗ; về sau xét điều kiện và tạo chứng chỉ cuối kỳ.
 
-“Manager/Admin” trong sơ đồ được ánh xạ về role **ADMIN** hiện có; hệ thống hiện không có role MANAGER riêng.
+Role **MANAGER** riêng được user yêu cầu bổ sung ngày 2026-10-09 để quản lý/sửa/
+duyệt tài liệu chính. Mentor được upload chờ Manager duyệt. Admin vẫn quản trị
+users/Course/Class/payment theo baseline; Manager không tự kế thừa các quyền đó.
 
 ## 3. Tạo khóa và mở lớp
 
@@ -115,6 +121,11 @@ Trong Phase 2, mentor cần màn hình **lớp được phân công → học vi
 
 Mentor được gán vào Class, mở Class Unit rồi quản lý Session. Class có hình thức **ONLINE** (board/compiler trong buổi học) hoặc **OFFLINE**. Theo sơ đồ, quản lý Session gồm dùng/upload materials, giao homework/assignment và điểm danh. DBML hiện đặt `materials.course_unit_id`, còn assignment/attendance gắn với Session; muốn sở hữu material riêng theo Class Unit hoặc Session phải mở rộng mô hình ở Phase 3. Mentor chấm bài và đưa feedback; Q&A theo Class Unit và group chat theo Class.
 
+Material là tài liệu chính của Course Unit, shared qua các Class Unit tham chiếu
+cùng Course Unit. Session link tùy chọn chỉ chỉ định sử dụng; Session còn theo
+dõi assignment/Q&A/student code riêng. Manager sửa/duyệt tài liệu chung; Mentor
+được upload draft, submit chờ duyệt. File READY không thay Manager approval.
+
 Student xem thời khóa biểu cá nhân, Class Unit/Session và tham gia buổi học theo hình thức đã đăng ký. Sau khi có quyền học đầy đủ, Student xem materials, nộp bài, chạy code, xem điểm danh, điểm/feedback và tham gia Q&A/chat. Nội dung phải được kiểm tra theo enrollment/mentor assignment, không chỉ theo role.
 
 ### 5.3 Điểm danh theo buổi học
@@ -155,18 +166,24 @@ Cuối kỳ, System dự kiến tự tạo chứng chỉ khi Student đạt **t�
 | Phần | Phase | Tình trạng theo tài liệu tiến độ hiện có |
 |---|---|---|
 | Course/Class catalog, giỏ, checkout, giữ chỗ, PayOS BE, CASH preview/mentor confirm | 2 / 2.2 | Đã triển khai và kiểm tra local; bản sửa tạo QR ngày 2026-10-06 còn cần deploy/kiểm chứng trên VPS. Giao dịch PayOS tiền thật và nghiệm thu live chưa có bằng chứng hoàn tất. |
-| File và materials | **3** | DBML hiện chỉ gắn material với Course Unit; nếu muốn gắn Class Unit/Session phải chốt và đổi schema. Chưa bắt đầu Phase 3 trong yêu cầu này. |
+| File và materials | **3** | D1–D6 đã duyệt: tài liệu chính Course Unit shared, Manager quản lý/review, Mentor upload chờ duyệt. Role Manager có migration mới; upload/review/material API chưa triển khai. |
 | Điểm danh và truy vấn vận hành | 4 | DBML đã phác bảng/trạng thái/quan hệ, nhưng chưa có migration/module/API điểm danh. Flow ghi và tính tỷ lệ còn các quyết định ở mục 8. |
 | Chat/DM, thông báo | 6 | Chưa triển khai; CASH pending chat là yêu cầu giữ lại. |
 | Assignment/chấm bài, board, compiler/judge, chứng chỉ, form tư vấn/gợi ý khóa học | Chưa chốt phase cụ thể | Có trong Flow/use case, không được hiểu là đã hoàn thành. |
 
-**Phạm vi Phase 3 để duyệt sau:** upload/lưu trữ file, metadata và lifecycle, gắn materials với Course Unit theo DBML hiện tại hoặc mở rộng sang Class Unit/Session nếu được xác nhận; quyền mentor/Admin quản lý và Student `ACTIVE` đọc/tải. Phase 3 không tự triển khai điểm danh; các quyết định về điểm danh được giữ cho Phase 4.
+**Phạm vi Phase 3 đã duyệt:** upload/lưu trữ file, metadata/lifecycle, Material
+chính của Course Unit, Manager quản lý/sửa/duyệt và Mentor upload chờ duyệt;
+Student ACTIVE đọc theo release/approval/publication. Không đổi owner sang
+Class Unit/Session. Không triển khai điểm danh; giữ quyết định đó cho Phase 4.
 
 ## 8. Điểm cần bạn xác nhận trước Phase 3
 
-1. **Nơi gắn material:** tài liệu thuộc Course Unit mẫu, Class Unit của lớp, Class Session của buổi học, hay cho phép cả ba? Khi Course Unit thay đổi, tài liệu ở Class đã mở có tự cập nhật không?
-2. **Người quản lý material:** sơ đồ cho Mentor upload trong Session; kế hoạch cũ ghi Admin quản lý materials ở Catalog. Mentor được upload/chỉnh/xóa cho lớp mình, Admin được quản lý toàn bộ, hay có quy tắc khác?
-3. **Quyền xem material:** Student `ACTIVE` xem ngay mọi material của lớp hay chỉ unit/session đã mở? CASH pending luôn chỉ xem preview tiêu đề/lịch như mục 6?
+1. **Đã chốt nơi gắn material:** Course Unit 1–N Material; tài liệu chính shared
+   giữa các lớp; Session link optional không đổi owner. Không tự đồng bộ cấu trúc lớp.
+2. **Đã chốt quản lý material:** Manager role riêng sửa/quản lý/duyệt; Mentor upload
+   và submit chờ Manager duyệt. Approval không phải bước xác nhận thanh toán.
+3. **Đã chốt quyền xem:** Student ACTIVE, Class không hủy, Class Unit đã mở/đến giờ,
+   Material approved/published/đến giờ, file READY. CASH pending chỉ preview tiêu đề/lịch.
 4. **Cách tạo Class:** mỗi Class lấy toàn bộ Course Unit tại thời điểm tạo như hiện tại, hay Admin có thể chọn một phần Course Unit?
 5. **Dạy bù:** “trước 1 ngày” là hạn gửi yêu cầu nghỉ, hạn Admin duyệt, hay thời điểm muộn nhất email phải đến Student? Buổi bù có thể ở tuần khác không?
 6. **Đối tượng được điểm danh:** chỉ Enrollment `ACTIVE`, hay cả CASH `PENDING_PAYMENT` đang được phép đến lớp offline? Nếu cash hết hạn/hủy sau khi đã dự học, giữ lịch sử điểm danh và tính chứng chỉ ra sao?

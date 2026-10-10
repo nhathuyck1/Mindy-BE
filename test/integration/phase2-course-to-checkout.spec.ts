@@ -15,6 +15,7 @@ import { CommerceOrders1790900000002 } from '../../src/database/migrations/17909
 import { EnrollmentSeatHolds1790900000003 } from '../../src/database/migrations/1790900000003-enrollment-seat-holds.js';
 import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/1790900000004-remove-manager-role.js';
 import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
+import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
 import { CourseDto, CourseManagementDetailDto } from '../../src/modules/catalog/dtos/course.dto.js';
 import { CourseEntity } from '../../src/modules/catalog/entities/course.entity.js';
 import { CourseCategoryEntity } from '../../src/modules/catalog/entities/course-category.entity.js';
@@ -64,7 +65,7 @@ if (databaseUrl.length > 0 && !isTestDatabase) {
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const DAY_MS = 86_400_000;
-const PHASE_2_MIGRATION_COUNT = 6;
+const PHASE_2_MIGRATION_COUNT = 7;
 
 const config = {
   getOrThrow<T>(key: string): T {
@@ -136,6 +137,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         EnrollmentSeatHolds1790900000003,
         RemoveManagerRole1790900000004,
         AddCourseImgUrl1791072000000,
+        RestoreManagerRole1791504000000,
       ],
     });
     await dataSource.initialize();
@@ -279,6 +281,24 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
 
     const rerun = await dataSource.runMigrations();
     expect(rerun).toHaveLength(PHASE_2_MIGRATION_COUNT);
+  });
+
+  it('preserves manager accounts on refused rollback and restores the role after down/up', async () => {
+    const manager = await createUser(UserRole.MANAGER);
+    await expect(dataSource.undoLastMigration()).rejects.toThrow(
+      'Cannot remove the MANAGER role while users still have it',
+    );
+    expect(await dataSource.getRepository(UserEntity).findOneBy({ id: manager.id })).toMatchObject({
+      role: UserRole.MANAGER,
+    });
+
+    await dataSource.getRepository(UserEntity).delete(manager.id);
+    await dataSource.undoLastMigration();
+    await expect(createUser(UserRole.MANAGER)).rejects.toMatchObject({ code: '22P02' });
+    expect(await dataSource.runMigrations()).toHaveLength(1);
+    const restored = await createUser(UserRole.MANAGER);
+    expect(restored.role).toBe(UserRole.MANAGER);
+    await dataSource.getRepository(UserEntity).delete(restored.id);
   });
 
   describe('catalog and class management', () => {
@@ -765,9 +785,11 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
           [student.id, `T${randomUUID().slice(0, 12)}`],
         ),
       ).rejects.toMatchObject({ code: '23514', constraint: 'ck_orders_cash_mentor' });
-      // 22P02: the MANAGER role no longer exists in user_role_enum.
+      // Unknown roles remain rejected even after restoring MANAGER.
       await expect(
-        dataSource.query(`UPDATE "users" SET "role" = 'MANAGER' WHERE "id" = $1`, [student.id]),
+        dataSource.query(`UPDATE "users" SET "role" = 'UNKNOWN_ROLE' WHERE "id" = $1`, [
+          student.id,
+        ]),
       ).rejects.toMatchObject({ code: '22P02' });
       await expect(
         dataSource.query(`DELETE FROM "classes" WHERE "id" = $1`, [classId]),

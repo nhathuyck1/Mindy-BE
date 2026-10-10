@@ -30,6 +30,13 @@ Import both files into Postman:
 - `Mindy-BE.postman_collection.json`
 - `Mindy-Local.postman_environment.json`
 
+For Phase 3.2 also import `Mindy-Files-Phase32.postman_collection.json`.
+It contains `04 — Phase 3.2 Files`: login an existing Manager, set Course Unit,
+filename/MIME/exact bytes, create intent, manually select the binary for PUT,
+complete and poll. For Mentor add matching `classId`/`classUnitId` and log in
+with the Mentor account. Keep API cookies away from storage PUT and clear signed
+URLs after testing. See [Files runbook](../docs/PHASE_3_2_FILES_RUNBOOK.md).
+
 Select the **Mindy Local** environment and set `admin_password` to the same value as
 `SEED_ADMIN_PASSWORD` in the local `.env` file.
 

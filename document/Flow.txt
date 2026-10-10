@@ -1,8 +1,8 @@
-Mentor 
+Mentor
 + Đăng ký thgian dạy , môn học, lịch làm calender, update profile: exp, feedback
-+ Thời khóa biểu lịch dạy, 
++ Thời khóa biểu lịch dạy,
 + flexible on both mentor take slot for class or admin assign slot for class
-+ mentor book slot khác dạy bù(đăng ký nghỉ vào buổi bận, cần admin duyệt) 
++ mentor book slot khác dạy bù(đăng ký nghỉ vào buổi bận, cần admin duyệt)
 -> Cho chọn slot khác trong tuần và mail các student vào buổi đó. (Trước 1 ngày)
 
 Flow mentor quản lý class
@@ -13,10 +13,10 @@ Flow mentor quản lý class
 Compiler run / Mentor chấm và fb
 
 Manager/Admin
-+ Create course, course-unit, class. Import class from course-unit. 
++ Create course, course-unit, class. Import class from course-unit.
 + Manage all above
 + Support customer about course
-+ Support transactions(from transactions log) 
++ Support transactions(from transactions log)
 + Manage schedule(Mentor's registration log, assign mentor to class, human resources)
 
 Student
@@ -26,8 +26,21 @@ Student
 + Browse course list -> register class and choose onl/off -> add to cart -> process order(full payment): can choose payment type(cash/PayOS)*add confirmation to mail for online transaction
 -> be added to the course unit(by manager)
 - Cash case: Cash pending(still got add automatic to class. Only see class unit title, class session title with timetable then go to offline classroon)
- -> Mentor confirm order stt -> Can see the whole course 
+ -> Mentor confirm order stt -> Can see the whole course
 - Cash pending will be added to class group chat/mentor DM
 + View schedule (Fap calendar)
-+ Browse class unit,session, attendance, homework, ... 
-+ 
++ Browse class unit,session, attendance, homework, ...
++
+
+
+thêm css vào mail
+thêm redirect url to orderdetails trên mail
+
+class unit -> class/assg/materials (mentor quản lý)
+
+course unit -> Tạo class unit -> Tạo class session tự động(chưa có lịch)
+
+
+
+Admin Tạo ra trước 1 bộ course unit cho từng course => tạo class => sinh ra class unit.
+Admin duyệt mentor dạy course, và assign class thì mentor toàn quyền cho cái class và class unit đấy.

@@ -10,7 +10,7 @@ Mindy Center API — a NestJS 11 modular monolith (TypeScript strict, **ESM**, T
 
 Every implementation — new feature, bug fix, refactor, migration, test — **must** follow the project rules below. They are imported in full so they are always in context:
 
-@docs/NESTJS_PROJECT_RULES.md
+@docs/core/NESTJS_PROJECT_RULES.md
 
 How to apply them:
 
@@ -29,7 +29,7 @@ How to apply them:
 
 Work is planned and delivered in phases. Docs are mostly in Vietnamese.
 
-- `docs/NESTJS_PROJECT_RULES.md` — mandatory engineering rules (see above).
+- `docs/core/NESTJS_PROJECT_RULES.md` — mandatory engineering rules (see above).
 - `document/Flow.txt` — business flow source. **Read all of it before changing commerce/payment/access business rules.** Note your interpretation and any deferred requirements.
 - `docs/CORE_BUSINESS_LOGIC.md` — domain logic and transaction boundaries.
 - `docs/implement_phase/` — one plan per phase (see its `README.md` for order and current status). Each phase must be a vertical slice: migration → service → API → tests.

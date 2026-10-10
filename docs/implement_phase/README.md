@@ -5,27 +5,41 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 
 ## Thứ tự thực hiện
 
-1. [Phase 0 — Foundation, database và deployment baseline](./PHASE_0_FOUNDATION.md)
-2. [Phase 1 — Registration, users, Google/password authentication và authorization baseline](./PHASE_1_IDENTITY_AUTH.md)
-3. [Phase 2 — Course registration, checkout, payment và enrollment](./PHASE_2_COURSE_TO_PAYMENT.md)
-4. [Phase 2.1 — Test webhook PayOS trên server, confirm đã pass](./PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
-5. [Phase 2.2 — Tích hợp payOS vào BE và nghiệm thu giao dịch thật](./PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md)
-6. [Phase 2.3 — My Classes + Personal Schedule](./PHASE_2_3_MY_CLASSES_SCHEDULE.md)
-7. [Phase 3 — File + Materials](./PHASE_3_FILES_MATERIALS.md)
+1. [Phase 0 — Foundation, database và deployment baseline](./phase%201/PHASE_0_FOUNDATION.md)
+2. [Phase 1 — Registration, users, Google/password authentication và authorization baseline](./phase%201/PHASE_1_IDENTITY_AUTH.md)
+3. [Phase 2 — Course registration, checkout, payment và enrollment](./phase2/PHASE_2_COURSE_TO_PAYMENT.md)
+4. [Phase 2.1 — Test webhook PayOS trên server, confirm đã pass](./phase2/PHASE_2_1_WEBHOOK_VPS_PAYOS.md)
+5. [Phase 2.2 — Tích hợp payOS vào BE và nghiệm thu giao dịch thật](./phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md)
+6. [Phase 2.3 — My Classes + Personal Schedule](./phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md)
+7. [Phase 3 — File + Materials](./phase%203/PHASE_3_FILES_MATERIALS.md)
+8. [Phase 3.1 — Policy + Contract, D1–D6 đã code và test local](./phase%203/PHASE_3_1_POLICY_CONTRACT.md)
+9. [Phase 3.2 — Upload private và xác minh file, đã nghiệm thu local](./phase%203/PHASE_3_2_SAFE_UPLOAD.md)
 
-Ưu tiên Phase 2.3 trước Phase 3: hoàn thiện Student đăng ký lớp → danh sách lớp
-→ detail/preview → lịch cá nhân tổng hợp. Ngày 2026-10-09 đã implement local và pass
-`pnpm check`; suite DB/HTTP chưa chạy, chưa deploy. Xem
-[PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md) và
-[contract FE](../PHASE_2_3_FE_CONTRACT.md).
+Phase 2.3 đã implement; các suite PostgreSQL/HTTP hiện có pass local ngày 2026-10-10.
+Xem [contract FE](../PHASE_2_3_FE_CONTRACT.md) và progress bên dưới.
 
-Phase 3 đã có kế hoạch ngày 2026-10-09, chưa triển khai. Kế hoạch đề xuất material
-dùng chung ở Course Unit và riêng ở Class Unit/Session; policy scope/quản lý/mở
-quyền cần được ghi quyết định trước khi code. Theo dõi tại
-[PHASE_3_PROGRESS.md](../progress/PHASE_3_PROGRESS.md).
+Điều phối hiện hành: người khác làm Phase 2.3, user làm Phase 3 song song;
+thứ tự danh sách trên là roadmap, không yêu cầu chờ 2.3 để bắt đầu P3.
+Phase 2.3 hoàn thiện Student đăng ký lớp → danh sách lớp → detail/preview → lịch;
+xem [PHASE_2_3_PROGRESS.md](../progress/phase%202/PHASE_2_3_PROGRESS.md). Phase 3 ưu tiên
+3.1 quyền/contract, 3.2 upload an toàn, 3.3 quản lý tài liệu, 3.4 Student đọc/tải,
+3.5 metadata/cleanup và 3.6 nghiệm thu/tích hợp; 3.1 đã có role MANAGER,
+policy/domain transitions và context providers. 3.2 có upload/storage/validation API;
+review/material persistence API tiếp tục ở 3.3.
+
+3.1 policy/contract đã hoàn tất và full local gates pass (171 tests/16 suites,
+HTTP 5/5). 3.2 hoàn tất local: full check 217 tests, focused Files 42,
+HTTP 19 pass; upload policy theo chiều Materials → Files giữ contract/errors 3.1.
+Theo dõi tại [PHASE_3_2_PROGRESS.md](../progress/phase%203/PHASE_3_2_PROGRESS.md) và
+[runbook](../PHASE_3_2_FILES_RUNBOOK.md). Chưa deploy/migrate dev hoặc VPS.
+
+Phase 3 đã chốt D1–D6 ngày 2026-10-09: Course Unit 1–N Material, tài liệu chính
+shared giữa các lớp; Manager quản lý/sửa/duyệt, Mentor upload chờ duyệt;
+Student ACTIVE còn phải qua unit release/approval/publication. Theo dõi tại
+[PHASE_3_PROGRESS.md](../progress/phase%203/PHASE_3_PROGRESS.md).
 
 Kế hoạch tiếp nối sau checkout:
-[Webhook VPS → PayOS BE → deploy test](./PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).
+[Webhook VPS → PayOS BE → deploy test](./phase2/PHASE_2_WEBHOOK_VPS_PAYOS_PLAN.md).
 Kế hoạch tiếp nối giữ thiết kế B–D và baseline lịch sử. Ngày 2026-10-05 webhook
 server đã confirm pass; payment BE đã implement/test local theo Phase 2.2,
 VPS payment/giao dịch thật chờ user thực hiện theo runbook. Các giới hạn test A1

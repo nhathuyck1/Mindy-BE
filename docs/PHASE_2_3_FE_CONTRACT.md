@@ -1,7 +1,7 @@
 # Contract FE — Phase 2.3 My Classes + Personal Schedule
 
 Chốt ngày **2026-10-09** (bước 2.3.1), triển khai cùng ngày ở local. Kế hoạch:
-[PHASE_2_3_MY_CLASSES_SCHEDULE.md](./implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
+[PHASE_2_3_MY_CLASSES_SCHEDULE.md](./implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
 Contract Phase 2 trước đó vẫn hiệu lực: [PHASE_2_FE_CONTRACT.md](./PHASE_2_FE_CONTRACT.md).
 
 Mọi route dưới `/api/v1`, cookie auth, role **STUDENT**. Không gửi `studentId`

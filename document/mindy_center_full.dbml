@@ -12,6 +12,7 @@
 
   Enum user_role {
     ADMIN
+    MANAGER
     MENTOR
     STUDENT
   }
@@ -100,6 +101,7 @@
 
   Enum file_status {
     PENDING_UPLOAD
+    PROCESSING
     READY
     FAILED
     DELETED
@@ -472,28 +474,41 @@
 
   Table file_objects {
     id uuid [pk]
-    owner_user_id uuid
+    owner_user_id uuid [not null]
+    course_unit_id uuid [not null]
+    intent_class_id uuid
+    intent_class_unit_id uuid
     bucket varchar(100) [not null]
-    object_key varchar(1024) [not null]
-    original_name varchar(500) [not null]
-    extension varchar(20)
-    mime_type varchar(150) [not null]
-    kind file_kind [not null, default: 'GENERIC']
-    size_bytes bigint [not null]
+    staging_key varchar(1024) [not null]
+    staging_version_id varchar(1024)
+    object_key varchar(1024)
+    object_version_id varchar(1024)
+    original_name varchar(250) [not null]
+    extension varchar(20) [not null]
+    declared_mime_type varchar(150) [not null]
+    declared_size_bytes bigint [not null]
+    mime_type varchar(150)
+    kind file_kind
+    size_bytes bigint
     sha256 char(64)
     status file_status [not null, default: 'PENDING_UPLOAD']
+    intent_expires_at timestamptz [not null]
+    processing_at timestamptz
+    error_code varchar(80)
     created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
     ready_at timestamptz
     deleted_at timestamptz
 
     indexes {
       (bucket, object_key) [unique]
+      (bucket, staging_key) [unique]
       (owner_user_id, created_at)
-      (kind, status)
-      (sha256)
+      (course_unit_id, status)
+      (intent_expires_at) [note: 'SQL partial index for PENDING_UPLOAD']
     }
 
-    Note: 'Stores the object identity and upload lifecycle. Never persist a temporary presigned URL.'
+    Note: 'Phase 3.2 Course Unit uploads: immutable owner/scope/declaration/provenance, optional class IDs paired; SQL composite FK validates Class Unit ancestry. READY requires matching verified size, MIME/kind/hash, pinned staging and final version, ready_at. GENERIC/ARCHIVE enum values remain future roadmap; current SQL allowlist excludes them. Never persist a signed URL; raw download is not exposed.'
   }
 
   Table file_metadata {
@@ -514,7 +529,7 @@
     frame_rate decimal(8,3)
 
     preview_file_id uuid [note: 'Thumbnail, poster frame or rendered first page stored as another file object']
-    properties jsonb [note: 'Less common metadata such as author, title, container, archive entry count or encryption flags']
+    properties jsonb [not null, default: `'{}'`, note: 'Bounded to 1 MiB; extraction fields remain null in 3.2']
     processing_error text
     extracted_at timestamptz
     created_at timestamptz [not null, default: `now()`]
@@ -526,6 +541,29 @@
     }
 
     Note: 'One optional metadata row per file. Type-specific validation is performed from file_objects.kind in the application or migration constraints.'
+  }
+
+  Table file_processing_jobs {
+    id uuid [pk]
+    file_object_id uuid [not null]
+    kind varchar(20) [not null, note: 'CHECK VALIDATE/EXTRACT/PURGE; only VALIDATE claimed in 3.2']
+    status varchar(20) [not null, default: 'PENDING', note: 'CHECK PENDING/PROCESSING/SUCCEEDED/FAILED']
+    attempts int [not null, default: 0]
+    max_attempts int [not null, default: 5, note: '1..20, attempts <= max_attempts']
+    available_at timestamptz [not null, default: `now()`]
+    lease_until timestamptz
+    lease_token uuid
+    copy_candidates jsonb [not null, default: `'[]'`, note: 'Bounded array <= max_attempts; token/key/version recorded before copy; orphan history retained']
+    error_code varchar(80)
+    completed_at timestamptz
+    created_at timestamptz [not null, default: `now()`]
+    updated_at timestamptz [not null, default: `now()`]
+    indexes {
+      (file_object_id, kind) [unique]
+      (kind, status, available_at)
+      (lease_until) [note: 'SQL partial index for PROCESSING']
+    }
+    Note: 'Durable validation jobs, SKIP LOCKED, bounded retries and fenced leases. READY + metadata PENDING + EXTRACT job commit atomically. EXTRACT/PURGE handlers are Phase 3.5.'
   }
 
   // -----------------------------------------------------------------------------
@@ -967,6 +1005,10 @@
   Ref: payment_confirmation_emails.student_id > users.id
 
   Ref: file_objects.owner_user_id > users.id
+  Ref: file_objects.course_unit_id > course_units.id
+  Ref: file_objects.intent_class_id > classes.id
+  Ref: file_objects.intent_class_unit_id > class_units.id
+  Ref: file_processing_jobs.file_object_id > file_objects.id
   Ref: file_metadata.file_object_id - file_objects.id
   Ref: file_metadata.preview_file_id > file_objects.id
 

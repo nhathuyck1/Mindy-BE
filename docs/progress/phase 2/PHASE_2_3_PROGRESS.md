@@ -1,8 +1,8 @@
 # Phase 2.3 — Tiến độ My Classes + Personal Schedule
 
 Cập nhật: **2026-10-10**.
-Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
-Contract FE: [PHASE_2_3_FE_CONTRACT.md](../PHASE_2_3_FE_CONTRACT.md).
+Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../../implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
+Contract FE: [PHASE_2_3_FE_CONTRACT.md](../../PHASE_2_3_FE_CONTRACT.md).
 
 ## Hiện trạng
 
@@ -12,9 +12,9 @@ query plan trên fixture lớn, chưa deploy.**
 | Loại bằng chứng | Trạng thái |
 |---|---|
 | Plan/contract | Chốt contract 2.3.1, viết FE contract. |
-| Local checks | `pnpm check` pass: lint, type-check, 60 unit test, build. Sau khi cấu hình DB test, `pnpm test` pass **127/127**, không skip. |
-| PostgreSQL integration | **67/67 pass**: Phase 2 (36), Phase 2.2 (25), Phase 2.3 (6). |
-| Built-app HTTP | `pnpm test:http` pass **5/5**, gồm luồng Phase 2.3 CASH preview → FULL. |
+| Local checks | Sau đồng bộ dev/Phase 3, `pnpm check` pass: lint, type-check, **243/243 test (22 suites)**, build; không skip. |
+| PostgreSQL integration | Suite Phase 2.3 **6/6 pass**; các suite Phase 2/2.2 và Phase 3.1/3.2 cũng pass trong full gate. |
+| Built-app HTTP | `pnpm test:http` pass **20/20 (2 suites)** sau đồng bộ dev, gồm luồng Phase 2.3 CASH preview → FULL. |
 | VPS/staging | Chưa deploy, chưa smoke. |
 | Payment thật | Không liên quan; PayOS live vẫn là nghiệm thu Phase 2.2 riêng. |
 
@@ -44,6 +44,23 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
   enrollment ACTIVE. Hai rule chỉ khác nhau với dữ liệu hỏng.
 - Hoãn: chat/DM CASH pending (phase chat), quyền học lại sau COMPLETED, workflow nghỉ/dạy
   bù, materials/attendance/progress (Phase 3/4).
+
+## Điều phối và lịch sử planning
+
+- Cập nhật điều phối: user giao 2.3 cho người khác và phụ trách P3; hai phase làm
+  song song. Ghi chú ưu tiên 2.3 trước P3 bên dưới là lịch sử lượt planning trước;
+  điều kiện hiện hành là tích hợp trước nghiệm thu hành trình FE, không chặn code P3.
+
+- User ưu tiên hoàn thiện luồng đăng ký lớp → My Classes → detail → lịch trước
+  Phase 3 File + Materials; lượt này chỉ yêu cầu planning vào Markdown.
+- Đã đọc Flow.txt, FE contract, nguồn class/enrollment/CASH/order và đối chiếu
+  DBML/Course flow với progress hiện có.
+- Tái dùng full detail ACTIVE và CASH preview; đề xuất collection `/me/classes`,
+  calendar `/me/schedule`, current/history/all và access context.
+- Giữ entitlement hiện tại, không mở quyền enrollment COMPLETED hoặc pending
+  PAYOS; CASH pending còn hạn có title/timetable. Metadata/list lịch sử có quyền
+  riêng với private learning content, không dùng Order PAID thay enrollment.
+- Bước 2.3.1 còn cần chốt contract/policy đề xuất; plan không làm rule thành code.
 
 ## Các bước
 
@@ -110,3 +127,14 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
   không gọi merchant thật. Ca Phase 2.3 kiểm chứng list, preview, calendar, quyền role,
   query validation, no-store và CASH confirmation → FULL.
 - Không sửa code nghiệp vụ; chưa EXPLAIN trên fixture lớn, deploy hoặc thanh toán thật.
+
+## Đồng bộ dev cho PR #9 ngày 2026-10-10
+
+- Resolve conflict docs/AppModule/payment fixture, giữ Phase 2.3 và Phase 3.1/3.2.
+- Giữ rename docs vào `implement_phase/phase2` và `progress/phase 2`; sửa liên kết
+  liên quan và giữ evidence local của cả hai phase.
+- Giữ public `hasActiveAccess` cho Materials bên cạnh `findActive` phục vụ detail;
+  giữ predicate ACTIVE và EntityManager của caller.
+- Frozen-lockfile install, `pnpm check` **243/243 tests (22 suites)** và
+  `pnpm test:http` **20/20 (2 suites)** pass; không skip. PostgreSQL test DB riêng,
+  MinIO test fixture tại `127.0.0.1:19000`; không migrate DB development/VPS.

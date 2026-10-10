@@ -24,7 +24,12 @@ fake provider; it does not call real payOS or require merchant credentials.
 - Identity uses short-lived RS256 access cookies and rotated refresh tokens. The Phase 1
   plan includes public `STUDENT` registration by verified email/password and Google
   OIDC with mandatory profile completion for new Google users.
-- Redis and MinIO are optional infrastructure modules and are not initialized until their feature flags are enabled.
+- Redis and MinIO are optional infrastructure; MinIO network calls and upload jobs require its feature flag.
+
+Phase 3.2 implements private Course Unit uploads for Manager/assigned Mentor,
+version-pinned binary validation and durable PostgreSQL jobs. Setup/API/test
+instructions: [Files runbook](docs/PHASE_3_2_FILES_RUNBOOK.md).
+Material review and Student downloads follow in Phases 3.3/3.4.
 - Board and compiler/judge features are intentionally outside the first implementation plan.
 
 ## Local setup
@@ -44,6 +49,13 @@ terminal used for checks. Git attributes and EditorConfig keep text files at LF;
 Biome enforces the same line ending.
 
 The liveness endpoint is `GET /api/v1/health/live`. Swagger is available at `/docs` only when `SWAGGER_ENABLED=true`.
+
+Registration verification and online payment confirmation emails include styled HTML
+and a plain-text alternative. Payment emails link directly to
+`FRONTEND_BASE_URL` + `ORDER_DETAILS_PATH` (default `/orders/:orderId`), replacing
+`:orderId` with the order UUID. The frontend order page requires the purchasing
+account to sign in and can load details from `GET /api/v1/me/orders/:orderId`.
+Verification links use `EMAIL_VERIFICATION_PATH` and retain the existing token flow.
 
 ## Quality commands
 
