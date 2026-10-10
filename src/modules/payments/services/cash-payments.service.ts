@@ -3,7 +3,6 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
-import type { ClassDetailView } from '../../classes/domain/class-views.js';
 import { ClassStatus } from '../../classes/enums/class-status.enum.js';
 // biome-ignore lint/style/useImportType: Exported class provider.
 import { ClassOffersService } from '../../classes/services/class-offers.service.js';
@@ -17,6 +16,7 @@ import type { OrderWithDetails } from '../../commerce/services/checkout.service.
 import { OrderSettlementService } from '../../commerce/services/order-settlement.service.js';
 // biome-ignore lint/style/useImportType: Exported enrollment provider.
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
+import type { CashPreviewView } from '../dtos/student-class-preview.dto.js';
 import { PaymentTransactionEntity } from '../entities/payment-transaction.entity.js';
 import { PaymentStatus } from '../enums/payment-status.enum.js';
 
@@ -37,9 +37,11 @@ export class CashPaymentsService {
     return this.orders.listCash(this.db.manager, mentorId, options);
   }
 
-  async preview(studentId: string, classId: string): Promise<ClassDetailView> {
-    const detailId = await this.orders.pendingCashDetail(this.db.manager, studentId, classId);
-    if (!detailId || !(await this.enrollments.hasPendingHold(studentId, classId, detailId)))
+  async preview(studentId: string, classId: string): Promise<CashPreviewView> {
+    const detail = await this.orders.pendingCashDetail(this.db.manager, studentId, classId);
+    const hold =
+      detail && (await this.enrollments.findPendingHold(studentId, classId, detail.detailId));
+    if (!detail || !hold)
       throw new AppHttpException(
         HttpStatus.FORBIDDEN,
         'CLASS_PREVIEW_DENIED',
@@ -52,7 +54,11 @@ export class CashPaymentsService {
         'CLASS_PREVIEW_DENIED',
         'Class is cancelled',
       );
-    return view;
+    return {
+      ...view,
+      enrollment: { id: hold.id, status: hold.status, enrolledAt: hold.enrolledAt },
+      order: { id: detail.orderId, orderCode: detail.orderCode, expiresAt: detail.expiresAt },
+    };
   }
 
   async confirm(

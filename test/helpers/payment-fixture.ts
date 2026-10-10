@@ -69,8 +69,8 @@ export function separateTestUrl(suffix: string): string {
   return url.toString();
 }
 
-export async function paymentDatabase(): Promise<DataSource> {
-  const url = separateTestUrl('payments');
+export async function paymentDatabase(suffix = 'payments'): Promise<DataSource> {
+  const url = separateTestUrl(suffix);
   const admin = new DataSource({ type: 'postgres', url: process.env.TEST_DATABASE_URL });
   await admin.initialize();
   const name = new URL(url).pathname.slice(1);

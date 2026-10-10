@@ -26,24 +26,26 @@ export interface SeatHoldRequest {
 export class EnrollmentsService {
   constructor(private readonly dataSource: DataSource) {}
 
-  async hasPendingHold(
+  /** The seat hold created for this exact order detail, if it is still pending. */
+  async findPendingHold(
     studentId: string,
     classId: string,
     orderDetailId: string,
-  ): Promise<boolean> {
+  ): Promise<EnrollmentEntity | null> {
     return this.dataSource
       .getRepository(EnrollmentEntity)
-      .existsBy({ studentId, classId, orderDetailId, status: EnrollmentStatus.PENDING_PAYMENT });
+      .findOneBy({ studentId, classId, orderDetailId, status: EnrollmentStatus.PENDING_PAYMENT });
   }
 
-  async hasActiveAccess(
+  /** The student's ACTIVE enrollment in the class; at most one exists (partial unique index). */
+  async findActive(
     studentId: string,
     classId: string,
     manager: EntityManager = this.dataSource.manager,
-  ): Promise<boolean> {
+  ): Promise<EnrollmentEntity | null> {
     return manager
       .getRepository(EnrollmentEntity)
-      .existsBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
+      .findOneBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
   }
 
   async canActivateHolds(

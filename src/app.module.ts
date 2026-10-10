@@ -12,6 +12,7 @@ import { CourseBrowseModule } from './modules/course-browse/course-browse.module
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
+import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
@@ -38,6 +39,7 @@ import { UsersModule } from './modules/users/users.module.js';
     CourseBrowseModule,
     CommerceModule,
     PaymentsModule,
+    StudentLearningModule,
   ],
 })
 export class AppModule {}
