@@ -72,9 +72,10 @@ Preview sau khi thanh toán trả 403; FE chuyển sang endpoint full class.
 
 ## Backlog ngoài increment Phase 2 này
 
-Ngày 2026-10-09 đã có [plan Phase 2.3 — My Classes + Personal Schedule](./implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md)
-để hoàn thiện lớp đã đăng ký và lịch tổng hợp trước Phase 3. Đây là kế hoạch,
-chưa triển khai route collection/calendar; full detail và CASH preview giữ hiện trạng.
+Ngày 2026-10-09 Phase 2.3 đã implement local `GET /me/classes` và `GET /me/schedule`,
+đồng thời bổ sung field additive cho detail/preview; xem
+[contract FE Phase 2.3](./PHASE_2_3_FE_CONTRACT.md). Chưa deploy, nên trên môi trường
+đang chạy vẫn dùng workaround Order PAID bên dưới cho tới khi release Phase 2.3.
 
 Phase 2 chỉ khởi tạo progress khi payment thành công. Chưa có API tự cập nhật
 progress và chưa chốt cách tính từ attendance/homework để tránh FE tự chứng nhận
@@ -84,7 +85,7 @@ Orders là lịch sử mua, không thay thế danh sách enrollment tổng quát
 
 | Phần | Contract dự kiến, chưa triển khai | Quy tắc cần chốt |
 |---|---|---|
-| Lớp đã đăng ký | `GET /me/classes` phân trang, enrollmentStatus, accessMode | ACTIVE/COMPLETED/pending CASH/PAYOS, history/cancelled và cách lọc |
+| Lớp đã đăng ký | Đã chốt và implement local ở Phase 2.3 | Xem [contract Phase 2.3](./PHASE_2_3_FE_CONTRACT.md) |
 | Progress | `GET /me/classes/:classId/progress`; write API sau khi chốt actor | Tiến độ tự báo hay mentor/system, unit locked, completion/certificate |
 | Materials — Phase 3 | Mentor CRUD theo class/session; student list/download theo ACTIVE enrollment | Storage, loại/dung lượng file, quyền upload, signed URL, soft delete |
 | Attendance — Phase 4 | Mentor ghi theo session/enrollment; student đọc attendance của mình | PRESENT/ABSENT/LATE/EXCUSED, buổi bù, sửa/audit, quyền CASH pending |

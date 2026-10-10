@@ -17,6 +17,12 @@ save `order_id`/`payment_id`. Read own order/class after the provider webhook co
 Login ADMIN before review/reconcile requests. Do not post synthetic paid callbacks
 to live orders. For deployment, see [payOS runbook](../docs/PAYOS_PHASE_2_2_DEPLOYMENT.md).
 
+Phase 2.3 adds `05 — Phase 2.3 My Classes + schedule`. Login student, list My Classes
+(the first row saves `class_id`), then open `/me/classes/{{class_id}}` when `accessMode`
+is `FULL` or `/preview` when it is `CASH_PREVIEW`; `NONE` rows are summary/history only.
+Set `schedule_from`/`schedule_to` to an ISO range with `Z` or an offset, at most 31 days.
+Contract: [Phase 2.3 FE contract](../docs/PHASE_2_3_FE_CONTRACT.md).
+
 ## Import
 
 Import both files into Postman:

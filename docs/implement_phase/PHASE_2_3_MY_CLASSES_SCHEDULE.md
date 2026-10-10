@@ -1,7 +1,9 @@
 # Phase 2.3 — My Classes + Personal Schedule
 
-Ngày lập: **2026-10-09**. Trạng thái: **đã lập kế hoạch; chưa triển khai**.
+Ngày lập: **2026-10-09**. Trạng thái: **đã implement và pass `pnpm check` ở local;
+suite PostgreSQL/HTTP chưa chạy, chưa deploy**.
 Tiến độ: [PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md).
+Contract FE đã chốt: [PHASE_2_3_FE_CONTRACT.md](../PHASE_2_3_FE_CONTRACT.md).
 Thứ tự: **Phase 2/2.2 → Phase 2.3 → Phase 3 File + Materials**.
 
 ## 1. Mục tiêu

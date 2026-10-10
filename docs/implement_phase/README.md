@@ -14,8 +14,10 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 7. [Phase 3 — File + Materials](./PHASE_3_FILES_MATERIALS.md)
 
 Ưu tiên Phase 2.3 trước Phase 3: hoàn thiện Student đăng ký lớp → danh sách lớp
-→ detail/preview → lịch cá nhân tổng hợp. Plan ngày 2026-10-09, chưa implement;
-xem [PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md).
+→ detail/preview → lịch cá nhân tổng hợp. Ngày 2026-10-09 đã implement local và pass
+`pnpm check`; suite DB/HTTP chưa chạy, chưa deploy. Xem
+[PHASE_2_3_PROGRESS.md](../progress/PHASE_2_3_PROGRESS.md) và
+[contract FE](../PHASE_2_3_FE_CONTRACT.md).
 
 Phase 3 đã có kế hoạch ngày 2026-10-09, chưa triển khai. Kế hoạch đề xuất material
 dùng chung ở Course Unit và riêng ở Class Unit/Session; policy scope/quản lý/mở

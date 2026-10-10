@@ -18,6 +18,19 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-09: Triển khai Phase 2.3 My Classes + Personal Schedule ở local. Thêm
+  `StudentLearningModule` với `GET /api/v1/me/classes` (enrollment-based, view
+  current/history/all, filter, order summary, accessMode/reason, `asOf`) và
+  `GET /api/v1/me/schedule` (range `[from, to)` ≤ 31 ngày có timezone, chỉ FULL/
+  CASH_PREVIEW, không meeting URL). Detail/preview thêm field additive; response
+  cá nhân `Cache-Control: private, no-store`. Không migration, không đổi settlement/
+  expiry/entitlement. Contract FE `docs/PHASE_2_3_FE_CONTRACT.md`, Postman folder 05.
+  **Local checks:** `pnpm check` pass (lint, type-check, 60 unit test, build).
+  **Chưa chạy:** suite PostgreSQL mới (`phase23-my-classes-schedule`) và
+  `pnpm test:http` — skip vì không có `TEST_DATABASE_URL`; không tính là pass.
+  **VPS/live:** chưa deploy, không có giao dịch thật. Chi tiết:
+  `docs/progress/PHASE_2_3_PROGRESS.md`.
+
 - 2026-10-09: Theo yêu cầu planning, tạo Phase 2.3 My Classes + Personal Schedule
   tại `docs/implement_phase/PHASE_2_3_MY_CLASSES_SCHEDULE.md` và progress riêng
   `docs/progress/PHASE_2_3_PROGRESS.md`, ưu tiên trước Phase 3. Plan tái dùng full
