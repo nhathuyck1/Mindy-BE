@@ -1,6 +1,16 @@
 This is not the normal nestjs you know. Before coding, check docs folder for all the logic and plan. Also after do something, write an update to the PROGRESS.md.
 Every phase will have it own implement plan and progress file.
 
+Every time work is done in a phase (planning, implementation, fixes, review,
+tests, documentation or deployment), record it in that phase's Markdown flow
+documentation under `docs/api_flow/`, alongside the existing combined flow.
+Keep a separate API breakdown for frontend integration in the same directory;
+use phase-prefixed filenames, e.g. `PHASE_3_2_FLOW.md` and
+`PHASE_3_2_flow-api-breakdown.md`, so phase documents do not overwrite each other.
+Update existing phase documents rather than creating a new file for every task.
+Follow the mandatory flow/API documentation requirements in
+[docs/core/NESTJS_PROJECT_RULES.md](docs/core/NESTJS_PROJECT_RULES.md).
+
 Before changing business rules, read all of document/Flow.txt and the related docs.
 The progress file to update is docs/progress/Progress.md; distinguish planned work,
 local checks, VPS evidence and real payment results.

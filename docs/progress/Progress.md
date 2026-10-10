@@ -18,6 +18,20 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-10: Theo yêu cầu user, chốt `docs/api_flow/` là thư mục ghi flow/API
+  của từng phase. Đồng bộ `Agent.md` và rules: mỗi lượt planning/code/fix/review/
+  test/docs/deploy phải cập nhật tài liệu phase ở đây; flow và API breakdown dùng
+  prefix phase, tái dùng file đã có. Giữ flow tổng hợp user đã chuyển vào thư mục,
+  sửa các liên kết tương đối theo vị trí mới. Chỉ sửa tài liệu, không đổi API.
+
+- 2026-10-10: Bổ sung rule tài liệu flow/API trong
+  `docs/core/NESTJS_PROJECT_RULES.md` và dẫn chiếu từ `Agent.md`: mỗi flow Markdown
+  phải có file `flow-api-breakdown.md` riêng theo phase/feature, mô tả từng API và
+  cách FE gọi/xử lý request-response, lỗi, state, polling, retry và refetch.
+  Phân biệt API đã code/kế hoạch cùng evidence local/deploy; cập nhật hai tài liệu
+  khi flow/API thay đổi. Đây là thay đổi rule tài liệu, chưa tạo breakdown cho các
+  phase hiện hữu; không thay source/API, chạy runtime tests, migration hoặc deploy.
+
 - 2026-10-09: Tiếp tục và hoàn tất Phase 3.2 local từ lượt bị ngắt. Files API
   intent/complete/status, upload policy Materials → Files, private versioned MinIO,
   SQL provenance/identity constraints, pinned version/hash, bounded binary parser,
