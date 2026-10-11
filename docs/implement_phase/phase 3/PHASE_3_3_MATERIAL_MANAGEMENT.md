@@ -11,6 +11,81 @@ User xác nhận 3.1/3.2 đã xong; không còn gate chờ policy/upload.
 
 ## 1. Kết quả cần đạt và phạm vi
 
+### Scope bổ sung theo user — 2026-10-11 (ưu tiên hơn baseline file-only bên dưới)
+
+User muốn nội dung Course Unit soạn trên web, BE lưu **HTML** để FE render;
+chốt video **MP4 private MinIO + URL có thời hạn**, HLS/streaming adaptive làm sau.
+Screenshot gợi ý JSON là tham khảo, không thay yêu cầu HTML trực tiếp của user.
+Mỗi slice cần có API sử dụng/kiểm chứng trên server; local pass là một evidence
+riêng, không phải nghiệm thu VPS. Không đợi3.6 mới rollout3.2/3.3/3.4.
+
+Material vẫn Course Unit1–N/shared live, cùng role/review/revision/release đã chốt.
+Mở rộng D6 từ file-only thành **ARTICLE / FILE / VIDEO**; sửa policy3.1 có chủ đích,
+không giả định policy file bắt buộc hiện tại đã hỗ trợ Article không có file.
+Files3.2 vẫn không nhận upload `.html`; HTML bài viết là string trong Material API.
+
+| Loại | Payload/persistence dự kiến | Điều kiện |
+|---|---|---|
+| ARTICLE | contentHtml TEXT đã sanitize, contentSchemaVersion=1; file_object_id NULL; ảnh inline/file đính kèm bằng reference | Nội dung sau sanitize có text hoặc ảnh hợp lệ; không bắt buộc PDF/DOCX |
+| FILE | file_object_id NOT NULL, contentHtml NULL; file READY loại không VIDEO | Tài liệu upload hiện tại; optional attachment refs nếu cần |
+| VIDEO | file_object_id NOT NULL, contentHtml NULL; file READY VIDEO/MP4 | Binary private, không nhúng public storage URL/HLS/external video |
+
+Schema `materials` bổ sung content_type enum/content_html nullable/
+content_schema_version, file FK nullable có CHECK theo loại. Không chỉ bỏ
+NOT NULL rồi cho mọi row không có nội dung. `material_file_references` sở hữu bởi
+Materials: materialId/fileId FK RESTRICT, role INLINE_IMAGE/ATTACHMENT, unique
+(materialId,fileId,role), index fileId để cleanup3.5. Primary file vẫn FK riêng;
+mọi refs (primary/inline/attachment) tham gia lock/READY/scope/retention checks.
+Không chứa base64 image, signed URL, bucket/key hoặc raw external image URL trong DB HTML.
+
+HTML allowlist dự kiến: heading/paragraph/bold/italic/underline/lists/table/
+blockquote/code/pre/link/image. BE dùng sanitizer/parser được duy trì, không regex
+để xử lý HTML; cấm script/event handlers/style nguy hiểm/iframe/object/embed/
+javascript URLs. Links chỉ safe schemes; ảnh dạng `<img data-file-id="UUID" alt="...">`
+(không src), fileId resolve từ file READY IMAGE đúng owner Course Unit và quyền
+attach. attachmentFileIds array separate, unique/max50; inline images/max50;
+size HTML UTF-8 max48 KiB để giữ JSON request64 KiB hiện tại; request tổng vẫn
+có thể413 nếu vượt64 KiB. Bound DOM depth/node count để không parser abuse;
+chốt số và library ở3.3.1. Nếu cần bài dài hơn, nâng body limit có giới hạn riêng
+cho Materials, không mở toàn bộ payment/auth routes. Return contentHtml canonical
+đã sanitize cho author; không âm thầm hiển thị nguyên raw input sau lưu.
+
+DTO create thêm contentType (required), contentHtml/contentSchemaVersion/
+attachmentFileIds theo loại; fileId chỉ required FILE/VIDEO. PATCH không đổi
+contentType trong MVP; sửa HTML hoặc bất kỳ reference nào tăng revision, về DRAFT,
+thu hồi publication/approval như baseline. Domain access kiểm loại/nội dung và
+mọi referenced file READY, ARTICLE không file vẫn có thể đạt gate. Manager review
+ARTICLE có thể đọc nội dung đã sanitize trong detail ngay3.3; binary preview3.4.
+
+Read contract3.4 cần thêm item detail trả contentHtml cho Student sau policy;
+collection chỉ trả summary, không toàn HTML. Student/Manager/Mentor asset access
+qua **Material + fileId thực sự được tham chiếu**, không mở GET Files tổng quát.
+Proposed `POST /me/classes/:classId/materials/:materialId/files/:fileId/access`
+và route preview tương ứng Manager/Mentor cấp URL đúng version, TTL<=60s,
+no-store; image/video disposition inline, attachment download disposition attachment
+do BE xác định theo reference role/kind, không tin client để mở file bất kỳ.
+
+MP4 cần test content-type/video range206, seek và URL expiry. Một URL60s không
+đủ tự bảo đảm xem video dài: FE refresh URL bằng cùng access API trước expiry/
+khi range request hết hạn, giữ vị trí/play state; BE kiểm quyền lại mỗi lần cấp.
+Không làm HLS/transcode/DRM. Tunnel Free/Pro100 MB/request không phục vụ đầy đủ
+MP4 max200 MiB đã có; rollout phải ghi rõ cap thực tế hoặc provision HTTPS storage
+trực tiếp ngoài proxy cho full size, không đổi signed host sau ký.
+
+Flow đầy đủ: author soạn HTML/upload assets hoặc MP4 → save DRAFT → submit →
+Manager approve/publish → release Class Unit → Student ACTIVE list/detail → FE
+render sanitized HTML/resolve inline images/tải attachments/phát MP4 → metadata/
+retry/cleanup bảo vệ refs. Sửa nội dung đã publish vẫn thu hồi bản live tới duyệt lại.
+Test mới bắt buộc: HTML-only create/read, sanitizer XSS vectors/canonical output,
+missing/foreign/FAILED ref, inline-image policy/count bounds, replacement rollback,
+revision review race, pending/locked body/asset không lộ, video Range/expiry.
+
+Các mục schema/API/test file-only bên dưới là baseline3.1/3.2: triển khai phải áp
+dụng thêm contract loại/ref/HTML này. Chi tiết API bổ sung tại
+[breakdown3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md#scope-htmlfilevideo-bổ-sung--2026-10-11).
+Estimate5–7 ngày cũ chỉ cho file-only; cần hiệu chỉnh sau sanitizer/ref/video spike,
+không coi là estimate full Phase3 mới.
+
 Manager/Mentor dùng `fileId` READY từ 3.2 để tạo Material của Course Unit.
 Mentor sửa draft của mình → submit; Manager đọc thông tin, approve/reject,
 sửa/công bố/ngừng công bố/xóa mềm. Admin hoặc Mentor đúng assignment thay

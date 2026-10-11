@@ -7,6 +7,12 @@ API dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md)
 
 ## Hiện trạng
 
+- 2026-10-11: User mở rộng scope thành ARTICLE lưu HTML, FILE và VIDEO MP4 private
+MinIO+signed URL; HLS sau. Đã cập nhật plan/flow/breakdown cho sanitize, nullable
+file có CHECK theo loại, inline/attachment refs, Student article/asset access và
+video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
+hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
+
 **Đã lập kế hoạch; chưa implement Phase 3.3.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 chưa có Material persistence/controllers hoặc release HTTP.

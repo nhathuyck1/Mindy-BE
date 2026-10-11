@@ -18,6 +18,18 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-11: User yêu cầu server acceptance sau mỗi slice và cho biết code3.2
+  đã có trên server. Chuẩn bị compose.files-production.yaml, pinned mc image,
+  private/versioned bucket + scoped backend user provisioning, root env template,
+  writable scratch và VPS/tunnel runbook. Kiểm lint/shell/Compose model/doc links;
+  Docker daemon local chưa chạy nên chưa build/run production artifacts mới,
+  chưa SSH/deploy/migrate hoặc xác minh upload trên VPS. API3.2 không đổi.
+- 2026-10-11: User mở rộng Material thành ARTICLE lưu sanitized HTML để FE render,
+  FILE và VIDEO MP4 private MinIO/URL expiry; HLS sau. Cập nhật plan3.3/flow/API,
+  progress và COURSE_FLOW: typed payload/schema/ref checks, article-only không
+  bắt buộc file, image data-file-id/attachment refs, Student detail/assets và
+  video Range/expiry ở3.4. Chưa sửa domain/source/migrations, chưa nghiệm thu3.3.
+
 - 2026-10-11: Lập plan Phase 3.3 sau user xác nhận 3.1/3.2 đã xong:
   `docs/implement_phase/phase 3/PHASE_3_3_MATERIAL_MANAGEMENT.md`, progress riêng,
   `docs/api_flow/PHASE_3_3_FLOW.md` và `PHASE_3_3_flow-api-breakdown.md`.

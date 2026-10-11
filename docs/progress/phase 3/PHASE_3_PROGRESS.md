@@ -5,6 +5,11 @@ Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE
 
 ## Hiện trạng
 
+- 2026-10-11: User muốn full flow Phase3 với ARTICLE HTML, FILE, VIDEO MP4 private;
+  cập nhật contract3.3, sanitize/reference/read/video gates. Không làm HLS hoặc
+  external video. Mỗi slice cần server acceptance; user báo code3.2 đã trên server,
+  MinIO provisioning/runbook đã chuẩn bị local, chưa có runtime VPS evidence.
+
 - 2026-10-11: User xác nhận 3.1/3.2 đã xong; lập
   [plan 3.3](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md),
   [progress riêng](PHASE_3_3_PROGRESS.md), [flow](../../api_flow/PHASE_3_3_FLOW.md)

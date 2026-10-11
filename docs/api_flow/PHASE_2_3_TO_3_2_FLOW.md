@@ -18,6 +18,13 @@ FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 | 3.3 | Material CRUD/review/publication và Class Unit release | Đã lập plan ngày 2026-10-11 theo baseline 3.1/3.2 hoàn tất; chưa implement | Persistence/audit/ancestry/locks, Mentor unit/session context và submission, Manager review, release API; [flow](PHASE_3_3_FLOW.md)/[breakdown dự kiến](PHASE_3_3_flow-api-breakdown.md) |
 
 Hai nhánh Student và Manager/Mentor làm việc độc lập, sau này gặp nhau ở Material.
+
+Cập nhật scope 2026-10-11: Material ARTICLE lưu HTML đã sanitize để FE render;
+FILE và VIDEO MP4 dùng private MinIO, URL có thời hạn (HLS sau). ARTICLE chỉ có
+text không cần upload file; ảnh/attachments tham chiếu fileId READY từ 3.2.
+Plan/flow/API 3.3 đã bổ sung, source vẫn file-only cho tới implementation.
+User báo code 3.2 có trên server; storage/upload nghiệm thu riêng theo
+[VPS runbook](../PHASE_3_2_VPS_MINIO_RUNBOOK.md), không chờ 3.6 mới deploy mỗi slice.
 2.3 cung cấp classId/classUnitId/sessionId để điều hướng; 3.1 kiểm quyền nội dung;
 3.2 cung cấp fileId đã xác minh. Một file READY chưa trở thành Material được phép đọc.
 

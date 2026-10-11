@@ -17,6 +17,15 @@ Tiến độ: [Phase 3](../../progress/phase%203/PHASE_3_PROGRESS.md),
 
 ## 1. Mục tiêu và phạm vi đã chốt
 
+**Cập nhật user2026-10-11:** mở rộng MVP file-only sang ARTICLE (BE lưu HTML đã
+sanitize), FILE và VIDEO (MP4 private MinIO/URL có thời hạn); HLS làm sau.
+Course Unit/review/revision/release/ACTIVE giữ nguyên. Content contract mới ở
+[plan3.3](PHASE_3_3_MATERIAL_MANAGEMENT.md#scope-bổ-sung-theo-user--2026-10-11-ưu-tiên-hơn-baseline-file-only-bên-dưới)
+ưu tiên hơn mô tả file-only D6 cũ. Files3.2 vẫn không nhận fileHTML.
+Mỗi slice cần API nghiệm thu trên server; user cho biết code3.2 đã có trên server,
+nhưng upload/storage VPS vẫn chưa có evidence. Provision theo
+[VPS runbook3.2](../../PHASE_3_2_VPS_MINIO_RUNBOOK.md), không chờ3.6.
+
 Material là tài liệu chính của Course Unit: **Course Unit 1–N Material**, giữ
 `materials.course_unit_id NOT NULL` theo DBML. Class Unit tham chiếu Course Unit;
 các lớp dùng chung tài liệu của Course Unit. Không thêm material owner Class

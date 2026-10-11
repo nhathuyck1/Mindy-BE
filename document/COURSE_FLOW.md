@@ -5,9 +5,9 @@
 > Nguồn quyết định triển khai hiện hành: [`CORE_BUSINESS_LOGIC.md`](../docs/CORE_BUSINESS_LOGIC.md), [`PHASE_2_FE_CONTRACT.md`](../docs/PHASE_2_FE_CONTRACT.md), [`Progress.md`](../docs/progress/Progress.md).  
 > Tài liệu này mô tả **flow mong muốn**; các mục ghi “chưa triển khai” không phải API/tính năng đã có.
 
-> Tiếp nối 2026-10-09: đã lập [kế hoạch Phase 3 File + Materials](../docs/implement_phase/PHASE_3_FILES_MATERIALS.md)
+> Tiếp nối 2026-10-09: đã lập [kế hoạch Phase 3 File + Materials](../docs/implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md)
 > từ flow này, DBML và use case. User đã duyệt D1–D6 tại
-> [Phase 3.1](../docs/implement_phase/PHASE_3_1_POLICY_CONTRACT.md): Material chính
+> [Phase 3.1](../docs/implement_phase/phase%203/PHASE_3_1_POLICY_CONTRACT.md): Material chính
 > thuộc Course Unit 1–N, shared giữa các lớp; Manager quản lý/sửa/duyệt, Mentor
 > upload chờ duyệt; ACTIVE + unit release + approval/publication mới đọc được.
 > Role MANAGER được bổ sung bằng migration mới; policy/contract/providers 3.1 đã
@@ -162,6 +162,14 @@ Cuối kỳ, System dự kiến tự tạo chứng chỉ khi Student đạt **t�
 | Order `EXPIRED`/enrollment bị hủy | Thông tin công khai | Không | Tiền về muộn chuyển đối soát. |
 
 ## 7. Ranh giới phase và trạng thái hiện tại
+
+Cập nhật scope user2026-10-11: Material chính hỗ trợ bàiARTICLE với HTML lưuBE
+đểFE đọc, tài liệuFILE và VIDEO MP4 private MinIO/URL có thời hạn; HLS sau.
+Không yêu cầu PDF/DOCX cho bài soạn trênweb. Ảnh/file là MinIO references,
+HTML phải sanitize; quyền Course Unit/shared/review/release không đổi.
+File-only D6 trong các ghi chú cũ đã được mở rộng có chủđích.
+CodeFiles3.2 đã có trênserver theo user; storage/upload thực tế cần nghiệmthu
+riêng. [Contract3.3](../docs/implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 
 | Phần | Phase | Tình trạng theo tài liệu tiến độ hiện có |
 |---|---|---|

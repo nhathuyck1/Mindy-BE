@@ -250,6 +250,12 @@ FE không POST complete mỗi lần poll.
 
 ## 8. Checklist FE/BE trước tích hợp
 
+Cập nhật 2026-10-11: user yêu cầu API dùng được trên server sau mỗi slice, code
+3.2 đã deploy theo user. Tiếp theo [provision VPS MinIO](../PHASE_3_2_VPS_MINIO_RUNBOOK.md)
+và smoke upload trong 3.2; không cần đợi 3.6. Contract ba API không đổi, HTML bài
+ARTICLE thuộc Material 3.3, không thêm upload HTML vào Files allowlist. Chưa có
+evidence upload READY trên VPS hoặc build/run production artifacts mới local.
+
 1. BE deploy code/migrations, provision private versioned MinIO, cấu hình public
    HTTPS/CORS và scratch/ffprobe, bật MINIO_ENABLED + FILE_JOB_ENABLED.
 2. Account Manager/Mentor hợp lệ; scope selection có nguồn IDs đúng quyền.

@@ -9,6 +9,71 @@ production dựa trên tài liệu này. Upload 3.2 đã có, xem
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 
+## Scope HTML/FILE/VIDEO bổ sung — 2026-10-11
+
+User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
+bổ sung ở đây ưu tiên hơn create/fileId required của baseline bên dưới, vẫn planned.
+Không đọc screenshot JSON như yêu cầu buộc đổi sang Tiptap JSON. Files3.2 routes
+vẫn unchanged; HTML string gửi vào Material body, không upload fileHTML tới Files.
+
+POST Manager/Mentor create paths ở§3/6 dùng tagged DTO:
+contentType required enum ARTICLE/FILE/VIDEO; title và metadata như cũ.
+ARTICLE required contentHtml nonempty sau sanitize/UTF-8<=48 KiB,
+contentSchemaVersion integer1 default1; fileId không được gửi.
+FILE/VIDEO required fileId READY đúng kind; không contentHtml;
+attachmentFileIds optional unique UUIDv4 array max50/default[].
+Inline images dùng data-file-id UUID lấy từ upload READY IMAGE, không src/base64/
+external URL. Body tổng64 KiB; body quá giới hạn413, invalid DTO/content/ref422
+hoặc file status409/owner403 theo policy. Ví dụ Article request:
+
+```json
+{
+  "contentType": "ARTICLE",
+  "title": "Giới thiệu Unit 1",
+  "contentHtml": "<h2>Mục tiêu</h2><p>Học về biến và kiểu dữ liệu.</p><img data-file-id=\"55555555-5555-4555-8555-555555555555\" alt=\"Sơ đồ\">",
+  "contentSchemaVersion": 1,
+  "attachmentFileIds": []
+}
+```
+
+201 detail thêm contentType/contentHtml/contentSchemaVersion/file(nullable)/
+attachments[]/inlineImages[] verified summaries; không signed URLs. BE canonicalize/
+sanitize bằng parser+allowlist; author nhận HTML đã lưu, UI thông báo nội dung bị
+loại khi cần. HTML-only không bắt buộc có file; ARTICLE có ảnh/file chỉ được ref
+READY đúng Course Unit/quyền owner attach như3.2. FILE/VIDEO response
+contentHtml null, file summary not null. Ví dụ Video request:
+
+```json
+{
+  "contentType": "VIDEO",
+  "title": "Video Unit 1",
+  "fileId": "88888888-8888-4888-8888-888888888888"
+}
+```
+
+PATCH expectedRevision + contentHtml/attachmentFileIds bổ sung; attachmentIds
+omitted giữ/null invalid/[] xóa; contentHtml chỉ ARTICLE/non-null; contentType
+immutable ởMVP. Mọi sửa HTML/ref vẫn EDIT/tăng revision/reset approval/publication.
+Queue/list giữ summary không HTML; Manager/Mentor detail trả HTML theo quyền và
+view nhưcũ. Các command/canEdit/review flow không đổi vì loại nội dung.
+
+3.4 planned cần Student `GET /api/v1/me/classes/:classId/materials/:materialId`
+detail body+refs sau ACTIVE/class/release/time/approval policy. Asset access
+POST `/api/v1/me/classes/:classId/materials/:materialId/files/:fileId/access`
+và Manager/Mentor preview tương ứng, body `{}`; fileId phải referenced và thuộc
+Material, 200 `{url,expiresAt}`, TTL<=60s/no-store/version chính xác.
+Inline image/video dùng signed GET inline, attachment dùng disposition attachment
+do BE quyết định. Pending/locked/hidden404, entitlement/assignment403, không auth401,
+storage disabled/outage503; không cấp URL chỉ vì biết fileId.
+Read/asset3.4 chưa implement; breakdown3.4 phải mô tả đầy đủ DTO/errors/UI khi triển khai.
+
+FE render HTML đã sanitize trong vùng đọc bài; resolve data-file-id bằng asset API,
+không persist signed URLs trong HTML/editor. Video Range/seek/URL expiry cần
+refresh URL qua BE và restore currentTime/play state, không assume URL60s đủ cho
+mọi video dài. 3.2 tunnel có ingress limit riêng; xem
+[VPS runbook](../PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+Không thêm endpoint stream/HLS/external video trong scope đã chọn.
+
 ## 1. Quy ước chung và dữ liệu nối bước
 
 Route đầy đủ là `/api/v1` + path ghi dưới đây. Request tới **BE**, dùng cookie

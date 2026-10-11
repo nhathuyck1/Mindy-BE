@@ -32,6 +32,12 @@ chưa có HTTP/persistence trong checkout này; nằm ở 3.3/3.4.
 
 ## Điều kiện để FE gọi trên VPS
 
+User cho biết code 3.2 đã có trên server (2026-10-11); tiếp theo provision MinIO
+và nghiệm thu create intent → signed PUT → complete → READY ngay trong 3.2.
+[VPS runbook](../PHASE_3_2_VPS_MINIO_RUNBOOK.md) có compose override và một lệnh
+tạo private bucket/versioning/backend user. Artifacts chưa build/run vì Docker
+daemon local không chạy; chưa có evidence thực tế VPS. API contract không đổi.
+
 - Release có code/migrations Files và role MANAGER đã được deploy.
 - MinIO thực sự chạy, bucket private có versioning và credentials của API hợp lệ.
 - `MINIO_ENABLED=true`; worker tự chạy cần thêm `FILE_JOB_ENABLED=true`.
@@ -59,6 +65,11 @@ Bật flag là một phần provisioning, không tự tạo MinIO/bucket/credent
   theo dõi fileId đã biết; không hứa có thư viện file đầy đủ chỉ từ ba API này.
 
 ## Nhật ký công việc
+
+- 2026-10-11: Chuẩn bị MinIO production override/provision/root env template/
+  scratch/tunnel runbook; server acceptance thuộc slice 3.2 theo yêu cầu user.
+  Kiểm lint/shell/Compose/diff/link, không chạy Docker image hoặc upload server.
+  Không đổi route/request/response Files, không deploy hoặc migration mới.
 
 - 2026-10-10: Viết hướng dẫn FE upload và breakdown ba API cùng PUT MinIO; ghi
   rõ state, error handling, polling và prerequisite VPS. Đối chiếu context IDs và

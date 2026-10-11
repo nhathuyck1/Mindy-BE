@@ -8,6 +8,13 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 
 ## 1. Kết quả sản phẩm
 
+Scope mới user chốt2026-10-11: **ARTICLE lưu HTML / FILE / VIDEO MP4 private**;
+HLS làm sau. Plan3.3/breakdown có contract bổ sung ưu tiên hơn file-only baseline.
+ARTICLE có thể không file; ảnh/file tham chiếu MinIO bằng fileId, không base64 hoặc
+signed URL lưu trong HTML. Nội dung sanitize và reference checks ởBE, FE render/
+resolve images ở3.4. Cùng review/revision/release gates cho cảba loại.
+Mỗi slice phải có server evidence, không trì hoãn mọi deployment tới3.6.
+
 File READY trở thành Material draft của Course Unit; Mentor gửi duyệt,
 Manager quyết định trên đúng revision. Approve đồng thời publish; availableAt
 và release của từng lớp vẫn quyết định khi Student đọc ở 3.4. Được duyệt không
@@ -93,6 +100,10 @@ Hai lớp cùng Course Unit dùng chung Material, release độc lập theo từ
   metadata/read/review không cần gọi storage network. Download cần triển khai 3.4.
 
 ## 7. Nhật ký — 2026-10-11
+
+User muốn hoàn thành full flow Phase3 với bàiHTML và MP4 private/URL expiry;
+bổ sung ARTICLE/ref/HTML/API body changes và handoff Student article/asset/video.
+Source policy hiện tại vẫn file-only; chưa sửa domain/schema/controllers trong lượt này.
 
 Lập plan theo baseline 3.1/3.2 đã xong; bổ sung context/detail/release/audit và
 breakdown dự kiến. API/source runtime hiện tại không đổi. Kiểm link/diff/JSON

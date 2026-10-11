@@ -4,6 +4,11 @@ Updated: 2026-10-09. This runbook covers local upload validation. Material
 CRUD/review is Phase 3.3, Student download 3.4, extraction/cleanup 3.5 and
 production rollout 3.6. `READY` never grants Student access by itself.
 
+2026-10-11 clarification: user expects usable server APIs after each slice;
+deploy/enable upload during 3.2, with full journey hardening in 3.6.
+Production provisioning and tunnel setup: [VPS MinIO runbook](PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+User reports 3.2 code on VPS; runtime upload acceptance still needs evidence.
+
 ## Start the local storage
 
 ```powershell
@@ -125,7 +130,7 @@ pending until handlers in 3.5. Staging expiry marks unused intents FAILED but
 does not delete binaries. Inspect queue/errors through fileId/jobId structured
 logs and database rows; do not log signed URLs or payloads.
 
-## Before staging/VPS enablement (Phase 3.6)
+## Before staging/VPS enablement (Phase 3.2 server acceptance)
 
 Keep `MINIO_ENABLED=false` until private bucket/versioning, bucket-scoped IAM,
 HTTPS public signer origin and real frontend CORS have been provisioned. Local
