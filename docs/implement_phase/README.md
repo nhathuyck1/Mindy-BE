@@ -14,9 +14,12 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 7. [Phase 3 — File + Materials](./phase%203/PHASE_3_FILES_MATERIALS.md)
 8. [Phase 3.1 — Policy + Contract, D1–D6 đã code và test local](./phase%203/PHASE_3_1_POLICY_CONTRACT.md)
 9. [Phase 3.2 — Upload private và xác minh file, đã nghiệm thu local](./phase%203/PHASE_3_2_SAFE_UPLOAD.md)
+10. [Phase 3.3 — Material management/review và Class Unit release, đã lập plan](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
 
 Phase 2.3 đã implement; các suite PostgreSQL/HTTP hiện có pass local ngày 2026-10-10.
 Xem [contract FE](../PHASE_2_3_FE_CONTRACT.md) và progress bên dưới.
+FE navigation/lịch: [Flow 2.3](../api_flow/PHASE_2_3_FLOW.md) và
+[API breakdown 2.3](../api_flow/PHASE_2_3_flow-api-breakdown.md).
 
 Điều phối hiện hành: người khác làm Phase 2.3, user làm Phase 3 song song;
 thứ tự danh sách trên là roadmap, không yêu cầu chờ 2.3 để bắt đầu P3.
@@ -26,6 +29,14 @@ xem [PHASE_2_3_PROGRESS.md](../progress/phase%202/PHASE_2_3_PROGRESS.md). Phase 
 3.5 metadata/cleanup và 3.6 nghiệm thu/tích hợp; 3.1 đã có role MANAGER,
 policy/domain transitions và context providers. 3.2 có upload/storage/validation API;
 review/material persistence API tiếp tục ở 3.3.
+
+Ngày 2026-10-11 đã lập [plan 3.3](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
+theo baseline 3.1/3.2 đã xong: Manager CRUD/persistence → Mentor context/draft/submit
+→ Manager review/publication → Class Unit release → acceptance/handoff 3.4.
+Theo dõi [progress 3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md),
+[flow](../api_flow/PHASE_3_3_FLOW.md) và
+[API breakdown dự kiến](../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Chỉ planning; chưa Material migration/API, runtime tests hoặc deploy 3.3.
 
 3.1 policy/contract đã hoàn tất và full local gates pass (171 tests/16 suites,
 HTTP 5/5). 3.2 hoàn tất local: full check 217 tests, focused Files 42,

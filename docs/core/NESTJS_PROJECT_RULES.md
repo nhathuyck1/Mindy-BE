@@ -46,6 +46,50 @@
 11. **NÊN** ưu tiên KISS, early return, hàm nhỏ, trách nhiệm đơn và lỗi tường minh.
 12. **NÊN** tránh code chết, wrapper chỉ chuyển tiếp tham số, abstraction chưa có nhu cầu thật và việc lặp logic.
 
+### Tài liệu flow và API cho frontend
+
+- **BẮT BUỘC** mỗi lần làm công việc thuộc phase/feature (planning, code, sửa lỗi,
+  review, test, tài liệu hoặc deploy): ghi lại trong tài liệu Markdown của phase
+  tại **`docs/api_flow/`**. Đây là thư mục cố định cho flow và API breakdown;
+  không đặt tài liệu mới ở `docs/flow/` hoặc rải ra thư mục khác.
+- Mỗi phase/feature có tài liệu flow và một file **`flow-api-breakdown`** riêng để
+  FE tích hợp từng API; dùng tên có prefix phase trong cùng `docs/api_flow/`,
+  ví dụ `PHASE_3_2_FLOW.md` và `PHASE_3_2_flow-api-breakdown.md`.
+  Không dùng sơ đồ flow hoặc danh sách route ngắn để thay thế breakdown chi tiết.
+- Cập nhật tài liệu phase đã có, không tạo file mới cho từng lượt công việc.
+  Flow tổng hợp `docs/api_flow/PHASE_2_3_TO_3_2_FLOW.md` giữ tên hiện tại; cập nhật
+  khi quan hệ giữa các phase thay đổi. Flow và breakdown phải liên kết qua lại.
+- Trong flow của phase, ghi ngày, việc đã làm, tác động lên flow/API, kiểm chứng
+  thực tế và phần còn thiếu. Nếu công việc không đổi API thì ghi rõ điều đó và giữ
+  breakdown nhất quán; không tự tạo endpoint hoặc thay contract để lấp nội dung.
+  Các ghi chép này bổ sung cho plan/progress hiện có, không thay thế progress.
+- **BẮT BUỘC** breakdown đầy đủ từng API trong flow, gồm:
+  1. Method, route đầy đủ/prefix, mục đích nghiệp vụ, actor/role, auth/cookie/header,
+     ownership/assignment và điều kiện được gọi.
+  2. Bước/màn hình/hành động FE gọi API; API gọi trước/sau; ID và dữ liệu lấy từ đâu
+     để truyền sang bước tiếp theo. Phân biệt request tới BE, provider hoặc storage.
+  3. Path params, query, body, required headers: kiểu dữ liệu, bắt buộc/tùy chọn,
+     enum, default, giới hạn, validation và ví dụ request hợp lệ.
+  4. HTTP success status, response envelope và ví dụ response; giải thích từng
+     field FE sử dụng, nullable/optional, pagination, timezone và ý nghĩa trạng thái.
+  5. Side effect và state transition, xử lý sync/async, idempotency và hành vi khi
+     gọi lặp/concurrent nếu có; không tự thêm contract chưa tồn tại.
+  6. HTTP error status, business error code và cách FE xử lý từng trường hợp:
+     thông báo, field error, chuyển màn hình, refetch, retry hoặc dừng retry.
+  7. Loading/empty/success/error UI, polling và điều kiện dừng, cache/refetch sau
+     mutation, hết hạn và quyền bị thu hồi nếu liên quan.
+  8. Happy path và nhánh lỗi/nghiệp vụ quan trọng; điều kiện cấu hình/backend cần
+     sẵn sàng để FE dùng được API.
+- **BẮT BUỘC** phân biệt rõ **đã implement / kế hoạch / chưa implement** theo source,
+  và **local verified / đã deploy / đã bật trên môi trường** theo evidence. API
+  dự kiến phải có nhãn; không ghi là FE gọi được khi mới có policy hoặc plan.
+- **BẮT BUỘC** đối chiếu controller, DTO, service, error mapping và test khi mô tả
+  API đã có; dùng dữ liệu giả an toàn trong ví dụ, không đưa secret/cookie thật.
+  Phần chưa chốt phải ghi rõ thay vì tự bịa field, error code hoặc hành vi retry.
+- Khi API hoặc thứ tự flow thay đổi, **BẮT BUỘC** cập nhật flow, breakdown, contract
+  FE liên quan và progress trong cùng lượt công việc. Có thay đổi flow/API thì
+  checklist hoàn tất phải kiểm đủ cả hai tài liệu.
+
 ## 3. Nền tảng và quản lý dependency
 
 - Runtime chính là Node.js. Chỉ hỗ trợ Bun/Deno khi pipeline riêng của chúng được kiểm thử liên tục.

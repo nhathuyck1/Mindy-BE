@@ -1,9 +1,17 @@
 # Phase 3.2 — Tiến độ Upload private và xác minh file
 
-Cập nhật: **2026-10-09**.
-Plan: [PHASE_3_2_SAFE_UPLOAD.md](../implement_phase/PHASE_3_2_SAFE_UPLOAD.md).
+Cập nhật: **2026-10-11**.
+Plan: [PHASE_3_2_SAFE_UPLOAD.md](../../implement_phase/phase%203/PHASE_3_2_SAFE_UPLOAD.md).
 
 ## Hiện trạng
+
+- 2026-10-11: User cho biết code 3.2 đã có trên server, mục tiêu mỗi slice là API
+  dùng được trên server. Chuẩn bị override `compose.files-production.yaml`,
+  provisioning image/script và [VPS runbook](../../PHASE_3_2_VPS_MINIO_RUNBOOK.md)
+  cho private bucket/versioning, backend user có policy riêng, CORS, scratch và
+  route tunnel. Lint, shell syntax, Compose model và tài liệu kiểm local;
+  Docker daemon chưa chạy nên chưa build/run artifacts mới. Chưa SSH/deploy hoặc
+  có evidence upload READY trên VPS; không coi code deployed là storage pass.
 
 **Phase 3.2 đã hoàn tất triển khai và nghiệm thu local.**
 
@@ -22,7 +30,7 @@ Plan: [PHASE_3_2_SAFE_UPLOAD.md](../implement_phase/PHASE_3_2_SAFE_UPLOAD.md).
   pinned version, staging overwrite, orphan history, stale worker/atomic rollback
   và quota/reference lock đều có evidence. Chưa nghiệm thu browser/VPS.
 - Setup: `pnpm files:local:up`, `pnpm files:local:setup`,
-  [runbook](../PHASE_3_2_FILES_RUNBOOK.md), env/DBML/Swagger/Postman đồng bộ.
+  [runbook](../../PHASE_3_2_FILES_RUNBOOK.md), env/DBML/Swagger/Postman đồng bộ.
 - Docker runtime image `mindy-center-api:phase32-local` build thành công;
   chỉ tạo image local, không push/deploy. Lint/type-check kiểm lại sau cập nhật pass.
 - Chỉ migrate database test riêng; chưa migrate development/VPS hoặc deploy.
@@ -30,7 +38,20 @@ Plan: [PHASE_3_2_SAFE_UPLOAD.md](../implement_phase/PHASE_3_2_SAFE_UPLOAD.md).
 - Migration author: Codex. Rà soát SQL/constraints/rollback/locks trong lượt này;
   human PR review trước merge còn riêng, không coi local tests là review đã merge.
 
-Các ghi chú planning dưới đây là lịch sử trước triển khai, không phải trạng thái hiện tại.
+## Hướng dẫn tích hợp FE — 2026-10-10
+
+- Bổ sung [flow FE upload](../../api_flow/PHASE_3_2_FLOW.md) và
+  [API breakdown](../../api_flow/PHASE_3_2_flow-api-breakdown.md): request/response,
+  raw PUT MinIO, complete async, polling READY/FAILED, quyền/error/retry và config VPS.
+- Đối chiếu source: public Course active detail có Course Unit IDs; Mentor class
+  list chưa có đầy đủ mapping Class Unit → Course Unit cho màn hình chọn unit.
+  Không dùng role Admin hoặc title/position để thay nguồn context đúng quyền.
+- Lượt này chỉ viết tài liệu; không triển khai read API còn thiếu, không sửa FE,
+  source/env hoặc deploy. Chưa xác minh browser/VPS; kiểm liên kết và diff tài liệu.
+
+## Ghi chú planning lịch sử
+
+Các ghi chú dưới đây là lịch sử trước triển khai, không phải trạng thái hiện tại.
 
 - Scope: Manager/Mentor đúng assignment upload private cho Course Unit; intent,
   complete, status và VALIDATE job đưa file về READY/FAILED.

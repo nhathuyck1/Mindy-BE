@@ -18,6 +18,59 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-11: User yêu cầu server acceptance sau mỗi slice và cho biết code3.2
+  đã có trên server. Chuẩn bị compose.files-production.yaml, pinned mc image,
+  private/versioned bucket + scoped backend user provisioning, root env template,
+  writable scratch và VPS/tunnel runbook. Kiểm lint/shell/Compose model/doc links;
+  Docker daemon local chưa chạy nên chưa build/run production artifacts mới,
+  chưa SSH/deploy/migrate hoặc xác minh upload trên VPS. API3.2 không đổi.
+- 2026-10-11: User mở rộng Material thành ARTICLE lưu sanitized HTML để FE render,
+  FILE và VIDEO MP4 private MinIO/URL expiry; HLS sau. Cập nhật plan3.3/flow/API,
+  progress và COURSE_FLOW: typed payload/schema/ref checks, article-only không
+  bắt buộc file, image data-file-id/attachment refs, Student detail/assets và
+  video Range/expiry ở3.4. Chưa sửa domain/source/migrations, chưa nghiệm thu3.3.
+
+- 2026-10-11: Lập plan Phase 3.3 sau user xác nhận 3.1/3.2 đã xong:
+  `docs/implement_phase/phase 3/PHASE_3_3_MATERIAL_MANAGEMENT.md`, progress riêng,
+  `docs/api_flow/PHASE_3_3_FLOW.md` và `PHASE_3_3_flow-api-breakdown.md`.
+  Kế hoạch Manager persistence/CRUD → Mentor context/draft/submit → Manager
+  review/publication → Class Unit release → full gates/handoff3.4; giữ owner
+  Course Unit, revision/firstApprovedAt, READY refs, locks/audit/assignment và payment
+  baseline. Ghi API planned, gaps context/preview, path400/body422 và Origin check
+  cho mutation mới. Đồng bộ index/plan/progress/flow tổng hợp; sửa link tương đối
+  trong tài liệu tổng Phase3 đã đổi thư mục. Kiểm diff/link/JSON tài liệu;
+  không chạy BE/HTTP/DB/MinIO tests, tạo migration/source/FE hoặc deploy.
+
+- 2026-10-10: Review đồng bộ Phase 2.3 trong progress/API flow. Progress đã có
+  implementation và evidence local; flow tổng hợp còn ghi collection/calendar
+  chưa code. Sửa `docs/api_flow/PHASE_2_3_TO_3_2_FLOW.md` theo source và tạo
+  `PHASE_2_3_FLOW.md`, `PHASE_2_3_flow-api-breakdown.md` cho 4 GET list/detail/
+  preview/schedule: query/response, access/current/history, pagination/timezone,
+  errors, FE refetch/polling, checkout/payment/expiry và liên hệ Phase 3.
+  Liên kết hai chiều với FE contract/progress; kiểm link, ví dụ JSON và diff.
+  Chỉ sửa tài liệu, không thay API, chạy lại runtime tests, migration hoặc deploy.
+
+- 2026-10-10: Viết `docs/api_flow/PHASE_3_2_FLOW.md` và
+  `PHASE_3_2_flow-api-breakdown.md` cho FE: create intent → raw PUT MinIO → complete
+  → poll status, request/response trực tiếp, errors/state/retry/expiry/polling và
+  prerequisite VPS. Đối chiếu public Course units/Mentor roster: Mentor chưa có
+  read API đủ mapping Class Unit → Course Unit cho UI chọn unit đầy đủ. Ghi rõ
+  Material CRUD/review/download còn thuộc 3.3/3.4; không đổi source/API/env hoặc
+  deploy, không chạy lại runtime tests; kiểm link và diff tài liệu.
+
+- 2026-10-10: Theo yêu cầu user, chốt `docs/api_flow/` là thư mục ghi flow/API
+  của từng phase. Đồng bộ `Agent.md` và rules: mỗi lượt planning/code/fix/review/
+  test/docs/deploy phải cập nhật tài liệu phase ở đây; flow và API breakdown dùng
+  prefix phase, tái dùng file đã có. Giữ flow tổng hợp user đã chuyển vào thư mục,
+  sửa các liên kết tương đối theo vị trí mới. Chỉ sửa tài liệu, không đổi API.
+
+- 2026-10-10: Bổ sung rule tài liệu flow/API trong
+  `docs/core/NESTJS_PROJECT_RULES.md` và dẫn chiếu từ `Agent.md`: mỗi flow Markdown
+  phải có file `flow-api-breakdown.md` riêng theo phase/feature, mô tả từng API và
+  cách FE gọi/xử lý request-response, lỗi, state, polling, retry và refetch.
+  Phân biệt API đã code/kế hoạch cùng evidence local/deploy; cập nhật hai tài liệu
+  khi flow/API thay đổi. Đây là thay đổi rule tài liệu, chưa tạo breakdown cho các
+  phase hiện hữu; không thay source/API, chạy runtime tests, migration hoặc deploy.
 - 2026-10-10: Đồng bộ `origin/dev` (Phase 3.1/3.2) vào `Feat/class-schedule` cho
   PR #9. Resolve 6 conflict, giữ StudentLearning + Materials trong AppModule,
   fixture mở rộng và migration MANAGER từ dev, nội dung progress của cả hai phase

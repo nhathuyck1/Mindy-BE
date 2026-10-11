@@ -3,6 +3,8 @@
 Cập nhật: **2026-10-10**.
 Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../../implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
 Contract FE: [PHASE_2_3_FE_CONTRACT.md](../../PHASE_2_3_FE_CONTRACT.md).
+Flow: [PHASE_2_3_FLOW.md](../../api_flow/PHASE_2_3_FLOW.md).
+API breakdown: [PHASE_2_3_flow-api-breakdown.md](../../api_flow/PHASE_2_3_flow-api-breakdown.md).
 
 ## Hiện trạng
 
@@ -138,3 +140,13 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
 - Frozen-lockfile install, `pnpm check` **243/243 tests (22 suites)** và
   `pnpm test:http` **20/20 (2 suites)** pass; không skip. PostgreSQL test DB riêng,
   MinIO test fixture tại `127.0.0.1:19000`; không migrate DB development/VPS.
+
+## Đồng bộ flow/API docs ngày 2026-10-10
+
+- Review xác nhận progress đã ghi implementation/local evidence; flow tổng hợp
+  còn ghi My Classes/calendar chưa implement. Sửa theo controller/DTO/service/test.
+- Thêm flow và API breakdown riêng 2.3 trong `docs/api_flow/`, đủ 4 endpoint,
+  request/response, error status/code, ownership/access, range/pagination/timezone,
+  UI/refetch/polling và điều kiện release. Liên kết contract/progress/flow tổng hợp.
+- Chỉ review và sửa tài liệu; kiểm JSON ví dụ, link local và diff, không chạy lại
+  BE tests/migration hoặc xác minh deploy/live. Giữ evidence runtime ở mục trên.
