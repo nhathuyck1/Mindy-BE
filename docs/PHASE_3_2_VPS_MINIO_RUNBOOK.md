@@ -171,6 +171,45 @@ Rollback tạm: MINIO_ENABLED=false và recreate API bằng cả compose files; 
 MinIO volume/database/refs, không down migrations hoặc xóa bucket. Jobs durable
 vẫn trong DB và có thể resume sau bật lại; chưa mở lifecycle purge.
 
+### API unhealthy trong CI/CD
+
+Log deploy user cung cấp ngày 2026-10-11 (release `8aafd5a`) cho thấy CI pass,
+image build pass, Postgres healthy và migration báo `No migrations are pending`.
+API được recreate/start rồi Compose báo `mindy-be-api-1 is unhealthy`. Runtime
+logs user cung cấp tiếp theo xác nhận ConfigModule dừng startup vì
+`MINIO_ACCESS_KEY` và `MINIO_SECRET_KEY` rỗng. Schema chỉ bắt buộc hai biến này khi
+`MINIO_ENABLED=true`; probe local xác nhận omitted/false với key rỗng đều pass.
+Root cause là bật storage khi credentials chưa cấu hình, không phải migration.
+
+Trên terminal SSH VPS, thu thập từng lệnh trước khi recreate để giữ evidence:
+
+```bash
+docker logs --tail 120 mindy-be-api-1
+docker inspect --format '{{json .State}}' mindy-be-api-1
+```
+
+Che credentials/tokens nếu xuất hiện trong log trước khi chia sẻ. Workflow đã bổ
+sung step `Diagnose failed deployment` khi thất bại: in Compose container status,
+API State (exit/OOM/restarting/health) và 120 dòng API logs, không in toàn bộ inspect
+hoặc expanded env/config. Step chẩn đoán không bỏ qua failure của bước deploy.
+Thêm validation env bằng schema của image mới trước backup/migrate/API switch;
+chỉ in field/error type, env invalid dừng rollout trong khi API cũ còn chạy.
+Workflow hiện vẫn chỉ dùng base compose; hỗ trợ Files override cho các release
+sau rollout cần cập nhật riêng. Chưa redeploy hoặc xác nhận API/storage READY.
+
+Khôi phục API trước provisioning: sửa `.env.production` để có đúng một dòng
+`MINIO_ENABLED=false`, giữ các auth/database/payment vars. Với release trong log:
+
+```bash
+cd /home/mindycode/mindycoding/Mindy-BE
+IMAGE_TAG=8aafd5ac64feb53da4b1e9bf8d1a5f09a261212a docker compose --env-file .env.production -f compose.production.yaml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 120 api
+docker logs --tail 60 mindy-be-api-1
+```
+
+Dùng cùng Compose project đang chạy; nếu release hiện tại khác log, giữ tag đang
+chạy thay vì tag minh họa này. Chỉ bật true sau private bucket/versioning/backend
+credentials/public endpoint và Files override sẵn sàng theo các bước phía trên.
+
 ## Evidence lượt chuẩn bị local
 
 Chỉ chuẩn bị deployment artifacts và runbook. Lint/shell syntax/Compose model

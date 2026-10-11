@@ -154,6 +154,14 @@ diagnosis or a forward fix; the workflow does not revert a database with payment
 history. It does not change Cloudflare routing, confirm the payOS webhook or
 initiate a real payment.
 
+After building, the workflow validates the production environment against the
+new image's schema before backup/migrations or replacing the API. Invalid config
+fails the rollout while the old API remains running; output contains field names
+and error types only. Failed deploys also report container status, API State and
+the last 120 API log lines without dumping container configuration/environment.
+For the Phase 3.2 empty MinIO credentials incident and recovery commands, see
+[the Files VPS runbook](./PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+
 ## Phase 2.2 payment release
 
 For payOS migration, exact Cloudflare callback routing, BE re-confirmation, live smoke

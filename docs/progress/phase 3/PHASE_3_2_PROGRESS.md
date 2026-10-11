@@ -5,6 +5,17 @@ Plan: [PHASE_3_2_SAFE_UPLOAD.md](../../implement_phase/phase%203/PHASE_3_2_SAFE_
 
 ## Hiện trạng
 
+- 2026-10-11: Đọc log deploy user cung cấp (`logs_103358883936`, release
+  `8aafd5a`): CI lint/type-check/build và 243 tests/22 suites + 20 HTTP tests/2
+  suites pass theo log; đây là evidence CI, không phải tests chạy lại local.
+  VPS image build/backup check/migration pass (`No migrations are pending`), API
+  recreate/start rồi unhealthy. Runtime logs user cung cấp xác nhận MinIO bật
+  nhưng access/secret key rỗng làm ConfigModule fail. Probe schema local:
+  omitted/false + key rỗng pass, true + key rỗng fail đúng hai fields. Thêm env
+  preflight trước backup/migrate/API switch và failure diagnostics vào workflow;
+  runbook hướng dẫn false/recreate đúng release. Không đổi schema/API/health gate.
+  Lint/diff và Bash syntax pass; chưa redeploy/khôi phục/xác minh VPS.
+
 - 2026-10-11: User cho biết code 3.2 đã có trên server, mục tiêu mỗi slice là API
   dùng được trên server. Chuẩn bị override `compose.files-production.yaml`,
   provisioning image/script và [VPS runbook](../../PHASE_3_2_VPS_MINIO_RUNBOOK.md)

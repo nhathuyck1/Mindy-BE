@@ -250,6 +250,12 @@ FE không POST complete mỗi lần poll.
 
 ## 8. Checklist FE/BE trước tích hợp
 
+2026-10-11 deploy diagnosis: release `8aafd5a` build/migrations pass nhưng API
+unhealthy; runtime logs user xác nhận MinIO bật với access/secret key rỗng làm
+config startup fail. Workflow thêm env preflight trước migrate/API switch và
+diagnostics khi failure; xem lệnh khôi phục trong [VPS runbook](../PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+Không đổi ba Files API; chưa coi release hoặc upload VPS là pass.
+
 Cập nhật 2026-10-11: user yêu cầu API dùng được trên server sau mỗi slice, code
 3.2 đã deploy theo user. Tiếp theo [provision VPS MinIO](../PHASE_3_2_VPS_MINIO_RUNBOOK.md)
 và smoke upload trong 3.2; không cần đợi 3.6. Contract ba API không đổi, HTML bài

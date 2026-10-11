@@ -66,6 +66,13 @@ Bật flag là một phần provisioning, không tự tạo MinIO/bucket/credent
 
 ## Nhật ký công việc
 
+- 2026-10-11: Rà soát log deploy release `8aafd5a`: CI/build/migration pass,
+  API bị báo unhealthy sau recreate. Runtime logs user cung cấp xác nhận MinIO
+  bật nhưng access/secret key rỗng làm ConfigModule fail. Thêm env preflight
+  trước migrate/API switch và diagnostics khi workflow thất bại; hướng dẫn tắt
+  flag/recreate đúng image để khôi phục. Contract/API Files giữ nguyên; chưa
+  SSH/khôi phục/xác minh runtime VPS.
+
 - 2026-10-11: Chuẩn bị MinIO production override/provision/root env template/
   scratch/tunnel runbook; server acceptance thuộc slice 3.2 theo yêu cầu user.
   Kiểm lint/shell/Compose/diff/link, không chạy Docker image hoặc upload server.
