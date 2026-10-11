@@ -18,6 +18,17 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-11: Lập plan Phase 3.3 sau user xác nhận 3.1/3.2 đã xong:
+  `docs/implement_phase/phase 3/PHASE_3_3_MATERIAL_MANAGEMENT.md`, progress riêng,
+  `docs/api_flow/PHASE_3_3_FLOW.md` và `PHASE_3_3_flow-api-breakdown.md`.
+  Kế hoạch Manager persistence/CRUD → Mentor context/draft/submit → Manager
+  review/publication → Class Unit release → full gates/handoff3.4; giữ owner
+  Course Unit, revision/firstApprovedAt, READY refs, locks/audit/assignment và payment
+  baseline. Ghi API planned, gaps context/preview, path400/body422 và Origin check
+  cho mutation mới. Đồng bộ index/plan/progress/flow tổng hợp; sửa link tương đối
+  trong tài liệu tổng Phase3 đã đổi thư mục. Kiểm diff/link/JSON tài liệu;
+  không chạy BE/HTTP/DB/MinIO tests, tạo migration/source/FE hoặc deploy.
+
 - 2026-10-10: Review đồng bộ Phase 2.3 trong progress/API flow. Progress đã có
   implementation và evidence local; flow tổng hợp còn ghi collection/calendar
   chưa code. Sửa `docs/api_flow/PHASE_2_3_TO_3_2_FLOW.md` theo source và tạo

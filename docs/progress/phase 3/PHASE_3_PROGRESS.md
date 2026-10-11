@@ -1,23 +1,31 @@
 # Phase 3 — Tiến độ File + Materials
 
-Cập nhật: **2026-10-09**.
-Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../implement_phase/PHASE_3_FILES_MATERIALS.md).
+Cập nhật: **2026-10-11**.
+Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
 ## Hiện trạng
+
+- 2026-10-11: User xác nhận 3.1/3.2 đã xong; lập
+  [plan 3.3](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md),
+  [progress riêng](PHASE_3_3_PROGRESS.md), [flow](../../api_flow/PHASE_3_3_FLOW.md)
+  và [API breakdown dự kiến](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+  Chia Manager CRUD/persistence → Mentor context/submission → review/publication
+  → release → acceptance. Chưa Material schema/API/code; chỉ kiểm tài liệu,
+  không chạy BE/DB/MinIO tests, migrate hoặc deploy.
 
 - 2026-10-09: **3.2 hoàn tất code và nghiệm thu local**: Files upload/complete/status,
   private versioned MinIO, bounded validation/lease/retry/expiry và reference lock.
   Full check 217 tests/18 suites; focused Files sau bổ sung 42/42; HTTP 19/19,
   lint/type-check/build pass, không skip. Chi tiết tại [progress 3.2](./PHASE_3_2_PROGRESS.md)
-  và [runbook](../PHASE_3_2_FILES_RUNBOOK.md). Chưa migrate dev/VPS/deploy.
+  và [runbook](../../PHASE_3_2_FILES_RUNBOOK.md). Chưa migrate dev/VPS/deploy.
 
 - 2026-10-09: User xác nhận 3.1 hoàn tất/pass toàn bộ; đã rà soát
-  [plan 3.2](../implement_phase/PHASE_3_2_SAFE_UPLOAD.md) và
+  [plan 3.2](../../implement_phase/phase%203/PHASE_3_2_SAFE_UPLOAD.md) và
   [progress riêng](./PHASE_3_2_PROGRESS.md) theo source/evidence mới. Bỏ gate chờ
   bàn giao; bổ sung policy delegation Materials → Files, errors/declaration khớp
   3.1 và candidate history qua retry. Chỉ sửa tài liệu, chưa Files/storage/worker.
 
-- Planning riêng [Phase 3.1](../implement_phase/PHASE_3_1_POLICY_CONTRACT.md)
+- Planning riêng [Phase 3.1](../../implement_phase/phase%203/PHASE_3_1_POLICY_CONTRACT.md)
   D1–D6 đã duyệt; theo dõi tại [PHASE_3_1_PROGRESS.md](./PHASE_3_1_PROGRESS.md).
   User xác nhận Course Unit 1–N Material, tài liệu chính theo DBML; chọn Session
   link tùy chọn, không đổi ownership. Manager quản lý/sửa/duyệt; Mentor upload chờ duyệt.
@@ -52,10 +60,10 @@ Migrations mới chỉ được nghiệm thu trên database test riêng.**
 | Lập plan | Hoàn tất | Plan, tiến độ riêng và index; schema/policy/API/milestone/test/rollout dự kiến. |
 | 3.1 Policy + contract | Hoàn tất code/test local D1–D6 | Role, domain policy/review transitions, facade/context providers; pnpm check 171 tests/16 suites + build, HTTP 5/5. |
 | 3.2 Upload slice | Hoàn tất local | Files/MinIO/migration/worker/reference; full check 217, focused Files 42, HTTP 19 pass. |
-| 3.3 Material management | Chưa thực hiện | MaterialsModule hiện export policy; chưa persistence/review/approval/release API. |
+| 3.3 Material management | Đã lập kế hoạch, chưa implement | Plan riêng + flow/API/progress; MaterialsModule hiện chỉ export policy, chưa persistence/review/release API. |
 | 3.4 Student access | Chưa thực hiện | Chưa có material list/download hoặc FE contract Phase 3. |
 | 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
-| 3.6 Quality gate/rollout | Chưa thực hiện | Chưa test BE/MinIO, staging hoặc deploy Phase 3. |
+| 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 
 ## Kiểm tra lượt planning ban đầu — 2026-10-09 (lịch sử)
 

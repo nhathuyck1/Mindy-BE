@@ -1,14 +1,19 @@
 # Phase 3 — File + Materials
 
-Cập nhật: **2026-10-09**. 3.1 D1–D6 đã code policy/contract/providers và role
+Cập nhật: **2026-10-11**. 3.1 D1–D6 đã code policy/contract/providers và role
 MANAGER, kiểm tra local pass; 3.2 upload/storage/validation API hoàn tất local.
 Material persistence/review và Student download tiếp tục ở 3.3/3.4.
 Contract chi tiết: [Phase 3.1](./PHASE_3_1_POLICY_CONTRACT.md).
-Plan upload tiếp theo: [Phase 3.2](./PHASE_3_2_SAFE_UPLOAD.md), đã rà soát theo
+Plan upload: [Phase 3.2](./PHASE_3_2_SAFE_UPLOAD.md), đã rà soát theo
 baseline 3.1; đã nghiệm thu Files/storage local, chi tiết trong progress riêng.
-Tiến độ: [Phase 3](../progress/PHASE_3_PROGRESS.md),
-[Phase 3.1](../progress/PHASE_3_1_PROGRESS.md),
-[Phase 3.2](../progress/PHASE_3_2_PROGRESS.md).
+Plan quản lý tiếp theo: [Phase 3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md),
+đã lập kế hoạch Manager CRUD/review, Mentor draft/submit/context và Class Unit
+release; chưa implement. [Flow 3.3](../../api_flow/PHASE_3_3_FLOW.md) và
+[breakdown dự kiến](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Tiến độ: [Phase 3](../../progress/phase%203/PHASE_3_PROGRESS.md),
+[Phase 3.1](../../progress/phase%203/PHASE_3_1_PROGRESS.md),
+[Phase 3.2](../../progress/phase%203/PHASE_3_2_PROGRESS.md),
+[Phase 3.3](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
 
 ## 1. Mục tiêu và phạm vi đã chốt
 
@@ -18,7 +23,7 @@ các lớp dùng chung tài liệu của Course Unit. Không thêm material owne
 Unit/Session. Optional Session link chỉ chỉ định sử dụng, không đổi owner/visibility.
 
 User phụ trách Phase 3, người khác làm
-[Phase 2.3](./PHASE_2_3_MY_CLASSES_SCHEDULE.md) song song. Thứ tự P3 là
+[Phase 2.3](../phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md) song song. Thứ tự P3 là
 3.1 → 3.2 → 3.3 → 3.4 → 3.5 → 3.6; không chờ calendar/navigation để bắt đầu,
 nhưng tích hợp toàn hành trình FE là gate riêng trước nghiệm thu tích hợp.
 
@@ -35,14 +40,15 @@ Session giữ công việc riêng của lớp trong các phase đó, không ph�
 
 ## 2. Căn cứ và trạng thái thực thi
 
-Nguồn: [Flow.txt](../../document/Flow.txt),
-[Course flow](../../document/COURSE_FLOW.md),
-[DBML](../../document/mindy_center_full.dbml),
-[business logic](../CORE_BUSINESS_LOGIC.md), usecase-course.drawio và
-[DB review](../../document/mindy_mvp_db_design_review.md).
+Nguồn: [Flow.txt](../../../document/Flow.txt),
+[Course flow](../../../document/COURSE_FLOW.md),
+[DBML](../../../document/mindy_center_full.dbml),
+[business logic](../../core/CORE_BUSINESS_LOGIC.md), usecase-course.drawio và
+[DB review](../../../document/mindy_mvp_db_design_review.md).
 
 Code có Catalog/Classes/Enrollments/Commerce/Payments và MaterialsModule export
-policy facade/domain transitions. Chưa có Files hoặc Material persistence/API.
+policy facade/domain transitions. Files upload/storage/validation đã có ở 3.2;
+Material persistence/API chưa có, đã lập plan 3.3.
 Class Unit có status/unlockAt, EnrollmentsService có hasActiveAccess() ACTIVE.
 MinIO/Redis env không chứng minh storage/worker hoạt động. CASH preview/confirm và
 mentor roster đã có; evidence roster deploy không chứng minh PayOS tiền thật đã pass.
@@ -135,7 +141,7 @@ Session navigation resolve Course Unit để hiện tài liệu chính, không t
 |---|---|---|
 | 3.1 | D1–D6, Manager role, domain policy, context providers và contract | Hoàn tất local: 171 tests/16 suites + build, HTTP 5/5; upload và review persistence/API chưa triển khai. |
 | [3.2](./PHASE_3_2_SAFE_UPLOAD.md) | Files migration/adapter/private MinIO, intent/complete/detail, validation jobs; plan đã rà soát sau 3.1 pass, giữ policy/errors và chiều Materials → Files | Manager/Mentor đúng scope upload thật → READY/FAILED; overwrite/retry/restart tests. |
-| 3.3 | Course Unit Materials, Manager CRUD/review, Mentor draft/submit, release API | READY không bypass review; revision race/assignment/approval/soft-delete tests. |
+| [3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md) | Đã lập plan: Course Unit Materials, Manager CRUD/review, Mentor context/draft/submit, release API | Chưa implement; READY không bypass review; revision race/assignment/approval/soft-delete/audit tests. |
 | 3.4 | ACTIVE Unit list/download, Swagger/Postman/FE contract | Pending/locked/draft/rejected/cross-class bị chặn; shared đọc đúng mỗi lớp. |
 | 3.5 | Metadata extraction/retry, cleanup/retention/purge/audit | Metadata fail giữ READY; không purge file có ref hoặc job live. |
 | 3.6 | Full gates, migration/storage runbook, staging + 2.3 integration | Evidence local/staging/VPS/payment live ghi riêng; không skip critical test. |
