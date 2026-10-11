@@ -18,6 +18,14 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-11: Chẩn đoán deploy từ log user (`logs_103358883936`, release
+  `8aafd5a`): CI pass 243 tests + 20 HTTP tests, image/backup check/migration pass,
+  API unhealthy sau recreate. Runtime logs user xác nhận MinIO bật với access/
+  secret key rỗng làm ConfigModule fail. Probe local schema pass khi omitted/false,
+  fail khi true. Bổ sung env preflight trước backup/migrate/API switch, diagnostics
+  khi failure và hướng dẫn tắt flag/recreate đúng release trong tài liệu3.2.
+  Lint/diff/Bash syntax pass; chưa redeploy/khôi phục/xác minh upload VPS.
+
 - 2026-10-11: User yêu cầu server acceptance sau mỗi slice và cho biết code3.2
   đã có trên server. Chuẩn bị compose.files-production.yaml, pinned mc image,
   private/versioned bucket + scoped backend user provisioning, root env template,

@@ -65,6 +65,17 @@ jobs:
           # Quiet validation avoids printing interpolated production secrets.
           "${compose[@]}" config --quiet
           docker build --target runtime -t "mindy-center-api:$IMAGE_TAG" .
+
+          # Validate the new image's config before touching the DB or replacing the API.
+          # Only field names/error types are printed; never dump production env values.
+          "${compose[@]}" run --rm --no-deps -T migration node --input-type=module -e \
+            'import { environmentSchema } from "./dist/config/environment.schema.js";
+             const { error } = environmentSchema.validate(process.env, { abortEarly: false });
+             if (error) {
+               console.error("Production environment validation failed:");
+               for (const detail of error.details) console.error(detail.path.join(".") + ": " + detail.type);
+               process.exit(1);
+             }'
           "${compose[@]}" up -d --wait --wait-timeout 120 postgres
 
           backup_dir="$(dirname "$DEPLOY_DIR")/mindy-backups"
@@ -82,3 +93,28 @@ jobs:
             'fetch("http://127.0.0.1:3000/api/v1/health/ready", {signal: AbortSignal.timeout(5000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))'
 
           echo "Deployed $RELEASE_SHA; PostgreSQL backup: $backup_file"
+
+      - name: Diagnose failed deployment
+        if: failure()
+        run: |
+          set -uo pipefail
+          if [[ ! -d "$DEPLOY_DIR" ]] || [[ ! -f "$DEPLOY_DIR/.env.production" ]] || [[ ! -f "$DEPLOY_DIR/compose.production.yaml" ]]; then
+            echo "VPS checkout is unavailable; container diagnostics skipped."
+            exit 0
+          fi
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG="$RELEASE_SHA"
+          compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          # Do not print container config or expanded Compose/environment secrets.
+          "${compose[@]}" ps --all || true
+          if ! api_id="$("${compose[@]}" ps --all --quiet api)"; then
+            echo "Cannot locate the API container; check the original deployment error."
+            exit 0
+          fi
+          if [[ -z "$api_id" ]]; then
+            echo "No API container exists for this Compose project."
+            exit 0
+          fi
+          docker inspect --format '{{json .State}}' "$api_id" || true
+          docker logs --timestamps --tail 120 "$api_id" || true
