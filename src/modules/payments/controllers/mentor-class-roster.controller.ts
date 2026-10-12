@@ -30,7 +30,7 @@ import { MentorClassRosterService } from '../services/mentor-class-roster.servic
 @ApiTags('mentor classes')
 @ApiCookieAuth('access_token')
 @UseGuards(AccessTokenGuard, RolesGuard)
-@Roles(UserRole.MENTOR, UserRole.MANAGER)
+@Roles(UserRole.MENTOR)
 @ApiErrors(
   HttpStatus.UNAUTHORIZED,
   HttpStatus.FORBIDDEN,
@@ -42,13 +42,13 @@ export class MentorClassRosterController {
   constructor(private readonly roster: MentorClassRosterService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List assigned classes for mentors or all classes for managers' })
+  @ApiOperation({ summary: 'List classes currently assigned to the signed-in mentor' })
   @ApiOkResponse({ type: MentorClassPageDto })
   async classes(
     @CurrentUser() user: AuthenticatedUser,
     @Query() options: MentorClassPageOptionsDto,
   ): Promise<MentorClassPageDto> {
-    const result = await this.roster.classes(user.userId, options, user.role);
+    const result = await this.roster.classes(user.userId, options);
     return new MentorClassPageDto(
       result.items.map((view) => new MentorClassDto(view)),
       options.page,
@@ -59,9 +59,9 @@ export class MentorClassRosterController {
 
   @Get(':classId/students')
   @ApiOperation({
-    summary: 'List effective enrollments for an assigned mentor class or any class for managers',
+    summary: 'List effective enrollments and payment status for an assigned class',
     description:
-      'Managers have read-only access to all classes. Mentors can only access assigned classes. Cash confirmation still uses the full order total; managers cannot confirm cash.',
+      'Cash confirmation still uses the full order total. A single cash order can cover multiple classes.',
   })
   @ApiOkResponse({ type: MentorRosterPageDto })
   async students(
@@ -69,7 +69,7 @@ export class MentorClassRosterController {
     @Param('classId', new ParseUUIDPipe()) classId: string,
     @Query() options: MentorRosterPageOptionsDto,
   ): Promise<MentorRosterPageDto> {
-    const result = await this.roster.students(user.userId, classId, options, user.role);
+    const result = await this.roster.students(user.userId, classId, options);
     return new MentorRosterPageDto(
       result.items.map((row) => new MentorRosterStudentDto(row)),
       options.page,

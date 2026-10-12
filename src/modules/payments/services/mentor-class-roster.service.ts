@@ -16,7 +16,6 @@ import {
 } from '../../enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../enrollments/enums/enrollment-status.enum.js';
 import { UserEntity } from '../../users/user.entity.js';
-import { UserRole } from '../../users/user-role.enum.js';
 import type {
   MentorClassPageOptionsDto,
   MentorRosterPageOptionsDto,
@@ -30,27 +29,13 @@ export class MentorClassRosterService {
     private readonly classRead: ClassReadService,
   ) {}
 
-  private assertReader(role: UserRole): void {
-    if (role !== UserRole.MENTOR && role !== UserRole.MANAGER)
-      throw new AppHttpException(
-        HttpStatus.FORBIDDEN,
-        'INSUFFICIENT_ROLE',
-        'Role cannot read class rosters',
-      );
-  }
-
-  async classes(
-    mentorId: string,
-    options: MentorClassPageOptionsDto,
-    role: UserRole = UserRole.MENTOR,
-  ) {
-    this.assertReader(role);
+  async classes(mentorId: string, options: MentorClassPageOptionsDto) {
     const query = this.db
       .getRepository(ClassEntity)
       .createQueryBuilder('class')
+      .where('class.mentorId = :mentorId', { mentorId })
       .orderBy('class.createdAt', 'DESC')
       .addOrderBy('class.id', 'ASC');
-    if (role === UserRole.MENTOR) query.where('class.mentorId = :mentorId', { mentorId });
     if (options.status !== undefined)
       query.andWhere('class.status = :status', { status: options.status });
     const [classes, total] = await query
@@ -64,12 +49,10 @@ export class MentorClassRosterService {
     mentorId: string,
     classId: string,
     options: MentorRosterPageOptionsDto,
-    role: UserRole = UserRole.MENTOR,
   ): Promise<{ items: MentorRosterRow[]; total: number }> {
-    this.assertReader(role);
     const classEntity = await this.db
       .getRepository(ClassEntity)
-      .findOneBy(role === UserRole.MANAGER ? { id: classId } : { id: classId, mentorId });
+      .findOneBy({ id: classId, mentorId });
     if (!classEntity)
       throw new AppHttpException(HttpStatus.NOT_FOUND, 'CLASS_NOT_FOUND', 'Class not found');
 
@@ -145,7 +128,6 @@ export class MentorClassRosterService {
         expiresAt: order.expiresAt,
         paidAt: order.paidAt,
         canConfirmCash:
-          role === UserRole.MENTOR &&
           order.paymentType === PaymentType.CASH &&
           order.cashMentorId === mentorId &&
           order.status === OrderStatus.PENDING &&
