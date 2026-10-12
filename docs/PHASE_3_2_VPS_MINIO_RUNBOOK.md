@@ -169,7 +169,7 @@ CI/CD tiếp theo; manual enable vẫn dùng function dc với cả hai compose 
 
 Dựng tài khoản uploader nếu chưa có: trong Postman login ADMIN qua
 `POST /api/v1/auth/login`, sau đó dùng cookie đó gọi `POST /api/v1/admin/users`
-với email mới, password12..128 ký tự, displayName và role MANAGER (phone optional).
+với email mới, password6..128 ký tự, displayName và role MANAGER (phone optional).
 Success201 tạo user ACTIVE, không cần email verification. Public register chỉ
 tạo STUDENT; không gửi role vào registration hoặc dùng demo seed để tạo Manager.
 Login lại bằng Manager để thay cookie rồi mới gọi Files. Không thêm status vào

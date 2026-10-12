@@ -14,6 +14,7 @@ import type { ClassDetailView } from '../domain/class-views.js';
 import type { CreateClassDto } from '../dtos/create-class.dto.js';
 import type { ScheduleClassSessionDto } from '../dtos/schedule-class-session.dto.js';
 import type { UpdateClassDto } from '../dtos/update-class.dto.js';
+import type { UpdateClassSessionTimeDto } from '../dtos/update-class-session-time.dto.js';
 import { ClassEntity } from '../entities/class.entity.js';
 import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
@@ -146,6 +147,19 @@ export class ClassesService {
       const classEntity = await this.lockClass(manager, classId);
       this.assertEditable(classEntity);
       await this.scheduleService.addSession(manager, classEntity, input);
+      return this.readService.loadDetail(manager, classEntity);
+    });
+  }
+
+  async updateSessionTimes(
+    classId: string,
+    sessionIds: readonly string[],
+    input: UpdateClassSessionTimeDto,
+  ): Promise<ClassDetailView> {
+    return this.dataSource.transaction(async (manager) => {
+      const classEntity = await this.lockClass(manager, classId);
+      this.assertEditable(classEntity);
+      await this.scheduleService.updateSessionTimes(manager, classEntity, sessionIds, input);
       return this.readService.loadDetail(manager, classEntity);
     });
   }

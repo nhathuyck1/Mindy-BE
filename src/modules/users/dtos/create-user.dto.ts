@@ -15,9 +15,9 @@ export class CreateUserDto {
   @Length(7, 32)
   readonly phone?: string;
 
-  @ApiProperty({ type: String, format: 'password', minLength: 12, maxLength: 128 })
+  @ApiProperty({ type: String, format: 'password', minLength: 6, maxLength: 128 })
   @IsString()
-  @Length(12, 128)
+  @Length(6, 128)
   readonly password!: string;
 
   @ApiProperty({ type: String, example: 'Test Student', minLength: 1, maxLength: 150 })

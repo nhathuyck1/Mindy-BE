@@ -40,6 +40,16 @@ function hasReached(time: Date | null, now: Date): boolean {
   return time === null || (Number.isFinite(time.getTime()) && time.getTime() <= now.getTime());
 }
 
+export function isMaterialUnitReleased(context: ClassContentContext, now: Date): boolean {
+  return (
+    Number.isFinite(now.getTime()) &&
+    context.classStatus !== ClassStatus.CANCELLED &&
+    (context.unitStatus === ClassUnitStatus.OPEN ||
+      context.unitStatus === ClassUnitStatus.COMPLETED) &&
+    hasReached(context.unlockAt, now)
+  );
+}
+
 /** D1/D3/D4/D5: delivery gates belong to the accessed class, ownership to Course Unit. */
 export function canReadMaterial(material: MaterialSnapshot, context: MaterialReadContext): boolean {
   const { actor, classContext, hasActiveEnrollment, now } = context;
@@ -48,11 +58,8 @@ export function canReadMaterial(material: MaterialSnapshot, context: MaterialRea
     actor.role === UserRole.STUDENT &&
     Number.isFinite(now.getTime()) &&
     hasActiveEnrollment &&
-    classContext.classStatus !== ClassStatus.CANCELLED &&
+    isMaterialUnitReleased(classContext, now) &&
     material.courseUnitId === classContext.courseUnitId &&
-    (classContext.unitStatus === ClassUnitStatus.OPEN ||
-      classContext.unitStatus === ClassUnitStatus.COMPLETED) &&
-    hasReached(classContext.unlockAt, now) &&
     material.deletedAt === null &&
     hasCurrentApproval(material) &&
     hasReached(material.reviewedAt, now) &&

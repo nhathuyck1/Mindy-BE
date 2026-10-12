@@ -57,6 +57,7 @@ export const FILE_STORAGE = Symbol('FILE_STORAGE');
 export interface FileStorage {
   assertAvailable(): Promise<void>;
   presignPut(bucket: string, key: string, mimeType: string, ttl: number): Promise<string>;
+  presignGet(location: StorageLocation, filename: string, ttl: number): Promise<string>;
   head(bucket: string, key: string, versionId?: string): Promise<ObjectVersion>;
   copy(source: StorageLocation, destinationKey: string, signal?: AbortSignal): Promise<string>;
   read(location: StorageLocation, signal?: AbortSignal): Promise<Readable>;

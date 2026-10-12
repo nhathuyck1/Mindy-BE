@@ -71,8 +71,8 @@ Materials chưa có migration; không dùng evidence3.2 làm nghiệm thu3.3.**
 | Lập plan | Hoàn tất | Plan, tiến độ riêng và index; schema/policy/API/milestone/test/rollout dự kiến. |
 | 3.1 Policy + contract | Hoàn tất code/test local D1–D6 | Role, domain policy/review transitions, facade/context providers; pnpm check 171 tests/16 suites + build, HTTP 5/5. |
 | 3.2 Upload slice | Hoàn tất local + nghiệm thu VPS theo user2026-10-12 | Files/MinIO/migration/worker/reference; PDF/MP4 READY/private objects; chi tiết progress3.2. |
-| 3.3 Material management | Đã lập kế hoạch, chưa implement | Plan riêng + flow/API/progress; MaterialsModule hiện chỉ export policy, chưa persistence/review/release API. |
-| 3.4 Student access | Chưa thực hiện | Chưa có material list/download hoặc FE contract Phase 3. |
+| 3.3 Material management | Authoring/review/release vẫn planned | Read persistence FILE/VIDEO tối thiểu đã thêm trước theo yêu cầu3.4; ARTICLE/refs/audits/writes cần migration additive mới. |
+| 3.4 Student access | Ba FILE/VIDEO GET local verified | List/detail/download + signed pinned-version TTL<=60s + FE contract; chưa ARTICLE/staff preview/FE integration/VPS. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
 | 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
 | 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 

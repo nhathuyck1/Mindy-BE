@@ -7,6 +7,19 @@ API dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md)
 
 ## Hiện trạng
 
+- 2026-10-12 (tư vấn UX Unit/bài học): User muốn CKEditor FE + HTML BE như trang
+  đọc kiến thức. Đề xuất Course Unit metadata/description + nhiều Material ARTICLE,
+  không thêm bảng details trùng content. PDF dùng FILE riêng hoặc attachment;
+  upload READY không tạo/publish Material hay tự chuyển sang HTML. Đã đối chiếu
+  entity/controller hiện tại: FILE/VIDEO read có sẵn, ARTICLE/authoring/attachments
+  còn planned. Cập nhật plan/flow/breakdown; không implement/migrate/deploy ARTICLE.
+- Cùng lượt chạy lại pnpm seed:course-class trên DB development local: tạo 0 lớp
+  vì cohort đã tồn tại; query xác minh HTML-CSS-101-10S-20261013 có 5 Course Unit,
+  5 Class Unit và 10 Session, hai buổi mỗi Unit (13/10–14/11). Không ghi Material.
+  Phần tư vấn không có implementation/test ARTICLE. Sau yêu cầu tiếp theo seed3
+  lớp, code seed đổi và pnpm check298/298 pass (27 suites); xem progress2.3,
+  không dùng kết quả seed/tests này làm evidence triển khai ARTICLE3.3.
+
 - 2026-10-12: 3.2 đã nghiệm thu VPS theo xác nhận user; hoàn thiện plan3.3 từ
   bản nháp, thống nhất ARTICLE HTML/FILE/VIDEO trong schema/domain/DTO/flow.
   Bổ sung gate local + server từng slice, batch lock mọi primary/inline/attachment
@@ -21,7 +34,9 @@ hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, khôn
 
 **Đã lập kế hoạch; chưa implement Phase 3.3.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
-chưa có Material persistence/controllers hoặc release HTTP.
+đã có Material FILE/VIDEO read persistence và ba Student GET theo
+[read slice3.4](PHASE_3_4_PROGRESS.md); chưa authoring/review/release HTTP.
+Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 
 ## Lượt planning — 2026-10-11
 

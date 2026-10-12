@@ -11,13 +11,14 @@ Liên hệ với các phase khác: [flow 2.3 → 3.2](PHASE_2_3_TO_3_2_FLOW.md).
 
 Manager/Mentor chọn một file cho Course Unit → gửi bytes tới storage private →
 backend xác minh file thật → FE nhận fileId READY hoặc trạng thái FAILED.
-Đây là bước chuẩn bị file. Tạo Material, Manager duyệt và Student tải tài liệu
-chưa có HTTP/persistence trong checkout này; nằm ở 3.3/3.4.
+Đây là bước chuẩn bị file. Tạo Material/Manager duyệt vẫn chờ3.3;
+[ba Student FILE/VIDEO GET3.4](PHASE_3_4_FLOW.md) đã implement local ngày12/10,
+cần Material approved và Class Unit released, không chỉ file READY.
 
 ## Thứ tự FE thực hiện
 
 Account prerequisite: public registration chỉ tạo STUDENT. Khi chưa có Manager,
-ADMIN login rồi POST `/api/v1/admin/users` với role MANAGER, password12..128,
+ADMIN login rồi POST `/api/v1/admin/users` với role MANAGER, password6..128,
 email/displayName (phone optional) →201 ACTIVE. Login lại bằng Manager để dùng
 cookie uploader; không cần email verify cho managed account, không dùng Admin
 cookie gọi Files hoặc gửi role vào public register.

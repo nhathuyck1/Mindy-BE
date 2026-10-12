@@ -94,6 +94,26 @@ export class ClassSessionTimeRangeInvalidException extends AppHttpException {
   }
 }
 
+export class ClassSessionNotEditableException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'CLASS_SESSION_NOT_EDITABLE',
+      'Only scheduled sessions can change time',
+    );
+  }
+}
+
+export class ClassSessionLocalTimeInvalidException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'CLASS_SESSION_LOCAL_TIME_INVALID',
+      'The requested local clock time does not exist in the center time zone',
+    );
+  }
+}
+
 export class ClassSessionOutsideClassPeriodException extends AppHttpException {
   constructor() {
     super(

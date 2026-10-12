@@ -6,7 +6,7 @@ xong và chốt 3.2. Contract giữ nguyên. [Flow FE](PHASE_3_2_FLOW.md).
 ## 1. Contract chung
 
 Nếu chưa có MANAGER: ADMIN login `POST /api/v1/auth/login`, dùng cookie gọi
-`POST /api/v1/admin/users` với email/displayName/password12..128/role MANAGER;
+`POST /api/v1/admin/users` với email/displayName/password6..128/role MANAGER;
 phone optional, không có status input. Success201 user ACTIVE, login được ngay.
 Login lại bằng Manager trước Files requests. Public register không nhận role và
 chỉ tạo STUDENT; không dùng demo seed (không tạo Manager) trên VPS cho bước này.

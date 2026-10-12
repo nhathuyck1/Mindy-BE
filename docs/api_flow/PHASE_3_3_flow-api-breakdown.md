@@ -1,7 +1,7 @@
 # Phase 3.3 — API breakdown cho FE (dự kiến)
 
 Cập nhật: **2026-10-12**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
-chưa có controller/persistence 3.3, chưa local verified/deploy.** Shapes mới là
+chưa có controller authoring/review/release 3.3, chưa local verified/deploy.** Shapes mới là
 contract đề xuất cần đối chiếu Swagger/source sau implementation; không gọi FE
 production dựa trên tài liệu này. Upload 3.2 đã có, xem
 [breakdown upload](PHASE_3_2_flow-api-breakdown.md).
@@ -9,7 +9,19 @@ production dựa trên tài liệu này. Upload 3.2 đã có, xem
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 
+Ngoại lệ thứ tự2026-10-12: [ba Student FILE/VIDEO GET3.4](PHASE_3_4_flow-api-breakdown.md)
+đã implement + materials read persistence tối thiểu; không biến APIs3.3 bên dưới
+thành hiện hữu. ARTICLE/refs/schema3.3 phải mở rộng bằng migration additive mới.
+
 ## Contract ARTICLE / FILE / VIDEO
+
+UX2026-10-12: mở Unit hiển thị danh sách Material, chọn ARTICLE gọi detail lấy
+contentHtml; FE dùng CKEditor để soạn và render canonical HTML cho học viên.
+Course Unit description là tổng quan; không bổ sung bảng course_unit_details
+hoặc endpoint mới trong lượt tư vấn. PDF upload trả fileId READY, sau đó gắn
+vào FILE hoặc attachment ARTICLE qua APIs authoring dự kiến bên dưới.
+Upload không tự tạo Material/publish hay chuyển PDF thành HTML. Contract này
+vẫn planned: source hiện tại chỉ hỗ trợ FILE/VIDEO read, chưa ARTICLE/attachments.
 
 User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
 bên dưới áp dụng thống nhất cho create/PATCH/detail/list; vẫn là planned.

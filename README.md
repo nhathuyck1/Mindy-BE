@@ -117,12 +117,22 @@ Configure `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_DISPLAY_NAME`
 and `SEED_ACCOUNT_PASSWORD` in `.env` first. `seed:data` runs admin → accounts →
 course/class → course images, stopping if a step fails. It creates one admin,
 two mentors, three students, three categories, six courses with Unsplash images,
-27 course units, seven classes and 47 sessions.
+27 course units, seven standard classes with 47 sessions, plus three current
+demo classes with ten upcoming Tuesday/Saturday sessions each (Vietnam time):
+HTML/CSS ONLINE 15:00–17:00 (five units), JavaScript ONLINE 15:00–17:00 (six units,
+different mentor), and Python OFFLINE 09:00–11:00 in Lab 2 (four units).
+Demo class codes are `<course-code>-10S-YYYYMMDD`, using the first session date.
+All ten sessions are distributed across each course's units in syllabus order.
+On 2026-10-12 all three demos run from 2026-10-13 to 2026-11-14; slots that have
+already started are skipped.
 
 Rerunning does not duplicate rows. The existing admin is preserved; demo account
 passwords are reset to `SEED_ACCOUNT_PASSWORD` by the account seed. Course/class
 data and existing images are preserved; missing demo course images are filled.
 Use `pnpm seed:course-images` to fill images only, without seeding accounts/classes.
+Rerunning preserves a current demo cohort of each course until its end date, avoiding overlapping
+copies for the same mentor. Once it finishes, a new cohort gets a new date suffix.
+Students still need checkout/enrollment to see their personal calendar.
 The image seed stores fixed Unsplash CDN URLs; it does not fetch images at runtime.
 
 For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`

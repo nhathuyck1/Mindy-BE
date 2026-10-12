@@ -37,6 +37,11 @@ import { CreateClassDto } from '../dtos/create-class.dto.js';
 import { ScheduleClassSessionDto } from '../dtos/schedule-class-session.dto.js';
 // biome-ignore lint/style/useImportType: Nest request validation needs runtime DTO metadata.
 import { UpdateClassDto } from '../dtos/update-class.dto.js';
+// biome-ignore lint/style/useImportType: Nest request validation needs runtime DTO metadata.
+import {
+  BulkUpdateClassSessionTimeDto,
+  UpdateClassSessionTimeDto,
+} from '../dtos/update-class-session-time.dto.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ClassReadService } from '../services/class-read.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -108,6 +113,33 @@ export class AdminClassesController {
     @Body() dto: ScheduleClassSessionDto,
   ): Promise<ClassManagementDetailDto> {
     return new ClassManagementDetailDto(await this.classesService.scheduleSession(classId, dto));
+  }
+
+  @Patch(':classId/sessions/bulk')
+  @ApiOperation({ summary: 'Change the clock times of selected sessions atomically; keep dates' })
+  @ApiOkResponse({ type: ClassManagementDetailDto })
+  @ApiErrors(HttpStatus.NOT_FOUND, HttpStatus.CONFLICT, HttpStatus.UNPROCESSABLE_ENTITY)
+  async bulkUpdateSessionTimes(
+    @Param('classId', new ParseUUIDPipe()) classId: string,
+    @Body() dto: BulkUpdateClassSessionTimeDto,
+  ): Promise<ClassManagementDetailDto> {
+    return new ClassManagementDetailDto(
+      await this.classesService.updateSessionTimes(classId, dto.sessionIds, dto),
+    );
+  }
+
+  @Patch(':classId/sessions/:sessionId')
+  @ApiOperation({ summary: 'Change the clock times of one session; keep its local dates' })
+  @ApiOkResponse({ type: ClassManagementDetailDto })
+  @ApiErrors(HttpStatus.NOT_FOUND, HttpStatus.CONFLICT, HttpStatus.UNPROCESSABLE_ENTITY)
+  async updateSessionTime(
+    @Param('classId', new ParseUUIDPipe()) classId: string,
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+    @Body() dto: UpdateClassSessionTimeDto,
+  ): Promise<ClassManagementDetailDto> {
+    return new ClassManagementDetailDto(
+      await this.classesService.updateSessionTimes(classId, [sessionId], dto),
+    );
   }
 
   @Post(':classId/open')

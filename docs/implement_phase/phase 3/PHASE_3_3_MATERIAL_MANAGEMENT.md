@@ -4,12 +4,42 @@ Cập nhật: **2026-10-12**. **Plan triển khai; chưa implement/nghiệm thu 
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
 
+Ngoại lệ thứ tự theo yêu cầu user2026-10-12: [ba Student FILE/VIDEO GET3.4](../../api_flow/PHASE_3_4_FLOW.md)
+đã có read persistence tối thiểu + signed GET. CRUD/review/release/ARTICLE3.3
+vẫn chưa implement; typed schema phải mở rộng bằng migration additive mới,
+không tạo lại bảng materials hoặc sửa migration read đã chạy.
+
 - Baseline: [3.1 policy](PHASE_3_1_POLICY_CONTRACT.md), [3.2 upload](PHASE_3_2_SAFE_UPLOAD.md).
 - Theo dõi: [progress 3.3](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
 - Hành trình: [flow 3.3](../../api_flow/PHASE_3_3_FLOW.md),
   [API breakdown dự kiến](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 ## 1. Kết quả cần đạt và phạm vi
+
+### Diễn giải trải nghiệm bài học ngày 2026-10-12
+
+User muốn mở Unit để đọc kiến thức như một trang bài học, soạn bằng CKEditor ở
+FE và lưu HTML ở BE. Dùng Course Unit 1–N Material hiện có: Unit giữ tên/thứ tự/
+description tổng quan; mỗi bài đọc là Material ARTICLE với contentHtml TEXT.
+Màn hình Unit lấy metadata + danh sách Material theo sortOrder, chọn bài để mở
+detail và render canonical HTML. Không đề xuất bảng course_unit_details riêng
+để lưu trùng bài học; một API/màn hình tổng hợp Unit detail có thể bổ sung khi
+FE cần, nhưng chưa được tạo bằng lượt tư vấn này.
+
+CKEditor xuất HTML cho contentHtml; BE sanitize theo allowlist trước khi lưu,
+không tin việc editor giới hạn toolbar. Article chỉ có chữ không cần upload.
+Ảnh inline đi qua Files và dùng data-file-id đã xác minh theo contract §3.1;
+FE cần adapter/conversion cho CKEditor, không lưu signed URL/base64 trong HTML.
+
+PDF dùng làm giáo trình, slide, bài tập hoặc tài liệu tham khảo có thể xem/tải.
+Sau upload, binary nằm ở MinIO và Files trả fileId READY. File có thể trở thành
+Material FILE độc lập trong Unit hoặc attachment của ARTICLE theo typed plan;
+upload READY tự nó chưa tạo bài học, chưa publish và chưa cấp quyền Student.
+PDF không tự chuyển thành HTML hay tự trích thành kiến thức. FILE/VIDEO Student
+read đã có; ARTICLE, attachments và authoring vẫn là phần chưa implement của3.3.
+
+Tham khảo: [CKEditor get/set data](https://ckeditor.com/docs/ckeditor5/latest/getting-started/setup/getting-and-setting-data.html),
+[OWASP HTML sanitization](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
 
 Manager/Mentor tạo nội dung của Course Unit, Mentor gửi duyệt, Manager quyết định
 đúng revision; Admin/Mentor release Class Unit. Nghiệm thu bằng API trên server
@@ -49,14 +79,14 @@ hoặc quyền học cho enrollment COMPLETED; CASH/PayOS/holds/mail giữ basel
 
 | Có sẵn | Tái dùng / việc còn thiếu |
 |---|---|
-| MaterialsModule/MaterialPolicyService | Hiện chỉ policy; chưa entities/controllers. actor() chưa dùng transaction manager: bổ sung trong 3.3.1 |
+| MaterialsModule/MaterialPolicyService | Policy + Student FILE/VIDEO read entities/controller. actor(manager) đã có cho read; mutation paths cần đồng bộ khi implement3.3.1 |
 | material-contract/review/access | Hiện bắt buộc một file; mở rộng typed content + refs và ARTICLE-only, giữ transitions/revision/firstApprovedAt |
 | FilesService.assertReadyReference | Lock file + READY/owner/scope/current assignment, không gọi MinIO; bổ sung batch provider để khóa mọi file trước mọi Class |
 | ClassContentContextService | getUnit/getCourseUnitInClass/getSession/lockContentClass có sẵn; bổ sung HTTP context/release trong Classes |
 | GET /mentor/classes | Có classId; cần unit/session picker để lấy đúng classUnitId/courseUnitId/sessionId |
-| EnrollmentsService.hasActiveAccess | ACTIVE giữ nguyên; Student consumer triển khai 3.4 |
-| FileStorage | Chưa presignGet; không coi preview/download đã có |
-| Migration hiện tại | Chưa tạo materials; DBML là tham khảo, migration mới là schema thực thi |
+| EnrollmentsService.hasActiveAccess | ACTIVE giữ nguyên; Student read consumer3.4 đã dùng |
+| FileStorage | presignGet đã có cho Student primary FILE/VIDEO; staff preview/ARTICLE assets còn planned |
+| Migration hiện tại | materials FILE/VIDEO read slice đã có; typed ARTICLE/refs/audit cần migration additive tiếp theo |
 
 3.2 đã chốt theo [progress](../../progress/phase%203/PHASE_3_2_PROGRESS.md):
 PDF/MP4 READY và private final objects có ảnh user; những ca còn lại ghi theo

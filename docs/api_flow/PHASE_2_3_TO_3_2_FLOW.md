@@ -66,7 +66,7 @@ flowchart TD
   MAT -.-> REVIEW["Mentor submit → Manager approve/reject; áp dụng policy 3.1"]
   REVIEW -.-> GATE{"Policy3.3 typed: ACTIVE + release/time + approval/publication + valid content/READY refs"}
   DETAIL -.-> GATE
-  GATE -.->|"Đủ điều kiện"| READ["3.4 chưa triển khai: Student xem/tải tài liệu"]
+  GATE -->|"FILE/VIDEO đủ điều kiện"| READ["3.4: Student list/detail/signed download local verified"]
   GATE -.->|"Thiếu điều kiện"| DENY["Không cấp nội dung/download"]
 ```
 
@@ -185,9 +185,16 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
   `MINIO_ENABLED=false`, Files trả503 FILE_STORAGE_DISABLED; đây là hành vi
   cấu hình, không phải mô tả VPS hiện đang tắt storage.
 - CI dùng MinIO fixture riêng; không phụ thuộc flag/MinIO của VPS.
-- Muốn Student thực sự đọc/tải tài liệu vẫn cần 3.3 + 3.4 và cấu hình/rollout tương ứng.
+- Student FILE/VIDEO read routes3.4 đã local verified; sản phẩm còn cần3.3
+  authoring/review/release, FE integration và rollout tương ứng.
 
 ## 8. Nhật ký đối chiếu
+
+- 2026-10-12: Theo yêu cầu làm ba API trước, [Student FILE/VIDEO read3.4](PHASE_3_4_FLOW.md)
+  đã implement/test local list/detail/download + materials read schema + signed
+  pinned GET. Authoring/review/release/ARTICLE3.3 vẫn planned; READY riêng lẻ
+  chưa tạo Material. [FE contract](PHASE_3_4_flow-api-breakdown.md) và
+  [FE gaps audit](PHASE_3_4_FE_API_GAPS.md). Chưa deploy/VPS/browser acceptance.
 
 - 2026-10-12: Cập nhật baseline3.2 đã nghiệm thu và flow ARTICLE text-only không
   qua upload; plan3.3 typed Manager→Mentor→review→release→acceptance, local/server

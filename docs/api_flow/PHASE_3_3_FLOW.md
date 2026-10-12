@@ -6,7 +6,21 @@ API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_FLOW.md).
 
+2026-10-12: Theo yêu cầu làm ba Student GET trước, có
+[read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
+CRUD/review/audit/release/ARTICLE3.3 vẫn planned. Schema typed dưới đây cần migration
+mở rộng additive; không tạo lại materials hoặc sửa migration read đã chạy.
+
 ## 1. Kết quả sản phẩm
+
+Diễn giải UX2026-10-12: Course Unit là chương/nhóm học; Material ARTICLE là từng
+bài đọc HTML soạn bằng CKEditor. Chọn Unit → danh sách bài theo sortOrder → mở
+Material detail để đọc; metadata/mục tiêu Unit dùng description hiện có, không
+thêm bảng course_unit_details lưu trùng contentHtml. Đây là hướng thiết kế,
+chưa có authoring/ARTICLE API. PDF là Material FILE hoặc attachment ARTICLE
+theo typed plan; upload READY chỉ lưu file, không tự tạo/publish bài học hoặc
+chuyển PDF thành HTML. Seed local lớp/lịch/course unit đã được chạy lại và query
+xác minh 5 course/class unit, 10 buổi; không seed ARTICLE vì schema chưa hỗ trợ.
 
 Scope mới user chốt2026-10-11: **ARTICLE lưu HTML / FILE / VIDEO MP4 private**;
 HLS làm sau. Plan3.3/breakdown đã hợp nhất typed content, thay baseline file-only.

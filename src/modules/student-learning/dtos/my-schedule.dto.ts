@@ -24,6 +24,27 @@ export class ScheduleEventDto {
   readonly startsAt: Date;
   @ApiProperty({ type: String, format: 'date-time' })
   readonly endsAt: Date;
+  @ApiProperty({
+    type: String,
+    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    example: 'Tuesday',
+    description: 'Weekday of startsAt in the response timeZone, including overnight sessions',
+  })
+  readonly dayOfWeek: string;
+  @ApiProperty({
+    type: String,
+    example: '07:30',
+    pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$',
+    description: 'Local startsAt clock time (HH:mm, 24-hour) in the response timeZone',
+  })
+  readonly startTime: string;
+  @ApiProperty({
+    type: String,
+    example: '09:30',
+    pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$',
+    description: 'Local endsAt clock time (HH:mm, 24-hour); may be on the next day',
+  })
+  readonly endTime: string;
   @ApiProperty({ type: String, nullable: true })
   readonly roomName: string | null;
   @ApiProperty({ type: String, format: 'uuid' })
@@ -55,13 +76,24 @@ export class ScheduleEventDto {
   })
   readonly accessMode: LearningAccessMode;
 
-  constructor(event: ScheduleEvent) {
+  constructor(event: ScheduleEvent, timeZone: string) {
     this.sessionId = event.sessionId;
     this.sessionNumber = event.sessionNumber;
     this.sessionTitle = event.sessionTitle;
     this.sessionStatus = event.sessionStatus;
     this.startsAt = event.startsAt;
     this.endsAt = event.endsAt;
+    this.dayOfWeek = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'long' }).format(
+      event.startsAt,
+    );
+    const clock = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    this.startTime = clock.format(event.startsAt);
+    this.endTime = clock.format(event.endsAt);
     this.roomName = event.roomName;
     this.classId = event.classId;
     this.classCode = event.classCode;
@@ -101,7 +133,7 @@ export class MySchedulePageDto {
   readonly asOf: Date;
 
   constructor(result: SchedulePage) {
-    this.items = result.items.map((event) => new ScheduleEventDto(event));
+    this.items = result.items.map((event) => new ScheduleEventDto(event, result.timeZone));
     this.page = result.page;
     this.pageSize = result.pageSize;
     this.total = result.total;

@@ -1,5 +1,18 @@
 # Phase 2 — Tiến độ: Course → Class → Cart → Checkout
 
+## Bổ sung giờ Session ngày 2026-10-12
+
+- Thêm hai PATCH ADMIN cho một Session và bulk 1–100 Session cùng Class;
+  giữ ngày, nhận startTime/endTime HH:mm, kiểm state/range/overlap/mentor,
+  transaction rollback toàn bulk. Không migration hoặc thay quyền học/payment.
+- GET lịch cá nhân thêm dayOfWeek/startTime/endTime; seed thêm cohort HTML/CSS
+  10 buổi thứ 3/thứ 7 từ slot sắp tới. Local seed tạo đúng 10 buổi 13/10–14/11,
+  chạy lại tạo 0 lớp. Không ghi đè các lớp cũ.
+- Local pnpm check pass **291/291**; suite mới tập trung **36/36**, HTTP **23/23**.
+  Chi tiết/evidence HTTP tại [progress 2.3](PHASE_2_3_PROGRESS.md), contract tại
+  [API breakdown](../../api_flow/PHASE_2_3_flow-api-breakdown.md#51-admin-sửa-giờ-một-buổi-và-bulk).
+  Chưa deploy phần bổ sung này.
+
 Cập nhật: 2026-10-05. Kế hoạch gốc: `docs/implement_phase/PHASE_2_COURSE_TO_PAYMENT.md`.
 
 ## Cập nhật Phase 2.1 / Phase 2.2

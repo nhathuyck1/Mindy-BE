@@ -35,13 +35,15 @@ Owns `course_categories`, `courses` and `course_units`. It defines reusable cour
 content and list price. A course is a template; it is not a scheduled class and
 does not itself grant learning access.
 
-### Materials — Phase 3.1 policy implemented, HTTP/persistence pending
+### Materials — policy + Student file-backed read slice implemented
 
 `MaterialsModule` now exports `MaterialPolicyService`; the domain layer implements
 access, draft/review/publication transitions, audit event output and the closed MVP
 file declaration contract. Catalog and Classes expose entity-free ancestry views;
-the facade uses current account roles/assignment and ACTIVE enrollment. There is
-no Materials HTTP controller or persistence yet. Transitions must later run under
+The facade uses current account roles/assignment and ACTIVE enrollment.
+Student FILE/VIDEO list/detail/download now have a controller and minimal
+`materials` persistence (2026-10-12); see [read flow](./api_flow/PHASE_3_4_FLOW.md).
+Authoring/review/release APIs, ARTICLE and references remain planned. Transitions must later run under
 row locks/expected-revision checks with durable audit in Phase 3.3. Server-owned
 file references/snapshots are inputs to policy, never raw client JSON.
 

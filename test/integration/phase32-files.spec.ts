@@ -290,6 +290,7 @@ describe('Phase 3.2 PostgreSQL + private versioned MinIO', () => {
     const failing = {
       assertAvailable: () => remote.storage.assertAvailable(),
       presignPut: remote.storage.presignPut.bind(remote.storage),
+      presignGet: remote.storage.presignGet.bind(remote.storage),
       head: remote.storage.head.bind(remote.storage),
       copy: remote.storage.copy.bind(remote.storage),
       read: async () => {
@@ -475,6 +476,7 @@ describe('Phase 3.2 PostgreSQL + private versioned MinIO', () => {
         ? {
             assertAvailable: remote.storage.assertAvailable.bind(remote.storage),
             presignPut: remote.storage.presignPut.bind(remote.storage),
+            presignGet: remote.storage.presignGet.bind(remote.storage),
             head: remote.storage.head.bind(remote.storage),
             copy: remote.storage.copy.bind(remote.storage),
             read: async () => Readable.from([Buffer.from('xx')]),
@@ -687,6 +689,7 @@ describe('Phase 3.2 PostgreSQL + private versioned MinIO', () => {
     const copyCrash = {
       assertAvailable: remote.storage.assertAvailable.bind(remote.storage),
       presignPut: remote.storage.presignPut.bind(remote.storage),
+      presignGet: remote.storage.presignGet.bind(remote.storage),
       head: remote.storage.head.bind(remote.storage),
       read: remote.storage.read.bind(remote.storage),
       copy: async (...args: Parameters<typeof remote.storage.copy>) => {

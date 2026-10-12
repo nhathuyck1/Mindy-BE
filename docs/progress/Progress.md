@@ -1,4 +1,27 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
+
+- 2026-10-12: Theo yêu cầu seed3 lớp/3 Course, current demo gồm HTML/CSS và JS
+  ONLINE, Python OFFLINE, mỗi lớp10 buổi thứ3/thứ7. Seed tạo thêm2 lớp cạnh HTML
+  đã có, query local xác minh15 Class Unit/30 Session/0 mentor conflict; rerun0
+  lớp. Helper timetable/partition10/10 pass; pnpm check298/298 (27 suites),
+  lint/type-check/build pass; không seed Material/enrollment hoặc deploy.
+  Chi tiết tại [progress2.3](phase%202/PHASE_2_3_PROGRESS.md).
+
+- 2026-10-12: Chạy lại seed lớp/lịch/course units local, giữ cohort hiện tại,
+  xác minh 5 Unit/10 Session. Tư vấn bài học CKEditor/HTML → Material ARTICLE
+  trong Unit, PDF → FILE hoặc attachment; không thêm bảng unit details trùng
+  nội dung. ARTICLE/authoring vẫn planned, không migrate/implement/deploy hoặc
+  chạy lại BE tests. Ghi ở [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-12: Phase 2.3 thêm thứ/giờ địa phương trên lịch Student và hai PATCH
+  ADMIN sửa giờ một/bulk Session, giữ ngày, atomic rollback và kiểm trùng mentor.
+  Seed local đã tạo cohort HTML/CSS 10 buổi thứ 3/thứ 7 13/10–14/11, rerun không
+  tạo trùng. `pnpm check` 291/291 pass (27 suites), suite tập trung 36/36,
+  `pnpm test:http` 23/23 pass (2 suites);
+  không migration/deploy/VPS hoặc thay payment/access. Evidence chi tiết:
+  [progress 2.3](phase%202/PHASE_2_3_PROGRESS.md) và
+  [flow/API](../api_flow/PHASE_2_3_flow-api-breakdown.md#51-admin-sửa-giờ-một-buổi-và-bulk).
+
 Phase 0: Hạ tầng và quy ước chung
 ↓
 Phase 1: Registration + User + Authentication
@@ -17,6 +40,23 @@ Assignment
 Compiler / Judge
 
 ## Documentation updates
+
+- 2026-10-12: User chốt mọi account tạo mới password6–128. Sửa CreateUserDto/
+  Swagger từ12→6, FE schema/error/form hint6 và active runbooks. BE check298tests/
+  27suites pass; HTTP27/27 gồm tạo/login6 và bounds5/128/129 cho cả4role. FE schema
+  full unit138tests/type-check/build/boundaries/targeted Biome và identity E2E1test pass;
+  full FE lint còn lỗi CRLF baseline. Chưa deploy. [Flow/API](../api_flow/PHASE_1_FLOW.md).
+
+- 2026-10-12: Theo yêu cầu FE, implement trước ba Student Material GET list/detail/
+  download cho FILE/VIDEO + migration read slice, current policy gates, signed GET
+  pinned version TTL<=60s và contract/Postman. `pnpm check`291tests/27suites pass;
+  focused Student15 integration tests, full HTTP23/23tests pass. Rà source
+  FE ghi missing proxy/role MANAGER/My Classes/schedule/roster integration và backlog
+  authoring/review/release/ARTICLE/progress/account. Chưa deploy/VPS/browser smoke;
+  không coi CRUD/review/release3.3 hoặc toàn3.4 đã hoàn tất. Chi tiết
+  [progress3.4](phase%203/PHASE_3_4_PROGRESS.md),
+  [flow/API](../api_flow/PHASE_3_4_FLOW.md),
+  [FE audit](../api_flow/PHASE_3_4_FE_API_GAPS.md).
 
 - 2026-10-12: Hoàn thiện plan3.3 sau nghiệm thu3.2; hợp nhất ARTICLE HTML/FILE/
   VIDEO trong domain/schema/API/refs, Manager/Mentor review và Classes release.

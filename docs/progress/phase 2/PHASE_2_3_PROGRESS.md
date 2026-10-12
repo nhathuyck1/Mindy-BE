@@ -1,12 +1,51 @@
 # Phase 2.3 — Tiến độ My Classes + Personal Schedule
 
-Cập nhật: **2026-10-10**.
+Cập nhật: **2026-10-12**.
 Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../../implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
 Contract FE: [PHASE_2_3_FE_CONTRACT.md](../../PHASE_2_3_FE_CONTRACT.md).
 Flow: [PHASE_2_3_FLOW.md](../../api_flow/PHASE_2_3_FLOW.md).
 API breakdown: [PHASE_2_3_flow-api-breakdown.md](../../api_flow/PHASE_2_3_flow-api-breakdown.md).
 
 ## Hiện trạng
+
+### Seed ba Course ngày 2026-10-12 (yêu cầu tiếp theo)
+
+- Đổi current demo seed thành ba lớp: HTML-CSS-101/JS-101 ONLINE 15:00–17:00,
+  PY-101 OFFLINE 09:00–11:00 Phòng Lab2; thứ3/thứ7,10 buổi/lớp,13/10–14/11.
+- Giữ HTML cohort đã có; local seed tạo thêm2 lớp JS/Python, mỗi lớp copy toàn
+  bộ Course Unit (5/6/4) và chia đủ10 session theo syllabus. Guard giữ current
+  cohort theo từng Course để rerun không sinh trùng. Slot generator nhận giờ
+  sáng/chiều; unit partition không mất/trùng slot khi số units khác nhau.
+- Query DB development xác minh3 lớp OPEN,2 ONLINE/1 OFFLINE,15 Class Unit,
+  30 Session và0 mentor conflict; rerun tạo0 lớp. Không seed Material/enrollment.
+- Unit helper **10/10 pass**; `pnpm check` **298/298 pass (27 suites)** trên DB
+  `_test` riêng, lint/type-check/build pass. Không chạy lại HTTP cho thay đổi seed;
+  HTTP23/23 ở lượt API sửa giờ trước vẫn là evidence riêng. Không deploy/VPS.
+
+### Bổ sung ngày 2026-10-12 — thứ, giờ và sửa giờ Session
+
+- GET `/api/v1/me/schedule` thêm `dayOfWeek` (Monday–Sunday), `startTime`/`endTime`
+  (`HH:mm`); tính theo response `timeZone`, giữ startsAt/endsAt đầy đủ. Test ngày
+  UTC lệch ngày địa phương, buổi qua đêm và timezone khác; không thêm cột/migration.
+- ADMIN: PATCH `/api/v1/admin/classes/:classId/sessions/:sessionId` và
+  `/sessions/bulk`, body startTime/endTime; bulk thêm 1–100 sessionIds không trùng.
+  Giữ từng ngày start/end theo APP_TIME_ZONE; chỉ Class DRAFT/OPEN/IN_PROGRESS,
+  Session SCHEDULED. Kiểm range, ownership theo class, overlap và mentor calendar;
+  class row lock + mentor advisory lock, bulk rollback toàn bộ.
+- Unit test clock conversion có DST gap/fold; PostgreSQL test single, bulk retry,
+  missing/foreign Session, state/range, overlap/adjacency, overnight và concurrent
+  edits giữa hai Class cùng Mentor. Không thay commerce/payment/access policy.
+- Seed thêm cohort HTML/CSS 10 buổi thứ 3/thứ 7 15:00–17:00 (+07), hai buổi/unit;
+  bỏ slot đã bắt đầu, giữ cohort còn trong period khi chạy lại để không trùng mentor.
+  Đã chạy trên DB development local: tạo `HTML-CSS-101-10S-20261013`, 13/10–14/11,
+  query xác minh 10 Session, positions 1–5 mỗi position hai Session; rerun tạo 0 lớp.
+  Không thêm enrollment, không xác nhận payment giả, không deploy/VPS.
+- Local: suite tập trung **36/36 pass**; full `pnpm check` **291/291 (27 suites)**,
+  lint/type-check/build pass trên dedicated `_test` DB. `pnpm test:http` **23/23**
+  pass (2 suites), gồm auth/DTO/routing/single/bulk/rollback và các field lịch.
+  Các thay đổi Materials/Files có sẵn trong checkout không thuộc
+  scope bổ sung lịch này.
+- Đã đồng bộ FE contract, flow/API breakdown, Phase 2 contract và README seed.
 
 **Đã implement và chạy pass các suite local hiện có, gồm PostgreSQL/HTTP; chưa review
 query plan trên fixture lớn, chưa deploy.**

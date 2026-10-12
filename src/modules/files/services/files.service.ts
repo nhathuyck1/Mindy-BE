@@ -4,7 +4,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
-import { DataSource, type EntityManager } from 'typeorm';
+import { DataSource, type EntityManager, In } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import type { CreateUploadIntentDto } from '../dtos/create-upload-intent.dto.js';
@@ -28,6 +28,90 @@ export class FilesService {
   private enabled(): void {
     if (!this.config.getOrThrow<boolean>('MINIO_ENABLED'))
       throw new FileException('FILE_STORAGE_DISABLED', HttpStatus.SERVICE_UNAVAILABLE);
+  }
+  /** Public read projection: Materials filters READY references before count/pagination. */
+  readyReadProjection(manager: EntityManager): {
+    readonly query: string;
+    readonly parameters: Record<string, unknown>;
+  } {
+    const query = manager
+      .getRepository(FileObjectEntity)
+      .createQueryBuilder('read_file')
+      .select('read_file.id', 'id')
+      .addSelect('read_file.courseUnitId', 'course_unit_id')
+      .addSelect('read_file.kind', 'kind')
+      .where("read_file.status = 'READY'")
+      .andWhere('read_file.deletedAt IS NULL');
+    return { query: query.getQuery(), parameters: query.getParameters() };
+  }
+
+  /** Metadata only; caller owns Material visibility. Upload ownership is not a read entitlement. */
+  async readSummaries(
+    ids: readonly string[],
+    manager: EntityManager,
+  ): Promise<Map<string, FileSummary>> {
+    if (ids.length === 0) return new Map();
+    const files = await manager
+      .getRepository(FileObjectEntity)
+      .findBy({ id: In([...ids]), status: 'READY' });
+    return new Map(
+      files.flatMap((file): [string, FileSummary][] => {
+        if (
+          file.deletedAt !== null ||
+          file.mimeType === null ||
+          file.sizeBytes === null ||
+          file.kind === null
+        )
+          return [];
+        return [
+          [
+            file.id,
+            {
+              id: file.id,
+              ownerUserId: file.ownerUserId,
+              courseUnitId: file.courseUnitId,
+              status: 'READY',
+              originalFilename: file.originalName,
+              mimeType: file.mimeType,
+              sizeBytes: Number(file.sizeBytes),
+              kind: file.kind,
+            },
+          ],
+        ];
+      }),
+    );
+  }
+
+  /** Internal capability: only call after the owning feature authorizes the current Material. */
+  async signReadReference(
+    id: string,
+    courseUnitId: string,
+  ): Promise<{
+    readonly url: string;
+    readonly expiresAt: Date;
+  }> {
+    const file = await this.load(this.db.manager, id);
+    if (
+      file.courseUnitId !== courseUnitId ||
+      file.status !== 'READY' ||
+      file.deletedAt !== null ||
+      !file.objectKey ||
+      !file.objectVersionId
+    )
+      throw new FileException('FILE_NOT_READY');
+    this.enabled();
+    const ttl = this.config.getOrThrow<number>('FILE_GET_TTL_SECONDS');
+    const issuedAt = new Date();
+    try {
+      const url = await this.storage.presignGet(
+        { bucket: file.bucket, key: file.objectKey, versionId: file.objectVersionId },
+        file.originalName,
+        ttl,
+      );
+      return { url, expiresAt: new Date(issuedAt.getTime() + ttl * 1000) };
+    } catch {
+      throw new FileException('FILE_STORAGE_UNAVAILABLE', HttpStatus.SERVICE_UNAVAILABLE);
+    }
   }
   async createIntent(
     principal: AuthenticatedUser,
