@@ -148,6 +148,7 @@ export const environmentSchema = Joi.object({
         .allow(''),
     }),
   FILE_PUT_TTL_SECONDS: Joi.number().integer().min(30).max(600).default(600),
+  FILE_GET_TTL_SECONDS: Joi.number().integer().min(1).max(60).default(60),
   FILE_INTENT_TTL_SECONDS: Joi.number().integer().min(600).max(3600).default(1800),
   FILE_MAX_OPEN_INTENTS: Joi.number().integer().min(1).max(100).default(20),
   FILE_JOB_ENABLED: Joi.boolean().default(true),

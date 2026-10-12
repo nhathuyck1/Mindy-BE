@@ -18,6 +18,7 @@ import { UserRole } from '../../modules/users/user-role.enum.js';
 import { UserStatus } from '../../modules/users/user-status.enum.js';
 import dataSource from '../data-source.js';
 import { COURSE_IMAGE_URLS, seedCourseImages } from './helpers/course-images.js';
+import { createDemoTimetable, splitDemoTimetable } from './helpers/demo-timetable.js';
 
 /**
  * Development seed for the catalog and classes: programming categories, courses with units
@@ -65,6 +66,8 @@ interface ClassSeed {
   readonly startTime: string;
   readonly roomName: string | null;
   readonly meetingUrl: string | null;
+  /** Optional current demo timetable, distributed in course-unit order. */
+  readonly sessionStartsAt?: readonly Date[];
 }
 
 const CATEGORIES: readonly CategorySeed[] = [
@@ -272,6 +275,40 @@ const CLASSES: readonly ClassSeed[] = [
   },
 ];
 
+const DEMO_CLASSES: readonly Omit<ClassSeed, 'code' | 'status' | 'weekdays' | 'sessionStartsAt'>[] =
+  [
+    {
+      courseCode: 'HTML-CSS-101',
+      name: 'HTML & CSS — Online 10 buổi chiều thứ 3-7',
+      mentorEmail: 'mentor.frontend@gmail.com',
+      deliveryMode: DeliveryMode.ONLINE,
+      maxStudents: 25,
+      startTime: '15:00',
+      roomName: null,
+      meetingUrl: 'https://meet.google.com/mindy-html-css-10s',
+    },
+    {
+      courseCode: 'JS-101',
+      name: 'JavaScript — Online 10 buổi chiều thứ 3-7',
+      mentorEmail: 'mentor.backend@gmail.com',
+      deliveryMode: DeliveryMode.ONLINE,
+      maxStudents: 25,
+      startTime: '15:00',
+      roomName: null,
+      meetingUrl: 'https://meet.google.com/mindy-js-10s',
+    },
+    {
+      courseCode: 'PY-101',
+      name: 'Python — Offline 10 buổi sáng thứ 3-7',
+      mentorEmail: 'mentor.frontend@gmail.com',
+      deliveryMode: DeliveryMode.OFFLINE,
+      maxStudents: 15,
+      startTime: '09:00',
+      roomName: 'Phòng Lab 2',
+      meetingUrl: null,
+    },
+  ];
+
 function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }
@@ -362,12 +399,13 @@ async function seedClasses(
   manager: EntityManager,
   mentors: Map<string, UserEntity>,
   startDate: string,
+  seeds: readonly ClassSeed[],
 ): Promise<number> {
   const classes = manager.getRepository(ClassEntity);
   const classUnits = manager.getRepository(ClassUnitEntity);
   const sessions = manager.getRepository(ClassSessionEntity);
   let created = 0;
-  for (const seed of CLASSES) {
+  for (const seed of seeds) {
     if (await classes.exists({ where: { code: seed.code } })) {
       continue;
     }
@@ -383,6 +421,11 @@ async function seedClasses(
       where: { courseId: course.id },
       order: { unitNumber: 'ASC' },
     });
+    const demoUnitStarts = seed.sessionStartsAt
+      ? splitDemoTimetable(seed.sessionStartsAt, courseUnits.length)
+      : undefined;
+    const firstSession = seed.sessionStartsAt?.at(0);
+    const lastSession = seed.sessionStartsAt?.at(-1);
 
     const classEntity = await classes.save(
       classes.create({
@@ -390,15 +433,17 @@ async function seedClasses(
         mentorId: mentor.id,
         code: seed.code,
         name: seed.name,
-        startDate,
-        endDate: addDays(startDate, courseUnits.length * 7 - 1),
+        startDate: firstSession ? toLocalDate(firstSession, TIME_ZONE) : startDate,
+        endDate: lastSession
+          ? toLocalDate(new Date(lastSession.getTime() + SESSION_MINUTES * 60_000), TIME_ZONE)
+          : addDays(startDate, courseUnits.length * 7 - 1),
         maxStudents: seed.maxStudents,
         deliveryMode: seed.deliveryMode,
         meetingUrl: seed.meetingUrl,
         status: seed.status,
       }),
     );
-    // Same shape the application produces: one class unit per course unit, one week each.
+    // Same shape the application produces: one class unit per course unit.
     for (const [unitIndex, courseUnit] of courseUnits.entries()) {
       const classUnit = await classUnits.save(
         classUnits.create({
@@ -409,14 +454,20 @@ async function seedClasses(
           status: ClassUnitStatus.LOCKED,
         }),
       );
-      await sessions.save(
-        seed.weekdays.map((weekday, sessionIndex) => {
+      const unitStartsAt =
+        demoUnitStarts?.[unitIndex] ??
+        seed.weekdays.map((weekday) => {
           const date = addDays(startDate, unitIndex * 7 + weekday - 1);
-          const startsAt = new Date(`${date}T${seed.startTime}:00${TIME_OFFSET}`);
+          return new Date(`${date}T${seed.startTime}:00${TIME_OFFSET}`);
+        });
+      await sessions.save(
+        unitStartsAt.map((startsAt, sessionIndex) => {
           return sessions.create({
             classUnitId: classUnit.id,
             sessionNumber: sessionIndex + 1,
-            title: `Tuần ${unitIndex + 1} · Buổi ${sessionIndex + 1}: ${courseUnit.title}`,
+            title: seed.sessionStartsAt
+              ? `Buổi ${seed.sessionStartsAt.indexOf(startsAt) + 1}: ${courseUnit.title}`
+              : `Tuần ${unitIndex + 1} · Buổi ${sessionIndex + 1}: ${courseUnit.title}`,
             startsAt,
             endsAt: new Date(startsAt.getTime() + SESSION_MINUTES * 60_000),
             roomName: seed.roomName,
@@ -437,19 +488,49 @@ async function seedCoursesAndClasses(source: DataSource): Promise<void> {
     throw new Error('Demo data is not seeded in production unless SEED_DEMO_CONFIRM=YES is set');
   }
 
-  const startDate = firstClassMonday(new Date());
+  const now = new Date();
+  const startDate = firstClassMonday(now);
+  const demoSeeds: ClassSeed[] = DEMO_CLASSES.map((seed) => {
+    const sessionStartsAt = createDemoTimetable(now, seed.startTime);
+    const firstSession = sessionStartsAt[0];
+    if (!firstSession) throw new Error('Missing first demo session');
+    return {
+      ...seed,
+      code: `${seed.courseCode}-10S-${toLocalDate(firstSession, TIME_ZONE).replaceAll('-', '')}`,
+      status: ClassStatus.OPEN,
+      weekdays: [2, 6],
+      sessionStartsAt,
+    };
+  });
   const summary = await source.transaction(async (manager) => {
     const categories = await seedCategories(manager);
     const courses = await seedCourses(manager, categories);
     const images = await seedCourseImages(manager);
     const mentors = await findMentors(manager);
-    const classes = await seedClasses(manager, mentors, startDate);
-    return { courses, classes, images };
+    let classes = await seedClasses(manager, mentors, startDate, CLASSES);
+    const demoCodes: string[] = [];
+    // Preserve a current cohort of each course, avoiding overlapping copies on later runs.
+    for (const seed of demoSeeds) {
+      const currentDemo = await manager
+        .getRepository(ClassEntity)
+        .createQueryBuilder('class')
+        .where('class.code LIKE :prefix', { prefix: `${seed.courseCode}-10S-%` })
+        .andWhere('class.endDate >= :today', { today: toLocalDate(now, TIME_ZONE) })
+        .andWhere('class.status IN (:...statuses)', {
+          statuses: [ClassStatus.DRAFT, ClassStatus.OPEN, ClassStatus.IN_PROGRESS],
+        })
+        .orderBy('class.startDate', 'DESC')
+        .getOne();
+      if (!currentDemo) classes += await seedClasses(manager, mentors, startDate, [seed]);
+      demoCodes.push(currentDemo?.code ?? seed.code);
+    }
+    return { courses, classes, images, demoCodes };
   });
 
   console.log(
     `Course/class seed done: ${summary.courses} course(s) and ${summary.classes} class(es) created; ` +
-      `${summary.images} missing course image(s) filled; new classes start on ${startDate}. ` +
+      `${summary.images} missing course image(s) filled; standard timetable anchor ${startDate}. ` +
+      `Current demos: ${summary.demoCodes.join(', ')}; 10 Tuesday/Saturday sessions each (+07:00). ` +
       'Existing images and other existing data were preserved.',
   );
 }

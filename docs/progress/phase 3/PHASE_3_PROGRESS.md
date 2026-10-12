@@ -1,9 +1,14 @@
 # Phase 3 — Tiến độ File + Materials
 
-Cập nhật: **2026-10-11**.
+Cập nhật: **2026-10-12**.
 Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
 ## Hiện trạng
+
+- 2026-10-12: 3.2 đã nghiệm thu VPS theo xác nhận user (PDF/MP4 READY/private
+  objects có evidence); hoàn thiện plan3.3 typed ARTICLE/FILE/VIDEO, refs/sanitizer/
+  review/release và gate local + server mỗi slice. Chưa implement3.3; Student/
+  signed GET/preview/video runtime ở3.4. Xem plan/progress3.3.
 
 - 2026-10-11: User muốn full flow Phase3 với ARTICLE HTML, FILE, VIDEO MP4 private;
   cập nhật contract3.3, sanitize/reference/read/video gates. Không làm HLS hoặc
@@ -35,9 +40,10 @@ Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE
   User xác nhận Course Unit 1–N Material, tài liệu chính theo DBML; chọn Session
   link tùy chọn, không đổi ownership. Manager quản lý/sửa/duyệt; Mentor upload chờ duyệt.
 
-**3.1 và 3.2 hoàn tất local; Files upload/storage/validation API đã có.
+**3.1 hoàn tất local; 3.2 hoàn tất local và nghiệm thu VPS theo user2026-10-12.
+Files upload/storage/validation API đã có.
 Materials persistence/review/Student download thuộc 3.3/3.4 chưa triển khai.
-Migrations mới chỉ được nghiệm thu trên database test riêng.**
+Materials chưa có migration; không dùng evidence3.2 làm nghiệm thu3.3.**
 
 - Điều phối mới: user làm Phase 3, người khác làm Phase 2.3 song song. Không dùng
   2.3 như điều kiện bắt đầu P3; tích hợp navigation là gate nghiệm thu riêng.
@@ -64,9 +70,9 @@ Migrations mới chỉ được nghiệm thu trên database test riêng.**
 |---|---|---|
 | Lập plan | Hoàn tất | Plan, tiến độ riêng và index; schema/policy/API/milestone/test/rollout dự kiến. |
 | 3.1 Policy + contract | Hoàn tất code/test local D1–D6 | Role, domain policy/review transitions, facade/context providers; pnpm check 171 tests/16 suites + build, HTTP 5/5. |
-| 3.2 Upload slice | Hoàn tất local | Files/MinIO/migration/worker/reference; full check 217, focused Files 42, HTTP 19 pass. |
-| 3.3 Material management | Đã lập kế hoạch, chưa implement | Plan riêng + flow/API/progress; MaterialsModule hiện chỉ export policy, chưa persistence/review/release API. |
-| 3.4 Student access | Chưa thực hiện | Chưa có material list/download hoặc FE contract Phase 3. |
+| 3.2 Upload slice | Hoàn tất local + nghiệm thu VPS theo user2026-10-12 | Files/MinIO/migration/worker/reference; PDF/MP4 READY/private objects; chi tiết progress3.2. |
+| 3.3 Material management | Authoring/review/release vẫn planned | Read persistence FILE/VIDEO tối thiểu đã thêm trước theo yêu cầu3.4; ARTICLE/refs/audits/writes cần migration additive mới. |
+| 3.4 Student access | Ba FILE/VIDEO GET local verified | List/detail/download + signed pinned-version TTL<=60s + FE contract; chưa ARTICLE/staff preview/FE integration/VPS. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
 | 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
 | 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 

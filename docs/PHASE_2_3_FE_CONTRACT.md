@@ -103,9 +103,26 @@ ví dụ tuần bắt đầu 12/10/2026 giờ Việt Nam: `from=2026-10-11T17:00
 Response `{ items, page, pageSize, total, timeZone, from, to, asOf }`; timestamp là ISO
 UTC, hiển thị theo `timeZone` (`APP_TIME_ZONE`, hiện `Asia/Ho_Chi_Minh`). Mỗi event:
 `sessionId`, `sessionNumber`, `sessionTitle`, `sessionStatus`, `startsAt`, `endsAt`,
+`dayOfWeek`, `startTime`, `endTime`,
 `roomName`, `classId`, `classCode`, `className`, `classStatus`, `courseId`,
 `courseTitle`, `classUnitId`, `unitTitle`, `deliveryMode`, `mentor: { id, displayName }`,
 `enrollmentId`, `accessMode` (`FULL` | `CASH_PREVIEW`).
+
+Bổ sung ngày 2026-10-12: `dayOfWeek` là tên tiếng Anh đầy đủ
+`Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday`, tính từ `startsAt`
+theo `timeZone` của response. `startTime`/`endTime` là giờ địa phương 24 giờ dạng
+`HH:mm`, ví dụ `07:30`/`09:30`. Cả ba là field dẫn xuất, không lưu trùng trong DB;
+`startsAt`/`endsAt` vẫn là timestamp đầy đủ. Buổi qua đêm giữ thứ của ngày bắt đầu;
+giờ kết thúc có thể nhỏ hơn giờ bắt đầu, FE dùng timestamp để biết ngày kết thúc.
+
+Admin sửa giờ một buổi bằng `PATCH /admin/classes/:classId/sessions/:sessionId`
+hoặc nhiều buổi bằng `PATCH /admin/classes/:classId/sessions/bulk`.
+Body chứa `startTime`/`endTime` bắt buộc; bulk thêm `sessionIds` (1–100 UUID v4
+không trùng, cùng lớp). Giữ ngày hiện tại theo APP_TIME_ZONE, lưu lại timestamps;
+bulk áp dụng cùng giờ cho tất cả buổi đã chọn và rollback toàn bộ nếu có lỗi.
+Refetch class detail và lịch sau success. Quyền ADMIN, Class DRAFT/OPEN/IN_PROGRESS,
+Session SCHEDULED; không mở quyền sửa cho Student/Mentor/Manager.
+Request/response/error chi tiết tại [API breakdown](./api_flow/PHASE_2_3_flow-api-breakdown.md#51-admin-sửa-giờ-một-buổi-và-bulk).
 
 Click event → mở lớp theo `accessMode` rồi định vị `sessionId` trong `units[].sessions[]`.
 Không có session detail endpoint riêng. Event CANCELLED: nhãn hủy, không nút tham gia.

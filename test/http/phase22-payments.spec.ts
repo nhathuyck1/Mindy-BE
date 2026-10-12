@@ -1,5 +1,5 @@
 import { type ChildProcess, fork } from 'node:child_process';
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { PayOS } from '@payos/node';
 import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -122,7 +122,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
   it('lets admins create managers who can authenticate without inheriting other role permissions', async () => {
     const input = {
       email: 'manager@http.test',
-      password: 'Http-test-password1!',
+      password: '123456',
       displayName: 'Material Manager',
       role: 'MANAGER',
     };
@@ -154,6 +154,40 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     expect((await request('/admin/courses', rotated)).status).toBe(403);
     expect((await request('/me/cart', rotated)).status).toBe(403);
   });
+
+  it.each(['ADMIN', 'MANAGER', 'MENTOR', 'STUDENT'])(
+    'uses the same 6–128 character creation password policy for %s',
+    async (role) => {
+      const input = {
+        email: `${randomUUID()}@http.test`,
+        displayName: 'Password policy test',
+        role,
+      };
+      for (const password of ['12345', 'a'.repeat(129)]) {
+        expect((await request('/admin/users', adminCookie, { ...input, password })).status).toBe(
+          422,
+        );
+      }
+      const created = await request('/admin/users', adminCookie, { ...input, password: '123456' });
+      expect(created.status).toBe(201);
+      expect(await created.json()).toMatchObject({ email: input.email, role });
+      const login = await request('/auth/login', undefined, {
+        email: input.email,
+        password: '123456',
+      });
+      expect(login.status).toBe(200);
+      expect(await login.json()).toMatchObject({ user: { role } });
+      expect(
+        (
+          await request('/admin/users', adminCookie, {
+            ...input,
+            email: `${randomUUID()}@http.test`,
+            password: 'a'.repeat(128),
+          })
+        ).status,
+      ).toBe(201);
+    },
+  );
 
   it('enforces auth/ownership/DTO, signed callback, own-order summary, full access and public privacy', async () => {
     expect((await request(`/me/classes/${classId}`)).status).toBe(401);
@@ -424,7 +458,19 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
       timeZone: 'Asia/Ho_Chi_Minh',
       total: 1,
       pageSize: 100,
-      items: [{ classId, enrollmentId: row.enrollmentId, accessMode: 'CASH_PREVIEW' }],
+      items: [
+        {
+          classId,
+          enrollmentId: row.enrollmentId,
+          accessMode: 'CASH_PREVIEW',
+          startTime: '08:00',
+          endTime: '09:00',
+          dayOfWeek: new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Ho_Chi_Minh',
+            weekday: 'long',
+          }).format(from),
+        },
+      ],
     });
     const offsetRange = `from=${encodeURIComponent(`${row.startDate}T00:00:00+07:00`)}&to=${to.toISOString()}`;
     expect(
@@ -479,5 +525,120 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
       items: { accessMode: string }[];
     };
     expect(fullEvents.items.map((event) => event.accessMode)).toEqual(['FULL']);
+  });
+
+  it('admin can edit one session or a bulk selection with strict validation and atomic rollback', async () => {
+    type Detail = {
+      id: string;
+      courseId: string;
+      startDate: string;
+      mentor: { id: string };
+      units: { id: string; sessions: { id: string; startsAt: string; endsAt: string }[] }[];
+    };
+    const original = (await (
+      await request(`/admin/classes/${classId}`, adminCookie)
+    ).json()) as Detail;
+    const date = original.startDate;
+    const nextDate = new Date(Date.parse(`${date}T00:00:00Z`) + 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const created = await request('/admin/classes', adminCookie, {
+      code: `EDIT-${randomUUID()}`,
+      courseId: original.courseId,
+      mentorId: original.mentor.id,
+      name: 'Time edit test',
+      startDate: date,
+      endDate: nextDate,
+      maxStudents: 10,
+      deliveryMode: 'ONLINE',
+    });
+    expect(created.status).toBe(201);
+    const draft = (await created.json()) as Detail;
+    const unitId = draft.units[0]?.id;
+    if (!unitId) throw new Error('Missing copied unit');
+    const route = `/admin/classes/${draft.id}/sessions`;
+    for (const [sessionDate, start, end] of [
+      [date, '15:00', '17:00'],
+      [nextDate, '15:00', '17:00'],
+      [date, '12:00', '13:00'],
+    ]) {
+      expect(
+        (
+          await request(route, adminCookie, {
+            classUnitId: unitId,
+            title: 'Session',
+            startsAt: `${sessionDate}T${start}:00+07:00`,
+            endsAt: `${sessionDate}T${end}:00+07:00`,
+          })
+        ).status,
+      ).toBe(201);
+    }
+    const detail = (await (
+      await request(`/admin/classes/${draft.id}`, adminCookie)
+    ).json()) as Detail;
+    const sessions = detail.units[0]?.sessions ?? [];
+    const first = sessions.find(
+      (session) => session.startsAt === new Date(`${date}T15:00:00+07:00`).toISOString(),
+    );
+    const second = sessions.find(
+      (session) => session.startsAt === new Date(`${nextDate}T15:00:00+07:00`).toISOString(),
+    );
+    if (!first || !second) throw new Error('Missing scheduled sessions');
+    const times = { startTime: '07:30', endTime: '09:30' };
+    const single = `${route}/${first.id}`;
+    const bulk = `${route}/bulk`;
+    expect((await request(single, undefined, times, 'PATCH')).status).toBe(401);
+    for (const cookie of [studentCookie, mentorCookie]) {
+      expect((await request(single, cookie, times, 'PATCH')).status).toBe(403);
+      expect(
+        (await request(bulk, cookie, { ...times, sessionIds: [first.id, second.id] }, 'PATCH'))
+          .status,
+      ).toBe(403);
+    }
+    expect((await request(single, adminCookie, times, 'PATCH')).status).toBe(200);
+    expect(
+      (await request(bulk, adminCookie, { ...times, sessionIds: [first.id, second.id] }, 'PATCH'))
+        .status,
+    ).toBe(200);
+    for (const body of [
+      { ...times, sessionIds: [] },
+      { ...times, sessionIds: [first.id, first.id] },
+      { ...times, sessionIds: [first.id], startTime: '7:30' },
+      { ...times, sessionIds: [first.id], startsAt: first.startsAt },
+    ])
+      expect((await request(bulk, adminCookie, body, 'PATCH')).status).toBe(422);
+    expect(
+      (await request(single, adminCookie, { startTime: '07:30', endTime: '07:30' }, 'PATCH'))
+        .status,
+    ).toBe(422);
+    expect(
+      (
+        await request(
+          bulk,
+          adminCookie,
+          { ...times, sessionIds: [first.id, randomUUID()] },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(404);
+    const conflict = await request(
+      bulk,
+      adminCookie,
+      { startTime: '12:30', endTime: '13:30', sessionIds: [first.id, second.id] },
+      'PATCH',
+    );
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toMatchObject({ code: 'CLASS_SESSION_OVERLAP' });
+    const after = (await (
+      await request(`/admin/classes/${draft.id}`, adminCookie)
+    ).json()) as Detail;
+    expect(after.units[0]?.sessions.find((session) => session.id === first.id)).toMatchObject({
+      startsAt: `${date}T00:30:00.000Z`,
+      endsAt: `${date}T02:30:00.000Z`,
+    });
+    expect(after.units[0]?.sessions.find((session) => session.id === second.id)).toMatchObject({
+      startsAt: `${nextDate}T00:30:00.000Z`,
+      endsAt: `${nextDate}T02:30:00.000Z`,
+    });
   });
 });

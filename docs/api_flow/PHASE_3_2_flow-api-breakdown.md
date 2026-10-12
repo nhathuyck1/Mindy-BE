@@ -1,9 +1,15 @@
 # Phase 3.2 — API breakdown cho FE upload
 
-Cập nhật: 2026-10-10. Các Files API bên dưới đã implement trong repo; chưa xác
-minh release đang chạy trên VPS. [Flow FE](PHASE_3_2_FLOW.md).
+Cập nhật: 2026-10-12. Các Files API đã implement; user xác nhận nghiệm thu VPS
+xong và chốt 3.2. Contract giữ nguyên. [Flow FE](PHASE_3_2_FLOW.md).
 
 ## 1. Contract chung
+
+Nếu chưa có MANAGER: ADMIN login `POST /api/v1/auth/login`, dùng cookie gọi
+`POST /api/v1/admin/users` với email/displayName/password6..128/role MANAGER;
+phone optional, không có status input. Success201 user ACTIVE, login được ngay.
+Login lại bằng Manager trước Files requests. Public register không nhận role và
+chỉ tạo STUDENT; không dùng demo seed (không tạo Manager) trên VPS cho bước này.
 
 - BE prefix `/api/v1`; xác thực bằng cookie `access_token`. Browser gọi BE với
   `credentials: 'include'` hoặc Axios `withCredentials: true`; không cần tự đọc token.
@@ -115,6 +121,12 @@ if (!putResponse.ok) {
 Success thông thường HTTP 200; kiểm response.ok, không chờ JSON từ PUT. Chỉ
 gọi complete sau success. Nếu muốn phần trăm upload, dùng upload progress của
 XHR/Axios; fetch cơ bản không có callback phần trăm. PUT xong 100% chưa nghĩa READY.
+
+Postman manual test phải chọn file trong binary picker và thấy filename trước
+Send. PUT200 với picker vẫn `Select file` không chứng minh gửi file; body rỗng
+có thể200 rồi worker báo FILE_SIZE_MISMATCH. Khai báo Size(bytes) đúng file, không
+Size on disk; intent FAILED phải tạo mới. User đã cung cấp ảnh ca này trên VPS,
+chưa có READY evidence. Postman web cần agent đọc file local hoặc Desktop app.
 
 Failure có thể là network/CORS/TLS hoặc XML error của S3, không phải error envelope
 của BE. Với 403, kiểm URL expiry và headers, không xử lý như lỗi session BE.
@@ -249,6 +261,44 @@ FE không POST complete mỗi lần poll.
   FE cần giữ reference của session upload phù hợp, không lưu signed URL dài hạn.
 
 ## 8. Checklist FE/BE trước tích hợp
+
+Trạng thái chốt 2026-10-12: user xác nhận nghiệm thu VPS xong, hoàn tất 3.2 và
+bàn giao 3.3. Các ca ngoài ảnh PDF/MP4 được ghi theo xác nhận user; lượt này
+không tự chạy browser CORS/quyền/retry hoặc BE tests/deploy mới.
+
+Evidence ảnh 2026-10-11: Postman user trên VPS xác nhận PDF READY,
+HTTP200, declaredSizeBytes = sizeBytes = 75758, application/pdf, kind PDF,
+errorCode null, metadataStatus PENDING. User tiếp tục cung cấp MP4 READY,
+fileId `91f575a9-df4b-4b33-b8c8-7680619244e2`, declared/verified 1583534 bytes,
+video/mp4, kind VIDEO, errorCode null, metadataStatus PENDING. MinIO Console
+qua SSH tunnel hiện object token trong final/<fileId> và bucket PRIVATE.
+PDF/MP4 happy paths pass theo ảnh; nghiệm thu toàn slice đã chốt theo xác nhận
+user ngày 2026-10-12.
+Files GET hiện chỉ trả trạng thái, chưa có API xem/tải nội dung (3.4).
+Storage hostname là S3 endpoint private; MinIO Console riêng tại port9001.
+
+Các mốc chuẩn bị trước evidence READY (lịch sử):
+
+User báo public storage health200; tiếp theo enable Files với matching public
+URL và recreate bằng Files override. Workflow đã thêm auto-select override khi
+VPS có root env provisioning; patch local chưa deploy. PUT/READY/CORS còn pending.
+
+User đã cung cấp provisioning output ready: private bucket/versioning/backend
+credentials pass trên VPS. Tiếp theo published storage route + matching public
+URL, sau đó bật flag/test APIs; chưa có evidence public PUT/READY/browser CORS.
+
+User thông báo deploy xong sau recovery; bước tiếp theo là provision MinIO giữ
+flag false, tạo public storage route rồi mới bật Files/test API. Chưa đối chiếu
+release log hoặc có evidence upload READY; contract không đổi.
+
+Evidence recovery tiếp theo từ ảnh SSH user: MINIO_ENABLED=false, recreate API
+image `8aafd5a` Healthy; .git directory/env/base compose tồn tại. API đã phục hồi
+ở image này; release mới và upload READY/CORS chưa xác minh, Files vẫn disabled.
+
+Deploy kế tiếp fail ở checkout preflight theo screenshot, trước build/migrate/API
+switch. Workflow bổ sung named errors; ảnh SSH user dev/status clean, log mới
+`1258e24` chưa nêu condition. API cũ còn restarting trong diagnostics; không quy
+lỗi checkout cho MinIO hoặc thay Files API. API recovery được ghi riêng phía trên.
 
 2026-10-11 deploy diagnosis: release `8aafd5a` build/migrations pass nhưng API
 unhealthy; runtime logs user xác nhận MinIO bật với access/secret key rỗng làm

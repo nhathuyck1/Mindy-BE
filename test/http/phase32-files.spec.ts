@@ -260,7 +260,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     expect((await request(`/files/${intent.fileId}`, mentorCookie)).status).toBe(403);
     expect((await request(`/files/${intent.fileId}`, managerCookie)).status).toBe(200);
   });
-  it('publishes Swagger contracts without introducing Student download routes', async () => {
+  it('publishes Files Swagger contracts without exposing generic Student file downloads', async () => {
     const document = (await (await fetch(url.replace('/api/v1', '/docs-json'))).json()) as {
       paths: Record<string, unknown>;
     };
@@ -296,4 +296,132 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       });
     },
   );
+
+  it('documents all three Student material routes and enforces roles/UUID/query validation', async () => {
+    const doc = (await (await fetch(url.replace('/api/v1', '/docs-json'))).json()) as {
+      paths: Record<string, unknown>;
+    };
+    for (const path of [
+      '/api/v1/me/classes/{classId}/units/{classUnitId}/materials',
+      '/api/v1/me/classes/{classId}/materials/{materialId}',
+      '/api/v1/me/classes/{classId}/materials/{materialId}/download',
+    ])
+      expect(doc.paths).toHaveProperty(path);
+    const paths = [
+      `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials`,
+      `/me/classes/${scope.classId}/materials/00000000-0000-4000-8000-000000000000`,
+      `/me/classes/${scope.classId}/materials/00000000-0000-4000-8000-000000000000/download`,
+    ];
+    for (const path of paths) {
+      expect((await request(path)).status).toBe(401);
+      for (const cookie of [managerCookie, mentorCookie, adminCookie])
+        expect((await request(path, cookie)).status).toBe(403);
+      expect((await request(path, studentCookie)).status).toBe(403);
+    }
+    expect(
+      (
+        await request(
+          '/me/classes/not-a-uuid/materials/00000000-0000-4000-8000-000000000000',
+          studentCookie,
+        )
+      ).status,
+    ).toBe(400);
+    for (const query of ['page=0', 'pageSize=101', 'pageSize=1.5', 'studentId=forged'])
+      expect((await request(`${paths[0]}?${query}`, studentCookie)).status).toBe(422);
+  });
+
+  it('CASH pending cannot read/download; confirmed student follows list → detail → PDF/MP4 signed GET', async () => {
+    await db.query(
+      "UPDATE classes SET mentor_id=(SELECT id FROM users WHERE email='mentor@http.test') WHERE id=$1",
+      [scope.classId],
+    );
+    expect(
+      (await request('/me/cart/items', studentCookie, { classId: scope.classId })).status,
+    ).toBe(201);
+    const checkout = await request('/me/cart/checkout', studentCookie, { paymentType: 'CASH' });
+    expect(checkout.status).toBe(201);
+    const order = ((await checkout.json()) as { orders: { id: string; totalAmount: number }[] })
+      .orders[0];
+    if (!order) throw new Error('Missing cash order');
+    const created = (await db.query(
+      `INSERT INTO materials(course_unit_id,file_object_id,content_type,title,created_by,review_status,approved_revision,reviewed_by,reviewed_at,first_approved_at,published_at)
+      SELECT course_unit_id,id,CASE WHEN kind='VIDEO' THEN 'VIDEO'::material_content_type_enum ELSE 'FILE'::material_content_type_enum END,original_name,owner_user_id,'APPROVED',1,owner_user_id,now(),now(),now()
+      FROM file_objects WHERE status='READY' AND course_unit_id=$1 AND kind IN ('PDF','VIDEO') RETURNING id,content_type`,
+      [scope.courseUnitId],
+    )) as { id: string; content_type: string }[];
+    expect(created).toHaveLength(2);
+    for (const material of created)
+      expect(
+        (
+          await request(
+            `/me/classes/${scope.classId}/materials/${material.id}/download`,
+            studentCookie,
+          )
+        ).status,
+      ).toBe(403);
+    expect(
+      (
+        await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, {
+          receivedAmount: order.totalAmount,
+        })
+      ).status,
+    ).toBe(200);
+    const path = `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials`;
+    expect(await (await request(path, studentCookie)).json()).toMatchObject({
+      items: [],
+      total: 0,
+    });
+    await db.query("UPDATE class_units SET status='OPEN' WHERE id=$1", [scope.classUnitId]);
+    const listing = await request(`${path}?pageSize=1`, studentCookie);
+    expect(listing.status).toBe(200);
+    expect(listing.headers.get('cache-control')).toBe('private, no-store');
+    expect(await listing.json()).toMatchObject({ page: 1, pageSize: 1, total: 2 });
+    for (const material of created) {
+      const detail = await request(
+        `/me/classes/${scope.classId}/materials/${material.id}`,
+        studentCookie,
+      );
+      expect(detail.status).toBe(200);
+      expect(await detail.json()).toMatchObject({
+        id: material.id,
+        contentType: material.content_type,
+      });
+      const download = await request(
+        `/me/classes/${scope.classId}/materials/${material.id}/download`,
+        studentCookie,
+      );
+      expect(download.status).toBe(200);
+      expect(download.headers.get('cache-control')).toBe('private, no-store');
+      const signed = (await download.json()) as {
+        materialId: string;
+        fileId: string;
+        url: string;
+        expiresAt: string;
+      };
+      expect(signed.materialId).toBe(material.id);
+      expect(new URL(signed.url).searchParams.get('X-Amz-Expires')).toBe('60');
+      const range = await fetch(signed.url, { headers: { range: 'bytes=0-7' } });
+      expect(range.status).toBe(206);
+      expect((await range.arrayBuffer()).byteLength).toBe(8);
+      expect(range.headers.get('content-type')).toBe(
+        material.content_type === 'VIDEO' ? 'video/mp4' : 'application/pdf',
+      );
+    }
+    await db.query('UPDATE materials SET published_at=NULL WHERE course_unit_id=$1', [
+      scope.courseUnitId,
+    ]);
+    expect(await (await request(path, studentCookie)).json()).toMatchObject({
+      items: [],
+      total: 0,
+    });
+    for (const material of created)
+      expect(
+        (
+          await request(
+            `/me/classes/${scope.classId}/materials/${material.id}/download`,
+            studentCookie,
+          )
+        ).status,
+      ).toBe(404);
+  });
 });

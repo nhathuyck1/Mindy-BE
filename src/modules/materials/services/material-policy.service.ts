@@ -24,6 +24,7 @@ import type {
   MaterialActor,
   MaterialCommand,
   MaterialContent,
+  MaterialReadContext,
   MaterialSnapshot,
   MaterialTransition,
 } from '../domain/material-contract.js';
@@ -72,7 +73,7 @@ export class MaterialPolicyService {
     now: Date,
     manager?: EntityManager,
   ): Promise<boolean> {
-    const actor = await this.actor(principal);
+    const actor = await this.actor(principal, manager);
     if (actor.role !== UserRole.STUDENT) return false;
     const context = await this.contexts.getCourseUnitInClass(
       classId,
@@ -87,6 +88,40 @@ export class MaterialPolicyService {
       now,
       hasActiveEnrollment: await this.enrollments.hasActiveAccess(actor.userId, classId, manager),
     });
+  }
+
+  async studentReadContext(
+    principal: AuthenticatedUser,
+    context: ClassContentContext,
+    now: Date,
+    manager: EntityManager,
+  ): Promise<MaterialReadContext> {
+    const actor = await this.actor(principal, manager);
+    if (actor.role !== UserRole.STUDENT) this.deny();
+    await this.assertCourseAncestry(context.courseUnitId, context, manager);
+    return {
+      actor,
+      classContext: context,
+      now,
+      hasActiveEnrollment: await this.enrollments.hasActiveAccess(
+        actor.userId,
+        context.classId,
+        manager,
+      ),
+    };
+  }
+
+  async assertStudentClassAccess(
+    principal: AuthenticatedUser,
+    classId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    const actor = await this.actor(principal, manager);
+    if (
+      actor.role !== UserRole.STUDENT ||
+      !(await this.enrollments.hasActiveAccess(actor.userId, classId, manager))
+    )
+      this.deny();
   }
 
   async canPreview(
@@ -182,8 +217,11 @@ export class MaterialPolicyService {
     }
   }
 
-  private async actor(principal: AuthenticatedUser): Promise<MaterialActor> {
-    const user = await this.users.findActiveByRole(principal.userId, principal.role);
+  private async actor(
+    principal: AuthenticatedUser,
+    manager?: EntityManager,
+  ): Promise<MaterialActor> {
+    const user = await this.users.findActiveByRole(principal.userId, principal.role, manager);
     if (user === null) this.deny();
     return { userId: user.id, role: user.role, active: true };
   }

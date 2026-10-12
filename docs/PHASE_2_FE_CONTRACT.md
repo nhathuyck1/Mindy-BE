@@ -33,6 +33,16 @@ integer; 422: query thiếu/sai định dạng. Response tạo/reuse link đã b
 
 ## CASH
 
+### Bổ sung quản trị giờ Session — 2026-10-12
+
+ADMIN có `PATCH /api/v1/admin/classes/:classId/sessions/:sessionId` (một buổi)
+và `PATCH /api/v1/admin/classes/:classId/sessions/bulk` (1–100 Session được chọn).
+Body `{startTime, endTime}` dạng `HH:mm`, bulk thêm sessionIds; giữ ngày địa phương,
+ghi lại timestamps. Response 200 ClassManagementDetailDto; kiểm trạng thái/trùng
+lịch và rollback bulk nếu lỗi. Contract Student lịch bổ sung dayOfWeek/startTime/endTime.
+Xem [contract 2.3](PHASE_2_3_FE_CONTRACT.md) và
+[API breakdown](api_flow/PHASE_2_3_flow-api-breakdown.md#51-admin-sửa-giờ-một-buổi-và-bulk).
+
 ### Màn hình Mentor: lớp → học viên → thu tiền
 
 | API | Quyền | Contract |

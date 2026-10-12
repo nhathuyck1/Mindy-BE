@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "06 — Phase 3.4 Student Materials",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Student cookie auth: My Classes FULL -> class detail units[].id -> visible FILE/VIDEO list -> detail -> short-lived signed GET. Requires approved Material rows and released units; authoring/review/release HTTP still planned. Never send BE cookies to storage or persist signed URLs."
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "student_email", "value": "" },
+    { "key": "student_password", "value": "" },
+    { "key": "class_id", "value": "" },
+    { "key": "class_unit_id", "value": "" },
+    { "key": "material_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Login Student",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "My Classes — choose FULL class_id",
+      "request": { "method": "GET", "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20" }
+    },
+    {
+      "name": "Class detail — choose units[].id as class_unit_id",
+      "request": { "method": "GET", "url": "{{base_url}}/api/v1/me/classes/{{class_id}}" }
+    },
+    {
+      "name": "Visible materials — choose item.id as material_id",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/units/{{class_unit_id}}/materials?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Material detail",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/materials/{{material_id}}"
+      }
+    },
+    {
+      "name": "Authorize download — use URL directly without API cookies",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/materials/{{material_id}}/download"
+      }
+    }
+  ]
+}

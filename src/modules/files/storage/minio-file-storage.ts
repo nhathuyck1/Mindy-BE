@@ -67,6 +67,19 @@ export class MinioFileStorage implements FileStorage {
       throw new Error('FILE_VERSION_REQUIRED');
     return { versionId: result.VersionId, size: result.ContentLength };
   }
+  async presignGet(location: StorageLocation, filename: string, ttl: number): Promise<string> {
+    return getSignedUrl(
+      this.publicClient,
+      new GetObjectCommand({
+        Bucket: location.bucket,
+        Key: location.key,
+        VersionId: location.versionId,
+        ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        ResponseCacheControl: 'private, no-store',
+      }),
+      { expiresIn: ttl },
+    );
+  }
   async copy(
     source: StorageLocation,
     destinationKey: string,

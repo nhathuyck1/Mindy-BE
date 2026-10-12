@@ -1,4 +1,11 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
+
+2026-10-12: Đồng bộ password tạo account6–128 cho ADMIN/MANAGER/MENTOR/STUDENT
+theo user; managed DTO/Swagger/FE trước đó còn12–128 trong khi public register6.
+BE check298tests, HTTP27tests pass; FE schema5tests/type-check/build/boundaries/
+targeted Biome và identity E2E1test pass, full lint có CRLF baseline. Chưa deploy.
+Xem [flow](../../api_flow/PHASE_1_FLOW.md) và
+[API breakdown](../../api_flow/PHASE_1_flow-api-breakdown.md).
 Phase 0: Hạ tầng và quy ước chung
 ↓
 Phase 1: Registration + User + Authentication

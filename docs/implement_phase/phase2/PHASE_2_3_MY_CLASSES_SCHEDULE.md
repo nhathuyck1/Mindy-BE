@@ -192,11 +192,12 @@ GET /api/v1/me/schedule
 - Có Session SCHEDULED/COMPLETED trong range. Sort `starts_at ASC, session_id ASC`;
   phân trang 100 mặc định, max 100; FE phải lấy đủ trang của range, không cắt âm thầm.
 - Không ghi trạng thái mới, không tạo/copy event riêng. Đổi giờ hoặc hủy Session
-  hiện hữu được phản ánh khi refetch. Workflow reschedule/approval chưa có không
-  được coi là đã triển khai nhờ API read này.
+  hiện hữu được phản ánh khi refetch. Ngày 2026-10-12 thêm PATCH Admin sửa giờ
+  một/bulk Session, giữ ngày học. Workflow đổi ngày/nghỉ/dạy bù/approval vẫn chưa
+  triển khai; API read không tự cung cấp các workflow này.
 
 Mỗi event gồm `sessionId`, `sessionNumber`, `sessionTitle`, `sessionStatus`,
-`startsAt`, `endsAt`, `roomName`, `classId`, `classCode`, `className`, `classStatus`,
+`startsAt`, `endsAt`, `dayOfWeek`, `startTime`, `endTime`, `roomName`, `classId`, `classCode`, `className`, `classStatus`,
 `courseId`, `courseTitle`, `classUnitId`, `unitTitle`, `deliveryMode`,
 `mentor: { id, displayName }`, `enrollmentId`, `accessMode`.
 

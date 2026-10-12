@@ -1,13 +1,33 @@
 # Phase 3.2 — Bật upload trên VPS qua Cloudflare Tunnel
 
-Cập nhật 2026-10-11. User cho biết code 3.2 đã có trên server. Chưa trực tiếp
-kiểm tra VPS/migrations/MinIO/tunnel hoặc upload trên server trong lượt này.
+Cập nhật 2026-10-12. User xác nhận đã nghiệm thu xong trên VPS và yêu cầu chốt
+3.2. Agent ghi kết quả từ ảnh/output và xác nhận user, không tự SSH nghiệm thu.
 Mục tiêu nghiệm thu mỗi slice: API chạy được **trên server**, bên cạnh local tests.
 Không đợi 3.6 mới bật upload; 3.6 kiểm toàn hành trình và hardening.
 
 Files API giữ nguyên. [Flow](api_flow/PHASE_3_2_FLOW.md),
 [API breakdown](api_flow/PHASE_3_2_flow-api-breakdown.md),
 [local runbook](PHASE_3_2_FILES_RUNBOOK.md).
+
+Evidence user ngày 2026-10-11: deploy đã xong theo user, API recovery Healthy có
+ảnh SSH, và script provisioning in `MinIO private bucket, versioning and backend
+credentials are ready.` Sau đó user báo storage health HTTP200 và cung cấp ảnh
+Postman PDF `1.pdf` READY/HTTP200: fileId `5118b974-64fc-44b0-826f-58c1f9ba6c90`,
+declaredSizeBytes = sizeBytes = 75758, application/pdf, kind PDF, errorCode null,
+metadataStatus PENDING. Evidence tiếp theo: MP4 READY, fileId
+`91f575a9-df4b-4b33-b8c8-7680619244e2`, declared/verified 1583534 bytes,
+video/mp4, kind VIDEO, errorCode null, metadataStatus PENDING. Ảnh MinIO Console
+qua SSH tunnel hiện object token trong final/<fileId>, bucket PRIVATE.
+PDF/MP4 happy paths đã pass theo evidence ảnh. Nghiệm thu toàn slice chốt theo
+xác nhận user ngày 2026-10-12; các ca invalid binary, complete retry/quyền/
+anonymous access và browser CORS không có log riêng trong chat.
+Các ghi chú chưa READY trong phần troubleshooting bên dưới là mốc lịch sử.
+
+Host storage là S3 endpoint private, không phải UI xem file. Files GET 3.2 chỉ
+trả trạng thái; API read/download thuộc3.4. Có thể kiểm file quản trị bằng MinIO
+Console port9001 qua SSH tunnel tới IP container, không cần publish Console.
+Object đã xác minh nằm trong bucket ở `final/<fileId>/`; object key có token
+và không giữ tên originalFilename. Không đổi bucket sang public để xem file.
 
 ## 1. Chuẩn bị trên VPS
 
@@ -140,8 +160,20 @@ rebuild/redeploy một phiên bản khác ngoài ý muốn. Env thay đổi cầ
 pending; không down/recreate tables. Kiểm health/auth/payment sau API recreate.
 **Các lần deploy sau phải tiếp tục dùng cả hai compose files** để giữ scratch
 mount/network. Dùng base compose đơn sẽ bỏ override khỏi API được recreate.
+Workflow tự thêm Files override khi VPS có `.env.minio.production`; đó là marker
+rollout đã được chuẩn bị, yêu cầu backend vars/root env hợp lệ. Workflow không
+tự dựng hoặc provision MinIO. Patch này cần commit/push/merge để áp dụng cho
+CI/CD tiếp theo; manual enable vẫn dùng function dc với cả hai compose files.
 
 ## 5. Nghiệm thu API3.2 trên server
+
+Dựng tài khoản uploader nếu chưa có: trong Postman login ADMIN qua
+`POST /api/v1/auth/login`, sau đó dùng cookie đó gọi `POST /api/v1/admin/users`
+với email mới, password6..128 ký tự, displayName và role MANAGER (phone optional).
+Success201 tạo user ACTIVE, không cần email verification. Public register chỉ
+tạo STUDENT; không gửi role vào registration hoặc dùng demo seed để tạo Manager.
+Login lại bằng Manager để thay cookie rồi mới gọi Files. Không thêm status vào
+CreateUserDto. Lượt hướng dẫn không tự tạo tài khoản/đổi roles trên VPS.
 
 Dùng Swagger/Postman với cookie Manager (ADMIN không có quyền Files) và
 courseUnitId thật; Mentor cần thêm classId/classUnitId đúng assignment.
@@ -159,7 +191,8 @@ courseUnitId thật; Mentor cần thêm classId/classUnitId đúng assignment.
 
 Record commit/image/migration/tunnel host, thời điểm, HTTP statuses, browser CORS,
 READY/FAILED và errors; không ghi signed URL/cookie/secret vào evidence công khai.
-3.2 server acceptance chưa có đủ bằng chứng cho tới khi các bước này pass;
+User đã xác nhận hoàn tất nghiệm thu 3.2 ngày 2026-10-12; checklist trên giữ làm
+tiêu chí kiểm lại sau thay đổi storage/tunnel/config.
 READY không cấp Student access, Material/article/read/play thuộc3.3/3.4.
 
 Troubleshooting: 503 FILE_STORAGE_DISABLED→env chưa loaded; 503 unavailable→
@@ -167,11 +200,43 @@ bucket/versioning/private/credentials/network; 502 storage→tunnel/network;
 SignatureDoesNotMatch→Host/path/query/content-type changed;
 PROCESSING lâu→FILE_JOB_ENABLED, worker/scratch/ffprobe logs; 413→proxy size limit.
 
+Postman FILE_SIZE_MISMATCH: user cung cấp ảnh declaration194470, intent201,
+PUT200 nhưng binary picker còn `Select file`, complete PROCESSING rồi FAILED.
+200 của PUT không chứng minh đã gửi PDF; kiểm chọn file trước Send. Nhấn picker,
+chọn đúng PDF, phải thấy filename hiện ra; khai báo đúng Size(bytes), không Size
+on disk. Tạo intent mới cho retry, không dùng lại fileId FAILED. Nếu dùng Postman
+web, cần agent đọc được file local hoặc Desktop app. Chưa có evidence READY.
+
 Rollback tạm: MINIO_ENABLED=false và recreate API bằng cả compose files; giữ
 MinIO volume/database/refs, không down migrations hoặc xóa bucket. Jobs durable
 vẫn trong DB và có thể resume sau bật lại; chưa mở lifecycle purge.
 
 ### API unhealthy trong CI/CD
+
+Nếu fail ở `Check VPS checkout and release`, rollout chưa chạy. Kiểm trong SSH:
+
+```bash
+cd /home/mindycode/mindycoding/Mindy-BE
+git branch --show-current
+git status --short
+```
+
+VPS cần nhánh `dev`, checkout clean, env/base compose tồn tại và Docker truy cập
+được từ runner. `.env.production` được ignore; sửa file đó bình thường không làm
+checkout dirty. User cung cấp ảnh SSH nhánh `dev`, status rỗng; không có evidence
+dirty ở thời điểm ảnh. Bộ log `logs_103361230819` release `1258e24` xác nhận runner
+checkout đúng SHA, env/base compose tồn tại và Docker dùng được ở diagnostics;
+step preflight vẫn là silent tests nên chưa chốt condition fail tại lúc chạy.
+Diagnostics lúc 15:13 UTC còn thấy image `8aafd5a` restarting vì MinIO keys rỗng:
+đó là API từ rollout trước, không phải release `1258e24` đã được khởi động.
+Nếu status có thay đổi, xem paths và bảo toàn nội dung trước khi
+xử lý; không reset/clean/stash tự động. Screenshot user gửi chỉ có exit1 trước
+Docker version, chưa đủ xác nhận điều kiện nào fail. Workflow đã đổi silent test
+thành named errors, dirty case chỉ in Git status (không in file contents), lỗi
+fast-forward cũng có message riêng. Container diagnostics chỉ chạy khi rollout
+thật sự fail, không dùng log API cũ để giải thích checkout failure.
+Lint/diff/Bash syntax pass; probe mock kiểm clean/dirty/wrong branch/Docker down/
+missing env/diverged history đúng exit/message. Không chạy deploy thật từ local.
 
 Log deploy user cung cấp ngày 2026-10-11 (release `8aafd5a`) cho thấy CI pass,
 image build pass, Postgres healthy và migration báo `No migrations are pending`.
@@ -194,8 +259,9 @@ API State (exit/OOM/restarting/health) và 120 dòng API logs, không in toàn b
 hoặc expanded env/config. Step chẩn đoán không bỏ qua failure của bước deploy.
 Thêm validation env bằng schema của image mới trước backup/migrate/API switch;
 chỉ in field/error type, env invalid dừng rollout trong khi API cũ còn chạy.
-Workflow hiện vẫn chỉ dùng base compose; hỗ trợ Files override cho các release
-sau rollout cần cập nhật riêng. Chưa redeploy hoặc xác nhận API/storage READY.
+Workflow đã được bổ sung lựa chọn Files override khi `.env.minio.production`
+tồn tại trên VPS để giữ scratch/network ở deploy sau; chưa deploy patch này.
+Chưa có evidence upload READY.
 
 Khôi phục API trước provisioning: sửa `.env.production` để có đúng một dòng
 `MINIO_ENABLED=false`, giữ các auth/database/payment vars. Với release trong log:
@@ -209,6 +275,13 @@ docker logs --tail 60 mindy-be-api-1
 Dùng cùng Compose project đang chạy; nếu release hiện tại khác log, giữ tag đang
 chạy thay vì tag minh họa này. Chỉ bật true sau private bucket/versioning/backend
 credentials/public endpoint và Files override sẵn sàng theo các bước phía trên.
+
+Evidence recovery ngày 2026-10-11: ảnh SSH user cho thấy đúng một dòng
+MINIO_ENABLED=false, recreate image `8aafd5a` trả Healthy; .git directory/env/base
+compose tồn tại. Có thể retry failed Deploy job với trạng thái VPS đã sửa; retry
+vẫn dùng workflow của release cũ, không tự lấy sửa workflow chưa commit ở local.
+Nếu checkout check còn fail, cần named-error workflow hoặc kiểm từng condition
+trong runner. Chưa xác nhận release `1258e24` hoặc MinIO/upload server acceptance.
 
 ## Evidence lượt chuẩn bị local
 

@@ -1,13 +1,14 @@
 # Phase 2.3 — API breakdown cho FE: My Classes và lịch
 
-Cập nhật: **2026-10-10**. Bốn endpoint dưới đây đã implement trong checkout.
+Cập nhật: **2026-10-12**. Bốn GET Student và hai PATCH Admin dưới đây đã implement trong checkout.
 [Flow Student](PHASE_2_3_FLOW.md) · [Contract FE](../PHASE_2_3_FE_CONTRACT.md).
 Deployment/VPS chưa được xác minh trong lượt này; API tồn tại trong source không
 chứng minh môi trường FE đang gọi đã có release tương ứng.
 
 ## 1. Contract chung
 
-- Prefix BE `/api/v1`; role STUDENT, user/session active, cookie `access_token`.
+- Prefix BE `/api/v1`; bốn GET dùng role STUDENT, hai PATCH §5.1 dùng ADMIN;
+  user/session active, cookie `access_token`.
   Browser gọi với `credentials: 'include'` hoặc Axios `withCredentials: true`.
   Không tự đọc token, không gửi studentId/role. GET không cần body hay header
   nghiệp vụ riêng; có thể gửi `Accept: application/json`.
@@ -17,7 +18,7 @@ chứng minh môi trường FE đang gọi đã có release tương ứng.
   response sau khác response trước, nên detail/preview kiểm quyền lại.
 - Success là DTO JSON trực tiếp, không có wrapper `{ data: ... }`. List và lịch
   có pagination; detail/preview không phân trang. Mọi success trả 200 và
-  `Cache-Control: private, no-store`.
+  `Cache-Control: private, no-store` cho bốn GET Student.
 - Date-time trả ISO UTC; ngày bắt đầu/kết thúc lớp là `YYYY-MM-DD`. Lịch hiển thị
   theo `timeZone` của response (`APP_TIME_ZONE`, hiện Asia/Ho_Chi_Minh).
 - List/lịch/preview không trả meeting URL; FULL detail có meeting URL nullable.
@@ -262,6 +263,7 @@ Ví dụ 200 (dữ liệu giả):
     "sessionId": "66666666-6666-4666-8666-666666666666",
     "sessionNumber": 1, "sessionTitle": "Buổi 1", "sessionStatus": "SCHEDULED",
     "startsAt": "2026-10-12T01:00:00.000Z", "endsAt": "2026-10-12T02:00:00.000Z",
+    "dayOfWeek": "Monday", "startTime": "08:00", "endTime": "09:00",
     "roomName": null,
     "classId": "33333333-3333-4333-8333-333333333333",
     "classCode": "WEB101-A", "className": "Web lớp A", "classStatus": "OPEN",
@@ -285,6 +287,11 @@ enrollment; accessMode chỉ FULL/CASH_PREVIEW, không có NONE trong events.
 Response page/pageSize/total để lấy đủ trang; from/to là range chuẩn hóa UTC,
 asOf là mốc server xét quyền. Không có meetingUrl hoặc order/payment payload.
 
+`dayOfWeek`: thứ của `startsAt` theo `timeZone`, tên tiếng Anh đầy đủ từ Monday
+đến Sunday. `startTime`/`endTime`: giờ địa phương `HH:mm` (24 giờ), tính từ hai
+timestamps; không có cột DB mới. Buổi qua đêm dùng thứ ngày bắt đầu và có thể có
+endTime nhỏ hơn startTime; vẫn phải dùng endsAt để xác định ngày kết thúc.
+
 - 200 total=0 khi không có lớp có quyền hoặc không có Session giao range. Loading
   → lịch rỗng/success/error; lấy đủ trang trước khi coi range hoàn chỉnh.
 - 403 SCHEDULE_CLASS_ACCESS_DENIED nếu truyền classId không có quyền (kể cả ID
@@ -297,6 +304,113 @@ asOf là mốc server xét quyền. Không có meetingUrl hoặc order/payment p
   vẫn hiện mặc định với nhãn hủy, không nút tham gia. Khi bấm event, gọi lại detail/
   preview và dùng sessionId; event không phải token quyền. Lịch GET không đổi giờ,
   hủy Session, settle order hoặc ghi attendance.
+
+## 5.1 Admin sửa giờ một buổi và bulk
+
+Hai endpoint mới ngày 2026-10-12, cookie auth, **ADMIN** (khác bốn GET Student):
+
+| Method và route | Mục đích |
+|---|---|
+| `PATCH /api/v1/admin/classes/:classId/sessions/:sessionId` | Sửa giờ một Session của Class |
+| `PATCH /api/v1/admin/classes/:classId/sessions/bulk` | Áp dụng cùng giờ cho các Session được chọn trong Class, một transaction |
+
+FE mở `GET /api/v1/admin/classes/:classId`, lấy classId và `units[].sessions[].id`;
+chọn một/nhiều buổi, nhập giờ rồi PATCH với `Content-Type: application/json`.
+Path classId/sessionId là UUID; sessionId phải thuộc đúng Class, kể cả bulk.
+Không query. Payload single:
+
+```json
+{ "startTime": "07:30", "endTime": "09:30" }
+```
+
+Payload bulk:
+
+```json
+{
+  "sessionIds": [
+    "66666666-6666-4666-8666-666666666666",
+    "88888888-8888-4888-8888-888888888888"
+  ],
+  "startTime": "07:30",
+  "endTime": "09:30"
+}
+```
+
+startTime/endTime bắt buộc dạng đúng `HH:mm`, khoảng 00:00–23:59; không nhận
+`7:30`, `24:00`, seconds, timestamp, ngày, field lạ. sessionIds là mảng 1–100 UUID v4
+không trùng; không suy diễn mảng rỗng thành “toàn bộ lớp”. Chọn tất cả thì FE lấy
+đủ ID từ class detail (trên 100 thì chia request, mỗi request atomic riêng).
+
+Backend ghép giờ với **ngày bắt đầu/kết thúc hiện tại tương ứng** theo APP_TIME_ZONE,
+lưu starts_at/ends_at TIMESTAMPTZ. Ví dụ buổi 13/10/2026 đổi thành 07:30–09:30
+giờ Việt Nam → startsAt `2026-10-13T00:30:00.000Z`, endsAt `2026-10-13T02:30:00.000Z`.
+Buổi qua đêm giữ cả hai ngày; endpoint không đổi ngày/thứ, title, room, URL,
+number, unit, status hoặc attendance. Thời điểm phải start < end và trong period
+của Class. Class DRAFT/OPEN/IN_PROGRESS và Session SCHEDULED được sửa; không có
+quy tắc tự đổi status dựa trên thời gian. Không sửa Class COMPLETED/CANCELLED hoặc
+Session COMPLETED/CANCELLED. Giờ không tồn tại do DST bị reject; giờ lặp do DST
+ưu tiên offset cũ nếu có thể.
+
+200 trả **ClassManagementDetailDto** giống GET admin class detail: class fields,
+status, units và sessions chứa timestamps mới (không có wrapper data).
+Ví dụ phần Session trong response (rút gọn):
+
+```json
+{
+  "id": "66666666-6666-4666-8666-666666666666",
+  "sessionNumber": 1,
+  "title": "Buổi 1",
+  "startsAt": "2026-10-13T00:30:00.000Z",
+  "endsAt": "2026-10-13T02:30:00.000Z",
+  "status": "SCHEDULED"
+}
+```
+
+Class row lock tuần tự hóa thay đổi trong cùng lớp; mentor advisory lock giữ
+quy tắc trùng mentor giữa OPEN/IN_PROGRESS classes. Kiểm overlap trên trạng thái
+cuối cùng, gồm buổi được chọn và chưa chọn; hai buổi sát nhau được phép. Một lỗi
+→ rollback toàn bộ bulk. Gọi lại cùng payload giữ nguyên giờ, không nhân bản Session;
+không gửi notification/payment hoặc sửa enrollment/progress.
+
+| Status / code | FE xử lý |
+|---|---|
+| 401 | Đăng nhập lại |
+| 403 INSUFFICIENT_ROLE | Không hiển thị thao tác cho role ngoài ADMIN; dừng retry |
+| 400 HTTP_ERROR | Path UUID sai; sửa ID |
+| 404 CLASS_NOT_FOUND / CLASS_SESSION_NOT_FOUND | Class/Session mất hoặc Session thuộc lớp khác; refetch selection |
+| 409 CLASS_NOT_EDITABLE / CLASS_SESSION_NOT_EDITABLE | Trạng thái không cho sửa; refetch và bỏ thao tác |
+| 409 CLASS_SESSION_OVERLAP / CLASS_MENTOR_SCHEDULE_CONFLICT | Giữ input, báo trùng lịch; không tự retry |
+| 422 HTTP_ERROR | Body sai format/field/mảng IDs; sửa input |
+| 422 CLASS_SESSION_TIME_RANGE_INVALID / CLASS_SESSION_OUTSIDE_CLASS_PERIOD / CLASS_SESSION_LOCAL_TIME_INVALID | Khoảng giờ/ngày hoặc giờ DST không hợp lệ; sửa input |
+
+Form có loading/success/error, khóa submit khi pending; không optimistic-update
+từng buổi khi bulk chưa thành công. Success → dùng detail mới/refetch admin detail
+và invalidate lịch Student. API lịch tự dẫn xuất lại dayOfWeek/startTime/endTime.
+Không polling bắt buộc. Chưa có workflow xin nghỉ/dạy bù/approval hay API đổi ngày.
+Không migration; cần deploy backend mới để FE gọi hai PATCH.
+
+## 5.2 Seed lịch demo hiện tại
+
+`pnpm seed:course-class` (hoặc seed:data) tạo ba lớp demo của ba Course:
+
+| Course | Mode | Giờ (+07) | Course/Class Unit | Sessions |
+|---|---|---|---|---|
+| HTML-CSS-101 | ONLINE | 15:00–17:00 | 5 | 10 |
+| JS-101 | ONLINE | 15:00–17:00, mentor khác HTML | 6 | 10 |
+| PY-101 | OFFLINE, Phòng Lab 2 | 09:00–11:00 | 4 | 10 |
+
+Code `<course-code>-10S-YYYYMMDD`, suffix là ngày của buổi đầu tiên còn sắp tới.
+10 buổi liên tiếp vào thứ 3/thứ 7. Chia đủ 10 slot theo thứ tự syllabus qua toàn
+bộ units của từng Course, mỗi Unit ít nhất một buổi; chênh lệch số buổi/unit tối đa1.
+Từ 12/10/2026: 13,17,20,24,27,31/10 và 03,07,10,14/11.
+Không tạo lại/sửa lớp cũ; chạy lại giữ cohort từng Course DRAFT/OPEN/IN_PROGRESS còn trong period
+để không tạo lịch trùng mentor. Sau khi cohort kết thúc mới seed cohort suffix mới.
+Accounts/mentors phải seed trước;
+không tạo enrollment hay giả thanh toán, Student cần checkout để lịch cá nhân có quyền đọc.
+Lịch 5 tuần dài hơn giới hạn 31 ngày của GET: FE lấy theo tuần hoặc chia range.
+Kiểm chứng local sau mở rộng3 lớp: query đúng2 ONLINE/1 OFFLINE,15 Class Unit,
+30 Session,0 mentor conflict; rerun0 lớp. pnpm check298/298 pass (27 suites),
+lint/type-check/build pass; không có deploy/VPS evidence mới.
 
 ## 6. Refetch, polling và prerequisite
 
@@ -315,6 +429,14 @@ asOf là mốc server xét quyền. Không có meetingUrl hoặc order/payment p
   fixture lớn và staging/VPS smoke vẫn là gate riêng. Lượt này chỉ review/docs.
 
 ## Nguồn đối chiếu
+
+- Kiểm chứng bổ sung 2026-10-12: `pnpm check` 291/291 (27 suites), HTTP 23/23
+  (2 suites) pass; seed DB development local 1 cohort/10 Session, rerun 0 lớp.
+  Chưa deploy/VPS phần bổ sung clock-time/calendar này.
+- [Session clock-time controller](../../src/modules/classes/controllers/admin-classes.controller.ts)
+- [Session clock-time requests](../../src/modules/classes/dtos/update-class-session-time.dto.ts)
+- [Atomic schedule updates](../../src/modules/classes/services/class-schedule.service.ts)
+- [Clock-time integration tests](../../test/integration/session-time-updates.spec.ts)
 
 - [List controller](../../src/modules/student-learning/controllers/my-classes.controller.ts)
 - [List query DTO](../../src/modules/student-learning/dtos/my-class-page-options.dto.ts)

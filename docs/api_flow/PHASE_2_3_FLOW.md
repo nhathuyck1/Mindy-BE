@@ -1,6 +1,6 @@
 # Phase 2.3 — Flow Student: My Classes và lịch cá nhân
 
-Cập nhật: **2026-10-10**. Đã đối chiếu controller, DTO, service và test trong checkout.
+Cập nhật: **2026-10-12**. Đã đối chiếu controller, DTO, service và test trong checkout.
 Các API đã implement; evidence local nằm trong progress. Chưa xác minh release/VPS
 trong lượt tài liệu này.
 
@@ -22,6 +22,8 @@ Tiến độ: [Progress 2.3](../progress/phase%202/PHASE_2_3_PROGRESS.md).
 4. Calendar gọi `GET /api/v1/me/schedule?from=…&to=…`, lấy đủ các trang của range.
    Chỉ lớp có FULL/CASH_PREVIEW được đưa vào lịch; mỗi event có `sessionId`,
    `classUnitId`, `classId`, `enrollmentId` và `accessMode`.
+   Event bổ sung `dayOfWeek` (Monday–Sunday), `startTime`/`endTime` (`HH:mm`)
+   theo response timeZone; dữ liệu dẫn xuất từ timestamps, không lưu cột mới.
 5. Bấm event → gọi lại detail/preview rồi định vị `sessionId` trong
    `units[].sessions[]`. Calendar không trả meeting URL; Session CANCELLED có nhãn
    hủy và không mời tham gia. Không có session detail endpoint riêng trong 2.3.
@@ -42,6 +44,20 @@ flowchart TD
 ```
 
 ## Trạng thái và nhánh cần xử lý
+
+Admin từ class detail chọn Session → PATCH
+`/admin/classes/:classId/sessions/:sessionId` hoặc `/sessions/bulk` với startTime/endTime.
+Giữ ngày cũ, kiểm trạng thái/range/trùng lịch lớp và mentor, lưu timestamps trong
+một transaction; bulk lỗi thì rollback toàn bộ. Success refetch detail/lịch.
+Chỉ ADMIN, Class DRAFT/OPEN/IN_PROGRESS và Session SCHEDULED; Student/Mentor/Manager
+không được sửa qua hai route này. Chi tiết body/errors ở API breakdown §5.1.
+
+Seed ba cohort demo cho HTML/CSS và JavaScript ONLINE 15:00–17:00 (mentor khác
+nhau), Python OFFLINE 09:00–11:00 Phòng Lab2; mỗi lớp 10 buổi thứ 3/thứ 7 từ slot
+còn sắp tới. Có đủ 5/6/4 Class Unit của ba Course, tổng30 Session. Giữ lớp cũ,
+không tạo enrollment/thanh toán. Ngày12/10/2026: suffix20261013, lịch13/10–14/11.
+Local xác minh đúng3 lớp/15 Class Unit/30 Session/0 mentor conflict, rerun0 lớp;
+pnpm check298/298 pass (27 suites), lint/type-check/build pass sau đổi seed.
 
 | Trạng thái | My Classes | Detail/lịch |
 |---|---|---|
@@ -81,6 +97,11 @@ hint chỉ có hiệu lực tại `asOf`; endpoint detail/preview kiểm quyền
   CASH preview không chứa nội dung/file; Materials CRUD/download vẫn thuộc 3.3/3.4.
 
 ## Kiểm chứng và phần còn lại
+
+- 2026-10-12: Bổ sung calendar fields, PATCH single/bulk và seed hiện tại;
+  `pnpm check` 291/291 và HTTP 23/23 pass trên PostgreSQL test DB riêng,
+  fake payment provider. Local seed tạo 1 cohort/10 Session, rerun tạo 0 lớp.
+  Chưa deploy bổ sung này; chi tiết ở progress 2.3.
 
 - Evidence trước lượt này: full `pnpm check` **243/243** và HTTP **20/20** pass sau
   đồng bộ dev; riêng PostgreSQL Phase 2.3 **6/6**. Đây là kết quả local, provider fake.

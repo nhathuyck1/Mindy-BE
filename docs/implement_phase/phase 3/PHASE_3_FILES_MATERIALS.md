@@ -1,11 +1,11 @@
 # Phase 3 — File + Materials
 
-Cập nhật: **2026-10-11**. 3.1 D1–D6 đã code policy/contract/providers và role
-MANAGER, kiểm tra local pass; 3.2 upload/storage/validation API hoàn tất local.
+Cập nhật: **2026-10-12**. 3.1 D1–D6 đã code policy/contract/providers và role
+MANAGER, kiểm tra local pass; 3.2 hoàn tất local và nghiệm thu VPS theo user.
 Material persistence/review và Student download tiếp tục ở 3.3/3.4.
 Contract chi tiết: [Phase 3.1](./PHASE_3_1_POLICY_CONTRACT.md).
 Plan upload: [Phase 3.2](./PHASE_3_2_SAFE_UPLOAD.md), đã rà soát theo
-baseline 3.1; đã nghiệm thu Files/storage local, chi tiết trong progress riêng.
+baseline 3.1; đã nghiệm thu Files/storage local/VPS, chi tiết trong progress riêng.
 Plan quản lý tiếp theo: [Phase 3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md),
 đã lập kế hoạch Manager CRUD/review, Mentor draft/submit/context và Class Unit
 release; chưa implement. [Flow 3.3](../../api_flow/PHASE_3_3_FLOW.md) và
@@ -20,11 +20,12 @@ Tiến độ: [Phase 3](../../progress/phase%203/PHASE_3_PROGRESS.md),
 **Cập nhật user2026-10-11:** mở rộng MVP file-only sang ARTICLE (BE lưu HTML đã
 sanitize), FILE và VIDEO (MP4 private MinIO/URL có thời hạn); HLS làm sau.
 Course Unit/review/revision/release/ACTIVE giữ nguyên. Content contract mới ở
-[plan3.3](PHASE_3_3_MATERIAL_MANAGEMENT.md#scope-bổ-sung-theo-user--2026-10-11-ưu-tiên-hơn-baseline-file-only-bên-dưới)
+[plan3.3](PHASE_3_3_MATERIAL_MANAGEMENT.md)
 ưu tiên hơn mô tả file-only D6 cũ. Files3.2 vẫn không nhận fileHTML.
-Mỗi slice cần API nghiệm thu trên server; user cho biết code3.2 đã có trên server,
-nhưng upload/storage VPS vẫn chưa có evidence. Provision theo
-[VPS runbook3.2](../../PHASE_3_2_VPS_MINIO_RUNBOOK.md), không chờ3.6.
+Mỗi slice cần API nghiệm thu trên server; user xác nhận nghiệm thu3.2 xong
+2026-10-12, PDF/MP4 READY/private objects có evidence trong progress3.2.
+Plan3.3 đã hợp nhất typed content/refs/sanitizer và gate local/server từng bước;
+estimate BE provisional7–10 ngày, không chờ3.6 mới rollout.
 
 Material là tài liệu chính của Course Unit: **Course Unit 1–N Material**, giữ
 `materials.course_unit_id NOT NULL` theo DBML. Class Unit tham chiếu Course Unit;
@@ -41,7 +42,7 @@ nhưng tích hợp toàn hành trình FE là gate riêng trước nghiệm thu t
   Manager duyệt; không tự approve/publish hoặc sửa tài liệu đã được duyệt.
 - Student ACTIVE đọc/tải theo Class Unit release và material approval/publication.
 - Upload private MinIO, xác minh binary, metadata async, cleanup/retry/audit.
-- MVP file-only; không external link, HLS/transcoding hay thực thi source code.
+- MVP ARTICLE HTML/FILE/VIDEO MP4; không external video, HLS/transcoding hay thực thi source code.
 
 Không gồm assignment/submission/grading, Q&A, student code, attendance, chứng chỉ,
 chat/DM, board/compiler, avatar/course-image hoặc snapshot/versioning nội dung học.
@@ -71,7 +72,8 @@ Public registration vẫn STUDENT; MANAGER không tự có quyền Admin/payment
 
 D1–D6 theo [plan 3.1](./PHASE_3_1_POLICY_CONTRACT.md), được user duyệt 2026-10-09:
 Course Unit owner; Manager quản lý/review, Mentor upload; ACTIVE + release;
-shared live giữa lớp; không tự cấp quyền enrollment COMPLETED; MVP file-only.
+shared live giữa lớp; không tự cấp quyền enrollment COMPLETED. D6 file-only lịch sử
+được thay bằng ARTICLE/FILE/VIDEO theo scope2026-10-11; domain typed ở3.3.
 
 Student canRead yêu cầu tất cả:
 
@@ -79,7 +81,8 @@ Student canRead yêu cầu tất cả:
 2. Class không CANCELLED, Class Unit thuộc Class và tham chiếu đúng Course Unit.
 3. Unit OPEN/COMPLETED, unlockAt null hoặc <= serverNow; LOCKED luôn chặn.
 4. Material chưa deleted, được Manager APPROVED đúng revision, đã published và
-   availableAt null hoặc <= serverNow; file READY.
+   availableAt null hoặc <= serverNow; typed content hợp lệ và mọi refs READY
+   đúng owner Course Unit (ARTICLE text-only không bắt buộc file).
 
 OPEN + unlockAt tương lai mở theo giờ; không cần worker đổi status.
 Class COMPLETED với enrollment ACTIVE áp dụng gate bình thường. Session CANCELLED

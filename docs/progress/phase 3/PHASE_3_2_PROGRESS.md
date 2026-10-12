@@ -1,9 +1,80 @@
 # Phase 3.2 — Tiến độ Upload private và xác minh file
 
-Cập nhật: **2026-10-11**.
+Cập nhật: **2026-10-12**.
 Plan: [PHASE_3_2_SAFE_UPLOAD.md](../../implement_phase/phase%203/PHASE_3_2_SAFE_UPLOAD.md).
 
 ## Hiện trạng
+
+**Phase 3.2 đã chốt: triển khai/local checks hoàn tất; nghiệm thu VPS hoàn tất
+theo xác nhận của user ngày 2026-10-12 ("chốt 3.2 đi xong r").** Bàn giao cho
+3.3 CRUD/review nội dung. Giữ nguyên contract Files và metadata PENDING cho 3.5.
+Ảnh đã nhận chứng minh PDF/MP4 READY và private final objects; các ca nghiệm thu
+còn lại được ghi theo xác nhận user, không gán là agent tự chạy hoặc có log
+từng ca. Lượt chốt chỉ cập nhật tài liệu, kiểm diff; không chạy lại BE tests/deploy.
+
+Các mốc evidence và tiến độ trước lúc chốt (lịch sử):
+
+- Evidence 2026-10-11: user cung cấp Postman status MP4 READY,
+  fileId `91f575a9-df4b-4b33-b8c8-7680619244e2`, declaredSizeBytes = sizeBytes
+  = 1583534, MIME video/mp4, kind VIDEO, errorCode null, metadataStatus PENDING.
+  Ảnh MinIO Console qua SSH tunnel xác nhận bucket PRIVATE và object token
+  trong final/<fileId>, size 1.5MiB, Content-Type video/mp4. PDF và MP4 happy
+  paths pass theo evidence user. Còn invalid binary, complete retry/quyền/
+  anonymous access và browser CORS; không coi toàn slice đã nghiệm thu.
+  Chỉ cập nhật tài liệu/đối chiếu source, không chạy BE tests hoặc deploy.
+
+- Evidence PDF trước đó 2026-10-11 từ ảnh Postman user trên VPS: PDF `1.pdf`,
+  fileId `5118b974-64fc-44b0-826f-58c1f9ba6c90`, GET status HTTP200/READY;
+  declaredSizeBytes = sizeBytes = 75758, MIME application/pdf, kind PDF,
+  errorCode null, metadataStatus PENDING (extraction thuộc 3.5). PDF happy path
+  đã pass theo evidence user; còn MP4, invalid binary, retry/quyền/private access
+  và browser CORS trước khi chốt nghiệm thu. Không lưu signed URL/cookies.
+  Các mục bên dưới là lịch sử trước evidence READY này.
+
+- 2026-10-11: User cung cấp ảnh Postman VPS: intent201, declaration194470,
+  PUT200 nhưng picker còn Select file, complete PROCESSING rồi status FAILED
+  FILE_SIZE_MISMATCH. Hướng dẫn chọn đúng binary file trước Send và tạo intent
+  mới; chưa chứng minh object bytes hoặc READY. Không lưu URL/cookies từ ảnh.
+  Lượt này đối chiếu source + hướng dẫn/tài liệu, không chạy BE tests/deploy.
+
+- 2026-10-11: User chưa có Manager để test upload. Đối chiếu POST admin/users
+  (ADMIN-only), CreateUserDto password12..128, create ACTIVE và registration
+  STUDENT-only; hướng dẫn Admin create →Manager login trong Postman. Chỉ hướng
+  dẫn/tài liệu, chưa tự tạo user hoặc xác nhận upload VPS; không chạy BE tests.
+
+- 2026-10-11: User báo public storage health200 sau route HTTP minio9000.
+  Tiếp theo cấu hình public URL/bật flag/recreate đúng image với Files override
+  và nghiệm thu upload. Bổ sung workflow tự chọn override khi VPS có root env
+  provisioning để giữ scratch qua deploy sau; chưa deploy patch hoặc có evidence
+  intent/PUT/READY/browser CORS trên VPS.
+  Local lint/diff/Bash syntax và Compose model (scratch/base tmpfs/private ports)
+  pass; không chạy lại BE tests hoặc deploy/kiểm upload từ local.
+
+- 2026-10-11: User cung cấp output provisioning VPS:
+  `MinIO private bucket, versioning and backend credentials are ready.`
+  Ghi evidence script private/versioning/backend credential checks pass do user
+  chạy. Tiếp theo network + Cloudflare storage route/public URL, rồi bật Files và
+  nghiệm thu intent/PUT/complete/READY/CORS; chưa đánh dấu upload VPS pass.
+
+- 2026-10-11: User thông báo deploy đã xong sau recovery; chưa có log release
+  thành công để đối chiếu SHA/workflow. Tiếp tục hướng dẫn provisioning MinIO
+  với flag false; chưa xác nhận storage/tunnel/browser upload READY.
+
+- 2026-10-11: User gửi ảnh SSH recovery: `.env.production` có một dòng
+  `MINIO_ENABLED=false`; recreate API bằng image tag `8aafd5a` trả Healthy.
+  `.git` là directory, env/base compose tồn tại. Đây là evidence API recovery
+  do user thực hiện; release `1258e24` chưa xác nhận deploy pass, checkout failure
+  condition còn chưa chốt. MinIO vẫn disabled, chưa có upload READY/CORS evidence.
+
+- 2026-10-11: Screenshot deploy kế tiếp fail ở checkout preflight, trước rollout;
+  chưa rõ condition. Thêm named errors thay silent tests, dirty status paths và
+  fast-forward diagnostics; giữ check safety, không reset/clean/stash. Chỉ log
+  API khi bước rollout fail để tránh nhầm log cũ với nguyên nhân checkout failure.
+  User gửi ảnh SSH: `dev`, status rỗng. Log `logs_103361230819` release `1258e24`
+  vẫn dùng silent tests, không chốt condition tại thời điểm fail. Diagnostics
+  thấy API image cũ `8aafd5a` restarting vì keys rỗng, chưa load env mới.
+  Lint/diff/Bash syntax và 6 mock preflight cases pass; chưa SSH/deploy/khôi phục
+  hoặc xác minh upload READY trên VPS.
 
 - 2026-10-11: Đọc log deploy user cung cấp (`logs_103358883936`, release
   `8aafd5a`): CI lint/type-check/build và 243 tests/22 suites + 20 HTTP tests/2
@@ -92,7 +163,7 @@ Các ghi chú dưới đây là lịch sử trước triển khai, không phải
 | 3.2.3 Complete/status/jobs | Pass local | Unique job/concurrent complete, expiry, no-store safe DTO |
 | 3.2.4 Validation worker | Pass local | Allowlist binary, bounded isolated parser, SHA-256/pinned version |
 | 3.2.5 Recovery/reference | Pass local | Retry/orphan/stale lease/atomic READY rollback/reference locks |
-| 3.2.6 Acceptance/handoff | Hoàn tất local | Full gates + 42 storage tests + 19 HTTP; runbook/config/schema/contracts |
+| 3.2.6 Acceptance/handoff | Hoàn tất local + VPS | Local gates đã ghi; PDF/MP4 READY có ảnh; user xác nhận chốt VPS 2026-10-12; bàn giao 3.3 |
 
 ## Rà soát sau 3.1 hoàn tất — 2026-10-09
 

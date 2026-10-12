@@ -39,28 +39,46 @@ jobs:
       - name: Check VPS checkout and release
         run: |
           set -euo pipefail
-          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$RELEASE_SHA"
-          [[ "$DEPLOY_DIR" = /* ]]
-          test -d "$DEPLOY_DIR/.git"
-          test -f "$DEPLOY_DIR/.env.production"
-          test -f "$DEPLOY_DIR/compose.production.yaml"
-          test "$(git -C "$DEPLOY_DIR" branch --show-current)" = dev
-          test -z "$(git -C "$DEPLOY_DIR" status --porcelain)"
-          docker info >/dev/null
-          docker compose version
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+          runner_sha="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" || fail "Cannot read runner checkout commit."
+          [[ "$runner_sha" = "$RELEASE_SHA" ]] || fail "Runner checkout does not match RELEASE_SHA."
+          [[ "$DEPLOY_DIR" = /* ]] || fail "DEPLOY_DIR must be an absolute path."
+          [[ -d "$DEPLOY_DIR/.git" ]] || fail "VPS Git checkout is missing at DEPLOY_DIR."
+          [[ -f "$DEPLOY_DIR/.env.production" ]] || fail "VPS .env.production is missing."
+          [[ -f "$DEPLOY_DIR/compose.production.yaml" ]] || fail "VPS compose.production.yaml is missing."
+          deploy_branch="$(git -C "$DEPLOY_DIR" branch --show-current)" || fail "Cannot read VPS checkout branch."
+          [[ "$deploy_branch" = dev ]] || fail "VPS checkout must be on dev; current branch: ${deploy_branch:-detached HEAD}."
+          checkout_changes="$(git -C "$DEPLOY_DIR" status --porcelain)" || fail "Cannot inspect VPS checkout status."
+          if [[ -n "$checkout_changes" ]]; then
+            printf '%s\n' "$checkout_changes"
+            fail "VPS checkout has local changes; preserve and review them before retrying."
+          fi
+          docker info >/dev/null || fail "Docker daemon is unavailable to the runner."
+          docker compose version || fail "Docker Compose is unavailable to the runner."
 
           # Fetch from the checked-out commit on this runner, then fast-forward only.
-          git -C "$DEPLOY_DIR" fetch --no-tags "$GITHUB_WORKSPACE" HEAD
-          git -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD
-          test "$(git -C "$DEPLOY_DIR" rev-parse HEAD)" = "$RELEASE_SHA"
+          git -C "$DEPLOY_DIR" fetch --no-tags "$GITHUB_WORKSPACE" HEAD || fail "Cannot fetch the checked release into the VPS checkout."
+          git -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD || fail "VPS checkout cannot fast-forward to the release; review its commit history."
+          deployed_sha="$(git -C "$DEPLOY_DIR" rev-parse HEAD)" || fail "Cannot read updated VPS checkout commit."
+          [[ "$deployed_sha" = "$RELEASE_SHA" ]] || fail "Updated VPS checkout does not match RELEASE_SHA."
 
       - name: Build, back up, migrate and start API
+        id: rollout
         run: |
           set -euo pipefail
           umask 077
           cd "$DEPLOY_DIR"
           export IMAGE_TAG="$RELEASE_SHA"
           compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          # The VPS provisioning env marks Files rollout; retain its API scratch mount.
+          if [[ -f .env.minio.production ]]; then
+            compose+=(-f compose.files-production.yaml)
+            echo "Using the provisioned Files Compose override."
+          fi
 
           # Quiet validation avoids printing interpolated production secrets.
           "${compose[@]}" config --quiet
@@ -95,7 +113,7 @@ jobs:
           echo "Deployed $RELEASE_SHA; PostgreSQL backup: $backup_file"
 
       - name: Diagnose failed deployment
-        if: failure()
+        if: failure() && steps.rollout.outcome == 'failure'
         run: |
           set -uo pipefail
           if [[ ! -d "$DEPLOY_DIR" ]] || [[ ! -f "$DEPLOY_DIR/.env.production" ]] || [[ ! -f "$DEPLOY_DIR/compose.production.yaml" ]]; then
@@ -105,6 +123,10 @@ jobs:
           cd "$DEPLOY_DIR"
           export IMAGE_TAG="$RELEASE_SHA"
           compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          if [[ -f .env.minio.production ]]; then
+            compose+=(-f compose.files-production.yaml)
+          fi
 
           # Do not print container config or expanded Compose/environment secrets.
           "${compose[@]}" ps --all || true
