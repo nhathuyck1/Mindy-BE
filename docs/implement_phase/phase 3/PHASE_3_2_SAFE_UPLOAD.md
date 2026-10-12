@@ -1,16 +1,18 @@
 # Phase 3.2 — Upload private và xác minh file
 
-Ngày lập/cập nhật: **2026-10-09**. Trạng thái: **đã triển khai và nghiệm thu local**.
+Ngày cập nhật: **2026-10-12**. Trạng thái: **đã triển khai và chốt local/VPS**.
 Full check 217 tests/18 suites; focused Files sau bổ sung 42/42; HTTP 19/19 pass.
-Chi tiết thực tế/config/giới hạn: [runbook](../PHASE_3_2_FILES_RUNBOOK.md).
+Chi tiết thực tế/config/giới hạn: [runbook](../../PHASE_3_2_FILES_RUNBOOK.md).
 Các mục baseline và đề xuất dưới đây giữ lịch sử thiết kế trước triển khai;
-progress/runbook ghi đầu ra hiện tại. Chưa deploy/migrate development hoặc VPS.
+progress/runbook ghi đầu ra hiện tại. User xác nhận nghiệm thu VPS xong và chốt
+3.2 ngày 2026-10-12; ảnh PDF/MP4 READY/private final objects đã ghi trong progress,
+các ca nghiệm thu còn lại theo xác nhận user. Lượt chốt không chạy tests/deploy mới.
 User xác nhận 3.1 đã xong và pass toàn bộ; progress 3.1 ghi full local gates
 171 tests/16 suites và HTTP 5/5 pass, không skip. Đây là baseline đầu vào đã đạt.
 
 Plan tổng: [Phase 3](./PHASE_3_FILES_MATERIALS.md).
 Contract đầu vào: [Phase 3.1](./PHASE_3_1_POLICY_CONTRACT.md).
-Tiến độ riêng: [Phase 3.2](../progress/PHASE_3_2_PROGRESS.md).
+Tiến độ riêng: [Phase 3.2](../../progress/phase%203/PHASE_3_2_PROGRESS.md).
 
 ## 1. Mục tiêu và giới hạn slice
 
@@ -433,7 +435,8 @@ Bàn giao 3.3: fileId READY, immutable verified summary, Course Unit/owner/prove
 provider assert/lock reference và error contract; READY vẫn phải qua draft/review.
 Bàn giao 3.5: metadata/jobs PENDING, candidate/orphan provenance, expiry/error data,
 cleanup/retention còn mở. Bàn giao 3.6: setup local/test, image/SDK pin và capability
-evidence; staging endpoint/HTTPS/CORS/capacity/VPS rollout chưa nghiệm thu ở 3.2.
+evidence; VPS rollout đã chốt theo user ngày 2026-10-12. Capacity/hardening và
+nghiệm thu toàn hành trình tiếp tục ở 3.6, không đánh dấu 3.3–3.6 đã hoàn tất.
 
 Lượt planning ban đầu không tạo Files code/migration. Implementation hiện có
 evidence trong progress riêng. CASH pending chỉ preview, assigned mentor cash confirm,

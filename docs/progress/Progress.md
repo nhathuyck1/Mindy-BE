@@ -18,6 +18,70 @@ Compiler / Judge
 
 ## Documentation updates
 
+- 2026-10-12: Hoàn thiện plan3.3 sau nghiệm thu3.2; hợp nhất ARTICLE HTML/FILE/
+  VIDEO trong domain/schema/API/refs, Manager/Mentor review và Classes release.
+  Chia3.3.1–3.3.5 với local gate + server cases từng slice, estimate BE7–10 ngày
+  provisional và bàn giao Student/binary preview/video playback3.4.
+  Đồng bộ plan/flow/API/progress/index; kiểm diff/link/JSON tài liệu.
+  Chưa implement3.3, chạy BE tests/migration hoặc deploy.
+
+- 2026-10-12: Chốt Phase 3.2 theo xác nhận user đã nghiệm thu xong trên VPS.
+  Giữ ảnh PDF/MP4 READY và private final objects làm evidence trực tiếp;
+  các ca còn lại ghi theo xác nhận user, không nhận là agent tự chạy.
+  Đồng bộ plan/index/progress/flow/breakdown/runbook; bàn giao 3.3 CRUD/review
+  nội dung. Chỉ cập nhật tài liệu và kiểm diff, không chạy BE tests/deploy mới.
+
+- 2026-10-11: Ghi evidence user MP4 VPS READY, fileId
+  `91f575a9-df4b-4b33-b8c8-7680619244e2`, declared/verified 1583534 bytes,
+  video/mp4, VIDEO, errorCode null. MinIO Console qua SSH tunnel hiện object
+  trong final/<fileId> và bucket PRIVATE. PDF/MP4 happy paths pass; còn invalid
+  binary, complete retry/quyền/anonymous access và browser CORS. Không sửa
+  source/deploy hoặc chạy BE tests; kiểm git diff --check cho tài liệu.
+
+- 2026-10-11: Ghi evidence user Postman VPS PDF READY/HTTP200, fileId
+  `5118b974-64fc-44b0-826f-58c1f9ba6c90`, declared/verified 75758 bytes,
+  application/pdf, errorCode null. Metadata PENDING đúng phạm vi 3.2;
+  nghiệm thu toàn slice còn MP4, invalid binary, retry/quyền/private access
+  và browser CORS. Không sửa source/deploy hoặc chạy BE tests trong lượt này.
+
+- 2026-10-11: Ảnh Postman user cho thấy upload VPS intent201/PUT200/PROCESSING
+  rồi FAILED FILE_SIZE_MISMATCH; binary picker còn Select file. Hướng dẫn chọn
+  file + retry intent mới, ghi evidence chưa READY và không lưu signed URLs.
+  Không sửa source/deploy hoặc chạy BE tests trong lượt này.
+
+- 2026-10-11: Hướng dẫn tạo MANAGER qua ADMIN POST admin/users để nghiệm thu3.2;
+  đối chiếu DTO/status/registration source. Không tự tạo tài khoản/đổi quyền DB,
+  không có upload acceptance hoặc BE tests mới trong lượt tài liệu này.
+
+- 2026-10-11: User báo storage public health200. Hướng dẫn public URL + enable/
+  recreate đúng image/Files override/test upload. Workflow thêm override khi VPS
+  có .env.minio.production để giữ scratch ở deploy sau; chưa deploy patch và
+  chưa có upload READY/browser CORS evidence.
+  Lint/diff/Bash syntax/Compose scratch model pass; không chạy lại BE tests.
+
+- 2026-10-11: User gửi output MinIO provisioning ready trên VPS; script kiểm
+  private bucket/versioning/backend credentials pass. Tiếp tục network/tunnel
+  storage route rồi bật/test upload; chưa có evidence public PUT/READY/CORS.
+
+- 2026-10-11: User thông báo deploy đã xong. Ghi nhận reported deployment,
+  tiếp tục provisioning MinIO với MINIO_ENABLED=false; không suy ra storage
+  hoặc upload server acceptance đã pass. Không SSH/chạy BE tests trong lượt này.
+
+- 2026-10-11: User xác nhận qua ảnh SSH API recovery: MINIO_ENABLED=false,
+  recreate image `8aafd5a` Healthy; .git directory và env/base compose tồn tại.
+  Chỉ API recovery đã có evidence; release mới/checkout failure và MinIO/upload
+  server acceptance chưa xác minh. Lượt này ghi tài liệu, không chạy BE tests.
+
+- 2026-10-11: Lượt deploy kế tiếp fail tại `Check VPS checkout and release`
+  theo screenshot user, trước build/migrate/API switch; silent test chưa cho biết
+  condition fail. Đổi workflow sang named errors cho path/files/branch/dirty/
+  Docker/fetch/fast-forward/SHA, giữ clean-check và ff-only; container diagnostics
+  chỉ khi rollout fail. Yêu cầu branch/status VPS để xác định nguyên nhân; không
+  tự reset/clean/stash hoặc coi đây là lỗi MinIO. User gửi ảnh nhánh dev/status
+  clean; log mới release `1258e24` chưa nêu condition, API cũ `8aafd5a` vẫn
+  restarting vì keys rỗng. Lint/diff/Bash syntax + 6 mock preflight cases pass;
+  chưa có runtime recovery evidence.
+
 - 2026-10-11: Chẩn đoán deploy từ log user (`logs_103358883936`, release
   `8aafd5a`): CI pass 243 tests + 20 HTTP tests, image/backup check/migration pass,
   API unhealthy sau recreate. Runtime logs user xác nhận MinIO bật với access/

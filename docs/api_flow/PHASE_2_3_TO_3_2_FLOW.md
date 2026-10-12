@@ -1,6 +1,6 @@
 # Flow Phase 2.3 → 3.1 → 3.2
 
-Đối chiếu source và progress trong checkout hiện tại ngày 2026-10-10.
+Đối chiếu source và progress; cập nhật plan/baseline ngày 2026-10-12.
 “Đã code” bên dưới chỉ nói về repo; không khẳng định đã deploy hoặc bật trên VPS.
 
 FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
@@ -14,8 +14,8 @@ FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 |---|---|---|---|
 | 2.3 | Student tìm lớp đã đăng ký, xem detail và lịch cá nhân | StudentLearningModule, collection My Classes, lịch nhiều lớp, DTO access context, full detail/CASH preview; suite local pass | Query-plan review trên fixture lớn, coverage PayOS settlement → list/lịch và staging/VPS smoke |
 | 3.1 | Quy định ai được tạo, sửa, duyệt và đọc tài liệu | Role MANAGER + migration; MaterialsModule/MaterialPolicyService; context providers; domain review/revision/access và test | Material entity, DB persistence, HTTP CRUD/review và Student download thuộc các slice sau |
-| 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, validation worker, retry/lease/reference locks và test | Material CRUD/review ở 3.3; Student đọc/tải ở 3.4; metadata extraction/cleanup ở 3.5; rollout/tích hợp ở 3.6 |
-| 3.3 | Material CRUD/review/publication và Class Unit release | Đã lập plan ngày 2026-10-11 theo baseline 3.1/3.2 hoàn tất; chưa implement | Persistence/audit/ancestry/locks, Mentor unit/session context và submission, Manager review, release API; [flow](PHASE_3_3_FLOW.md)/[breakdown dự kiến](PHASE_3_3_flow-api-breakdown.md) |
+| 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, worker/locks/tests; nghiệm thu VPS theo user2026-10-12 | Material CRUD/review ở3.3; đọc/tải3.4; metadata/cleanup3.5; full integration3.6 |
+| 3.3 | Typed Material CRUD/review và Class Unit release | Hoàn thiện plan2026-10-12 sau nghiệm thu3.2; chưa implement | ARTICLE/sanitizer/refs/schema/audit/locks, Mentor context/submission, review/release; local/server gates từng slice; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
 
 Hai nhánh Student và Manager/Mentor làm việc độc lập, sau này gặp nhau ở Material.
 
@@ -23,8 +23,9 @@ Cập nhật scope 2026-10-11: Material ARTICLE lưu HTML đã sanitize để FE
 FILE và VIDEO MP4 dùng private MinIO, URL có thời hạn (HLS sau). ARTICLE chỉ có
 text không cần upload file; ảnh/attachments tham chiếu fileId READY từ 3.2.
 Plan/flow/API 3.3 đã bổ sung, source vẫn file-only cho tới implementation.
-User báo code 3.2 có trên server; storage/upload nghiệm thu riêng theo
-[VPS runbook](../PHASE_3_2_VPS_MINIO_RUNBOOK.md), không chờ 3.6 mới deploy mỗi slice.
+User xác nhận3.2 đã nghiệm thu VPS ngày2026-10-12; PDF/MP4 READY/private objects
+ghi ở [progress3.2](../progress/phase%203/PHASE_3_2_PROGRESS.md).
+Plan3.3 thống nhất typed content, local/server gate từng slice, không chờ3.6 mới deploy.
 2.3 cung cấp classId/classUnitId/sessionId để điều hướng; 3.1 kiểm quyền nội dung;
 3.2 cung cấp fileId đã xác minh. Một file READY chưa trở thành Material được phép đọc.
 
@@ -60,9 +61,10 @@ flowchart TD
     WORK -->|"Không hợp lệ / hết retry"| FAILED["FAILED + errorCode"]
     INT -->|"Intent hết hạn trước complete"| FAILED
   end
-  READY -.-> MAT["3.3 đã lập plan, chưa API/DB: tạo Material draft bằng fileId"]
+  ARTICLE["3.3: ARTICLE HTML text-only không cần upload"] -.-> MAT
+  READY -.-> MAT["3.3 planned: typed Material draft + READY refs nếu có"]
   MAT -.-> REVIEW["Mentor submit → Manager approve/reject; áp dụng policy 3.1"]
-  REVIEW -.-> GATE{"Policy đọc 3.1: ACTIVE + release/time + approval/publication + READY"}
+  REVIEW -.-> GATE{"Policy3.3 typed: ACTIVE + release/time + approval/publication + valid content/READY refs"}
   DETAIL -.-> GATE
   GATE -.->|"Đủ điều kiện"| READ["3.4 chưa triển khai: Student xem/tải tài liệu"]
   GATE -.->|"Thiếu điều kiện"| DENY["Không cấp nội dung/download"]
@@ -179,14 +181,17 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
 - Linux validator dùng `/usr/bin/ffprobe`; Docker runtime đã cài `ffmpeg`.
   Workflow Check có bước cài dependency tương ứng trên runner.
 - Redis không bắt buộc cho jobs của 3.2; job truth nằm trong PostgreSQL.
-- VPS đang để `MINIO_ENABLED=false` theo thông tin user: storage bị tắt;
-  các request tạo/complete/status upload đủ quyền bị từ chối với HTTP 503,
-  code `FILE_STORAGE_DISABLED`.
-  Có source API không đồng nghĩa đã có hành trình upload dùng được trên VPS.
+- 3.2 đã nghiệm thu VPS theo xác nhận user2026-10-12. Khi môi trường tắt
+  `MINIO_ENABLED=false`, Files trả503 FILE_STORAGE_DISABLED; đây là hành vi
+  cấu hình, không phải mô tả VPS hiện đang tắt storage.
 - CI dùng MinIO fixture riêng; không phụ thuộc flag/MinIO của VPS.
 - Muốn Student thực sự đọc/tải tài liệu vẫn cần 3.3 + 3.4 và cấu hình/rollout tương ứng.
 
 ## 8. Nhật ký đối chiếu
+
+- 2026-10-12: Cập nhật baseline3.2 đã nghiệm thu và flow ARTICLE text-only không
+  qua upload; plan3.3 typed Manager→Mentor→review→release→acceptance, local/server
+  gates từng slice. APIs3.3/3.4 vẫn planned; chỉ kiểm tài liệu/diff/link/JSON.
 
 - 2026-10-11: Bổ sung liên kết plan/flow/API3.3, workflow context/draft/review/
   release sau READY; trạng thái vẫn chưa implement. Preview binary cùng Student

@@ -154,6 +154,11 @@ diagnosis or a forward fix; the workflow does not revert a database with payment
 history. It does not change Cloudflare routing, confirm the payOS webhook or
 initiate a real payment.
 
+Checkout checks report named errors for missing files, wrong branch, local Git
+changes, Docker access and fast-forward/SHA failures. Local changes are reported
+as status paths only and never discarded automatically. Container diagnostics
+run only if the build/migrate/API rollout step fails, not on checkout failures.
+
 After building, the workflow validates the production environment against the
 new image's schema before backup/migrations or replacing the API. Invalid config
 fails the rollout while the old API remains running; output contains field names
@@ -161,6 +166,12 @@ and error types only. Failed deploys also report container status, API State and
 the last 120 API log lines without dumping container configuration/environment.
 For the Phase 3.2 empty MinIO credentials incident and recovery commands, see
 [the Files VPS runbook](./PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+
+When `.env.minio.production` exists in the VPS checkout, rollout and diagnostics
+also use `compose.files-production.yaml`, preserving the API scratch mount after
+Files provisioning. This marker requires valid MinIO root/backend configuration.
+MinIO build/provision/tunnel routing remain explicit runbook steps; CI/CD does
+not automatically start or provision storage.
 
 ## Phase 2.2 payment release
 

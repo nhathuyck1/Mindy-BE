@@ -1,11 +1,17 @@
 # Phase 3.3 — Tiến độ Material management
 
-Cập nhật: **2026-10-11**.
+Cập nhật: **2026-10-12**.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).
 API dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 ## Hiện trạng
+
+- 2026-10-12: 3.2 đã nghiệm thu VPS theo xác nhận user; hoàn thiện plan3.3 từ
+  bản nháp, thống nhất ARTICLE HTML/FILE/VIDEO trong schema/domain/DTO/flow.
+  Bổ sung gate local + server từng slice, batch lock mọi primary/inline/attachment
+  refs trước Class locks, safe summaries và bàn giao3.4. Estimate BE provisional
+  7–10 ngày, chốt sau sanitizer/batch-lock spike. Chưa implement/test/deploy3.3.
 
 - 2026-10-11: User mở rộng scope thành ARTICLE lưu HTML, FILE và VIDEO MP4 private
 MinIO+signed URL; HLS sau. Đã cập nhật plan/flow/breakdown cho sanitize, nullable
@@ -39,11 +45,27 @@ chưa có Material persistence/controllers hoặc release HTTP.
 | Bước | Trạng thái | Gate |
 |---|---|---|
 | Plan | Hoàn tất | Plan + flow/API + progress/index đồng bộ |
-| 3.3.1 Manager persistence/CRUD | Chưa làm | Schema/READY attach/ancestry/audit atomic/locks |
+| 3.3.1 Typed Manager draft | Chưa làm | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
 | 3.3.2 Mentor context/submission | Chưa làm | Assignment + own draft + ID mapping + hidden pagination |
 | 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt |
 | 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
-| 3.3.5 Acceptance/handoff | Chưa làm | Full local checks/actual FE contract; 3.4 handoff |
+| 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
+
+## Lượt hoàn thiện plan — 2026-10-12
+
+- Lấy nghiệm thu3.2 làm baseline, không yêu cầu upload gate lại.
+- Hợp nhất plan từ file-only + addendum thành typed ARTICLE/FILE/VIDEO; CHECK theo
+  loại, references table, HTML-only không file, safe summary/detail và sanitizer bounds.
+- Đồng bộ API examples bắt buộc contentType, fileId theo loại, nullable file và
+  list omit HTML; workflow review/revision/firstApprovedAt giữ baseline.
+- Ghi multi-file lock gap của provider3.2: cần batch khóa mọi file trước Class,
+  khóa union old/new refs khi replacement và kiểm actor cùng transaction.
+- Chia việc + local gate + server acceptance3.3.1–3.3.5; preview binary/Student/
+  signed GET/video Range thuộc3.4, cleanup refs thuộc3.5; không đợi3.6 mới deploy.
+- Kiểm diff whitespace, local links/anchors và JSON examples của tài liệu cập nhật.
+  Kết quả: git diff --check pass; 9 tài liệu, 95 local links và 9 JSON examples
+  hợp lệ, không lỗi link/anchor/JSON.
+  Không chạy pnpm check/DB/HTTP/MinIO tests, migration, source/FE hoặc deploy.
 
 ## Evidence và phần còn mở
 

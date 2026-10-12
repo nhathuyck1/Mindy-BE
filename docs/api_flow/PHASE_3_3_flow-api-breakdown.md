@@ -1,6 +1,6 @@
 # Phase 3.3 — API breakdown cho FE (dự kiến)
 
-Cập nhật: **2026-10-11**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
+Cập nhật: **2026-10-12**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
 chưa có controller/persistence 3.3, chưa local verified/deploy.** Shapes mới là
 contract đề xuất cần đối chiếu Swagger/source sau implementation; không gọi FE
 production dựa trên tài liệu này. Upload 3.2 đã có, xem
@@ -9,10 +9,10 @@ production dựa trên tài liệu này. Upload 3.2 đã có, xem
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 
-## Scope HTML/FILE/VIDEO bổ sung — 2026-10-11
+## Contract ARTICLE / FILE / VIDEO
 
 User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
-bổ sung ở đây ưu tiên hơn create/fileId required của baseline bên dưới, vẫn planned.
+bên dưới áp dụng thống nhất cho create/PATCH/detail/list; vẫn là planned.
 Không đọc screenshot JSON như yêu cầu buộc đổi sang Tiptap JSON. Files3.2 routes
 vẫn unchanged; HTML string gửi vào Material body, không upload fileHTML tới Files.
 
@@ -23,7 +23,11 @@ contentSchemaVersion integer1 default1; fileId không được gửi.
 FILE/VIDEO required fileId READY đúng kind; không contentHtml;
 attachmentFileIds optional unique UUIDv4 array max50/default[].
 Inline images dùng data-file-id UUID lấy từ upload READY IMAGE, không src/base64/
-external URL. Body tổng64 KiB; body quá giới hạn413, invalid DTO/content/ref422
+external URL; tối đa50 image nodes, BE derive unique refs từ canonical HTML.
+Primary file không đồng thời là attachment; inline/attachment cùng file được phép.
+Đề xuất DOM depth32/nodes5.000, chốt bằng sanitizer spike3.3.1 trước merge.
+Input và canonical HTML đều <=48 KiB UTF-8. Body tổng64 KiB (kể cả JSON escaping);
+body quá giới hạn413, invalid DTO/content/ref422
 hoặc file status409/owner403 theo policy. Ví dụ Article request:
 
 ```json
@@ -51,9 +55,9 @@ contentHtml null, file summary not null. Ví dụ Video request:
 }
 ```
 
-PATCH expectedRevision + contentHtml/attachmentFileIds bổ sung; attachmentIds
+PATCH expectedRevision + contentHtml/attachmentFileIds; attachmentFileIds
 omitted giữ/null invalid/[] xóa; contentHtml chỉ ARTICLE/non-null; contentType
-immutable ởMVP. Mọi sửa HTML/ref vẫn EDIT/tăng revision/reset approval/publication.
+và contentSchemaVersion immutable ởMVP. Mọi sửa HTML/ref vẫn EDIT/tăng revision/reset approval/publication.
 Queue/list giữ summary không HTML; Manager/Mentor detail trả HTML theo quyền và
 view nhưcũ. Các command/canEdit/review flow không đổi vì loại nội dung.
 
@@ -105,6 +109,8 @@ ID nguồn: Manager từ Course Unit nguồn quản trị/public active Course d
 Mentor classId từ `GET /api/v1/mentor/classes` đã có, unit/session từ APIs §8;
 fileId từ 3.2 READY; materialId/revision từ create/list/detail.
 Manager catalogue inactive picker còn thiếu, không dùng Admin cookie để thay quyền.
+3.2 đã nghiệm thu VPS theo xác nhận user 2026-10-12; API3.3 cần triển khai và
+nghiệm thu từng slice theo plan. Không dùng kết quả3.2 làm evidence API3.3.
 
 ## 2. Shapes chung dự kiến
 
@@ -112,6 +118,7 @@ Create body (Manager/Mentor dùng chung, owner do route/server resolve):
 
 ```json
 {
+  "contentType": "FILE",
   "fileId": "55555555-5555-4555-8555-555555555555",
   "title": "Bài đọc Unit 1",
   "description": "Tài liệu chuẩn bị cho buổi học",
@@ -121,15 +128,22 @@ Create body (Manager/Mentor dùng chung, owner do route/server resolve):
 }
 ```
 
-fileId/title required, không null; title không whitespace-only/max250.
+contentType/title required; title không null/whitespace-only/max250.
+fileId required chỉ FILE/VIDEO và không null; ARTICLE required contentHtml,
+không fileId. contentSchemaVersion chỉ ARTICLE, default1; FILE/VIDEO không nhận.
+FILE primary kind khác VIDEO; VIDEO primary kind VIDEO/MIME video/mp4.
+attachmentFileIds optional unique UUIDv4/max50/default[] cho cả ba loại.
 description optional/null/max5.000, default null; sortOrder optional integer
 0..2.147.483.647 default0; availableAt/sessionId optional/null default null,
 date có timezone, session UUID v4. Field lạ (courseUnitId ở body, externalUrl,
 createdBy, approvedRevision, file summary, storage key...) 422.
 
-PATCH dùng các field trên tùy chọn + **expectedRevision required** integer
-1..2.147.483.647; cần ít nhất một content field. fileId/title/sortOrder không
-null; description/availableAt/sessionId omitted giữ, null xóa. Không đổi owner.
+PATCH dùng title/description/sortOrder/availableAt/sessionId, contentHtml chỉ
+ARTICLE, fileId chỉ FILE/VIDEO và attachmentFileIds + **expectedRevision required**
+integer1..2.147.483.647; cần ít nhất một content field. contentHtml/fileId/title/
+sortOrder không null; description/availableAt/sessionId omitted giữ, null xóa.
+attachmentFileIds omitted giữ, [] xóa, null invalid. Không đổi owner/contentType/
+contentSchemaVersion; field immutable trong PATCH trả422.
 Các command body `{ "expectedRevision": 1 }`; reject thêm reason required
 string trimmed nonempty/max2.000. DELETE dùng query expectedRevision cùng bounds.
 
@@ -139,6 +153,11 @@ Manager item response dự kiến (201 create, 200 detail/mutation):
 {
   "id": "44444444-4444-4444-8444-444444444444",
   "courseUnitId": "33333333-3333-4333-8333-333333333333",
+  "contentType": "FILE",
+  "contentHtml": null,
+  "contentSchemaVersion": null,
+  "inlineImages": [],
+  "attachments": [],
   "title": "Bài đọc Unit 1",
   "description": "Tài liệu chuẩn bị cho buổi học",
   "sortOrder": 0,
@@ -170,6 +189,12 @@ Manager item response dự kiến (201 create, 200 detail/mutation):
 file.kind dùng 3.2 enum PDF/IMAGE/DOCUMENT/PRESENTATION/SPREADSHEET/AUDIO/VIDEO/
 SOURCE_CODE; sizeBytes safe JSON integer đã verified. file không có ownerUserId,
 bucket/key/version/hash hoặc upload/download URL. canEdit là hint, BE kiểm lại.
+ARTICLE detail có file=null, contentHtml canonical, contentSchemaVersion=1;
+inlineImages/attachments là các verified summaries cùng safe shape với file.
+FILE/VIDEO có file, contentHtml/contentSchemaVersion null, inlineImages=[].
+Mọi list/queue dùng summary **omit contentHtml**, không trả toàn bài trong collection.
+Các field review và safe ref summaries giữ theo actor view; create/mutation/detail
+trả detail. ARTICLE có thể chỉ text, refs arrays rỗng vẫn hợp lệ.
 Review fields nullable; firstApprovedAt giữ sau edit. updatedAt phản ánh mutation
 thực, no-op retry không reset timestamps. DTO Manager có audit metadata trên;
 không trả toàn lịch sử audit không phân trang.
@@ -199,9 +224,11 @@ Không side effect/polling. 404 MATERIAL_NOT_FOUND nếu owner Unit thiếu;
 
 ### POST `/api/v1/manager/course-units/:courseUnitId/materials`
 
-Manager editor sau upload READY, path courseUnitId + body §2, cookie/JSON/Origin.
-201 Manager item DRAFT/revision1/publishedAt null; file ref + CREATE audit atomic.
-File READY đúng Course Unit; Manager có thể dùng file Mentor upload. Sync.
+Manager editor: ARTICLE có thể chỉ HTML; assets/FILE/VIDEO cần upload READY.
+Path courseUnitId + body §2, cookie/JSON/Origin.
+201 Manager detail DRAFT/revision1/publishedAt null; state + mọi refs + CREATE audit atomic.
+ARTICLE-only không cần file; nếu có primary/inline/attachment đều READY đúng
+Course Unit. Manager có thể dùng file Mentor upload. Sync.
 Create **chưa có idempotency key**: mỗi successful POST tạo Material mới, shared
 file không bị unique cấm. Mất response không tự retry POST; refetch list và đối
 chiếu trước tạo lại. 409 FILE_NOT_READY; 404 FILE_NOT_FOUND/MATERIAL_NOT_FOUND;
@@ -250,16 +277,19 @@ Không async purge/polling ở API này.
 ## 5. Manager decision/publication commands
 
 Tất cả Manager cookie/JSON/Origin, path materialId và expectedRevision §2;
-sync 200 Manager item. Trước gọi GET detail lấy revision, sau gọi invalidate
+sync 200 Manager detail. Trước gọi GET detail lấy revision, sau gọi invalidate
 detail/unit list/queue. 409 refetch và yêu cầu người dùng quyết định lại; không
 retry decision cho revision mới. 404 item missing/deleted; 403 role/Origin;
-422 DTO/content/scope, 409 FILE_NOT_READY khi action cần verified file.
+422 DTO/content/scope, 409 FILE_NOT_READY khi có reference chưa READY.
+ARTICLE-only qua gate typed content không cần file; các bước kiểm nội dung
+(submit/approve/reject/publish) kiểm mọi refs nếu có. Unpublish/delete không
+yêu cầu storage network hoặc phát signed URL.
 
 | Full route | Ví dụ body | Transition/response và lặp |
 |---|---|---|
 | POST `/api/v1/manager/materials/:materialId/approve` | `{ "expectedRevision": 1 }` | PENDING→APPROVED, approvedRevision1, reviewedAt/firstApprovedAt/publishedAt serverNow. Manager own DRAFT hoặc bản Manager sửa sau từng duyệt cũng hợp lệ; Mentor draft chưa submit409. Same current approved revision no-op; approve retry sau unpublish giữ publishedAt null. |
 | POST `/api/v1/manager/materials/:materialId/reject` | `{ "expectedRevision": 1, "reason": "Cần bổ sung ví dụ thực hành" }` | Chỉ pending→REJECTED, reviewedAt/reason, approval/publication null. Repeat cùng revision + trimmed reason no-op; khác reason/state409. Blank/overlong reason422. |
-| POST `/api/v1/manager/materials/:materialId/publish` | `{ "expectedRevision": 1 }` | Current APPROVED+READY bắt buộc; set publishedAt nếu đang null, repeat giữ timestamp. Future availableAt/release vẫn trì hoãn Student3.4; không worker. |
+| POST `/api/v1/manager/materials/:materialId/publish` | `{ "expectedRevision": 1 }` | Current APPROVED + typed content hợp lệ + mọi refs READY nếu có; set publishedAt nếu đang null, repeat giữ timestamp. Future availableAt/release vẫn trì hoãn Student3.4; không worker. |
 | POST `/api/v1/manager/materials/:materialId/unpublish` | `{ "expectedRevision": 1 }` | Xóa publishedAt, giữ approval/revision; repeat no-op. Không thu hồi byte đã tải/URL cũ3.4 trước TTL. |
 
 Command giữ revision; audit chỉ ghi transition thực. Hai approve cùng revision
@@ -283,10 +313,12 @@ empty/success; refresh sau mutation, không polling worker.
 
 ### POST `/api/v1/mentor/classes/:classId/units/:unitId/materials`
 
-Sau picker+upload3.2 READY, cookie/JSON/Origin. Path class/unit, body create §2;
-BE resolve courseUnitId, không nhận owner từ client. 201 own Mentor item
-DRAFT/revision1/createdInClassId=classId. File own READY đúng Course Unit, intent
-scope còn quyền; optional session phải cùng lớp/unit. CREATE audit+reference atomic.
+Sau picker: ARTICLE có thể chỉ HTML; assets/FILE/VIDEO cần upload3.2 READY.
+Cookie/JSON/Origin, path class/unit, body create §2;
+BE resolve courseUnitId, không nhận owner từ client. 201 own Mentor detail
+DRAFT/revision1/createdInClassId=classId. ARTICLE-only không cần file; mọi primary/
+inline/attachment nếu có phải own READY đúng Course Unit, intent scope còn quyền;
+optional session phải cùng lớp/unit. State+CREATE audit+mọi references atomic.
 Create không tự retry khi mất response, giống Manager §3.
 403 MATERIAL_ACCESS_DENIED/FILE_OWNER_MISMATCH, 404 ancestry/file,
 409 FILE_NOT_READY, 422 scope/content. Assignment revoke sau upload chặn create,
@@ -434,7 +466,7 @@ Prerequisites: implement+migrate3.3, cookie auth roles, proxy Origin/CORS đúng
 upload3.2 MinIO/versioning/worker bật nếu tạo/thay file. Không có claims deploy/
 VPS trong lượt này. Human preview3.4 và Manager inactive catalogue picker còn
 thiếu trước nghiệm thu UI toàn flow. Chạy local DB/HTTP/full gates khi implement;
-happy path dự kiến upload READY→Mentor draft→submit→Manager approve→release,
+happy paths ARTICLE-only hoặc upload READY→Mentor typed draft→submit→Manager approve→release,
 error branches/revision/assignment tests theo plan.
 
 ## 11. Nhật ký planning — 2026-10-11
@@ -442,3 +474,11 @@ error branches/revision/assignment tests theo plan.
 Tạo breakdown dự kiến tương ứng flow/plan; đối chiếu policy/transitions/Files
 reference/Class locks, phân biệt planned với APIs3.2 đã có. Kiểm links/diff và
 ví dụ JSON; chưa source/API change, BE tests, migrations, deploy hoặc binary review.
+
+## 12. Đồng bộ plan sau nghiệm thu3.2 — 2026-10-12
+
+Chuẩn hóa examples và shapes cho contentType required, fileId theo loại, HTML-only
+không file, refs bounds/duplicate rules và summary omit HTML; workflow review/
+release không đổi. Thêm baseline3.2 đã nghiệm thu theo user và gate server từng
+slice trong plan. Kiểm diff/link/JSON tài liệu, chưa source/API runtime change,
+BE tests, migration hoặc deploy3.3.

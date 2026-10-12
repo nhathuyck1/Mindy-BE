@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-11**. **Kế hoạch; các API 3.3 chưa implement/deploy.**
+Cập nhật: **2026-10-12**. **Kế hoạch; các API 3.3 chưa implement/deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -9,7 +9,7 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 ## 1. Kết quả sản phẩm
 
 Scope mới user chốt2026-10-11: **ARTICLE lưu HTML / FILE / VIDEO MP4 private**;
-HLS làm sau. Plan3.3/breakdown có contract bổ sung ưu tiên hơn file-only baseline.
+HLS làm sau. Plan3.3/breakdown đã hợp nhất typed content, thay baseline file-only.
 ARTICLE có thể không file; ảnh/file tham chiếu MinIO bằng fileId, không base64 hoặc
 signed URL lưu trong HTML. Nội dung sanitize và reference checks ởBE, FE render/
 resolve images ở3.4. Cùng review/revision/release gates cho cảba loại.
@@ -25,9 +25,13 @@ và release của từng lớp vẫn quyết định khi Student đọc ở 3.4.
 ```mermaid
 flowchart TD
   C["Mentor roster classId đã có"] -.-> U["3.3: unit/session context đúng assignment"]
-  M["Manager chọn Course Unit UUID"] --> UP["3.2 đã có: intent → PUT MinIO → complete → READY"]
+  M["Manager chọn Course Unit UUID"] --> K{"ARTICLE / FILE / VIDEO"}
+  K -.-> H["ARTICLE: HTML đã sanitize; text-only không cần upload"]
+  K --> UP["3.2 đã nghiệm thu: upload assets / PDF / MP4 → READY"]
+  U -.-> H
   U -.-> UP
-  UP -.-> D["3.3: tạo Material DRAFT revision 1"]
+  UP -.-> D["3.3: tạo typed Material DRAFT revision 1"]
+  H -.-> D
   D -.-> S["Mentor submit → PENDING_REVIEW"]
   S -.-> Q["Manager queue/detail + expectedRevision"]
   Q -.-> A["Approve → APPROVED + publishedAt"]
@@ -38,21 +42,24 @@ flowchart TD
   ME -.-> A
   A -.-> P["Manager unpublish/publish đúng approval"]
   REL["3.3: Admin/Mentor release Class Unit LOCKED/OPEN + unlockAt"] -.-> G
-  A -.-> G["3.4: ACTIVE + class/unit/time + approval + READY"]
-  G -.-> READ["Student list/download; Manager/Mentor binary preview"]
+  A -.-> G["3.4: ACTIVE + class/unit/time + approval + valid content/READY refs"]
+  G -.-> READ["Student list/detail/assets; Manager/Mentor binary preview"]
 ```
 
-Nét đứt là việc chưa implement. Upload 3.2 có evidence local, không chứng minh
-VPS đang bật storage. Diagram không công bố endpoint mới là dùng được.
+Nét đứt là việc chưa implement. Upload 3.2 đã nghiệm thu VPS theo xác nhận user
+2026-10-12; ảnh PDF/MP4 READY/private objects ghi ở progress3.2.
+Diagram không công bố endpoint3.3/3.4 mới là dùng được.
 
 ## 3. Mentor tạo và gửi duyệt
 
 1. `GET /mentor/classes` đã có lấy classId. Routes context dự kiến 3.3 trả
    classUnitId/courseUnitId; optional session picker trả sessionId đúng unit.
    Không đoán mapping theo title/position hoặc gọi Admin API.
-2. Theo [upload breakdown 3.2](PHASE_3_2_flow-api-breakdown.md): tạo intent đúng
+2. ARTICLE text-only: soạn HTML; nếu có inline images/attachments hoặc FILE/VIDEO,
+   theo [upload breakdown 3.2](PHASE_3_2_flow-api-breakdown.md): intent đúng
    classId/classUnitId/courseUnitId, raw PUT storage, complete, poll đến READY.
-3. POST unit materials với fileId/title/content; response DRAFT/revision=1.
+3. POST unit materials với contentType/title và HTML hoặc primary fileId;
+   response detail canonical HTML/safe refs, DRAFT/revision=1.
    READY metadata PENDING/FAILED không cản Material nếu binary đã READY.
 4. PATCH draft với expectedRevision; cập nhật revision từ response. Submit
    expectedRevision → pending, khóa editor của Mentor, dừng retry sau 403/409.
@@ -68,10 +75,11 @@ VPS đang bật storage. Diagram không công bố endpoint mới là dùng đư
 2. GET materials/queue (mặc định queue filter FE PENDING_REVIEW); chọn item GET
    detail để lấy current revision. List không chứa download URL.
 3. Approve/reject dùng expectedRevision; approve publish cùng commit, reject cần
-   reason. Binary preview thuộc 3.4; không giả định 3.3 đã đủ màn hình đọc file.
+   reason. ARTICLE detail trả HTML đã sanitize để đọc ngay3.3.
+   Binary preview thuộc 3.4; không giả định 3.3 đã đủ màn hình đọc file.
 4. 409: refetch item/queue, hiển thị bản hiện tại, không tự approve revision mới.
    Response mất: refetch, retry cùng revision khi state còn đúng; no-op không tạo audit.
-5. Manager EDIT nội dung/file/sortOrder/availableAt/sessionId tăng revision và
+5. Manager EDIT HTML/primary/inline/attachment refs/sortOrder/availableAt/sessionId tăng revision và
    thu hồi approval/publication ngay. File mới phải upload READY trước PATCH.
 6. Unpublish giữ approval; publish lại cần approval current. Approve retry không
    tự publish lại bản đã unpublish. DELETE soft-delete, refetch item/list/queue.
@@ -108,3 +116,13 @@ Source policy hiện tại vẫn file-only; chưa sửa domain/schema/controller
 Lập plan theo baseline 3.1/3.2 đã xong; bổ sung context/detail/release/audit và
 breakdown dự kiến. API/source runtime hiện tại không đổi. Kiểm link/diff/JSON
 trong tài liệu; chưa chạy runtime tests, migrate, deploy hoặc human binary review.
+
+## 8. Plan sau nghiệm thu 3.2 — 2026-10-12
+
+User xác nhận3.2 đã nghiệm thu xong. Hợp nhất plan/schema/DTO cho ARTICLE/FILE/VIDEO,
+ARTICLE-only không file, sanitizer và mọi references; bỏ flow luôn bắt buộc upload.
+Giữ thứ tự3.3.1 typed Manager draft →3.3.2 Mentor submission →3.3.3 review/publication
+→3.3.4 release →3.3.5 acceptance/handoff. Mỗi bước có local gate và server cases
+trong plan, ghi evidence riêng; signed GET/Student access/video runtime thuộc3.4.
+Estimate BE provisional7–10 ngày, chốt sau sanitizer/batch-lock spike.
+Kiểm diff/link/JSON tài liệu; không sửa API runtime, chạy BE tests, migrate hoặc deploy.
