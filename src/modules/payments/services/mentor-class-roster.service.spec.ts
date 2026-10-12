@@ -56,20 +56,18 @@ function fixture() {
     [
       OrderEntity,
       {
-        find: vi
-          .fn()
-          .mockResolvedValue([
-            {
-              id: 'order',
-              orderCode: 'MD-TEST',
-              paymentType: PaymentType.CASH,
-              cashMentorId: 'actor',
-              status: OrderStatus.PENDING,
-              totalAmount: 100,
-              expiresAt: new Date('2099-01-01'),
-              paidAt: null,
-            },
-          ]),
+        find: vi.fn().mockResolvedValue([
+          {
+            id: 'order',
+            orderCode: 'MD-TEST',
+            paymentType: PaymentType.CASH,
+            cashMentorId: 'actor',
+            status: OrderStatus.PENDING,
+            totalAmount: 100,
+            expiresAt: new Date('2099-01-01'),
+            paidAt: null,
+          },
+        ]),
       },
     ],
     [UserEntity, { find: vi.fn().mockResolvedValue([{ id: 'student', displayName: 'Học viên' }]) }],
