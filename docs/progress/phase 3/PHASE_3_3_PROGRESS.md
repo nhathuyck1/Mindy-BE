@@ -1,9 +1,9 @@
 # Phase 3.3 — Tiến độ Material management
 
-Cập nhật: **2026-10-12**.
+Cập nhật: **2026-10-13**.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).
-API dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+API đã có + dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 ## Hiện trạng
 
@@ -32,10 +32,10 @@ file có CHECK theo loại, inline/attachment refs, Student article/asset access
 video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
 hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
 
-**Đã lập kế hoạch; chưa implement Phase 3.3.** User xác nhận 3.1/3.2 đã xong.
+**3.3.1 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.2–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 đã có Material FILE/VIDEO read persistence và ba Student GET theo
-[read slice3.4](PHASE_3_4_PROGRESS.md); chưa authoring/review/release HTTP.
+[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor/review/release HTTP còn planned.
 Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 
 ## Lượt planning — 2026-10-11
@@ -60,7 +60,7 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 | Bước | Trạng thái | Gate |
 |---|---|---|
 | Plan | Hoàn tất | Plan + flow/API + progress/index đồng bộ |
-| 3.3.1 Typed Manager draft | Chưa làm | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
+| 3.3.1 Typed Manager draft | Đã implement local; chờ VPS acceptance | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
 | 3.3.2 Mentor context/submission | Chưa làm | Assignment + own draft + ID mapping + hidden pagination |
 | 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt |
 | 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
@@ -85,6 +85,47 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 ## Evidence và phần còn mở
 
 Evidence 3.1/3.2 đã có trong progress riêng; không phải test pass 3.3.
-Chưa có migration SQL review, Material DB/HTTP tests, preview binary, UI/VPS smoke.
+Đã có Material migration/DB/HTTP tests3.3.1 và SQL self-review; PR reviewer trước merge còn cần chỉ định.
+Preview binary, UI/VPS smoke chưa có.
 Chốt SQL ancestry/parent locks và reviewer trước merge khi implement 3.3.1.
 Manager picker inactive catalogue là gap UI riêng; không cấp quyền Admin tạm.
+
+## Triển khai 3.3.1 — 2026-10-13
+
+- Branch `codex/phase-3-3-1-manager-materials`; typed ARTICLE/FILE/VIDEO domain,
+  sanitizer/canonical HTML, inline images/attachments, nullable primary và safe DTO.
+- Additive migration `1791849600000-typed-manager-materials`, refs/audit/indexes,
+  typed CHECK, READY/kind/scope/file-state protections, immutable ancestry/first approval,
+  append-only audit. Clean up/down/up và upgrade có FILE legacy trên DB test.
+- Files batch reference khóa union old/new file rows UUID tăng dần trước Class authorize;
+  reuse batch summary read không upload-owner check/không storage network.
+- Manager create/list/detail/PATCH/delete; roles/current actor under transaction,
+  Users FOR SHARE bảo vệ role/status, Origin allowlist bắt buộc, stale revision409,
+  same-value EDIT tăng revision/reset approval, DELETE retry204/không audit trùng.
+- Tests ARTICLE-only/image-only/XSS/UTF-8/depth/nodes, refs/kind/scope, đổi file
+  ngược chiều, PATCH races, rollback audit/ref replacement, file-state race,
+  parent reparent guards, actor revoke lock, tombstones và safe summary/detail.
+- Built-app HTTP tests3.3.1 chạy cùng fixture Files3.2: CRUD/roles/Origin/DTO/413/
+  Swagger và attach PDF/MP4 đã upload/validate trên MinIO thật. Fixture cố định
+  MINIO_PUBLIC_URL local, tránh kế thừa public endpoint của .env.
+- Swagger, Postman Phase33, DBML, plan/flow/API/progress cập nhật theo source.
+- Final local gate: `pnpm check` pass (lint/type-check/build + **332/332 tests,
+  30 suites, 0 skip**); `pnpm test:http` **32/32, 2 suites, 0 skip**;
+  `pnpm test:files` **42/42, 1 suite, 0 skip**, PostgreSQL + private MinIO thật.
+  Test331 có14 integration cases; sanitizer17 cases; shared typed predicate3 cases.
+  HTTP3.3.1 có5 cases trong Files HTTP suite, gồm nhiều nhánh role/DTO/Origin.
+  `git diff --check` pass; 26 local links, 9 JSON examples và11 Postman requests hợp lệ.
+  Log ERROR/WARN trong các failure/retry fixtures có chủ đích; không có test failure.
+- Chỉ migrate dedicated *_test databases và bucket fixture riêng; chưa migrate dev/VPS,
+  chưa deploy/merge hoặc nghiệm thu server. Mentor/review/release và ARTICLE asset
+  access/binary preview chưa được cấp bởi slice này.
+
+### Server acceptance 3.3.1 cần chạy sau deploy
+
+Backup DB → chạy additive migration → deploy app → health/auth smoke. Import
+`postman/Mindy-Materials-Phase33.postman_collection.json`, đặt Manager credentials,
+Origin đúng allowlist và Course Unit fixture UUID. Ghi release SHA/migration ID,
+request/status/result cho các ca: text ARTICLE CRUD; ảnh IMAGE + PDF attachment;
+FILE PDF/VIDEO MP4 READY3.2; stale PATCH409; DELETE retry204/detail404; foreign refs422;
+Admin/Mentor/Student403; missing/foreign Origin403; empty ARTICLE422; body413.
+Không tự đánh dấu server pass từ local checks. Rollback app giữ typed tables/data.

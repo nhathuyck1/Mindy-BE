@@ -42,7 +42,7 @@ export class StudentMaterialDto {
   @ApiProperty({ type: String, format: 'uuid' }) readonly classId: string;
   @ApiProperty({ type: String, format: 'uuid' }) readonly classUnitId: string;
   @ApiProperty({ type: String, format: 'uuid' }) readonly courseUnitId: string;
-  @ApiProperty({ type: String, enum: MaterialContentType })
+  @ApiProperty({ type: String, enum: [MaterialContentType.FILE, MaterialContentType.VIDEO] })
   readonly contentType: MaterialContentType;
   @ApiProperty({ type: String }) readonly title: string;
   @ApiProperty({ type: String, nullable: true }) readonly description: string | null;

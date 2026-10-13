@@ -6,6 +6,7 @@ import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrivateFileUploads1791504000001 } from '../../src/database/migrations/1791504000001-private-file-uploads.js';
 import { StudentMaterialReads1791763200000 } from '../../src/database/migrations/1791763200000-student-material-reads.js';
+import { TypedManagerMaterials1791849600000 } from '../../src/database/migrations/1791849600000-typed-manager-materials.js';
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
@@ -50,7 +51,11 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       throw new Error('Student material tests require dedicated TEST_DATABASE_URL + local MinIO');
     db = await paymentDatabase('student_materials', {
       entities: [FileObjectEntity, FileMetadataEntity, FileProcessingJobEntity, MaterialEntity],
-      migrations: [PrivateFileUploads1791504000001, StudentMaterialReads1791763200000],
+      migrations: [
+        PrivateFileUploads1791504000001,
+        StudentMaterialReads1791763200000,
+        TypedManagerMaterials1791849600000,
+      ],
     });
     // Migration up/down/up is safe only on this isolated empty test database.
     await db.undoLastMigration();
@@ -135,7 +140,14 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
           );
       await db.getRepository(ClassUnitEntity).update(unit.id, { status: ClassUnitStatus.OPEN });
     };
-    return { order, classId, unit, material, principal, activate };
+    return {
+      order,
+      classId,
+      unit,
+      material: { ...material, fileObjectId: intent.fileId },
+      principal,
+      activate,
+    };
   }
 
   it('filters hidden rows before count/page and maps only student-safe fields', async () => {
@@ -296,23 +308,34 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
         .getRepository(MaterialEntity)
         .update(s.material.id, { availableAt: new Date(Date.now() + 60000) });
     if (gate === 'file-failed')
-      await db
-        .getRepository(FileObjectEntity)
-        .update(s.material.fileObjectId, { status: 'FAILED' });
+      await expect(
+        db.getRepository(FileObjectEntity).update(s.material.fileObjectId, { status: 'FAILED' }),
+      ).rejects.toMatchObject({ code: '23514' });
     if (gate === 'file-deleted')
-      await db
-        .getRepository(FileObjectEntity)
-        .update(s.material.fileObjectId, { deletedAt: new Date() });
+      await expect(
+        db
+          .getRepository(FileObjectEntity)
+          .update(s.material.fileObjectId, { deletedAt: new Date() }),
+      ).rejects.toMatchObject({ code: '23514' });
     if (gate === 'wrong-file-scope') {
       const other = await setup();
-      await db
-        .getRepository(MaterialEntity)
-        .update(s.material.id, { fileObjectId: other.material.fileObjectId });
+      await expect(
+        db
+          .getRepository(MaterialEntity)
+          .update(s.material.id, { fileObjectId: other.material.fileObjectId }),
+      ).rejects.toMatchObject({ code: '23514' });
     }
     if (gate === 'wrong-kind')
-      await db
-        .getRepository(MaterialEntity)
-        .update(s.material.id, { contentType: MaterialContentType.VIDEO });
+      await expect(
+        db
+          .getRepository(MaterialEntity)
+          .update(s.material.id, { contentType: MaterialContentType.VIDEO }),
+      ).rejects.toMatchObject({ code: '23514' });
+    // Typed migration prevents these corrupt states. Unpublish still revokes valid reads.
+    if (['file-failed', 'file-deleted', 'wrong-file-scope', 'wrong-kind'].includes(gate)) {
+      expect((await reads.detail(s.principal, s.classId, s.material.id)).file.status).toBe('READY');
+      await db.getRepository(MaterialEntity).update(s.material.id, { publishedAt: null });
+    }
     expect(
       (await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 })).total,
     ).toBe(0);

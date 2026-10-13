@@ -1,0 +1,402 @@
+{
+  "info": {
+    "name": "07 — Phase 3.3.1 Manager Materials",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Manager typed draft CRUD only. Login cookie jar; Origin must match CORS_ORIGINS. Choose Course Unit ID from fixtures. Upload primary/inline/attachment assets via Files 3.2 first and wait READY. Review/Mentor/release and ARTICLE asset access remain later slices. Successful mutation records material_id/expected_revision; stale revisions require refetch and user comparison."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "manager_email",
+      "value": ""
+    },
+    {
+      "key": "manager_password",
+      "value": ""
+    },
+    {
+      "key": "course_unit_id",
+      "value": ""
+    },
+    {
+      "key": "material_id",
+      "value": ""
+    },
+    {
+      "key": "file_id",
+      "value": ""
+    },
+    {
+      "key": "image_file_id",
+      "value": ""
+    },
+    {
+      "key": "expected_revision",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login Manager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{manager_email}}\",\n  \"password\": \"{{manager_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create ARTICLE text-only",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"contentType\": \"ARTICLE\",\n  \"title\": \"Kiến thức Unit 1\",\n  \"contentHtml\": \"<h2>Mục tiêu</h2><p>Nội dung bài học.</p>\",\n  \"attachmentFileIds\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create ARTICLE image + PDF attachment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"contentType\": \"ARTICLE\",\n  \"title\": \"Bài đọc có ảnh\",\n  \"contentHtml\": \"<p>Sơ đồ</p><img data-file-id=\\\"{{image_file_id}}\\\" alt=\\\"Sơ đồ\\\">\",\n  \"attachmentFileIds\": [\n    \"{{file_id}}\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create FILE from READY file",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"contentType\": \"FILE\",\n  \"title\": \"Giáo trình\",\n  \"fileId\": \"{{file_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create VIDEO from READY file",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"contentType\": \"VIDEO\",\n  \"title\": \"Video bài học\",\n  \"fileId\": \"{{file_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Course Unit summaries",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "List global DRAFT summaries",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/materials?reviewStatus=DRAFT&page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Get detail / refetch revision",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PATCH title — expectedRevision is JSON number",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": {{expected_revision}},\n  \"title\": \"Bài học đã chỉnh sửa\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "PATCH remove attachments",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": {{expected_revision}},\n  \"attachmentFileIds\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const data = pm.response.json();",
+              "  pm.collectionVariables.set('material_id', data.id);",
+              "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DELETE soft / repeat same revision",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}?expectedRevision={{expected_revision}}"
+      }
+    }
+  ]
+}

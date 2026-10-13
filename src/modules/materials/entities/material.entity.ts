@@ -3,16 +3,19 @@ import { TimestampedEntity } from '../../../common/database/base.entity.js';
 import { MaterialReviewStatus } from '../domain/material-contract.js';
 
 export enum MaterialContentType {
+  ARTICLE = 'ARTICLE',
   FILE = 'FILE',
   VIDEO = 'VIDEO',
 }
 
-/** Read slice for existing file-backed policy; ARTICLE/refs/writes follow in Phase 3.3. */
 @Entity('materials')
 export class MaterialEntity extends TimestampedEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ name: 'course_unit_id', type: 'uuid' }) courseUnitId!: string;
-  @Column({ name: 'file_object_id', type: 'uuid' }) fileObjectId!: string;
+  @Column({ name: 'file_object_id', type: 'uuid', nullable: true }) fileObjectId!: string | null;
+  @Column({ name: 'content_html', type: 'text', nullable: true }) contentHtml!: string | null;
+  @Column({ name: 'content_schema_version', type: 'integer', nullable: true })
+  contentSchemaVersion!: number | null;
   @Column({
     name: 'content_type',
     type: 'enum',

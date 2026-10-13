@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-12**. **Kế hoạch; các API 3.3 chưa implement/deploy.**
+Cập nhật: **2026-10-13**. **Manager CRUD3.3.1 đã implement local; chưa deploy. Mentor/review/release còn planned.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -8,8 +8,8 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
-CRUD/review/audit/release/ARTICLE3.3 vẫn planned. Schema typed dưới đây cần migration
-mở rộng additive; không tạo lại materials hoặc sửa migration read đã chạy.
+Manager CRUD/ARTICLE/refs/audit3.3.1 đã có migration additive mới.
+Mentor/review/release còn planned; không sửa migration read đã chạy.
 
 ## 1. Kết quả sản phẩm
 
@@ -17,7 +17,7 @@ Diễn giải UX2026-10-12: Course Unit là chương/nhóm học; Material ARTIC
 bài đọc HTML soạn bằng CKEditor. Chọn Unit → danh sách bài theo sortOrder → mở
 Material detail để đọc; metadata/mục tiêu Unit dùng description hiện có, không
 thêm bảng course_unit_details lưu trùng contentHtml. Đây là hướng thiết kế,
-chưa có authoring/ARTICLE API. PDF là Material FILE hoặc attachment ARTICLE
+Manager authoring/ARTICLE API đã có3.3.1, Student ARTICLE/asset access còn3.4. PDF là Material FILE hoặc attachment ARTICLE
 theo typed plan; upload READY chỉ lưu file, không tự tạo/publish bài học hoặc
 chuyển PDF thành HTML. Seed local lớp/lịch/course unit đã được chạy lại và query
 xác minh 5 course/class unit, 10 buổi; không seed ARTICLE vì schema chưa hỗ trợ.
@@ -116,7 +116,7 @@ Hai lớp cùng Course Unit dùng chung Material, release độc lập theo từ
   409 giữ form nhưng refetch server state để người dùng đối chiếu.
 - Mutations sync; không polling Material worker. Có thể refresh pending queue
   theo thao tác người dùng; upload polling chỉ dùng flow 3.2.
-- Metadata responses `private, no-store`; invalidate unit list/item/queue theo
+- Manager3.3.1 metadata responses `no-store`; invalidate unit list/item/queue theo
   mutation, release refetch unit context và Student views khi 3.4 tích hợp.
 - Cần migration/code 3.3/auth role; upload mới cần MinIO/worker 3.2. Existing
   metadata/read/review không cần gọi storage network. Download cần triển khai 3.4.
@@ -140,3 +140,19 @@ Giữ thứ tự3.3.1 typed Manager draft →3.3.2 Mentor submission →3.3.3 re
 trong plan, ghi evidence riêng; signed GET/Student access/video runtime thuộc3.4.
 Estimate BE provisional7–10 ngày, chốt sau sanitizer/batch-lock spike.
 Kiểm diff/link/JSON tài liệu; không sửa API runtime, chạy BE tests, migrate hoặc deploy.
+
+## 9. Triển khai 3.3.1 — 2026-10-13
+
+Manager chọn Course Unit UUID → soạn ARTICLE (text-only không upload) hoặc upload
+primary/inline/attachment3.2 READY → POST Manager Unit materials → DRAFT revision1
++ refs/audit atomic → GET list summary/detail canonical HTML → PATCH expectedRevision
+(tăng revision, reset review/publication) hoặc DELETE query expectedRevision (soft).
+Các bước trên đã có API local; Mentor submit/Manager decision/Class Unit release
+vẫn planned. Student FILE/VIDEO reads giữ baseline; chưa thêm Student ARTICLE API.
+
+Chốt sanitizer48 KiB HTML/64 KiB JSON/depth32/nodes5.000/images50. Refs khóa union
+old/new files trước Class context, actor FOR SHARE; DB bảo vệ file state/ancestry.
+List không HTML, detail không URL/storage secrets. Origin mutation bắt buộc;
+canEdit=true chỉ Manager hint, BE kiểm lại. Postman Phase33/Swagger/DBML đã cập nhật.
+Local: check332/332 (30 suites), HTTP32/32 (2 suites), Files42/42 (1 suite), 0 skip.
+Evidence local/rollout và server cases xem progress3.3; chưa deploy/VPS acceptance.

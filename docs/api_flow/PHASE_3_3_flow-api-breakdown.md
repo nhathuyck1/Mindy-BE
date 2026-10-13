@@ -1,17 +1,17 @@
-# Phase 3.3 — API breakdown cho FE (dự kiến)
+# Phase 3.3 — API breakdown cho FE
 
-Cập nhật: **2026-10-12**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
-chưa có controller authoring/review/release 3.3, chưa local verified/deploy.** Shapes mới là
-contract đề xuất cần đối chiếu Swagger/source sau implementation; không gọi FE
-production dựa trên tài liệu này. Upload 3.2 đã có, xem
+Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4 đã implement và test local3.3.1;
+Mentor/review/release ở các phần sau còn planned. Chưa deploy/nghiệm thu VPS3.3.1.**
+Shapes Manager đã đối chiếu Swagger/source; phần Mentor/decision/release là đề xuất.
+Upload 3.2 đã có, xem
 [breakdown upload](PHASE_3_2_flow-api-breakdown.md).
 
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 
 Ngoại lệ thứ tự2026-10-12: [ba Student FILE/VIDEO GET3.4](PHASE_3_4_flow-api-breakdown.md)
-đã implement + materials read persistence tối thiểu; không biến APIs3.3 bên dưới
-thành hiện hữu. ARTICLE/refs/schema3.3 phải mở rộng bằng migration additive mới.
+đã implement + materials read persistence tối thiểu. ARTICLE/refs/schema và Manager
+CRUD3.3.1 đã mở rộng bằng migration additive mới, giữ Student FILE/VIDEO baseline.
 
 ## Contract ARTICLE / FILE / VIDEO
 
@@ -20,11 +20,11 @@ contentHtml; FE dùng CKEditor để soạn và render canonical HTML cho học 
 Course Unit description là tổng quan; không bổ sung bảng course_unit_details
 hoặc endpoint mới trong lượt tư vấn. PDF upload trả fileId READY, sau đó gắn
 vào FILE hoặc attachment ARTICLE qua APIs authoring dự kiến bên dưới.
-Upload không tự tạo Material/publish hay chuyển PDF thành HTML. Contract này
-vẫn planned: source hiện tại chỉ hỗ trợ FILE/VIDEO read, chưa ARTICLE/attachments.
+Upload không tự tạo Material/publish hay chuyển PDF thành HTML. Manager3.3.1 đã có
+ARTICLE/attachments; Student ARTICLE/assets và Mentor authoring còn planned.
 
 User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
-bên dưới áp dụng thống nhất cho create/PATCH/detail/list; vẫn là planned.
+bên dưới áp dụng thống nhất cho Manager create/PATCH/detail/list; Mentor còn planned.
 Không đọc screenshot JSON như yêu cầu buộc đổi sang Tiptap JSON. Files3.2 routes
 vẫn unchanged; HTML string gửi vào Material body, không upload fileHTML tới Files.
 
@@ -37,7 +37,7 @@ attachmentFileIds optional unique UUIDv4 array max50/default[].
 Inline images dùng data-file-id UUID lấy từ upload READY IMAGE, không src/base64/
 external URL; tối đa50 image nodes, BE derive unique refs từ canonical HTML.
 Primary file không đồng thời là attachment; inline/attachment cùng file được phép.
-Đề xuất DOM depth32/nodes5.000, chốt bằng sanitizer spike3.3.1 trước merge.
+Chốt DOM depth32/nodes5.000 (text node tính depth), kiểm input/canonical; image nodes50.
 Input và canonical HTML đều <=48 KiB UTF-8. Body tổng64 KiB (kể cả JSON escaping);
 body quá giới hạn413, invalid DTO/content/ref422
 hoặc file status409/owner403 theo policy. Ví dụ Article request:
@@ -95,8 +95,8 @@ Không thêm endpoint stream/HLS/external video trong scope đã chọn.
 Route đầy đủ là `/api/v1` + path ghi dưới đây. Request tới **BE**, dùng cookie
 `access_token` qua browser `credentials: include`/adapter cùng origin; không Bearer
 token/localStorage. GET không body; POST/PATCH JSON cần `Content-Type: application/json`.
-Mutation mới dự kiến kiểm `Origin` allowlist từ CORS_ORIGINS, reject thiếu/sai
-với **403 ORIGIN_NOT_ALLOWED** (code mới, chưa implement). Browser tự gửi Origin;
+Manager mutation3.3.1 kiểm `Origin` allowlist từ CORS_ORIGINS, reject thiếu/sai
+với **403 ORIGIN_NOT_ALLOWED**; Mentor/release áp dụng khi triển khai. Browser tự gửi Origin;
 adapter/server proxy phải bảo toàn header. DELETE cũng cần Origin, không JSON body.
 
 MANAGER routes chỉ Manager; MENTOR routes chỉ Mentor đang assigned Class chưa
@@ -124,7 +124,7 @@ Manager catalogue inactive picker còn thiếu, không dùng Admin cookie để 
 3.2 đã nghiệm thu VPS theo xác nhận user 2026-10-12; API3.3 cần triển khai và
 nghiệm thu từng slice theo plan. Không dùng kết quả3.2 làm evidence API3.3.
 
-## 2. Shapes chung dự kiến
+## 2. Shapes Manager đã implement; Mentor dự kiến
 
 Create body (Manager/Mentor dùng chung, owner do route/server resolve):
 
@@ -204,7 +204,8 @@ bucket/key/version/hash hoặc upload/download URL. canEdit là hint, BE kiểm 
 ARTICLE detail có file=null, contentHtml canonical, contentSchemaVersion=1;
 inlineImages/attachments là các verified summaries cùng safe shape với file.
 FILE/VIDEO có file, contentHtml/contentSchemaVersion null, inlineImages=[].
-Mọi list/queue dùng summary **omit contentHtml**, không trả toàn bài trong collection.
+Manager3.3.1 list dùng summary **omit contentHtml/contentSchemaVersion/inlineImages/attachments**;
+queue review và Mentor view dự kiến cũng omit contentHtml, không trả toàn bài trong collection.
 Các field review và safe ref summaries giữ theo actor view; create/mutation/detail
 trả detail. ARTICLE có thể chỉ text, refs arrays rỗng vẫn hợp lệ.
 Review fields nullable; firstApprovedAt giữ sau edit. updatedAt phản ánh mutation
@@ -225,10 +226,12 @@ Page example (cùng item view tương ứng actor, `items: []` là empty hợp l
 
 ## 3. Manager Course Unit create/list
 
+**Đã implement3.3.1, verified local; chưa deploy.**
+
 ### GET `/api/v1/manager/course-units/:courseUnitId/materials`
 
 Màn hình quản lý Unit; Manager cookie, Unit phải tồn tại (có thể Course inactive).
-Path courseUnitId; query page/pageSize, không body. Ví dụ:
+Path courseUnitId; query page/pageSize/contentType/reviewStatus (courseUnitId query bị owner path ghi đè), không body. Ví dụ:
 `GET /api/v1/manager/course-units/33333333-3333-4333-8333-333333333333/materials?page=1&pageSize=20`.
 200 page Manager items mọi review status chưa deleted; total sau filter.
 Không side effect/polling. 404 MATERIAL_NOT_FOUND nếu owner Unit thiếu;
@@ -249,10 +252,13 @@ Giữ form khi lỗi, không poll Material; successful response cung cấp mater
 
 ## 4. Manager queue/detail/edit/delete
 
+**Global list/detail/edit/delete đã implement3.3.1; decision queue flow còn3.3.3.**
+
 ### GET `/api/v1/manager/materials`
 
 Queue Manager, cookie. Query page/pageSize + reviewStatus optional enum
-DRAFT/PENDING_REVIEW/APPROVED/REJECTED + courseUnitId optional UUID v4;
+DRAFT/PENDING_REVIEW/APPROVED/REJECTED + courseUnitId optional UUID v4
+và contentType optional ARTICLE/FILE/VIDEO;
 omitted status = mọi Material còn sống. FE queue gửi
 `GET /api/v1/manager/materials?reviewStatus=PENDING_REVIEW&page=1&pageSize=20`.
 200 Manager page, sort createdAt DESC/id ASC; item có owner/submitter provenance
@@ -288,6 +294,8 @@ Không async purge/polling ở API này.
 
 ## 5. Manager decision/publication commands
 
+**Chưa implement3.3.3.**
+
 Tất cả Manager cookie/JSON/Origin, path materialId và expectedRevision §2;
 sync 200 Manager detail. Trước gọi GET detail lấy revision, sau gọi invalidate
 detail/unit list/queue. 409 refetch và yêu cầu người dùng quyết định lại; không
@@ -311,6 +319,8 @@ detail; nếu state đã đúng không cần gọi lại. UI nút disabled trong
 hiển thị approval/rejection/published là trạng thái riêng.
 
 ## 6. Mentor Unit create/list
+
+**Chưa implement3.3.2.**
 
 ### GET `/api/v1/mentor/classes/:classId/units/:unitId/materials`
 
@@ -337,6 +347,8 @@ Create không tự retry khi mất response, giống Manager §3.
 FE giữ form/thông báo hết quyền, không đổi IDs để attach.
 
 ## 7. Mentor item/edit/delete/submit
+
+**Chưa implement3.3.2.**
 
 Mọi route có classId+materialId, phải resolve class Unit tham chiếu owner Course
 Unit và kiểm assignment hiện tại; UUID400. Own draft/rejected chưa từng approved
@@ -460,7 +472,7 @@ codes mới §8/9/Origin là dự kiến, test mapping trước FE integration. 
 | 400 path UUID/JSON malformed | Sửa request/router; không retry. Code path từ filter baseline, không bịa tên code mới. |
 | 401 auth | Login/refresh theo auth adapter, dừng thao tác nếu session hết hạn. |
 | 403 MATERIAL_ACCESS_DENIED/FILE_OWNER_MISMATCH | Dừng retry, refetch assignment/role; bỏ quyền editor, không đổi owner để bypass. |
-| 403 ORIGIN_NOT_ALLOWED (new planned) | Kiểm adapter/proxy/header allowlist; không gửi lại vô hạn. |
+| 403 ORIGIN_NOT_ALLOWED (Manager3.3.1 đã có) | Kiểm adapter/proxy/header allowlist; không gửi lại vô hạn. |
 | 404 MATERIAL_NOT_FOUND/FILE_NOT_FOUND/CLASS_NOT_FOUND/CLASS_UNIT_NOT_FOUND/CLASS_SESSION_NOT_FOUND | Item missing/hidden/wrong ancestry; refetch context/đóng item. Không phân biệt hidden qua UI. |
 | 422 DTO/MATERIAL_CONTENT_INVALID/MATERIAL_SCOPE_MISMATCH | Giữ form, field error khi details có; sửa IDs/fields. Không tự upload lại vì scope sai. |
 | 409 FILE_NOT_READY | Nếu file đang PROCESSING, quay status polling3.2; FAILED/DELETED không attach. Không retry Material mutation khi chưa READY. |
@@ -494,3 +506,35 @@ không file, refs bounds/duplicate rules và summary omit HTML; workflow review/
 release không đổi. Thêm baseline3.2 đã nghiệm thu theo user và gate server từng
 slice trong plan. Kiểm diff/link/JSON tài liệu, chưa source/API runtime change,
 BE tests, migration hoặc deploy3.3.
+
+## Triển khai 3.3.1 — 2026-10-13
+
+**Phạm vi hiện hành:** chỉ §3/4 Manager create/list/detail/PATCH/delete đã implement
+local. Các §5+ Mentor/review/release tiếp tục planned; các ghi chú lịch sử phía trên
+không thay trạng thái này. Canonical ARTICLE/refs/audit đã có additive schema.
+Responses Manager có `Cache-Control: no-store`, không envelope bọc data; page có
+items/page/pageSize/total. Unit list sortOrder/id ASC, global list createdAt DESC/id ASC.
+DELETE nhận query expectedRevision (không body), integer1..2147483647; thiếu422.
+POST không idempotency key; PATCH stale409; DELETE same revision204/no duplicate audit.
+
+Sanitizer: `sanitize-html2.18.0` + `htmlparser2 12.0.0` ESM. Hrefs chỉ http/https/mailto
+tuyệt đối; strip target/style/events/src/unsafe embeds/svg/math; CKEditor figure/table
+markup cho phép nhưng class/style bị loại. Input/canonical48 KiB UTF-8, depth32,
+5.000 nodes, 50 image nodes, attachment unique UUIDv4 max50. File status/scope
+verified dưới lock; ARTICLE không text/ảnh hợp lệ422 MATERIAL_CONTENT_INVALID.
+HTML quá limit413 MATERIAL_CONTENT_TOO_LARGE; body JSON64 KiB quá limit413
+INVALID_JSON_BODY. Missing ref404 FILE_NOT_FOUND; non-READY409 FILE_NOT_READY;
+foreign scope422 MATERIAL_SCOPE_MISMATCH; primary kind/inline non-IMAGE422
+MATERIAL_CONTENT_INVALID. File metadata PENDING/FAILED không chặn binary READY.
+
+FE: sau create lấy id/revision từ detail; list là summary, mở editor phải GET detail;
+render canonical HTML đã trả về và giữ data-file-id. Chưa gọi asset API planned3.4
+hoặc dùng Files status làm download. Invalid422 giữ form; 409 giữ form/refetch,
+người dùng đối chiếu trước sửa; 401 login; 403 dừng retry/thông báo hết quyền;
+404 đóng editor/refetch list. Loading/empty/success dùng page total sau filter,
+mutation invalidate unit/global lists và detail. Không poll Material.
+
+Postman: [Phase33 collection](../../postman/Mindy-Materials-Phase33.postman_collection.json).
+Gán Origin đúng CORS_ORIGINS kể cả khi gọi bằng Postman; cookie jar từ login Manager.
+Local: check332/332, HTTP32/32, Files42/42, 0 skip; server cases ở [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không có deploy/server evidence trong lượt này.

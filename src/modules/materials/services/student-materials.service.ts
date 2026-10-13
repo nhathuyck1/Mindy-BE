@@ -134,11 +134,11 @@ export class StudentMaterialsService {
     manager: EntityManager,
   ): Promise<StudentMaterialView[]> {
     const summaries = await this.files.readSummaries(
-      materials.map((material) => material.fileObjectId),
+      materials.flatMap((material) => (material.fileObjectId ? [material.fileObjectId] : [])),
       manager,
     );
     return materials.flatMap((material) => {
-      const file = summaries.get(material.fileObjectId);
+      const file = material.fileObjectId ? summaries.get(material.fileObjectId) : undefined;
       if (!file || !canReadMaterial({ ...material, file }, read)) return [];
       return [
         {

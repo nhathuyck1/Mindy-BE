@@ -56,6 +56,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
         MINIO_ENABLED: 'true',
         MINIO_ENDPOINT: '127.0.0.1',
         MINIO_PORT: '19000',
+        MINIO_PUBLIC_URL: 'http://127.0.0.1:19000',
         MINIO_USE_SSL: 'false',
         MINIO_ACCESS_KEY: 'mindy-files-test',
         MINIO_SECRET_KEY: 'mindy-files-test-only-password',
@@ -141,7 +142,11 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
   ) {
     return fetch(`${url}${path}`, {
       method,
-      headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+      headers: {
+        'content-type': 'application/json',
+        origin: 'http://localhost:3001',
+        ...(cookie ? { cookie } : {}),
+      },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   }
@@ -423,5 +428,163 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
           )
         ).status,
       ).toBe(404);
+  });
+  describe('Phase 3.3.1 Manager authoring HTTP', () => {
+    const article = {
+      contentType: 'ARTICLE',
+      title: 'HTTP lesson',
+      contentHtml: '<p onclick="bad()">Knowledge</p><script>bad()</script>',
+    };
+    const unitPath = () => `/manager/course-units/${scope.courseUnitId}/materials`;
+    it('enforces roles, mandatory Origin, UUID paths and strict typed DTOs', async () => {
+      expect((await request(unitPath(), undefined, article)).status).toBe(401);
+      for (const cookie of [adminCookie, studentCookie, mentorCookie])
+        expect((await request(unitPath(), cookie, article)).status).toBe(403);
+      for (const origin of [undefined, 'null', 'https://evil.test']) {
+        const response = await fetch(`${url}${unitPath()}`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            cookie: managerCookie,
+            ...(origin ? { origin } : {}),
+          },
+          body: JSON.stringify(article),
+        });
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
+      }
+      expect((await request('/manager/materials/invalid', managerCookie)).status).toBe(400);
+      for (const input of [
+        { ...article, fileId: scope.courseUnitId },
+        { ...article, contentSchemaVersion: 2 },
+        { ...article, attachmentFileIds: null },
+        { ...article, sortOrder: null },
+        { ...article, availableAt: '2026-10-13T12:00:00' },
+        { ...article, title: '  ' },
+        { ...article, contentHtml: '<script>bad()</script>' },
+        { ...article, bucket: 'secret' },
+        { contentType: 'FILE', title: 'missing primary' },
+      ])
+        expect((await request(unitPath(), managerCookie, input)).status).toBe(422);
+      expect((await request('/manager/materials?pageSize=101', managerCookie)).status).toBe(422);
+    });
+
+    it('creates/reads/edits/deletes canonical text-only ARTICLE with no-store and conflict handling', async () => {
+      const response = await request(unitPath(), managerCookie, article);
+      expect(response.status).toBe(201);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      const created = (await response.json()) as { id: string; revision: number };
+      expect(created).toMatchObject({
+        contentHtml: '<p>Knowledge</p>',
+        contentSchemaVersion: 1,
+        file: null,
+        revision: 1,
+        attachments: [],
+        inlineImages: [],
+      });
+      const path = `/manager/materials/${created.id}`;
+      const detail = await request(path, managerCookie);
+      expect(detail.status).toBe(200);
+      const listing = (await (
+        await request(`${unitPath()}?pageSize=1&contentType=ARTICLE`, managerCookie)
+      ).json()) as { items: unknown[]; total: number };
+      expect(listing.total).toBeGreaterThan(0);
+      expect(listing.items[0]).not.toHaveProperty('contentHtml');
+      const patch = await request(
+        path,
+        managerCookie,
+        { expectedRevision: 1, title: 'Edited' },
+        'PATCH',
+      );
+      expect(patch.status).toBe(200);
+      expect(await patch.json()).toMatchObject({
+        revision: 2,
+        title: 'Edited',
+        reviewStatus: 'DRAFT',
+        publishedAt: null,
+      });
+      expect(
+        (await request(path, managerCookie, { expectedRevision: 1, title: 'stale' }, 'PATCH'))
+          .status,
+      ).toBe(409);
+      for (const input of [
+        { expectedRevision: 2 },
+        { expectedRevision: 2, contentType: 'FILE' },
+        { expectedRevision: 2, contentSchemaVersion: 1 },
+        { title: 'missing revision' },
+        { expectedRevision: 2, attachmentFileIds: null },
+        { expectedRevision: 2, fileId: null },
+        { expectedRevision: 2, contentHtml: null },
+      ])
+        expect((await request(path, managerCookie, input, 'PATCH')).status).toBe(422);
+      for (let retry = 0; retry < 2; retry++)
+        expect(
+          (await request(`${path}?expectedRevision=2`, managerCookie, undefined, 'DELETE')).status,
+        ).toBe(204);
+      expect((await request(path, managerCookie)).status).toBe(404);
+    });
+
+    it('checks HTML UTF-8 and total JSON body byte limits', async () => {
+      expect(
+        (await request(unitPath(), managerCookie, { ...article, contentHtml: 'đ'.repeat(25000) }))
+          .status,
+      ).toBe(413);
+      expect(
+        (await request(unitPath(), managerCookie, { ...article, contentHtml: 'x'.repeat(70000) }))
+          .status,
+      ).toBe(413);
+    });
+
+    it('attaches real validated MinIO PDF/MP4 as FILE/VIDEO and rejects kind mismatch', async () => {
+      const rows = (await db.query(
+        "SELECT id,kind FROM file_objects WHERE course_unit_id=$1 AND status='READY' AND kind IN ('PDF','VIDEO') ORDER BY id",
+        [scope.courseUnitId],
+      )) as { id: string; kind: string }[];
+      expect(rows).toHaveLength(2);
+      for (const file of rows) {
+        const type = file.kind === 'VIDEO' ? 'VIDEO' : 'FILE';
+        const response = await request(unitPath(), managerCookie, {
+          contentType: type,
+          title: 'Ready binary',
+          fileId: file.id,
+        });
+        expect(response.status).toBe(201);
+        const result = await response.json();
+        expect(result).toMatchObject({
+          contentType: type,
+          contentHtml: null,
+          contentSchemaVersion: null,
+          file: { id: file.id, kind: file.kind },
+        });
+        expect(JSON.stringify(result)).not.toMatch(/bucket|objectKey|staging|signed|uploadUrl/);
+        expect(
+          (
+            await request(unitPath(), managerCookie, {
+              contentType: type === 'FILE' ? 'VIDEO' : 'FILE',
+              title: 'Wrong kind',
+              fileId: file.id,
+            })
+          ).status,
+        ).toBe(422);
+      }
+      const pdf = rows.find((file) => file.kind === 'PDF');
+      const response = await request(unitPath(), managerCookie, {
+        ...article,
+        attachmentFileIds: [pdf?.id],
+      });
+      expect(response.status).toBe(201);
+      expect(await response.json()).toMatchObject({ attachments: [{ id: pdf?.id }] });
+    });
+
+    it('documents the implemented endpoints and typed schema in Swagger', async () => {
+      const response = await fetch(`${url.replace('/api/v1', '')}/docs-json`);
+      expect(response.status).toBe(200);
+      const schema = (await response.json()) as {
+        paths: Record<string, unknown>;
+        components: { schemas: Record<string, unknown> };
+      };
+      expect(schema.paths).toHaveProperty('/api/v1/manager/materials/{materialId}');
+      expect(schema.components.schemas).toHaveProperty('ManagerMaterialDetailDto');
+    });
   });
 });

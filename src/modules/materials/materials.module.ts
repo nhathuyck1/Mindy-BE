@@ -6,12 +6,16 @@ import { ClassesModule } from '../classes/classes.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { FilesModule } from '../files/files.module.js';
 import { UsersModule } from '../users/users.module.js';
+import { ManagerMaterialsController } from './controllers/manager-materials.controller.js';
 import { StudentMaterialsController } from './controllers/student-materials.controller.js';
 import { MaterialEntity } from './entities/material.entity.js';
+import { MaterialAuditEventEntity } from './entities/material-audit-event.entity.js';
+import { MaterialFileReferenceEntity } from './entities/material-file-reference.entity.js';
+import { MaterialOriginGuard } from './guards/material-origin.guard.js';
+import { ManagerMaterialsService } from './services/manager-materials.service.js';
 import { MaterialPolicyService } from './services/material-policy.service.js';
 import { StudentMaterialsService } from './services/student-materials.service.js';
 
-/** Policy + Student read slice. Manager/Mentor authoring remains Phase 3.3. */
 @Module({
   imports: [
     AuthModule,
@@ -20,10 +24,19 @@ import { StudentMaterialsService } from './services/student-materials.service.js
     ClassesModule,
     EnrollmentsModule,
     FilesModule,
-    TypeOrmModule.forFeature([MaterialEntity]),
+    TypeOrmModule.forFeature([
+      MaterialEntity,
+      MaterialFileReferenceEntity,
+      MaterialAuditEventEntity,
+    ]),
   ],
-  controllers: [StudentMaterialsController],
-  providers: [MaterialPolicyService, StudentMaterialsService],
+  controllers: [StudentMaterialsController, ManagerMaterialsController],
+  providers: [
+    MaterialPolicyService,
+    StudentMaterialsService,
+    ManagerMaterialsService,
+    MaterialOriginGuard,
+  ],
   exports: [MaterialPolicyService],
 })
 export class MaterialsModule {}

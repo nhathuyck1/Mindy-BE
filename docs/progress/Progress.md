@@ -1,5 +1,11 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-13: Triển khai3.3.1 Manager typed draft CRUD (ARTICLE/FILE/VIDEO),
+  sanitizer/refs/audit/additive migration + batch locks/current actor/Origin;
+  Swagger/Postman/DBML/flow/API cập nhật. `pnpm check`332/332 (30 suites),
+  HTTP32/32 (2 suites), Files42/42 (1 suite), 0 skip; lint/type-check/build pass. Chi tiết xem
+  [progress3.3](phase%203/PHASE_3_3_PROGRESS.md); chưa deploy/VPS acceptance.
+
 - 2026-10-12: Theo yêu cầu seed3 lớp/3 Course, current demo gồm HTML/CSS và JS
   ONLINE, Python OFFLINE, mỗi lớp10 buổi thứ3/thứ7. Seed tạo thêm2 lớp cạnh HTML
   đã có, query local xác minh15 Class Unit/30 Session/0 mentor conflict; rerun0
