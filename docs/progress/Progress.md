@@ -1,5 +1,13 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-14: Triển khai phần còn lại Phase 3.4 local: Student list/detail ARTICLE
+  (sanitized HTML, inline images, attachments), POST file access theo role
+  PRIMARY/INLINE_IMAGE/ATTACHMENT và staff preview Manager/Mentor theo canPreview;
+  ký version đã verify ngoài transaction, recheck sau ký, attachment disposition.
+  Không migration/env mới. pnpm check 411/411 (35 suites), HTTP 48/48 (2 suites),
+  lint/type-check/build pass trên `_test` DB + MinIO local. Chưa commit/deploy/VPS/
+  browser FE. Chi tiết [progress3.4](phase%203/PHASE_3_4_PROGRESS.md).
+
 - 2026-10-14: Triển khai3.3.5 local acceptance/handoff:4 HTTP cases mới gồm16
   source migrations/34 Postman routes đối chiếu Swagger và ARTICLE PNG/PDF,
   FILE PDF, VIDEO MP4 từ upload MinIO thật→submit/reject/edit/resubmit/approve

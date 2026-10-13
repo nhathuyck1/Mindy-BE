@@ -732,3 +732,7 @@ TTL<=60s/no-store và tránh upload-owner policy trên read. Runtime MP4 Range20
 seek/expiry/refresh và ingress cap còn acceptance3.4. Manager inactive catalog
 picker chưa có; FE dùng fixture Course Unit cho nghiệm thu API, không dùng route
 Admin thay quyền Manager. Chưa nghiệm thu UI FE hoặc sửa repo Mindy-FE.
+
+2026-10-14: Phần bàn giao trên đã được 3.4 implement local (Student ARTICLE/assets,
+POST file access, staff preview). Contract tại
+[breakdown 3.4 §4–5](PHASE_3_4_flow-api-breakdown.md); không đổi API 3.3 §3–9.

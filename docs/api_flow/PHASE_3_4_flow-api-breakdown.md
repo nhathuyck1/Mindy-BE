@@ -1,22 +1,24 @@
 # Phase 3.4 — FE integration: Student Materials
 
-Cập nhật **2026-10-12**. Ba endpoints đã implement, local verified FILE/VIDEO;
-chưa deploy. [Flow](PHASE_3_4_FLOW.md) · [Progress](../progress/phase%203/PHASE_3_4_PROGRESS.md).
-ARTICLE/attachments/inline assets và staff authoring/review/release HTTP chưa có.
+Cập nhật **2026-10-14**. Đã implement và local verified: ba Student GET (nay gồm
+ARTICLE/inline images/attachments), Student file access POST (§4) và staff preview
+POST cho Manager/Mentor (§5). **Chưa deploy/VPS, chưa nghiệm thu browser FE.**
+[Flow](PHASE_3_4_FLOW.md) · [Progress](../progress/phase%203/PHASE_3_4_PROGRESS.md).
+Authoring/review/release HTTP thuộc [3.3](PHASE_3_3_flow-api-breakdown.md) (đã có local).
 
 ## Contract chung
 
 Prefix `/api/v1`. Actor STUDENT, cookie `access_token`; browser FE dùng authenticated
 same-origin adapter và `credentials` theo session client hiện có. Không gửi
-studentId/role/fileId/bucket/key. Cả ba trả `Cache-Control: private, no-store`.
+studentId/role/fileId/bucket/key. Mọi route Student trả `Cache-Control: private, no-store`.
 GET không có body/side effects/payment transition; response JSON trực tiếp,
 không bọc `{data}`. UUID path **v4**, invalid400 HTTP_ERROR; query invalid422
 HTTP_ERROR. Ví dụ IDs bên dưới là giả.
 
-Prerequisites: migration3.2 + `StudentMaterialReads1791763200000`, Material đã
-APPROVED/published đúng revision, ACTIVE enrollment và Class Unit đã release.
-Không có authoring/review/release HTTP trong slice này; fixture tests không phải
-workflow production. FILE là kind khác VIDEO; VIDEO là verified MP4 ở Files3.2.
+Prerequisites: migrations tới `ClassUnitReleaseAudit1791856800000` (16 source
+migrations, 3.4 không thêm migration), Material APPROVED/published đúng revision qua
+workflow 3.3, ACTIVE enrollment và Class Unit đã release (3.3.4). FILE là kind khác
+VIDEO; VIDEO là verified MP4 ở Files3.2; ARTICLE là HTML đã sanitize ở 3.3.1.
 
 List/detail hoạt động khi MINIO_ENABLED=false; download cần MINIO_ENABLED=true,
 credentials/bucket private versioned và MINIO_PUBLIC_URL truy cập được từ browser.
@@ -46,6 +48,8 @@ Cookie: access_token=<session-cookie>
 200 trả `{items,page,pageSize,total,asOf}`. `asOf` là ISO UTC server time dùng cho
 mọi time gate; sort `sortOrder ASC,id ASC`, không phụ thuộc sessionId. total chỉ
 đếm các Material đã được phép xem; draft/future/deleted/not-READY không lộ qua total.
+ARTICLE chỉ được đếm khi mọi inline image/attachment còn READY đúng Course Unit
+(inline phải IMAGE); FILE/VIDEO cũng cần mọi attachment READY.
 
 ```json
 {
@@ -57,14 +61,18 @@ mọi time gate; sort `sortOrder ASC,id ASC`, không phụ thuộc sessionId. to
     "contentType": "FILE", "title": "Bài học", "description": null,
     "sortOrder": 0, "revision": 1, "sessionId": null, "availableAt": null,
     "publishedAt": "2026-10-12T08:00:00.000Z", "updatedAt": "2026-10-12T08:00:00.000Z",
-    "file": { "id": "55555555-5555-4555-8555-555555555555", "originalFilename": "lesson.pdf", "mimeType": "application/pdf", "sizeBytes": 4096, "kind": "PDF" }
+    "file": { "id": "55555555-5555-4555-8555-555555555555", "originalFilename": "lesson.pdf", "mimeType": "application/pdf", "sizeBytes": 4096, "kind": "PDF" },
+    "attachmentCount": 0
   }],
   "page": 1, "pageSize": 20, "total": 1, "asOf": "2026-10-12T09:00:00.000Z"
 }
 ```
 
 `id` dùng mở detail/download; classUnitId trong DTO là context lớp đang truy cập.
-`contentType` FILE/VIDEO chọn viewer; `file.id` là metadata, không phải quyền gọi
+`contentType` ARTICLE/FILE/VIDEO chọn viewer. `file` **nullable**: null với ARTICLE
+(không có primary binary), object với FILE/VIDEO. `attachmentCount` (number, mặc định0)
+để hiện badge tệp đính kèm; danh sách **không** trả contentHtml/inline/attachments —
+mở detail để lấy. `file.id` là metadata, không phải quyền gọi
 generic Files API. `file.kind` PDF/IMAGE/DOCUMENT/PRESENTATION/SPREADSHEET/AUDIO/
 VIDEO/SOURCE_CODE; mimeType/sizeBytes là verified, dùng chọn viewer/hiển thị dung lượng.
 `description`, `sessionId`, `availableAt` nullable; publishedAt/updatedAt có giá trị.
@@ -82,7 +90,10 @@ sau thông báo publish/release; không polling vô hạn. Cần tải trang ti�
 
 FE click item từ danh sách; classId từ lớp đã chọn, materialId từ item.id. Deep
 link/reload có thể gọi trực tiếp khi đã bootstrap phiên. Hai path required UUIDv4,
-không query nghiệp vụ/body. 200 trả **một item cùng shape ở trên**, không page wrapper.
+không query nghiệp vụ/body. 200 trả **item cùng shape ở trên + 4 field detail**, không
+page wrapper: `contentHtml` (string|null, chỉ ARTICLE), `contentSchemaVersion`
+(1|null), `inlineImages[]` và `attachments[]` (cùng shape `file`, luôn là mảng,
+có thể rỗng; sort theo fileId). Không có URL trong các mảng này.
 Ví dụ request hợp lệ:
 
 ```http
@@ -92,8 +103,24 @@ Cookie: access_token=<session-cookie>
 
 Context được resolve lại; Material phải thuộc Course Unit được dạy trong class,
 current approval/release/publication/availability/READY phải còn hiệu lực.
-Không trả raw HTML ARTICLE trong slice này. FILE/VIDEO detail gồm metadata;
-FE gọi download ở bước tiếp theo để có bytes/viewer URL.
+Ví dụ ARTICLE (rút gọn các field chung):
+
+```json
+{
+  "id": "66666666-6666-4666-8666-666666666666", "contentType": "ARTICLE", "revision": 2,
+  "file": null, "attachmentCount": 1, "contentSchemaVersion": 1,
+  "contentHtml": "<p>Bài đọc</p><img data-file-id=\"77777777-7777-4777-8777-777777777777\" alt=\"Sơ đồ\" />",
+  "inlineImages": [{ "id": "77777777-7777-4777-8777-777777777777", "originalFilename": "diagram.png", "mimeType": "image/png", "sizeBytes": 2048, "kind": "IMAGE" }],
+  "attachments": [{ "id": "55555555-5555-4555-8555-555555555555", "originalFilename": "lesson.pdf", "mimeType": "application/pdf", "sizeBytes": 4096, "kind": "PDF" }]
+}
+```
+
+`contentHtml` là canonical HTML đã sanitize phía server (3.3.1 allowlist); FE vẫn
+render trong vùng đọc bài và **không** chèn script/style. `<img>` chỉ có
+`data-file-id`/`alt`, không `src`: FE lấy URL qua §4 cho từng `data-file-id` có trong
+`inlineImages`, gán `src` trong DOM tạm thời, không ghi ngược URL vào HTML/cache.
+FILE/VIDEO detail: `contentHtml`/`contentSchemaVersion` null, `inlineImages` rỗng;
+FE gọi download (§3) hoặc access (§4) để có bytes/viewer URL.
 
 Loading trong viewer, success hiển thị title/description/file; hidden404 hiển thị
 “Tài liệu chưa khả dụng”, quay về/refetch list; không dò URL hoặc retry liên tục.
@@ -102,7 +129,9 @@ Refetch detail trước tiếp tục học sau tab focus để cập nhật revi
 
 ## 3. GET /api/v1/me/classes/:classId/materials/:materialId/download
 
-FE bấm xem/tải hoặc chuẩn bị player; IDs từ detail/list. Hai path required UUIDv4,
+Giữ nguyên contract cho **primary FILE/VIDEO**. ARTICLE không có primary nên trả
+404 MATERIAL_NOT_FOUND; dùng §4 cho ảnh/attachments. FE bấm xem/tải hoặc chuẩn bị
+player; IDs từ detail/list. Hai path required UUIDv4,
 không nhận fileId/body/query nghiệp vụ. 200 JSON, **không redirect**:
 
 ```http
@@ -138,7 +167,86 @@ ngoài transaction, recheck Material/quyền trước trả, revision/file thay 
 API không HEAD/storage health probe trước ký; ký thành công không chứng minh object
 hoặc ingress đang online. Network/storage failure khi dùng URL cần feedback riêng.
 
-## Errors và UI cho cả ba API
+## 4. POST /api/v1/me/classes/:classId/materials/:materialId/files/:fileId/access
+
+**Đã implement local 2026-10-14.** Actor STUDENT ACTIVE (cùng gates §2). Mục đích: lấy
+signed URL ngắn hạn cho **một file thuộc Material đang xem**: primary FILE/VIDEO,
+inline image ARTICLE hoặc attachment. FE gọi khi render ảnh `data-file-id`, khi user
+bấm tải attachment, hoặc refresh URL player (thay cho download nếu muốn thống nhất).
+`classId`/`materialId` từ detail, `fileId` từ `file.id`, `inlineImages[].id` hoặc
+`attachments[].id` của **chính detail đó**.
+
+| Input | Ràng buộc |
+|---|---|
+| classId, materialId, fileId (path) | Required UUID v4, invalid → 400 |
+| Header `Origin` | Bắt buộc, phải nằm trong `CORS_ORIGINS` (POST + cookie); browser tự gửi |
+| Body | Không dùng; gửi `{}` hoặc bỏ trống. Không nhận role/disposition từ client |
+
+```http
+POST /api/v1/me/classes/11111111-1111-4111-8111-111111111111/materials/66666666-6666-4666-8666-666666666666/files/77777777-7777-4777-8777-777777777777/access
+Cookie: access_token=<session-cookie>
+Origin: https://fe.example.test
+Content-Type: application/json
+
+{}
+```
+
+200 (không phải 201 — không tạo resource), `Cache-Control: private, no-store`:
+
+```json
+{
+  "materialId": "66666666-6666-4666-8666-666666666666",
+  "fileId": "77777777-7777-4777-8777-777777777777",
+  "role": "INLINE_IMAGE",
+  "revision": 2,
+  "url": "https://storage.example.test/private/verified-object?versionId=v&X-Amz-Expires=60&X-Amz-Signature=example",
+  "expiresAt": "2026-10-14T09:01:00.000Z"
+}
+```
+
+`role` do server resolve: `PRIMARY` | `INLINE_IMAGE` | `ATTACHMENT` (file vừa inline
+vừa attachment → INLINE_IMAGE). PRIMARY/INLINE_IMAGE ký `Content-Disposition: inline`,
+ATTACHMENT ký `attachment` (trình duyệt tải xuống). `revision` là revision đã được
+authorize; nếu khác revision trong detail FE đang hiển thị → refetch detail. URL pin
+verified object version, TTL = `FILE_GET_TTL_SECONDS` (1..60, default60), Range206.
+
+Side effect: không đổi state; mỗi lần gọi ký URL mới sau khi kiểm quyền. Server ký
+ngoài transaction rồi **kiểm lại** detail: revision đổi hoặc file không còn thuộc
+Material với cùng role → 404. fileId không thuộc Material (kể cả file READY khác cùng
+unit hoặc primary của Material khác) → 404 MATERIAL_NOT_FOUND, không lộ tồn tại.
+URL đã phát hành vẫn dùng được đến hết hạn sau revoke/unpublish.
+
+UI: ảnh inline hiện skeleton tới khi có URL; lỗi 404 → placeholder “Ảnh không khả
+dụng” và refetch detail một lần; 503 → retry hữu hạn theo thao tác user. Không
+prefetch hàng loạt URL ngoài viewport; refresh khi `expiresAt` gần tới hoặc `<img>`
+/player lỗi (một lần) rồi khôi phục currentTime. Không lưu URL vào localStorage/HTML.
+
+## 5. Staff preview (Manager/Mentor)
+
+**Đã implement local 2026-10-14.** Dùng để xem PDF/video/ảnh **trước khi duyệt**; không
+dùng Student route thay thế và ngược lại. Hai route cùng response DTO §4, 200,
+`Cache-Control: private, no-store`, header `Origin` bắt buộc, body `{}`/không body.
+
+| Route | Actor | Điều kiện |
+|---|---|---|
+| POST `/api/v1/manager/materials/:materialId/files/:fileId/access` | MANAGER active | Material chưa xóa ở mọi reviewStatus (DRAFT/PENDING/APPROVED/REJECTED, published hay không); mọi reference READY |
+| POST `/api/v1/mentor/classes/:classId/materials/:materialId/files/:fileId/access` | MENTOR được assign lớp (không CANCELLED), Course Unit thuộc lớp | Material APPROVED current + published, **hoặc** draft do chính mentor tạo trong lớp đó và chưa từng được duyệt (firstApprovedAt null) |
+
+FE Manager: từ queue/detail 3.3 (`GET /manager/materials/:id`) lấy `file.id`,
+`inlineImages[].id`, `attachments[].id`. FE Mentor: từ `GET /mentor/classes/:classId/materials/:id`.
+Không dùng Files status API hay upload PUT URL làm preview.
+
+| HTTP/code | Khi nào | FE xử lý |
+|---|---|---|
+| 401 AUTHENTICATION_REQUIRED | Hết phiên | Session recovery/login |
+| 403 INSUFFICIENT_ROLE | Sai role trên route | Ẩn nút preview |
+| 403 ORIGIN_NOT_ALLOWED | Thiếu/sai Origin | Lỗi cấu hình FE/proxy, không retry |
+| 403 MATERIAL_ACCESS_DENIED | Mentor mất assignment/lớp hủy, actor inactive | Refetch context, dừng preview |
+| 404 MATERIAL_NOT_FOUND | Material xóa/không có; fileId không thuộc Material; Mentor không được xem bản này; revision đổi lúc ký | Refetch detail |
+| 409 FILE_NOT_READY | Manager: có reference không READY/thiếu metadata | Báo file lỗi, không retry |
+| 503 FILE_STORAGE_DISABLED / FILE_STORAGE_UNAVAILABLE | MinIO tắt / ký lỗi | Báo tạm thời, retry hữu hạn |
+
+## Errors và UI cho các API Student
 
 Envelope `{statusCode,code,message,requestId?,details?}`. Ví dụ hidden detail:
 
@@ -157,6 +265,7 @@ Envelope `{statusCode,code,message,requestId?,details?}`. Ví dụ hidden detail
 | 404 MATERIAL_NOT_FOUND | Detail/download missing/foreign/hidden/revision thay đổi lúc ký | Refetch list/detail; không dò file khác |
 | 422 HTTP_ERROR | Query paging sai/thừa field | Sửa query/input |
 | 422 MATERIAL_SCOPE_MISMATCH | Catalogue ancestry không khớp | Dừng, báo dữ liệu không nhất quán |
+| 403 ORIGIN_NOT_ALLOWED | §4 POST thiếu/sai Origin | Lỗi cấu hình FE/proxy, không retry |
 | 409 FILE_NOT_READY | File mất READY giữa authorize và signer load | Refetch detail, dừng dùng file cũ |
 | 503 FILE_STORAGE_DISABLED | Download storage disabled | Báo chưa khả dụng, metadata vẫn đọc được |
 | 503 FILE_STORAGE_UNAVAILABLE | Không ký được URL | Retry hữu hạn theo thao tác user |
@@ -171,7 +280,13 @@ FE repo hiện chặn các route này ở `src/shared/lib/http/proxy-policy.ts`;
 My Classes/lịch thay vì tìm lớp qua order. Schema class cần giữ unit.status/unlockAt/
 courseUnitId nếu UI hiển thị nguyên nhân lock. Bản thân schema BE có dữ liệu đó.
 
+FE cần allowlist thêm POST §4 (Student) và §5 (Manager/Mentor) trong proxy, gửi
+Origin, giữ URL trong memory. Renderer ARTICLE: parse contentHtml đã sanitize, map
+`img[data-file-id]` → §4, attachments list → §4 (role ATTACHMENT).
+
 Local integration/compiled HTTP đã kiểm cookie roles, query/path, paging, safe DTO,
 CASH pending→confirm, unit release, shared classes, revoke/unpublish, MinIO pinned
-version/expiry/Range/PDF/MP4. Browser Range/seek/refresh/CORS và deployed acceptance
-còn chờ; production authoring/review/release là phụ thuộc3.3.
+version/expiry/Range/PDF/MP4; từ 2026-10-14 thêm ARTICLE HTML/inline PNG/attachment
+disposition, foreign fileId404, broken reference ẩn trước total, recheck sau ký,
+staff preview pending/unpublished, role/Origin/UUID. Browser Range/seek/refresh/CORS,
+UI FE và deployed/VPS acceptance **còn chờ**.

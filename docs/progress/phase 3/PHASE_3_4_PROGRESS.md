@@ -1,6 +1,6 @@
 # Phase 3.4 — Student Material read slice
 
-Cập nhật **2026-10-12**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
+Cập nhật **2026-10-14**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
 [API breakdown](../../api_flow/PHASE_3_4_flow-api-breakdown.md) ·
 [FE audit](../../api_flow/PHASE_3_4_FE_API_GAPS.md).
 
@@ -53,3 +53,37 @@ Cập nhật **2026-10-12**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
   hạ tầng cross-cutting trong ba read endpoints này.
 
 2026-10-14: Nhận handoff3.3.5 providers/typed refs/policy/release/fixtures tại [§10 contract3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md). Manager/Mentor3.3.1–3.3.4 đã implement local. Không thêm Student API trong3.3.5; ARTICLE/assets và staff preview/video runtime còn pending.
+
+## 2026-10-14 — ARTICLE/assets + staff preview (implement local)
+
+Kế hoạch (plan 3.3 §1 "Bàn giao 3.4" + breakdown 3.3 §10): Student detail ARTICLE,
+scoped asset access, Manager/Mentor binary preview, signed GET đúng version.
+
+Đã làm (source):
+- Student list/detail hỗ trợ ARTICLE: DTO `file` nullable, `attachmentCount`; detail
+  `StudentMaterialDetailDto` thêm contentHtml/contentSchemaVersion/inlineImages/attachments.
+  Visibility SQL: ARTICLE không primary + schema1; `NOT EXISTS` reference không READY/
+  sai unit/inline không IMAGE trước count/page; batch refs + summaries, typed predicate
+  `canReadMaterial` kiểm lại trong memory.
+- POST `/me/classes/:classId/materials/:materialId/files/:fileId/access` (Student) và
+  POST `/manager/materials/:materialId/files/:fileId/access`,
+  `/mentor/classes/:classId/materials/:materialId/files/:fileId/access` (canPreview).
+  Domain `material-file-access.ts`: resolve role từ refs server, disposition
+  inline/attachment. `FileStorage.presignGet`/`FilesService.signReadReference` nhận
+  disposition (default inline, không đổi download cũ). Origin guard cho POST.
+- Download primary giữ contract; ARTICLE → 404. Không migration, env hay dependency mới.
+- Swagger, Postman Phase33 (+2 preview) và Phase34 (+1 access), flow/API breakdown.
+
+Local checks (Node 22.20.0, PostgreSQL `mindy_center_test`, MinIO local):
+- `pnpm check`: **411/411 tests, 35 suites**, lint/type-check/build pass.
+- Student integration: **18 tests** (2 mới: ARTICLE HTML/inline PNG/attachment
+  disposition/foreign fileId404/recheck sau ký và broken reference ẩn trước total).
+  Unit `material-file-access.spec.ts`: 3 tests.
+- `pnpm test:http`: **48/48, 2 suites**; workflow 3.3.5 ba loại thêm staff preview khi
+  PENDING_REVIEW/unpublished, Student 404 khi pending/unpublished, detail ARTICLE, list
+  không lộ HTML, access Range206 + Content-Disposition, role403/Origin403/UUID400.
+
+Chưa có / giới hạn:
+- Chưa deploy/VPS, chưa browser CORS/Range/seek/refresh thực tế, chưa UI FE.
+- Rate limiting/metrics cho access route chưa có hạ tầng chung (ghi nhận, không tự thêm).
+- Manager inactive catalog picker vẫn planned; progress học (P2) ngoài 3.4.

@@ -39,7 +39,7 @@ Theo dõi [progress 3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md),
 Mỗi slice có local gate và server acceptance riêng; estimate BE provisional7–10 ngày.
 Student ARTICLE/assets/binary preview/video playback ở3.4. Ngày2026-10-13 đã implement
 Manager typed CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 local;
-migrations additive3.3.1/3.3.3, tests và Swagger/Postman đã có. Release3.3.4 đã implement local; chưa deploy3.3.
+migrations additive3.3.1/3.3.3, tests và Swagger/Postman đã có. Release3.3.4 đã implement local; chưa deploy3.3. Ngày2026-10-14 Student ARTICLE/assets và staff preview3.4 đã implement local ([flow3.4](../api_flow/PHASE_3_4_FLOW.md)); chưa deploy/VPS.
 
 3.1 policy/contract đã hoàn tất và full local gates pass (171 tests/16 suites,
 HTTP 5/5). 3.2 hoàn tất local: full check 217 tests, focused Files 42,
