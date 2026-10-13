@@ -831,4 +831,253 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       }
     });
   });
+
+  describe('Phase 3.3.3 Manager review/publication HTTP', () => {
+    const commands = ['approve', 'reject', 'publish', 'unpublish'];
+    const article = {
+      contentType: 'ARTICLE',
+      title: 'Review lesson',
+      contentHtml: '<p>Knowledge</p>',
+    };
+    const mentorPath = () =>
+      `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/materials`;
+    const managerPath = (id: string) => `/manager/materials/${id}`;
+    async function pending() {
+      const response = await request(mentorPath(), mentorCookie, article);
+      expect(response.status).toBe(201);
+      const created = (await response.json()) as { id: string };
+      expect(
+        (
+          await request(
+            `/mentor/classes/${scope.classId}/materials/${created.id}/submit`,
+            mentorCookie,
+            { expectedRevision: 1 },
+          )
+        ).status,
+      ).toBe(200);
+      return created.id;
+    }
+
+    it('documents commands and enforces cookie role, Origin, UUID and strict revision/reason validation', async () => {
+      const id = await pending();
+      const doc = (await (await fetch(`${url.replace('/api/v1', '')}/docs-json`)).json()) as {
+        paths: Record<string, { post: { responses: Record<string, unknown> } }>;
+      };
+      for (const command of commands) {
+        expect(
+          doc.paths[`/api/v1/manager/materials/{materialId}/${command}`]?.post.responses,
+        ).toHaveProperty('200');
+        const path = `${managerPath(id)}/${command}`;
+        const valid = {
+          expectedRevision: 1,
+          ...(command === 'reject' ? { reason: 'Examples' } : {}),
+        };
+        expect((await request(path, undefined, valid)).status).toBe(401);
+        for (const cookie of [mentorCookie, studentCookie, adminCookie])
+          expect((await request(path, cookie, valid)).status).toBe(403);
+        for (const origin of [undefined, 'https://evil.test'])
+          expect(
+            (
+              await fetch(`${url}${path}`, {
+                method: 'POST',
+                headers: {
+                  'content-type': 'application/json',
+                  cookie: managerCookie,
+                  ...(origin ? { origin } : {}),
+                },
+                body: JSON.stringify(valid),
+              })
+            ).status,
+          ).toBe(403);
+        for (const expectedRevision of [undefined, null, '1', 0, 1.5, 2147483648])
+          expect((await request(path, managerCookie, { ...valid, expectedRevision })).status).toBe(
+            422,
+          );
+        expect((await request(path, managerCookie, { ...valid, action: 'DELETE' })).status).toBe(
+          422,
+        );
+        expect(
+          (await request(`/manager/materials/not-a-uuid/${command}`, managerCookie, valid)).status,
+        ).toBe(400);
+        expect(
+          (
+            await request(
+              `/manager/materials/00000000-0000-4000-8000-000000000000/${command}`,
+              managerCookie,
+              valid,
+            )
+          ).status,
+        ).toBe(404);
+      }
+      for (const reason of [undefined, null, '', '   ', 42, 'x'.repeat(2001)])
+        expect(
+          (
+            await request(`${managerPath(id)}/reject`, managerCookie, {
+              expectedRevision: 1,
+              reason,
+            })
+          ).status,
+        ).toBe(422);
+    });
+
+    it('queue → reject/retry → Mentor edit/resubmit → approve; safe detail and publication retries', async () => {
+      const id = await pending();
+      const queue = await request(
+        `/manager/materials?courseUnitId=${scope.courseUnitId}&reviewStatus=PENDING_REVIEW&contentType=ARTICLE`,
+        managerCookie,
+      );
+      expect(queue.headers.get('cache-control')).toBe('no-store');
+      const queued = (await queue.json()) as { items: { id: string }[] };
+      expect(queued.items.some((item) => item.id === id)).toBe(true);
+      expect(queued.items[0]).not.toHaveProperty('contentHtml');
+      const reject = () =>
+        request(`${managerPath(id)}/reject`, managerCookie, {
+          expectedRevision: 1,
+          reason: '  Add examples  ',
+        });
+      const response = await reject();
+      expect(response.status).toBe(200);
+      const rejected = await response.json();
+      expect(rejected).toMatchObject({
+        reviewStatus: 'REJECTED',
+        rejectionReason: 'Add examples',
+        revision: 1,
+      });
+      expect(await (await reject()).json()).toEqual(rejected);
+      expect(
+        (
+          await request(`${managerPath(id)}/reject`, managerCookie, {
+            expectedRevision: 1,
+            reason: 'Different',
+          })
+        ).status,
+      ).toBe(409);
+      const item = `/mentor/classes/${scope.classId}/materials/${id}`;
+      expect(
+        (await request(item, mentorCookie, { expectedRevision: 1, title: 'Examples' }, 'PATCH'))
+          .status,
+      ).toBe(200);
+      expect((await request(`${item}/submit`, mentorCookie, { expectedRevision: 2 })).status).toBe(
+        200,
+      );
+      expect(
+        (await request(`${managerPath(id)}/approve`, managerCookie, { expectedRevision: 1 }))
+          .status,
+      ).toBe(409);
+      const approval = await request(`${managerPath(id)}/approve`, managerCookie, {
+        expectedRevision: 2,
+      });
+      expect(approval.status).toBe(200);
+      expect(approval.headers.get('cache-control')).toBe('no-store');
+      const approved = await approval.json();
+      expect(approved).toMatchObject({
+        reviewStatus: 'APPROVED',
+        revision: 2,
+        approvedRevision: 2,
+        contentHtml: '<p>Knowledge</p>',
+        canEdit: true,
+        file: null,
+        inlineImages: [],
+        attachments: [],
+      });
+      expect(JSON.stringify(approved)).not.toMatch(/bucket|objectKey|signed|ownerUserId/);
+      expect(await (await request(item, mentorCookie)).json()).toMatchObject({ canEdit: false });
+      const hidden = await (
+        await request(`${managerPath(id)}/unpublish`, managerCookie, { expectedRevision: 2 })
+      ).json();
+      expect(hidden).toMatchObject({ publishedAt: null, approvedRevision: 2 });
+      expect(
+        await (
+          await request(`${managerPath(id)}/approve`, managerCookie, { expectedRevision: 2 })
+        ).json(),
+      ).toEqual(hidden);
+      expect(
+        await (
+          await request(`${managerPath(id)}/unpublish`, managerCookie, { expectedRevision: 2 })
+        ).json(),
+      ).toEqual(hidden);
+      const published = await (
+        await request(`${managerPath(id)}/publish`, managerCookie, { expectedRevision: 2 })
+      ).json();
+      expect(published).toMatchObject({ reviewStatus: 'APPROVED', approvedRevision: 2 });
+      expect(
+        await (
+          await request(`${managerPath(id)}/publish`, managerCookie, { expectedRevision: 2 })
+        ).json(),
+      ).toEqual(published);
+      const changed = await request(
+        managerPath(id),
+        managerCookie,
+        { expectedRevision: 2, title: 'Examples' },
+        'PATCH',
+      );
+      expect(await changed.json()).toMatchObject({
+        revision: 3,
+        reviewStatus: 'DRAFT',
+        publishedAt: null,
+        approvedRevision: null,
+      });
+      expect((await request(`${item}/submit`, mentorCookie, { expectedRevision: 3 })).status).toBe(
+        403,
+      );
+      expect(
+        (await request(`${managerPath(id)}/approve`, managerCookie, { expectedRevision: 3 }))
+          .status,
+      ).toBe(200);
+    });
+
+    it('reviews validated real MinIO PDF/MP4 without signing URLs or changing reference rows', async () => {
+      const rows = (await db.query(
+        "SELECT id,kind FROM file_objects WHERE status='READY' AND kind IN ('PDF','VIDEO') AND course_unit_id=$1 ORDER BY kind",
+        [scope.courseUnitId],
+      )) as { id: string; kind: string }[];
+      for (const kind of ['PDF', 'VIDEO']) {
+        const file = rows.find((row) => row.kind === kind);
+        if (!file) throw new Error(`Missing validated ${kind}`);
+        const created = await request(
+          `/manager/course-units/${scope.courseUnitId}/materials`,
+          managerCookie,
+          {
+            contentType: kind === 'VIDEO' ? 'VIDEO' : 'FILE',
+            title: 'Binary review',
+            fileId: file.id,
+          },
+        );
+        expect(created.status).toBe(201);
+        const data = (await created.json()) as { id: string };
+        const response = await request(`${managerPath(data.id)}/approve`, managerCookie, {
+          expectedRevision: 1,
+        });
+        expect(response.status).toBe(200);
+        const approved = await response.json();
+        expect(approved).toMatchObject({ reviewStatus: 'APPROVED', file: { id: file.id } });
+        expect(JSON.stringify(approved)).not.toMatch(/bucket|objectKey|signed|ownerUserId/);
+      }
+    });
+
+    it('decision races return a single winner and reject decisions on deleted materials', async () => {
+      const id = await pending();
+      const responses = await Promise.all([
+        request(`${managerPath(id)}/approve`, managerCookie, { expectedRevision: 1 }),
+        request(`${managerPath(id)}/reject`, managerCookie, {
+          expectedRevision: 1,
+          reason: 'Needs work',
+        }),
+      ]);
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+      expect(
+        (await request(`${managerPath(id)}?expectedRevision=1`, managerCookie, undefined, 'DELETE'))
+          .status,
+      ).toBe(204);
+      for (const command of commands)
+        expect(
+          (
+            await request(`${managerPath(id)}/${command}`, managerCookie, {
+              expectedRevision: 1,
+              ...(command === 'reject' ? { reason: 'No' } : {}),
+            })
+          ).status,
+        ).toBe(404);
+    });
+  });
 });

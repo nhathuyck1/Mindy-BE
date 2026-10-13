@@ -324,11 +324,12 @@ describe('Phase 3.3.2 Mentor submission + PostgreSQL', () => {
     });
     await service.patch(manager, created.id, { expectedRevision: 2, title: 'Manager edit' });
     for (const mutation of [
-      service.patch(s.actor, created.id, { expectedRevision: 3, title: 'forbidden' }, s.scope),
-      service.delete(s.actor, created.id, 3, s.scope),
-      service.submit(s.actor, created.id, 3, s.scope),
+      () =>
+        service.patch(s.actor, created.id, { expectedRevision: 3, title: 'forbidden' }, s.scope),
+      () => service.delete(s.actor, created.id, 3, s.scope),
+      () => service.submit(s.actor, created.id, 3, s.scope),
     ])
-      await expect(mutation).rejects.toMatchObject({ status: 403 });
+      await expect(mutation()).rejects.toMatchObject({ status: 403 });
     await expect(service.detail(s.actor, created.id, s.scope)).rejects.toMatchObject({
       status: 404,
     });
