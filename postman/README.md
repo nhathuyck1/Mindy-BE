@@ -69,3 +69,14 @@ If login succeeds but an authenticated request returns `401`, delete old cookies
 
 The collection creates a unique student email on each run and stores the returned ID
 as a collection variable for the following get/suspend/reactivate requests.
+
+## Phase 3.3.3 review/publication
+
+Import [Phase33 collection](Mindy-Materials-Phase33.postman_collection.json), set origin
+matching CORS_ORIGINS. Mentor create→submit, login Manager again→pending review queue
+→detail→reject or approve. Reject→login Mentor→EDIT→submit→login Manager→approve.
+Use expected_revision from the latest detail; on409 refetch and explicitly decide
+again. Approve publishes, unpublish retains approval; approve retry does not republish.
+Publish/unpublish retries retain timestamps and produce no duplicate audit. Requires
+migrations through1791853200000; local verification only, VPS acceptance pending.
+Release and binary preview remain later slices.
