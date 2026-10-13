@@ -83,3 +83,5 @@ entity trước rồi mới quay lại làm controller/service.
 - Đọc toàn bộ `document/Flow.txt` trước khi chốt rule nghiệp vụ; ghi rõ diễn giải
   triển khai và yêu cầu được hoãn, không bỏ cash preview/mentor confirmation/mail.
 
+
+2026-10-14: Phase3.3.5 local acceptance/handoff đã chuẩn bị; full checks và server evidence theo progress3.3. VPS/sign-off còn pending; không thêm API/schema.

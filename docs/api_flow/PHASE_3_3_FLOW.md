@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-13**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
+Cập nhật: **2026-10-14**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -226,3 +226,16 @@ không pending, audit table/constraints/indexes và Material triggers đã xác 
 Flow/API contract không đổi; development schema hỗ trợ implementation3.3.4.
 Chưa deploy/VPS acceptance hoặc thực hiện3.3.5. Không chạy lại API tests trong
 lượt migration; xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+
+## Phase 3.3.5 — 2026-10-14
+
+Hoàn thiện local acceptance/handoff: ba workflow HTTP ARTICLE (ảnh inline/PDF
+attachment), FILE PDF, VIDEO MP4 với MinIO thật; upload→submit→reject→edit→resubmit
+→approve→release→unpublish→approve retry không republish→publish→edit revoke.
+Release không đổi Material/enrollment; stale publish409 và refs giữ qua decisions.
+Startup kiểm toàn bộ source migrations; Postman Phase33 đối chiếu Swagger.
+Không thêm API/schema; DBML giữ đúng refs/audit hiện hành. Quy trình VPS, bảng
+PENDING evidence và providers/fixtures3.4 ở [§10 breakdown](PHASE_3_3_flow-api-breakdown.md#10-phase-335--acceptance-và-handoff-34-2026-10-14).
+Kết quả gate cuối ghi [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Chưa deploy/VPS acceptance/user sign-off; Student ARTICLE/assets, staff binary
+preview và video runtime thuộc3.4. Local pass không đánh dấu toàn3.3 complete.

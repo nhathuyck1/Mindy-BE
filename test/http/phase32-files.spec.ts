@@ -1,5 +1,6 @@
 import { type ChildProcess, fork } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
 import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -978,6 +979,198 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     });
   });
 
+  describe('Phase 3.3.5 metadata acceptance and handoff HTTP', () => {
+    it('boots all source migrations and keeps Phase33 Postman routes aligned with Swagger', async () => {
+      const migrations = readdirSync('src/database/migrations')
+        .filter((name) => /^\d+.*\.ts$/.test(name))
+        .map((name) => Number(name.split('-')[0]))
+        .sort();
+      const applied = (await db.query('SELECT timestamp FROM migrations ORDER BY timestamp')) as {
+        timestamp: string;
+      }[];
+      expect(applied.map((row) => Number(row.timestamp)).sort()).toEqual(migrations);
+      type Item = {
+        item?: Item[];
+        request?: { method: string; url: string | { raw: string }; body?: { raw?: string } };
+      };
+      const collection = JSON.parse(
+        readFileSync('postman/Mindy-Materials-Phase33.postman_collection.json', 'utf8'),
+      ) as { item: Item[] };
+      const document = (await (await fetch(url.replace('/api/v1', '/docs-json'))).json()) as {
+        paths: Record<string, Record<string, unknown>>;
+      };
+      const normalize = (path: string) => path.replace(/\{[^}]+\}/g, '{}');
+      const operations = new Set(
+        Object.entries(document.paths).flatMap(([path, verbs]) =>
+          Object.keys(verbs).map((verb) => `${verb.toUpperCase()} ${normalize(path)}`),
+        ),
+      );
+      let requests = 0;
+      function visit(items: Item[]): void {
+        for (const item of items) {
+          if (item.item) visit(item.item);
+          if (!item.request) continue;
+          requests++;
+          const raw =
+            typeof item.request.url === 'string' ? item.request.url : item.request.url.raw;
+          const path = raw
+            .replace('{{base_url}}', '')
+            .split('?')[0]
+            ?.replace(/\{\{[^}]+\}\}/g, '{}');
+          expect(operations.has(`${item.request.method} ${path}`), raw).toBe(true);
+          if (item.request.body?.raw)
+            expect(() =>
+              JSON.parse((item.request?.body?.raw ?? '').replace(/\{\{[^}]+\}\}/g, '1')),
+            ).not.toThrow();
+        }
+      }
+      visit(collection.item);
+      expect(requests).toBeGreaterThanOrEqual(34);
+    });
+    it.each(['ARTICLE', 'FILE', 'VIDEO'] as const)(
+      '%s follows real upload → submit → reject/edit → approve → release → withdraw',
+      async (contentType) => {
+        async function readyFile(extension: string): Promise<string> {
+          const binary = binaries.find((item) => item.filename.endsWith(`.${extension}`));
+          if (!binary) throw new Error(`Missing ${extension} fixture`);
+          const response = await request('/files/upload-intents', mentorCookie, {
+            ...scope,
+            originalFilename: binary.filename,
+            declaredMimeType: binary.mimeType,
+            declaredSizeBytes: binary.bytes.length,
+          });
+          expect(response.status).toBe(201);
+          const intent = (await response.json()) as { fileId: string; uploadUrl: string };
+          await upload(intent.uploadUrl, binary.mimeType, binary.bytes);
+          expect((await request(`/files/${intent.fileId}/complete`, mentorCookie, {})).status).toBe(
+            202,
+          );
+          await invokeWorker(intent.fileId);
+          expect(
+            await (await request(`/files/${intent.fileId}`, mentorCookie)).json(),
+          ).toMatchObject({ status: 'READY' });
+          return intent.fileId;
+        }
+        const fileId = await readyFile(contentType === 'VIDEO' ? 'mp4' : 'pdf');
+        const imageId = contentType === 'ARTICLE' ? await readyFile('png') : undefined;
+        const createdResponse = await request(
+          `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/materials`,
+          mentorCookie,
+          {
+            contentType,
+            title: `Acceptance ${contentType}`,
+            ...(imageId
+              ? {
+                  contentHtml: `<p>Lesson</p><img data-file-id="${imageId}">`,
+                  attachmentFileIds: [fileId],
+                }
+              : { fileId }),
+          },
+        );
+        expect(createdResponse.status).toBe(201);
+        const created = (await createdResponse.json()) as { id: string };
+        const mentorPath = `/mentor/classes/${scope.classId}/materials/${created.id}`;
+        const managerPath = `/manager/materials/${created.id}`;
+        async function command(path: string, cookie: string, body: unknown, method = 'POST') {
+          const response = await request(path, cookie, body, method);
+          expect(response.status).toBe(200);
+          expect(response.headers.get('cache-control')).toContain('no-store');
+          const result: unknown = await response.json();
+          expect(JSON.stringify(result)).not.toMatch(
+            /objectKey|objectVersion|bucket|uploadUrl|signedUrl|ownerUserId/,
+          );
+          return result;
+        }
+        expect(
+          await command(`${mentorPath}/submit`, mentorCookie, { expectedRevision: 1 }),
+        ).toMatchObject({ reviewStatus: 'PENDING_REVIEW', canEdit: false });
+        await command(`${managerPath}/reject`, managerCookie, {
+          expectedRevision: 1,
+          reason: 'Add examples',
+        });
+        expect(
+          await command(
+            mentorPath,
+            mentorCookie,
+            { expectedRevision: 1, title: 'Lesson with examples' },
+            'PATCH',
+          ),
+        ).toMatchObject({ revision: 2, reviewStatus: 'DRAFT' });
+        await command(`${mentorPath}/submit`, mentorCookie, { expectedRevision: 2 });
+        const approved = await command(`${managerPath}/approve`, managerCookie, {
+          expectedRevision: 2,
+        });
+        expect(approved).toMatchObject({
+          contentType,
+          revision: 2,
+          approvedRevision: 2,
+          reviewStatus: 'APPROVED',
+          canEdit: true,
+        });
+        if (imageId)
+          expect(approved).toMatchObject({
+            file: null,
+            inlineImages: [{ id: imageId }],
+            attachments: [{ id: fileId }],
+          });
+        else expect(approved).toMatchObject({ file: { id: fileId }, contentHtml: null });
+        const refs = await db.query(
+          'SELECT * FROM material_file_references WHERE material_id=$1 ORDER BY file_id, role',
+          [created.id],
+        );
+        const enrollments = await db.query(
+          'SELECT * FROM enrollments WHERE class_id=$1 ORDER BY id',
+          [scope.classId],
+        );
+        const releasePath = `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
+        try {
+          await command(releasePath, mentorCookie, { status: 'OPEN', unlockAt: null }, 'PATCH');
+          expect(await (await request(managerPath, managerCookie)).json()).toEqual(approved);
+          expect(
+            await db.query('SELECT * FROM enrollments WHERE class_id=$1 ORDER BY id', [
+              scope.classId,
+            ]),
+          ).toEqual(enrollments);
+          const withdrawn = await command(`${managerPath}/unpublish`, managerCookie, {
+            expectedRevision: 2,
+          });
+          expect(withdrawn).toMatchObject({ publishedAt: null, approvedRevision: 2 });
+          expect(
+            await command(`${managerPath}/approve`, managerCookie, { expectedRevision: 2 }),
+          ).toEqual(withdrawn);
+          expect(
+            await command(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 }),
+          ).toMatchObject({ approvedRevision: 2 });
+          expect(
+            await db.query(
+              'SELECT * FROM material_file_references WHERE material_id=$1 ORDER BY file_id, role',
+              [created.id],
+            ),
+          ).toEqual(refs);
+          expect(
+            await command(
+              managerPath,
+              managerCookie,
+              { expectedRevision: 2, title: 'Next revision' },
+              'PATCH',
+            ),
+          ).toMatchObject({
+            revision: 3,
+            reviewStatus: 'DRAFT',
+            approvedRevision: null,
+            publishedAt: null,
+          });
+          expect(
+            (await request(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 }))
+              .status,
+          ).toBe(409);
+        } finally {
+          await command(releasePath, mentorCookie, { status: 'LOCKED', unlockAt: null }, 'PATCH');
+        }
+      },
+      30000,
+    );
+  });
   describe('Phase 3.3.3 Manager review/publication HTTP', () => {
     const commands = ['approve', 'reject', 'publish', 'unpublish'];
     const article = {

@@ -1,9 +1,12 @@
 # Phase 3 — Tiến độ File + Materials
 
-Cập nhật: **2026-10-12**.
+Cập nhật: **2026-10-14**.
 Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
 ## Hiện trạng
+
+- 2026-10-14:3.3.1–3.3.4 đã implement local;3.3.5 acceptance/handoff local đã chuẩn bị. Full gates và VPS evidence ở [progress3.3](PHASE_3_3_PROGRESS.md); VPS/sign-off còn pending. Student FILE/VIDEO read đã có; ARTICLE/assets/staff preview/video runtime còn3.4.
+
 
 - 2026-10-12: 3.2 đã nghiệm thu VPS theo xác nhận user (PDF/MP4 READY/private
   objects có evidence); hoàn thiện plan3.3 typed ARTICLE/FILE/VIDEO, refs/sanitizer/

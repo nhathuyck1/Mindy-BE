@@ -32,7 +32,7 @@ file có CHECK theo loại, inline/attachment refs, Student article/asset access
 video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
 hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
 
-**3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
+**3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 đã hoàn thiện local acceptance/handoff; VPS evidence/user sign-off còn pending.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 đã có Material FILE/VIDEO read persistence và ba Student GET theo
 [read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/publication HTTP có ở3.3.3; release HTTP đã có3.3.4 local.
@@ -64,7 +64,7 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 | 3.3.2 Mentor context/submission | Đã implement local; chờ VPS acceptance | Assignment + own draft + ID mapping + hidden pagination; evidence bên dưới |
 | 3.3.3 Review/publication | Đã implement local; chờ VPS acceptance | Queue/revision/races/no-op retry/firstApprovedAt + withdrawal migration |
 | 3.3.4 Class Unit release | Đã implement local; chờ VPS acceptance | Actor/Class/Unit locks, time semantics, atomic Classes audit |
-| 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
+| 3.3.5 Acceptance/handoff | Local verified; chờ VPS/user sign-off | Full gates406/48/42, all migrations/Postman–Swagger check, three typed workflows, runbook/evidence table + providers/fixtures3.4 |
 
 ## Lượt hoàn thiện plan — 2026-10-12
 
@@ -328,3 +328,44 @@ class_unit_release_audit,6 constraints/4 indexes và2 Material content triggers.
 Development đã có schema3.3.4; không deploy/migrate VPS/nghiệm thu server3.3.5.
 Không chạy lại test BE/HTTP ở lượt migrate này; local gate406/44 phía trên là
 lượt implementation trước. Kiểm git diff whitespace cho cập nhật tài liệu.
+
+## Triển khai 3.3.5 — 2026-10-14
+
+- Hoàn thiện acceptance/handoff local theo plan; không thêm endpoint/DTO/schema,
+  migration hoặc dependency. Thêm4 HTTP cases trong built-app suite: đối chiếu
+  toàn bộ16 source migration IDs với startup DB và34 Postman method/routes với
+  Swagger; ba workflows riêng ARTICLE/FILE/VIDEO dùng Mentor upload MinIO thật.
+- ARTICLE dùng PNG inline + PDF attachment, FILE PDF, VIDEO MP4 đều complete/
+  validation READY trước create; submit→reject→EDIT revision2→resubmit→approve
+  →Mentor release→unpublish→approve retry không republish→publish→Manager EDIT
+  revoke revision3→stale publish409. Kiểm no-store/safe refs, decisions không đổi
+  reference rows và release không đổi Material/enrollment. Fixtures không lấy
+  fileId/materialId từ test khác; unit release cleanup trong finally.
+- Node22.20.0/pnpm12.6.0 (portable runtime có sẵn), PostgreSQL dedicated *_test
+  và local private MinIO: **pnpm check pass406/406 tests,34 suites**, lint/type-check/
+  build pass; **pnpm test:http48/48,2 suites**; **pnpm test:files42/42,1 suite**.
+  **0 skip,0 unhandled errors**. Rerun lint/type-check cuối sau sửa HTTP fixture pass.
+  Tests không dùng development DATABASE_URL; dùng URL đã đổi tên sang *_test,
+  helper tạo DB fixture riêng. Không migrate development/VPS trong lượt này.
+- HTTP lượt đầu phát hiện assertion fixture ORDER BY id sai vì refs dùng composite
+  key và Postman url có dạng string. Đã sửa file_id/role + url union; lượt sau
+  phát hiện numeric variable expected_revision cần substitute trước JSON parse.
+  Sửa và rerun toàn bộ HTTP48/48 sạch; chỉ kết quả cuối là evidence acceptance.
+- DBML đối chiếu primary nullable/typed Material, composite refs, Material audit,
+  Class Unit release audit hiện hành; không schema change nên không sửa DBML.
+  Swagger có đủ request routes đã đối chiếu Postman (34 requests), JSON templates
+  kiểm sau substitution. Flow/breakdown/plan/Postman README/progress/index và
+  FE gap audit cập nhật trạng thái authoring/context/review/release local hiện hữu.
+- Bàn giao MaterialPolicyService + typed snapshots/predicates, Files batch summaries/
+  ready projection/version signing, Classes context providers và binary/DB/HTTP
+  fixtures tại [§10 API breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+  Student ARTICLE/assets/staff preview chưa implement; FILE/VIDEO Student baseline
+  và video runtime acceptance vẫn phân biệt. Không sửa source hoặc nghiệm thu UI FE.
+- Runbook VPS có backup/migration/health/auth, workflow ba loại + text-only ARTICLE,
+  case matrix từng slice, rollback giữ audit/schema và bảng evidence PENDING. Base
+  checkout SHA e64a1ab5a2b6162a340de3f5930d3bc2f8e5aa50 chỉ là local base; thay đổi
+  lượt này chưa commit, không dùng SHA đó làm release SHA của implementation mới.
+  Chưa commit/merge/push/deploy, chưa server evidence hoặc user sign-off3.3.
+  PR/API/auth review trước merge tiếp tục theo repo rules; toàn phase3.3 chưa complete.
+
+- Final documentation check: git diff --check và lint pass; kiểm107 local links,5 path FE thuộc audit cũ trỏ sibling repo không có tại workspace hiện tại đã đổi thành tham chiếu text có nhãn lịch sử;102 local links còn lại resolve được.

@@ -29,7 +29,7 @@ Phase3.4: import `Mindy-Materials-Phase34.postman_collection.json`, login STUDEN
 choose FULL class from My Classes and `units[].id` from class detail, then call
 list/detail/download. FILE/VIDEO read slice is local verified, not yet deployed.
 Approved Material rows/released units are prerequisites; authoring/review/release
-HTTP3.3 is still planned. Do not send API cookies to signed storage URLs.
+HTTP3.3 đã implement và kiểm chứng local; VPS acceptance còn pending. Do not send API cookies to signed storage URLs.
 See [Student Material contract](../docs/api_flow/PHASE_3_4_flow-api-breakdown.md).
 
 Import both files into Postman:
@@ -91,3 +91,16 @@ OPEN + future unlockAt waits for server time; LOCKED always blocks. Omit unlockA
 to retain, null to clear. Retry equal values keeps timestamps/audit. On409 or lost
 response, refetch and choose again; no expectedRevision or automatic replay.
 Local checks and VPS acceptance are tracked separately in Phase3.3 progress.
+
+## Phase 3.3.5 acceptance/handoff
+
+Run the metadata journey with separate ARTICLE text-only, ARTICLE PNG inline + PDF
+attachment, FILE PDF and VIDEO MP4 fixtures. Files Phase32 supplies upload/complete/
+status; Phase33 supplies context/create/submit/reject/edit/approve/publication and
+release. Switch role by logging in again; read IDs/revisions from actual responses.
+Postman numeric expected_revision templates are substituted before sending JSON.
+Local HTTP checks compare all Phase33 method/routes to Swagger and all source
+migration IDs to the built-app database. No new routes or schema in3.3.5.
+[VPS cases, evidence table and3.4 handoff](../docs/api_flow/PHASE_3_3_flow-api-breakdown.md#10-phase-335--acceptance-và-handoff-34-2026-10-14).
+VPS results and user sign-off remain pending; staff binary preview and Student
+ARTICLE/inline/attachment URLs remain3.4 work.

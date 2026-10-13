@@ -1,6 +1,6 @@
 # Phase 3.3 — Material management, review và Class Unit release
 
-Cập nhật: **2026-10-13**. **3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 còn planned.**
+Cập nhật: **2026-10-14**. **3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 đã chuẩn bị local acceptance/handoff; VPS evidence và user sign-off còn pending.**
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
 
@@ -273,10 +273,10 @@ body/assets leak và video Range/seek/expiry là runtime acceptance **3.4**.
 
 - [x] 3.2 nghiệm thu xong; plan ARTICLE/FILE/VIDEO thống nhất, flow/API/progress đồng bộ.
 - [ ] Typed domain/sanitizer/schema/refs/audits/lock protocol và migration SQL được review/test.
-- [ ] Manager/Mentor APIs + release chạy đúng quyền/revision/visibility, full local gates pass.
+- [x] Manager/Mentor APIs + release chạy đúng quyền/revision/visibility, full local gates pass (3.3.5); VPS evidence vẫn riêng.
 - [ ] Mỗi slice có server evidence riêng; không skip critical cases hoặc claim binary review đã xong.
 - [ ] Swagger/Postman/DBML/API breakdown phản ánh source thực; user nghiệm thu3.3.
-- [ ] Bàn giao3.4 typed read view/verified refs/policy/release/fixtures/error contracts.
+- [x] Bàn giao3.4 contracts/providers/refs/policy/release/fixtures và giới hạn hiện hữu tại §10 API breakdown; typed Student ARTICLE/assets implementation vẫn thuộc3.4.
 
 3.4 thêm signed GET đúng verified version, TTL<=60s/no-store, recheck quyền khi
 refresh URL; assetId phải thuộc Material. MP4 kiểm Range206/seek/expiry/refresh
@@ -378,3 +378,17 @@ Migration chỉ thêm audit/index/composite FK class-unit và unique(id,class_id
 không backfill hoặc sửa release/Materials/enrollment. Down xóa audit, chỉ test
 trên DB riêng; production rollback code giữ bảng/data. SQL/API review trước merge.
 Server acceptance và handoff3.3.5 còn pending; không migrate dev/VPS hoặc deploy.
+
+## Triển khai 3.3.5 — 2026-10-14
+
+Acceptance/handoff local đã chuẩn bị; không thêm API/schema/migration/dependency.
+Built-app HTTP thêm ba workflow độc lập ARTICLE ảnh inline/PDF attachment, FILE
+PDF, VIDEO MP4 từ upload MinIO thật đến reject/edit/resubmit/approve/release/
+withdraw/publish/edit revoke. Kiểm refs giữ qua decisions, release không đổi
+Material/enrollment, safe no-store DTO và stale409. Thêm startup migration gate
+đối chiếu 16 source IDs với migrations DB và Postman Phase33 với Swagger runtime.
+DBML typed refs/audit không đổi; JSON Postman numeric templates được kiểm sau
+substitution. Server runbook, evidence PENDING và bàn giao providers/fixtures/
+read gaps3.4 tại [§10 API breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Local results ghi progress3.3. Chưa deploy/nghiệm thu VPS/user sign-off; không đánh
+dấu toàn phase3.3 complete. Các ghi chép planned trước đây là lịch sử theo ngày.

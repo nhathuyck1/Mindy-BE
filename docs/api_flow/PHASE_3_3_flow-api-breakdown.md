@@ -1,6 +1,6 @@
 # Phase 3.3 — API breakdown cho FE
 
-Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
+Cập nhật: **2026-10-14**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
 release3.3.4 ở §9 đã implement local. Chưa deploy/nghiệm thu VPS3.3.1–3.3.4.**
 Shapes Manager/Mentor/decision/release đã đối chiếu Swagger/source.
 Upload 3.2 đã có, xem
@@ -661,3 +661,74 @@ local mindy_center (localhost:5433);16/16 source migrations applied, không pend
 §9 release và review/publication3.3.3 đã đủ prerequisite schema ở development.
 Không thay route/body/DTO/error/FE flow. Chưa xác nhận API smoke ở lượt này,
 không deploy/migrate VPS hoặc thay evidence server acceptance3.3.5.
+
+## 10. Phase 3.3.5 — acceptance và handoff 3.4 (2026-10-14)
+
+Slice này bổ sung kiểm thử và bàn giao, không thêm endpoint/DTO/schema hoặc đổi
+thứ tự API ở §3–9. Gate local và VPS độc lập; chưa có release VPS hay user sign-off.
+
+### Quy trình nghiệm thu trên VPS
+
+1. Ghi commit SHA của artifact thực tế, môi trường, thời điểm Asia/Bangkok, người
+   chạy. Backup DB và xác minh private/versioned MinIO theo runbook 3.2. Dùng tài
+   khoản/Unit và binary fixture nghiệm thu riêng, không dùng đơn thanh toán thật.
+2. Chạy migration bằng một job trước traffic, kiểm migration:show trước/sau.
+   Baseline hiện có 16 migration; các IDs Phase3 là 1791504000000 (MANAGER),
+   1791504000001 (Files), 1791763200000 (Student read), 1791849600000 (typed authoring),
+   1791853200000 (withdrawal) và 1791856800000 (release audit). Không có migration3.3.5.
+   Chỉ triển khai source/artifact đã qua review và full gate; không bật synchronize.
+3. GET /api/v1/health/live và /health/ready →200; login/GET auth/me với cookie.
+   Import Files Phase32, Materials Phase33; base_url là host (không thêm /api/v1),
+   origin khớp CORS_ORIGINS. Đổi login theo actor để cookie jar đúng identity.
+4. Mentor picker lấy classId/Class Unit id/courseUnitId/sessionId. Upload PDF, MP4,
+   PNG theo 3.2 →PUT storage không cookie→complete202→poll READY hoặc dừng FAILED.
+   Tạo riêng ARTICLE text-only và ARTICLE ảnh inline + PDF attachment; FILE PDF;
+   VIDEO MP4. ARTICLE gửi data-file-id, không gửi URL/base64. Create201 revision1.
+5. Mentor submit200/PENDING_REVIEW→Manager queue/detail→reject reason→Mentor PATCH
+   expectedRevision1→revision2/DRAFT→submit→Manager approve expectedRevision2.
+   Kiểm APPROVED/approvedRevision2/firstApprovedAt/publishedAt, no-store, safe refs.
+   Retry không thêm audit; stale409 refetch và chọn lại; pending Mentor edit403.
+6. Admin hoặc assigned Mentor PATCH release OPEN/unlockAt:null. Kiểm enrollment,
+   progress/payment và Material revision/approval không đổi. Thử LOCKED, OPEN+future,
+   omitted/null/past, hai lớp cùng Course Unit độc lập và COMPLETED/CANCELLED409
+   theo ma trận3.3.4 ở progress. Release không chứng minh Student ARTICLE đã có API.
+7. Manager unpublish giữ approvedRevision; approve retry không republish; publish
+   phục hồi. PATCH published về DRAFT/revision+1, clear approval/publication,
+   giữ firstApprovedAt; stale publish409. Kiểm audit/ref counts và auth/Origin/
+   UUID/DTO/assignment/race cases từng slice trong progress, không bỏ critical cases.
+8. Ghi từng case PASS/FAIL/BLOCKED kèm HTTP status/business code, DTO đã loại secret,
+   audit delta và migration IDs. Không lưu cookie, password hoặc signed URLs.
+   Nếu lỗi schema: rollback code theo artifact tương thích, giữ schema/audit;
+   không migration:revert trên production có refs/audit thật (down3.3.4 xóa audit).
+
+| Nhóm evidence | Release SHA/migration IDs | Cases/status/code/audit | Kết quả VPS |
+|---|---|---|---|
+| Deploy/health/auth | Chưa ghi | Chưa chạy | PENDING |
+| 3.3.1 authoring/refs/sanitize | Chưa ghi | Theo progress3.3.1 | PENDING |
+| 3.3.2 context/submission/RBAC | Chưa ghi | Theo progress3.3.2 | PENDING |
+| 3.3.3 review/publication/races | Chưa ghi | Theo progress3.3.3 | PENDING |
+| 3.3.4 release/isolation/audit | Chưa ghi | Theo progress3.3.4 | PENDING |
+| Workflow3.2→3.3 cả ba loại | Chưa ghi | Bước4–7 + text-only ARTICLE | PENDING |
+| User sign-off3.3 | — | Chưa xác nhận | PENDING |
+
+### Providers, fixtures và giới hạn bàn giao 3.4
+
+| Thành phần hiện hữu | Cách dùng trong 3.4 |
+|---|---|
+| MaterialsModule export MaterialPolicyService | canRead/canPreview với MaterialSnapshot và refs do server resolve; studentReadContext/assertStudentClassAccess recheck actor/enrollment/context. Không tin fileIds do client khai báo. |
+| material-contract.ts / material-access.ts | Snapshot typed ARTICLE/FILE/VIDEO, current approvedRevision/publishedAt/deletedAt, every reference READY; pure predicates dùng chung. Không dùng canEdit làm canPreview. |
+| FilesModule export FilesService | readSummaries(ids, EntityManager) batch metadata; readyReadProjection lọc READY; signReadReference chỉ sau Material authorization, đúng Course Unit/version, ngoài transaction. includeUnavailable=true chỉ dành staff metadata/withdrawal, không mở quyền đọc binary. |
+| ClassesModule export ClassContentContextService/MentorContentContextService | Resolve Class Unit ↔ Course Unit và current assignment/ancestry; release là state của từng lớp. ClassUnitReleaseService là provider nội bộ, không gọi xuyên module private. |
+| MaterialEntity / MaterialFileReferenceEntity | Primary FK và composite refs(material_id,file_id,role), INLINE_IMAGE/ATTACHMENT; ARTICLE primary null. Resolve asset từ refs thuộc đúng Material; không generic download theo fileId. |
+| test/helpers/files-fixture.ts | binaryFixtures tạo PDF/MP4/PNG thật; storageFixture bucket riêng và cleanup; upload PUT không API cookie. |
+| test/helpers/payment-fixture.ts | paymentDatabase/separateTestUrl chỉ *_test, migrate fixture riêng; không trỏ DATABASE_URL development/VPS cho tests. |
+| test/http/phase32-files.spec.ts | Built app all migrations, Swagger/Postman alignment, ba typed workflows upload→reject/edit/resubmit→approve→release→withdraw/reapprove; không phụ thuộc request ID từ suite khác. |
+| test/integration/phase331/332/333/334 + phase34-student-materials.spec.ts | Fixtures/races/rollback/locks và Student FILE/VIDEO release/access regression; state SQL fixtures không thay evidence API server. |
+
+Student3.4 hiện chỉ FILE/VIDEO primary list/detail/download; chưa trả ARTICLE HTML,
+inline/attachment asset URL hoặc staff binary preview. 3.4 phải resolve typed view
+và refs trên server, scope asset vào Material, recheck quyền khi refresh URL, giữ
+TTL<=60s/no-store và tránh upload-owner policy trên read. Runtime MP4 Range206,
+seek/expiry/refresh và ingress cap còn acceptance3.4. Manager inactive catalog
+picker chưa có; FE dùng fixture Course Unit cho nghiệm thu API, không dùng route
+Admin thay quyền Manager. Chưa nghiệm thu UI FE hoặc sửa repo Mindy-FE.

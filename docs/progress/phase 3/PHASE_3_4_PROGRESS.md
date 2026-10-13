@@ -51,3 +51,5 @@ Cập nhật **2026-10-12**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
   roster chưa tích hợp. Không sửa FE ở lượt source audit này.
 - Metrics/rate limiting/i18n chưa hạ tầng đầy đủ theo baseline repo; không bổ sung
   hạ tầng cross-cutting trong ba read endpoints này.
+
+2026-10-14: Nhận handoff3.3.5 providers/typed refs/policy/release/fixtures tại [§10 contract3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md). Manager/Mentor3.3.1–3.3.4 đã implement local. Không thêm Student API trong3.3.5; ARTICLE/assets và staff preview/video runtime còn pending.

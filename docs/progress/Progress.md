@@ -1,5 +1,15 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-14: Triển khai3.3.5 local acceptance/handoff:4 HTTP cases mới gồm16
+  source migrations/34 Postman routes đối chiếu Swagger và ARTICLE PNG/PDF,
+  FILE PDF, VIDEO MP4 từ upload MinIO thật→submit/reject/edit/resubmit/approve
+  →release/withdraw/publish/edit revoke. Node22.20.0/pnpm12.6.0: pnpm check406/406
+  (34 suites), HTTP48/48 (2 suites), Files42/42 (1 suite),0 skip/unhandled errors;
+  lint/type-check/build pass. Runbook/evidence PENDING/providers/fixtures3.4 và
+  flow/API/plan/progress/FE gap audit đồng bộ; không API/schema/migration mới.
+  Chưa commit/merge/push/deploy/VPS acceptance/user sign-off; toàn3.3 chưa complete.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-14: Theo yêu cầu user, chạy migration cho development local
   mindy_center tại localhost:5433 bằng Node22.20.0/pnpm12.6.0. Hai migration
   MaterialPublicationWithdrawal1791853200000 và ClassUnitReleaseAudit1791856800000
