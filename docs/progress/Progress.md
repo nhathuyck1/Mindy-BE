@@ -1,5 +1,14 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-13: Triển khai3.3.3 Manager review/publication (queue filters, approve/reject/
+  publish/unpublish), strict revision/reason, no-op audit/timestamps, atomic locks và
+  firstApprovedAt/canEdit. Migration additive1791853200000 cho withdrawal/soft-delete
+  với refs unavailable, giữ content/identity/review và Student READY gates.
+  Node22.20.0: pnpm check365/365 (32 suites), HTTP40/40 (2 suites), 0 skip;
+  lint/type-check/build pass. Swagger/Postman27 requests, flow/API/plan/progress cập nhật.
+  Chưa migrate dev/VPS, merge/push/deploy hoặc server acceptance; release3.3.4 còn planned.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-13: Triển khai3.3.2 Mentor Unit/session context + typed own draft
   create/list/detail/EDIT/delete/submit; current assignment/actor/ancestry dưới locks,
   visibility trước count/page, pending retry no-op/audit, Origin/no-store.

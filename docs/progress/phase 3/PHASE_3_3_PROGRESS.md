@@ -32,10 +32,10 @@ file có CHECK theo loại, inline/attachment refs, Student article/asset access
 video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
 hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
 
-**3.3.1–3.3.2 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.3–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
+**3.3.1–3.3.3 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.4–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 đã có Material FILE/VIDEO read persistence và ba Student GET theo
-[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/release HTTP còn planned.
+[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/publication HTTP có ở3.3.3; release HTTP còn planned.
 Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 
 ## Lượt planning — 2026-10-11
@@ -62,7 +62,7 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 | Plan | Hoàn tất | Plan + flow/API + progress/index đồng bộ |
 | 3.3.1 Typed Manager draft | Đã implement local; chờ VPS acceptance | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
 | 3.3.2 Mentor context/submission | Đã implement local; chờ VPS acceptance | Assignment + own draft + ID mapping + hidden pagination; evidence bên dưới |
-| 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt |
+| 3.3.3 Review/publication | Đã implement local; chờ VPS acceptance | Queue/revision/races/no-op retry/firstApprovedAt + withdrawal migration |
 | 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
 | 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
 
@@ -196,3 +196,66 @@ migration IDs, status/code/result cho các ca:
    Manager vẫn thấy submission. Review/reject/resubmit runtime chờ3.3.3.
 
 Chỉ ghi server pass khi thực hiện trên VPS; local fixtures không thay server evidence.
+
+## Triển khai 3.3.3 — 2026-10-13
+
+- Branch codex/phase-3-3-3-material-review. Bốn POST Manager approve/reject/publish/
+  unpublish đã implement HTTP200 detail/no-store; queue dùng global list filters
+  reviewStatus/courseUnitId/contentType và pagination trước total, summary không HTML.
+  Strict expectedRevision1..2147483647, reason string nonempty/max2.000 trước trim,
+  cookie/role/Origin/path validation; safe DTO/canEdit theo actor như3.3.1/3.3.2.
+- Material row lock→mọi file UUID→actor→Classes; typed snapshots/current refs,
+  workflow+audit atomic. Review/publication không sửa content/reference rows;
+  no-op không save nên giữ updatedAt/timestamps/audit. Approve/reject chỉ một thắng;
+  review sau EDIT revision cũ409; Manager EDIT dù cùng giá trị tăng revision và
+  clear approval/publication, giữ firstApprovedAt; Mentor không lấy lại quyền sửa.
+- Manager own DRAFT approve trực tiếp, Mentor chưa submit/Manager khác chưa từng
+  approve draft409; bản Manager sửa sau từng approved được approve lại. Reject
+  cùng revision/trimmed reason no-op, reason khác409; phải EDIT trước resubmit.
+  Unpublish giữ approval; approve retry sau unpublish không republish, cần publish.
+- Migration mới1791853200000-material-publication-withdrawal: trigger cũ gate READY
+  trên mọi UPDATE ngăn unpublish khi file unavailable. Bypass chỉ withdrawal hoặc
+  soft-delete với content/identity/revision/review giữ nguyên. Insert/EDIT/review/
+  publication mới vẫn guard READY/ancestry. Không sửa migration đã chạy. Down chỉ
+  phục hồi trigger cũ, giữ tables/data/audit; clean up/down/up đã test DB *_test.
+  Staff detail/delete/unpublish dùng batch metadata unavailable nội bộ; Student
+  read/signing giữ default READY. Không storage signing/network trong decisions.
+- Gates trên Node22.20.0/pnpm12.6.0: pnpm check pass lint/type-check/build,
+  **365/365 tests, 32 suites, 0 skip, 0 unhandled errors**; pnpm test:http
+  **40/40 tests, 2 suites, 0 skip**. Full check gồm Files42/42 và Student read15/15;
+  không cần lặp standalone Files gate. Thêm17 DB tests và4 HTTP cases (21 cases),
+  gồm real MinIO validated PDF/MP4 review, queue/reject/edit/resubmit/approve,
+  publication retry, stale commands, auth/Origin/DTO/UUID/tombstone và concurrency.
+- Lượt đầu DB test thiếu local Docker/PostgreSQL đang dừng; đã khởi động existing
+  test dependencies. READY-unavailable fixtures phát hiện staff summary/DB trigger
+  chặn withdrawal, đã sửa bằng option + migration mới và test lại thành công.
+  Full gate đầu có365 assertions pass nhưng fail do test3.3.2 tạo nhiều rejection
+  promises trước khi attach assertion; chuyển thành callback gọi lần lượt, chạy lại
+  full gate sạch. Các kết quả cuối phía trên là sau sửa, không dùng lượt fail.
+- Swagger/Postman **27 requests/17 JSON bodies**, flow/API breakdown/plan/index và
+  progress đồng bộ. Không thêm dependency/config; không migrate dev/VPS, merge/push/
+  deploy hoặc tuyên bố server acceptance. SQL/API/auth/transaction review trước merge
+  theo repo rules; release3.3.4, handoff3.3.5 và binary preview/ARTICLE assets3.4 còn planned.
+
+### Server acceptance 3.3.3 cần chạy sau deploy
+
+Chạy migration1791853200000 sau schema3.3.1, deploy app/health/auth smoke; import
+Phase33 collection, Origin khớp CORS_ORIGINS. Ghi release SHA/migration IDs,
+HTTP status/code/response và audit counts cho từng ca:
+
+1. Mentor tạo text-only ARTICLE→submit; Manager queue filters→detail đọc canonical
+   HTML. Login Manager lại để cookie jar đúng actor; không dùng Files status làm preview.
+2. Manager reject reason→Mentor detail có canEdit/reason→EDIT revision+1→resubmit
+   →Manager approve: APPROVED/current approvedRevision, firstApprovedAt/publishedAt.
+   Repeat giữ audit/timestamps; reason khác409, stale revision409, pending EDIT403.
+3. Unpublish→approval giữ, approve retry không republish→publish. Repeated publish/
+   unpublish không audit trùng; publish/unpublish/publish là transition hợp lệ cùng revision.
+4. Manager PATCH published dù cùng giá trị→DRAFT/revision+1/current approval null,
+   firstApprovedAt giữ; Mentor EDIT/delete/submit403, Manager reapprove đúng revision.
+5. READY PDF/MP4 và ARTICLE inline IMAGE/attachment review; every ref READY gate,
+   disabled MinIO không chặn metadata decisions. Binary human review chờ3.4.
+6. Role/anonymous/Origin/path/body/reason bounds, deleted404; approve/reject và
+   decision/PATCH races; actor/assignment revoke theo local matrix. Manager vẫn duyệt
+   được submission sau Mentor mất assignment; không cấp quyền Mentor lại.
+
+Chưa chạy những ca này trên VPS; local evidence không thay server evidence.

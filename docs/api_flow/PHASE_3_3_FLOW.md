@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-13**. **Manager CRUD3.3.1 và Mentor context/submission3.3.2 đã implement local; chưa deploy. Review/release còn planned.**
+Cập nhật: **2026-10-13**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 đã implement local; chưa deploy. Release còn planned.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -9,7 +9,7 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
 Manager CRUD/ARTICLE/refs/audit3.3.1 đã có migration additive mới.
-Mentor context/submission3.3.2 đã có; review/release còn planned; không sửa migration read đã chạy.
+Mentor context/submission3.3.2 và Manager review/publication3.3.3 đã có; release còn planned; không sửa migration read đã chạy.
 
 ## 1. Kết quả sản phẩm
 
@@ -179,3 +179,26 @@ reuse schema3.3.1. Swagger/Postman22 requests và [breakdown](PHASE_3_3_flow-api
 đồng bộ. Local Node22.20.0: check348/348 (31 suites), HTTP36/36 (2 suites), Files42/42
 (1 suite), 0 skip; gồm upload PDF/MP4 thật→READY→Mentor draft→submit và revoke/locks.
 Server cases tại [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md); chưa deploy/VPS acceptance.
+
+## Triển khai 3.3.3 — 2026-10-13
+
+Manager chọn queue GET /manager/materials?reviewStatus=PENDING_REVIEW, lọc thêm
+courseUnitId/contentType và phân trang; mở detail để đọc canonical ARTICLE/revision.
+POST approve/reject/publish/unpublish đều đã implement local, cookie MANAGER,
+Origin allowlist, expectedRevision integer bắt buộc; trả200 detail/no-store.
+Reject cần reason nonempty, trim khi lưu, input tối đa2.000 ký tự. Không có worker.
+
+Flow reject→Mentor EDIT revision+1→SUBMIT→approve đồng thời publish; Manager own
+DRAFT được approve trực tiếp, Mentor DRAFT chưa submit409. Sau từng approved,
+Manager EDIT về DRAFT giữ firstApprovedAt; Mentor không lấy lại quyền sửa. Unpublish
+giữ approval; approve retry sau unpublish không publish lại, cần command publish.
+No-op giữ timestamp/updatedAt/audit; quyết định revision cũ409 và FE phải refetch,
+không tự approve revision mới. File refs nguyên vẹn; response không storage secrets/URL.
+
+Additive migration1791853200000 chỉ cho bỏ publication/soft-delete mà không đổi
+content/identity/revision/review khi file không khả dụng; insert, EDIT, APPROVE và
+PUBLISH giữ READY/ancestry guards. Staff detail có thể đọc metadata đã xác minh của
+file không còn READY để xử lý; Student read/signing vẫn chỉ nhận READY.
+Xem [API breakdown](PHASE_3_3_flow-api-breakdown.md) và
+[local/server evidence](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Release3.3.4, ARTICLE assets và human binary preview3.4 vẫn planned; chưa deploy VPS.

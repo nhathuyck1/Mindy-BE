@@ -14,7 +14,7 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 7. [Phase 3 — File + Materials](./phase%203/PHASE_3_FILES_MATERIALS.md)
 8. [Phase 3.1 — Policy + Contract, D1–D6 đã code và test local](./phase%203/PHASE_3_1_POLICY_CONTRACT.md)
 9. [Phase 3.2 — Upload private và xác minh file, đã chốt local/VPS](./phase%203/PHASE_3_2_SAFE_UPLOAD.md)
-10. [Phase 3.3 — Material management/review và Class Unit release, Manager/Mentor authoring đã có local](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
+10. [Phase 3.3 — Material management/review và Class Unit release, Manager/Mentor authoring và review/publication đã có local](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
 
 Phase 2.3 đã implement; các suite PostgreSQL/HTTP hiện có pass local ngày 2026-10-10.
 Xem [contract FE](../PHASE_2_3_FE_CONTRACT.md) và progress bên dưới.
@@ -38,8 +38,8 @@ Theo dõi [progress 3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md),
 [API breakdown dự kiến](../api_flow/PHASE_3_3_flow-api-breakdown.md).
 Mỗi slice có local gate và server acceptance riêng; estimate BE provisional7–10 ngày.
 Student ARTICLE/assets/binary preview/video playback ở3.4. Ngày2026-10-13 đã implement
-Manager typed CRUD3.3.1 và Mentor context/submission3.3.2 local; migration additive3.3.1,
-tests và Swagger/Postman đã có. Review/publication/release còn planned; chưa deploy3.3.
+Manager typed CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 local;
+migrations additive3.3.1/3.3.3, tests và Swagger/Postman đã có. Release còn planned; chưa deploy3.3.
 
 3.1 policy/contract đã hoàn tất và full local gates pass (171 tests/16 suites,
 HTTP 5/5). 3.2 hoàn tất local: full check 217 tests, focused Files 42,

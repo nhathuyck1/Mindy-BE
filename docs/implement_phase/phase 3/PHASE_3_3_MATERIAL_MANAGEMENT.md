@@ -1,12 +1,12 @@
 # Phase 3.3 — Material management, review và Class Unit release
 
-Cập nhật: **2026-10-13**. **3.3.1–3.3.2 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.3–3.3.5 còn planned.**
+Cập nhật: **2026-10-13**. **3.3.1–3.3.3 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.4–3.3.5 còn planned.**
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
 
 Ngoại lệ thứ tự theo yêu cầu user2026-10-12: [ba Student FILE/VIDEO GET3.4](../../api_flow/PHASE_3_4_FLOW.md)
 đã có read persistence tối thiểu + signed GET. Manager CRUD/ARTICLE/refs/audit3.3.1 đã có additive migration mới;
-Mentor context/submission3.3.2 đã có; review/release còn planned,
+Mentor context/submission3.3.2 và Manager review/publication3.3.3 đã có; release còn planned,
 không tạo lại bảng materials hoặc sửa migration read đã chạy.
 
 - Baseline: [3.1 policy](PHASE_3_1_POLICY_CONTRACT.md), [3.2 upload](PHASE_3_2_SAFE_UPLOAD.md).
@@ -37,7 +37,7 @@ Material FILE độc lập trong Unit hoặc attachment của ARTICLE theo typed
 upload READY tự nó chưa tạo bài học, chưa publish và chưa cấp quyền Student.
 PDF không tự chuyển thành HTML hay tự trích thành kiến thức. FILE/VIDEO Student
 read đã có; Manager ARTICLE/attachments/authoring3.3.1 đã implement local,
-Mentor authoring/submission3.3.2 đã có; review/release và Student ARTICLE/assets còn planned.
+Mentor authoring/submission3.3.2 và Manager review/publication3.3.3 đã có; release và Student ARTICLE/assets còn planned.
 
 Tham khảo: [CKEditor get/set data](https://ckeditor.com/docs/ckeditor5/latest/getting-started/setup/getting-and-setting-data.html),
 [OWASP HTML sanitization](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
@@ -211,7 +211,7 @@ regression bảo toàn file-only fixtures3.1/3.2 và không cấp Student API �
 
 ## 6. API dự kiến và FE handoff
 
-Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor context/content/submit **đã implement 3.3.2**, decisions/release planned; chi tiết shapes/errors/UI trong
+Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor context/content/submit **đã implement 3.3.2**, Manager decisions **đã implement 3.3.3**, release planned; chi tiết shapes/errors/UI trong
 [breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 | Nhóm | Routes |
@@ -338,3 +338,22 @@ Lịch sử planning giữ ở progress. 3.3.1–3.3.2 đã có source/tests/doc
   Files42/42 (1 suite), 0 skip; PostgreSQL *_test/private MinIO riêng. Mentor mới16
   integration cases +4 HTTP cases gồm thật upload→READY PDF/MP4→typed draft→submit.
   Swagger/Postman22 requests, flow/API/progress cập nhật; chưa deploy/VPS acceptance.
+
+## Triển khai 3.3.3 — 2026-10-13
+
+Queue filters dùng global list đã có; thêm bốn Manager command HTTP200/no-store,
+strict revision/reason DTO, role/cookie/Origin guard và safe detail/canEdit.
+Mutation Material lock→files UUID→actor→Classes, apply policy + workflow save/audit
+atomic; no-op không save/audit. Không thay reference rows trong review/publication.
+APPROVE own Manager DRAFT hoặc pending; giữ firstApprovedAt khi Manager edit/reapprove.
+
+Phát hiện READY guard cũ áp cả UNPUBLISH/DELETE; thêm migration additive
+1791853200000-material-publication-withdrawal, không sửa migration3.3.1. Chỉ bỏ gate
+cho withdrawal/soft-delete với content/identity/revision/review giữ nguyên; mọi
+insert/content/review/publication mới vẫn chạy guard. Staff read summary có option
+metadata unavailable nội bộ; Student READY contract giữ nguyên. Migration clean
+up/down/up được test trên DB riêng, data/audit preserved; cần SQL/API review trước merge.
+
+Local evidence và server acceptance ở [progress](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không thay config/dependency, không chạy migration dev/VPS hoặc deploy; release3.3.4
+và handoff3.3.5 vẫn planned. Binary preview/Student ARTICLE assets thuộc3.4.

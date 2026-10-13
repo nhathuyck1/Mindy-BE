@@ -1,8 +1,8 @@
 # Phase 3.3 — API breakdown cho FE
 
-Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4 và Mentor context/submission ở §6/7/8 đã implement local3.3.1–3.3.2;
-review/release ở §5/9 còn planned. Chưa deploy/nghiệm thu VPS3.3.1–3.3.2.**
-Shapes Manager đã đối chiếu Swagger/source; phần Mentor/decision/release là đề xuất.
+Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
+release ở §9 còn planned. Chưa deploy/nghiệm thu VPS3.3.1–3.3.3.**
+Shapes Manager/Mentor/decision đã đối chiếu Swagger/source; phần release là đề xuất.
 Upload 3.2 đã có, xem
 [breakdown upload](PHASE_3_2_flow-api-breakdown.md).
 
@@ -252,7 +252,7 @@ Giữ form khi lỗi, không poll Material; successful response cung cấp mater
 
 ## 4. Manager queue/detail/edit/delete
 
-**Global list/detail/edit/delete đã implement3.3.1; decision queue flow còn3.3.3.**
+**Global list/detail/edit/delete đã implement3.3.1; decision queue flow đã implement3.3.3 local.**
 
 ### GET `/api/v1/manager/materials`
 
@@ -294,7 +294,7 @@ Không async purge/polling ở API này.
 
 ## 5. Manager decision/publication commands
 
-**Chưa implement3.3.3.**
+**Đã implement3.3.3 local; chưa deploy/nghiệm thu VPS.**
 
 Tất cả Manager cookie/JSON/Origin, path materialId và expectedRevision §2;
 sync 200 Manager detail. Trước gọi GET detail lấy revision, sau gọi invalidate
@@ -579,3 +579,33 @@ PATCH/submit/delete, lưu material_id/expected_revision từ200/201; create khô
 Local Node22.20.0: check348/348 (31 suites), HTTP36/36 (2 suites), Files42/42 (1 suite),
 0 skip, gồm real MinIO PDF/MP4→Mentor submit. [Progress](../progress/phase%203/PHASE_3_3_PROGRESS.md)
 ghi chi tiết tests và server cases; chưa deploy/nghiệm thu VPS.
+
+## Triển khai 3.3.3 — 2026-10-13
+
+§5 bốn Manager commands đã có source/controller/DTO và Swagger; route đầy đủ như
+bảng §5. Trả200 ManagerMaterialDetailDto trực tiếp, không bọc data, no-store.
+Manager canEdit=true ở mọi state còn sống; Mentor canEdit chỉ own DRAFT/REJECTED
+trong lớp đang assigned và firstApprovedAt=null, pending/ever-approved false.
+APPROVE DRAFT chưa từng duyệt chỉ khi createdInClassId=null và createdBy=current
+Manager; các Manager khác cần submission pending, hoặc bản đã từng approved.
+REJECT reason JSON string nonempty/max2.000 ký tự trước trim; whitespace-only422.
+JSON expectedRevision không coercion: missing/null/string/fraction/out-of-range422;
+unknown body fields422; UUID400; auth401/role hoặc Origin403; tombstone404.
+
+Queue GET giữ filters/page/summary/sort ở §4. Detail đọc canonical HTML, verified
+file metadata; không signed URL. Staff có thể thấy metadata file không còn READY,
+nhưng approve/reject/publish kiểm mọi refs READY dưới khóa. Unpublish/delete không
+đòi READY hay gọi storage. Primary FILE/VIDEO không human preview trong slice này.
+FirstApprovedAt bất biến; Manager PATCH dù cùng giá trị về DRAFT/revision+1, clear
+review/publication, Mentor không được sửa lại. Approve/unpublish/publish giữ revision.
+
+FE: disable nút khi đang gọi; invalidate detail/unit list/queue sau success; giữ form
+khi422, refetch khi409 và yêu cầu quyết định lại. Mất response: GET detail trước retry;
+no-op không audit/timestamp trùng. Approve retry sau unpublish giữ publishedAt=null.
+Postman Phase33 có27 requests, bổ sung queue và bốn decisions; login Manager lại sau
+Mentor submit để cookie jar đúng actor, expected_revision lấy từ detail/mutation.
+
+Deploy cần migration1791853200000 sau typed schema1791849600000; không sửa migration
+đã chạy. Chưa migrate dev/VPS hoặc nghiệm thu server. Release§9 và ARTICLE assets/
+binary preview3.4 vẫn planned. Rollback app giữ data; migration down chỉ khôi phục
+trigger cũ (withdrawal có thể lại bị READY guard chặn), không xóa Materials/audit.
