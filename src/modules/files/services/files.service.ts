@@ -49,15 +49,16 @@ export class FilesService {
   async readSummaries(
     ids: readonly string[],
     manager: EntityManager,
+    includeUnavailable = false,
   ): Promise<Map<string, FileSummary>> {
     if (ids.length === 0) return new Map();
     const files = await manager
       .getRepository(FileObjectEntity)
-      .findBy({ id: In([...ids]), status: 'READY' });
+      .findBy({ id: In([...ids]), ...(includeUnavailable ? {} : { status: 'READY' as const }) });
     return new Map(
       files.flatMap((file): [string, FileSummary][] => {
         if (
-          file.deletedAt !== null ||
+          (!includeUnavailable && file.deletedAt !== null) ||
           file.mimeType === null ||
           file.sizeBytes === null ||
           file.kind === null
@@ -70,7 +71,7 @@ export class FilesService {
               id: file.id,
               ownerUserId: file.ownerUserId,
               courseUnitId: file.courseUnitId,
-              status: 'READY',
+              status: file.deletedAt === null ? file.status : 'DELETED',
               originalFilename: file.originalName,
               mimeType: file.mimeType,
               sizeBytes: Number(file.sizeBytes),
