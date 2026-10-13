@@ -27,7 +27,9 @@ Contract: [Phase 2.3 FE contract](../docs/PHASE_2_3_FE_CONTRACT.md).
 
 Phase3.4: import `Mindy-Materials-Phase34.postman_collection.json`, login STUDENT,
 choose FULL class from My Classes and `units[].id` from class detail, then call
-list/detail/download. FILE/VIDEO read slice is local verified, not yet deployed.
+list/detail/download. ARTICLE inline images/attachments use
+`POST .../files/{{file_id}}/access` (Origin header, body `{}`); Phase33 collection has
+Manager/Mentor preview with `preview_file_id`. Local verified 2026-10-14, not yet deployed.
 Approved Material rows/released units are prerequisites; authoring/review/release
 HTTP3.3 đã implement và kiểm chứng local; VPS acceptance còn pending. Do not send API cookies to signed storage URLs.
 See [Student Material contract](../docs/api_flow/PHASE_3_4_flow-api-breakdown.md).

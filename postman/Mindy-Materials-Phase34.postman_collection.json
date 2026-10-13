@@ -2,22 +2,53 @@
   "info": {
     "name": "06 — Phase 3.4 Student Materials",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Student cookie auth: My Classes FULL -> class detail units[].id -> visible FILE/VIDEO list -> detail -> short-lived signed GET. Requires approved Material rows and released units; authoring/review/release HTTP still planned. Never send BE cookies to storage or persist signed URLs."
+    "description": "Student cookie auth: My Classes FULL -> class detail units[].id -> visible ARTICLE/FILE/VIDEO list -> detail (ARTICLE contentHtml + inlineImages/attachments metadata) -> short-lived signed GET. FILE/VIDEO primary: GET download. Any referenced file (primary, ARTICLE inline image via data-file-id, attachment): POST files/{{file_id}}/access with Origin + body {}. Requires approved/published Material and released unit. Never send BE cookies to storage or persist signed URLs."
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3000" },
-    { "key": "student_email", "value": "" },
-    { "key": "student_password", "value": "" },
-    { "key": "class_id", "value": "" },
-    { "key": "class_unit_id", "value": "" },
-    { "key": "material_id", "value": "" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "student_email",
+      "value": ""
+    },
+    {
+      "key": "student_password",
+      "value": ""
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "class_unit_id",
+      "value": ""
+    },
+    {
+      "key": "material_id",
+      "value": ""
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "file_id",
+      "value": ""
+    }
   ],
   "item": [
     {
       "name": "Login Student",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "url": "{{base_url}}/api/v1/auth/login",
         "body": {
           "mode": "raw",
@@ -27,11 +58,17 @@
     },
     {
       "name": "My Classes — choose FULL class_id",
-      "request": { "method": "GET", "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20" }
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes?page=1&pageSize=20"
+      }
     },
     {
       "name": "Class detail — choose units[].id as class_unit_id",
-      "request": { "method": "GET", "url": "{{base_url}}/api/v1/me/classes/{{class_id}}" }
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}"
+      }
     },
     {
       "name": "Visible materials — choose item.id as material_id",
@@ -52,6 +89,32 @@
       "request": {
         "method": "GET",
         "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/materials/{{material_id}}/download"
+      }
+    },
+    {
+      "name": "Referenced file access — inline image/attachment/primary signed URL",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/materials/{{material_id}}/files/{{file_id}}/access",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
       }
     }
   ]
