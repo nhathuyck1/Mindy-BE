@@ -1,11 +1,23 @@
 # Phase 3.3 — Tiến độ Material management
 
-Cập nhật: **2026-10-12**.
+Cập nhật: **2026-10-13**.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).
 API dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 ## Hiện trạng
+
+- 2026-10-13: Theo user, người khác triển khai3.3–3.6; user nhận deploy/server
+  acceptance; FE do nhóm riêng, repo FE local chỉ để đọc. Lập
+  [plan3.4 phối hợp](../../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+  và cập nhật plan3.3: typed schema/refs/policy3.3.1 bàn giao consumer; staff
+  preview/assets3.4 nghiệm thu cùng review3.3.3; Student server journey sau
+  publication/release. Contract preview/asset GET + expectedRevision là planned,
+  không source/API runtime change. Một người sở hữu schema/migration; user nhận
+  SHA/migrations/config/checks/Postman/smoke/rollback khi triển khai bàn giao.
+  Chỉ tài liệu BE; không sửa source/FE, migrate, runtime tests hoặc deploy.
+  Planning checks: git diff --check pass; 14 tài liệu/152 local links/1 anchor/
+  14 JSON examples hợp lệ, code fences cân bằng. Evidence này chỉ cho tài liệu.
 
 - 2026-10-12 (tư vấn UX Unit/bài học): User muốn CKEditor FE + HTML BE như trang
   đọc kiến thức. Đề xuất Course Unit metadata/description + nhiều Material ARTICLE,
@@ -62,9 +74,9 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 | Plan | Hoàn tất | Plan + flow/API + progress/index đồng bộ |
 | 3.3.1 Typed Manager draft | Chưa làm | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
 | 3.3.2 Mentor context/submission | Chưa làm | Assignment + own draft + ID mapping + hidden pagination |
-| 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt |
+| 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt; phối hợp staff preview/assets3.4 để nghiệm thu human review |
 | 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
-| 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
+| 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice; phối hợp3.4 và bàn giao user deploy, contract gửi nhóm FE |
 
 ## Lượt hoàn thiện plan — 2026-10-12
 

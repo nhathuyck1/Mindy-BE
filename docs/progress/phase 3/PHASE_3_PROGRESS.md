@@ -1,9 +1,16 @@
 # Phase 3 — Tiến độ File + Materials
 
-Cập nhật: **2026-10-12**.
+Cập nhật: **2026-10-13**.
 Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
 ## Hiện trạng
+
+- 2026-10-13: Điều phối hiện hành theo user: người khác triển khai3.3–3.6,
+  user nhận deploy/server acceptance; FE là nhóm riêng và repo local chỉ đọc.
+  [Plan3.4 phối hợp](../../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+  đưa staff preview/assets cùng review3.3.3; typed Student reader sau contract3.3.1,
+  server journey sau publication/release. Đồng bộ plan3.3/3.4, flow/API/index/
+  progress; chỉ tài liệu BE, không source/FE/migration/runtime tests/deploy.
 
 - 2026-10-12: 3.2 đã nghiệm thu VPS theo xác nhận user (PDF/MP4 READY/private
   objects có evidence); hoàn thiện plan3.3 typed ARTICLE/FILE/VIDEO, refs/sanitizer/
@@ -41,12 +48,13 @@ Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE
   link tùy chọn, không đổi ownership. Manager quản lý/sửa/duyệt; Mentor upload chờ duyệt.
 
 **3.1 hoàn tất local; 3.2 hoàn tất local và nghiệm thu VPS theo user2026-10-12.
-Files upload/storage/validation API đã có.
-Materials persistence/review/Student download thuộc 3.3/3.4 chưa triển khai.
-Materials chưa có migration; không dùng evidence3.2 làm nghiệm thu3.3.**
+Files upload/storage/validation API đã có. Material FILE/VIDEO read persistence,
+migration và ba Student GET đã có local; authoring/review/release/ARTICLE/staff
+preview vẫn planned. Không dùng evidence3.2 làm nghiệm thu3.3/3.4.**
 
 - Điều phối mới: user làm Phase 3, người khác làm Phase 2.3 song song. Không dùng
   2.3 như điều kiện bắt đầu P3; tích hợp navigation là gate nghiệm thu riêng.
+  Đây là phân công lịch sử; điều phối3.3–3.6 ngày2026-10-13 ở đầu tài liệu thay thế.
 - Đã chia plan thành Phase 3.1–3.6, mỗi mục có mục tiêu/công việc/đầu ra/gate.
   Ưu tiên 3.1 quyền/contract → 3.2 upload an toàn → 3.3 quản lý → 3.4 Student
   đọc/tải; 3.5 metadata/cleanup, 3.6 quality/integration. Đã implement policy 3.1.
@@ -72,7 +80,7 @@ Materials chưa có migration; không dùng evidence3.2 làm nghiệm thu3.3.**
 | 3.1 Policy + contract | Hoàn tất code/test local D1–D6 | Role, domain policy/review transitions, facade/context providers; pnpm check 171 tests/16 suites + build, HTTP 5/5. |
 | 3.2 Upload slice | Hoàn tất local + nghiệm thu VPS theo user2026-10-12 | Files/MinIO/migration/worker/reference; PDF/MP4 READY/private objects; chi tiết progress3.2. |
 | 3.3 Material management | Authoring/review/release vẫn planned | Read persistence FILE/VIDEO tối thiểu đã thêm trước theo yêu cầu3.4; ARTICLE/refs/audits/writes cần migration additive mới. |
-| 3.4 Student access | Ba FILE/VIDEO GET local verified | List/detail/download + signed pinned-version TTL<=60s + FE contract; chưa ARTICLE/staff preview/FE integration/VPS. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
+| 3.4 Student access + staff preview | Ba FILE/VIDEO GET local verified; plan phối hợp3.3 đã có | Preview/assets cùng review3.3.3, ARTICLE reader sau contract3.3.1; chưa code phần bổ sung/FE integration/VPS. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
 | 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
 | 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 

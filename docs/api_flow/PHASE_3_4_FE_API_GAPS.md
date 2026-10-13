@@ -4,6 +4,13 @@
 Đây là **source audit**, không phải nghiệm thu UI/browser/VPS. Không sửa FE trong
 lượt này. [Flow mới](PHASE_3_4_FLOW.md) · [Contract ba API](PHASE_3_4_flow-api-breakdown.md).
 
+Điều phối2026-10-13: FE do nhóm riêng thực hiện; repo FE local chỉ đọc. Các mục
+FE dưới đây là backlog bàn giao nhóm đó, không phải phạm vi sửa của BE/user.
+Người khác triển khai3.3–3.6, user deploy/server acceptance.
+[Plan3.4 phối hợp3.3](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+đưa staff preview/assets vào cùng review3.3.3; typed Student ARTICLE sau
+contract3.3.1. API mới vẫn planned, chỉ tài liệu BE được cập nhật lượt này.
+
 ## Ưu tiên bàn giao ngay cho FE
 
 | Ưu tiên | Người dùng bị ảnh hưởng | Evidence và việc cần làm |

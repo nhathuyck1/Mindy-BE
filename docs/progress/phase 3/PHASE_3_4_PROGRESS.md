@@ -1,8 +1,40 @@
-# Phase 3.4 — Student Material read slice
+# Phase 3.4 — Material access và staff preview
 
-Cập nhật **2026-10-12**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
+Cập nhật **2026-10-13**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
 [API breakdown](../../api_flow/PHASE_3_4_flow-api-breakdown.md) ·
 [FE audit](../../api_flow/PHASE_3_4_FE_API_GAPS.md).
+
+Plan: [3.4 phối hợp3.3](../../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
+
+## Planning phối hợp — 2026-10-13
+
+- User giao người khác triển khai3.3–3.6; user nhận handoff deploy/server acceptance.
+  FE do nhóm riêng làm; repo FE local chỉ đọc. Lượt này chỉ tài liệu trong BE.
+- Lập plan3.4 với mốc3.3.1 typed schema/refs → staff primary preview3.4.1,
+  Mentor consumer sau context3.3.2; staff asset access3.4.3 nghiệm thu cùng
+  review3.3.3. Student typed reader/assets có thể code bằng fixtures sau3.3.1,
+  server happy path chờ publication/release thật3.3.3/3.3.4.
+- Contract mới đều planned: hai staff primary preview GET và ba actor-scoped
+  asset access GET, required expectedRevision, Material membership/revision/READY
+  và signer recheck. Ba Student FILE/VIDEO endpoints hiện có giữ contract.
+- Định nghĩa PDF FILE xem/tải, MP4 VIDEO phát qua signed GET, ARTICLE canonical
+  HTML + optional refs; ownership Course Unit và ACTIVE/release/approval giữ nguyên.
+- Chốt một chủ schema/migration/policy3.3; additive mở rộng read schema hiện có,
+  không tạo lại materials. Bàn giao SHA/migrations/config/local checks/Postman/
+  smoke/rollback cho user; browser evidence phối hợp nhóm FE và ghi riêng.
+- Không sửa source/FE, thêm/chạy migration, BE/HTTP/MinIO runtime tests hoặc deploy.
+  Kiểm chứng lượt planning là diff, local links/anchors, JSON examples và consistency.
+  Kết quả: git diff --check pass; 14 tài liệu, 152 local links, 1 anchor và
+  14 JSON examples hợp lệ; code fences cân bằng. Không chạy runtime tests.
+
+## Theo dõi phần bổ sung
+
+| Slice | Trạng thái | Gate phối hợp |
+|---|---|---|
+| 3.4.1 Staff primary preview | Planned, chưa implement | Manager draft persistence3.3.1; Mentor context3.3.2; cùng review3.3.3 |
+| 3.4.2 Typed Student reader | Planned; FILE/VIDEO baseline đã có | ARTICLE/refs/policy3.3.1; publication/release cho server cases |
+| 3.4.3 Scoped asset access | Planned, chưa implement | Typed refs3.3.1; staff cùng review, Student theo ACTIVE/release/approval |
+| 3.4.4 BE/server/browser handoff | Planned; local FILE/VIDEO evidence bên dưới | Người triển khai kiểm local, user deploy/API acceptance, nhóm FE làm browser integration |
 
 ## Đã implement theo yêu cầu làm ba API trước
 

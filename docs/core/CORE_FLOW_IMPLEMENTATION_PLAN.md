@@ -292,11 +292,22 @@ Required integration tests include duplicate callbacks, mismatched amount, inval
 
 ## Milestone 7 — Attendance and operational queries
 
+Current plan **2026-10-13**: [Phase 4](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md),
+[flow](../api_flow/PHASE_4_FLOW.md), [planned APIs](../api_flow/PHASE_4_flow-api-breakdown.md).
+User approved mentor start/manual attendance/finalization, a 24h edit window
+from the first actual start, and MANAGER corrections without a time limit.
+Manager can find available mentors and replace a session's teaching mentor,
+including during an active session; a class mentor change is a separate command.
+Phase 4 runs alongside Phase 3 using the existing enrollment/schedule baseline.
+These contracts are planned, not implemented or deployed.
+
 Implement attendance only after enrollment and class sessions are stable.
 
 - Record one attendance row per `(enrollment_id, class_session_id)`.
 - Validate that enrollment and session belong to the same class.
-- Restrict writes to assigned mentor or the admin role.
+- Restrict writes to the effective session mentor within the edit window, or
+  MANAGER/ADMIN with reason and audit. Session overrides do not grant payment
+  confirmation or shared material management permissions.
 - Add paginated class roster, schedule and revenue/order operational queries.
 
 ## Migration strategy

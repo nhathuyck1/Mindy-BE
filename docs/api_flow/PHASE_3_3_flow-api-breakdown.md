@@ -1,6 +1,6 @@
 # Phase 3.3 — API breakdown cho FE (dự kiến)
 
-Cập nhật: **2026-10-12**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
+Cập nhật: **2026-10-13**. **Tất cả API liệt kê ở tài liệu này là kế hoạch,
 chưa có controller authoring/review/release 3.3, chưa local verified/deploy.** Shapes mới là
 contract đề xuất cần đối chiếu Swagger/source sau implementation; không gọi FE
 production dựa trên tài liệu này. Upload 3.2 đã có, xem
@@ -8,6 +8,11 @@ production dựa trên tài liệu này. Upload 3.2 đã có, xem
 
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
+
+Phối hợp2026-10-13: [plan3.4](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+và [preview/assets breakdown](PHASE_3_4_flow-api-breakdown.md) đưa staff access
+vào cùng mốc review3.3.3. Người khác triển khai3.3–3.6, user deploy/nghiệm thu
+server; FE do nhóm riêng làm, repo FE local chỉ để đọc.
 
 Ngoại lệ thứ tự2026-10-12: [ba Student FILE/VIDEO GET3.4](PHASE_3_4_flow-api-breakdown.md)
 đã implement + materials read persistence tối thiểu; không biến APIs3.3 bên dưới
@@ -73,15 +78,16 @@ và contentSchemaVersion immutable ởMVP. Mọi sửa HTML/ref vẫn EDIT/tăng
 Queue/list giữ summary không HTML; Manager/Mentor detail trả HTML theo quyền và
 view nhưcũ. Các command/canEdit/review flow không đổi vì loại nội dung.
 
-3.4 planned cần Student `GET /api/v1/me/classes/:classId/materials/:materialId`
-detail body+refs sau ACTIVE/class/release/time/approval policy. Asset access
-POST `/api/v1/me/classes/:classId/materials/:materialId/files/:fileId/access`
-và Manager/Mentor preview tương ứng, body `{}`; fileId phải referenced và thuộc
-Material, 200 `{url,expiresAt}`, TTL<=60s/no-store/version chính xác.
-Inline image/video dùng signed GET inline, attachment dùng disposition attachment
-do BE quyết định. Pending/locked/hidden404, entitlement/assignment403, không auth401,
-storage disabled/outage503; không cấp URL chỉ vì biết fileId.
-Read/asset3.4 chưa implement; breakdown3.4 phải mô tả đầy đủ DTO/errors/UI khi triển khai.
+3.4 planned mở rộng Student detail body+refs sau ACTIVE/class/release/time/approval.
+Contract2026-10-13 thay đề xuất POST files/access cũ chưa implement bằng GET
+`/api/v1/me/classes/:classId/materials/:materialId/assets/:fileId/access?expectedRevision=1`.
+Staff primary preview và scoped assets ở [breakdown3.4](PHASE_3_4_flow-api-breakdown.md).
+New routes GET no body;200 `{materialId,fileId,revision,url,expiresAt}`, TTL<=60s/
+no-store/version chính xác. fileId phải referenced bởi Material hiện tại; cùng
+Course Unit chưa đủ. URLs inline filename theo signer hiện có, không thêm query
+disposition; browser save/download nghiệm thu cùng nhóm FE. Student FILE/VIDEO
+ba GET đã có, ARTICLE/asset/staff preview vẫn chưa implement. Pending/locked/
+hidden404, entitlement/assignment403, revision409, storage disabled/outage503.
 
 FE render HTML đã sanitize trong vùng đọc bài; resolve data-file-id bằng asset API,
 không persist signed URLs trong HTML/editor. Video Range/seek/URL expiry cần
@@ -476,8 +482,9 @@ URLs trong cache (3.3 không phát URL). Không polling vô hạn cho pending re
 
 Prerequisites: implement+migrate3.3, cookie auth roles, proxy Origin/CORS đúng;
 upload3.2 MinIO/versioning/worker bật nếu tạo/thay file. Không có claims deploy/
-VPS trong lượt này. Human preview3.4 và Manager inactive catalogue picker còn
-thiếu trước nghiệm thu UI toàn flow. Chạy local DB/HTTP/full gates khi implement;
+VPS trong lượt này. Human preview/assets3.4 triển khai cùng mốc review3.3.3;
+Manager inactive catalogue picker vẫn là gap trước nghiệm thu UI toàn flow.
+Chạy local DB/HTTP/full gates khi implement;
 happy paths ARTICLE-only hoặc upload READY→Mentor typed draft→submit→Manager approve→release,
 error branches/revision/assignment tests theo plan.
 
@@ -494,3 +501,12 @@ không file, refs bounds/duplicate rules và summary omit HTML; workflow review/
 release không đổi. Thêm baseline3.2 đã nghiệm thu theo user và gate server từng
 slice trong plan. Kiểm diff/link/JSON tài liệu, chưa source/API runtime change,
 BE tests, migration hoặc deploy3.3.
+
+## 13. Phối hợp preview/review — 2026-10-13
+
+Đồng bộ contract preview/assets với breakdown3.4: GET + expectedRevision,
+revision trong signed response, authorize/recheck membership và current quyền.
+Review command3.3 dùng revision đã preview;409 cần refetch/xem lại, không tự
+approve bản mới. Bổ sung plan/handoff/ownership; chỉ tài liệu BE, không source/
+FE/migration/runtime tests/deploy. Đề xuất POST files/access cũ chưa implement
+được thay ở plan, không có breaking change với ba Student FILE/VIDEO GET hiện có.

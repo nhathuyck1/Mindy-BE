@@ -1,5 +1,16 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-13: Lập plan backend3.4 phối hợp3.3 theo user: người khác triển khai
+  3.3–3.6, user nhận deploy/server acceptance; FE do nhóm riêng, repo FE local
+  chỉ đọc. Preview PDF/MP4 và staff assets3.4 cùng mốc review3.3.3; typed Student
+  reader sau contract3.3.1, server journey sau publication/release. Một chủ schema/
+  migration additive, tái dùng ba Student FILE/VIDEO GET hiện có; contract GET
+  preview/assets + expectedRevision là dự kiến chưa implement. Đồng bộ plans,
+  flow/API/index/progress và handoff SHA/migrations/config/checks/Postman/smoke/
+  rollback. Chỉ tài liệu BE, không source/FE/migration/runtime tests/deploy.
+  [Plan3.4](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md),
+  [progress3.4](phase%203/PHASE_3_4_PROGRESS.md).
+
 - 2026-10-12: Theo yêu cầu seed3 lớp/3 Course, current demo gồm HTML/CSS và JS
   ONLINE, Python OFFLINE, mỗi lớp10 buổi thứ3/thứ7. Seed tạo thêm2 lớp cạnh HTML
   đã có, query local xác minh15 Class Unit/30 Session/0 mentor conflict; rerun0
@@ -40,6 +51,16 @@ Assignment
 Compiler / Judge
 
 ## Documentation updates
+
+- 2026-10-13: User duyệt nghiệp vụ điểm danh và yêu cầu Manager tìm mentor trống
+  lịch/dạy thay; lập [plan Phase4](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
+  gồm4.1–4.5, phân công buổi vs lớp/effective mentor, transaction conflict recheck,
+  24h từ actual start, roster/CASH activation, audit/version/idempotency,
+  Student history/summary, thiếu điểm danh và makeup. Phase4 chạy song song
+  Phase3; giữ payment snapshot/materials policy. Đồng bộ
+  [flow/API](../api_flow/PHASE_4_FLOW.md), index/course/core/combined flow và
+  [progress4](phase%204/PHASE_4_PROGRESS.md). Chỉ tài liệu, kiểm diff/link;
+  chưa migrate/implement/chạy BE tests/deploy/nghiệm thu VPS Phase4.
 
 - 2026-10-12: User chốt mọi account tạo mới password6–128. Sửa CreateUserDto/
   Swagger từ12→6, FE schema/error/form hint6 và active runbooks. BE check298tests/
