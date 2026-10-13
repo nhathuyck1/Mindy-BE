@@ -30,6 +30,7 @@ import { UserRole } from '../../users/user-role.enum.js';
 import { ManagerMaterialDetailDto, ManagerMaterialPageDto } from '../dtos/manager-material.dto.js';
 // biome-ignore lint/style/useImportType: Runtime DTO metadata.
 import { MaterialDeleteQueryDto, MaterialRevisionDto } from '../dtos/manager-material-input.dto.js';
+import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 // biome-ignore lint/style/useImportType: Runtime DTO metadata.
 import {
   CreateMentorMaterialDto,
@@ -121,5 +122,24 @@ export class MentorMaterialsController {
     @Body() input: MaterialRevisionDto,
   ): Promise<ManagerMaterialDetailDto> {
     return this.materials.submit(principal, id, input.expectedRevision, { classId });
+  }
+
+  @Post('materials/:materialId/files/:fileId/access')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({
+    summary: 'Preview a referenced binary of a published material or own unapproved draft',
+    description:
+      'fileId must be the primary file, an inline image or an attachment of this material. No request body. Signed for at most 60 seconds (attachment disposition for attachments); access is re-checked after signing.',
+  })
+  preview(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.preview(principal, id, fileId, { classId });
   }
 }

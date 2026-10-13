@@ -13,7 +13,12 @@ import { FileMetadataEntity } from '../entities/file-metadata.entity.js';
 import { FileObjectEntity } from '../entities/file-object.entity.js';
 import { FileProcessingJobEntity } from '../entities/file-processing-job.entity.js';
 import { FileException } from '../exceptions/file.exceptions.js';
-import { FILE_STORAGE, type FileStorage, type FileSummary } from '../files.contracts.js';
+import {
+  type ContentDisposition,
+  FILE_STORAGE,
+  type FileStorage,
+  type FileSummary,
+} from '../files.contracts.js';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
 import { FileUploadPolicyService } from './file-upload-policy.service.js';
 
@@ -87,6 +92,7 @@ export class FilesService {
   async signReadReference(
     id: string,
     courseUnitId: string,
+    disposition: ContentDisposition = 'inline',
   ): Promise<{
     readonly url: string;
     readonly expiresAt: Date;
@@ -108,6 +114,7 @@ export class FilesService {
         { bucket: file.bucket, key: file.objectKey, versionId: file.objectVersionId },
         file.originalName,
         ttl,
+        disposition,
       );
       return { url, expiresAt: new Date(issuedAt.getTime() + ttl * 1000) };
     } catch {

@@ -37,6 +37,7 @@ import {
   PatchManagerMaterialDto,
   RejectMaterialDto,
 } from '../dtos/manager-material-input.dto.js';
+import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import { MaterialOriginGuard } from '../guards/material-origin.guard.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { MaterialAuthoringService } from '../services/material-authoring.service.js';
@@ -166,5 +167,23 @@ export class ManagerMaterialsController {
     @Body() input: MaterialRevisionDto,
   ): Promise<ManagerMaterialDetailDto> {
     return this.materials.review(principal, id, { action: 'UNPUBLISH', ...input });
+  }
+
+  @Post('materials/:materialId/files/:fileId/access')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({
+    summary: 'Preview a referenced binary of any live material for review',
+    description:
+      'fileId must be the primary file, an inline image or an attachment of this material. No request body. Signed for at most 60 seconds (attachment disposition for attachments); access is re-checked after signing.',
+  })
+  preview(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.preview(principal, id, fileId);
   }
 }

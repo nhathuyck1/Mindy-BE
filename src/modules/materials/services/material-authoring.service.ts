@@ -23,6 +23,11 @@ import type {
   MaterialTransition,
 } from '../domain/material-contract.js';
 import { MaterialReviewStatus } from '../domain/material-contract.js';
+import {
+  findMaterialFileRole,
+  type MaterialFileRole,
+  materialFileDisposition,
+} from '../domain/material-file-access.js';
 import { MaterialPolicyError } from '../domain/material-policy.error.js';
 import type {
   ManagerMaterialDetailDto,
@@ -34,6 +39,7 @@ import type {
   ManagerMaterialQueryDto,
   PatchManagerMaterialDto,
 } from '../dtos/manager-material-input.dto.js';
+import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import { StudentMaterialFileDto } from '../dtos/student-material.dto.js';
 import { MaterialContentType, MaterialEntity } from '../entities/material.entity.js';
 import { MaterialAuditEventEntity } from '../entities/material-audit-event.entity.js';
@@ -255,6 +261,32 @@ export class MaterialAuthoringService {
     });
   }
 
+  /** Manager review / assigned Mentor preview of a referenced binary; signed outside transactions. */
+  async preview(
+    principal: AuthenticatedUser,
+    id: string,
+    fileId: string,
+    scope?: MentorMaterialScope,
+  ): Promise<MaterialFileAccessDto> {
+    const target = await this.previewTarget(principal, id, fileId, scope);
+    const signed = await this.files.signReadReference(
+      fileId,
+      target.courseUnitId,
+      materialFileDisposition(target.role),
+    );
+    const current = await this.previewTarget(principal, id, fileId, scope);
+    if (current.revision !== target.revision || current.role !== target.role)
+      throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+    return new MaterialFileAccessDto(
+      id,
+      fileId,
+      target.role,
+      target.revision,
+      signed.url,
+      signed.expiresAt,
+    );
+  }
+
   async list(
     principal: AuthenticatedUser,
     options: ManagerMaterialQueryDto,
@@ -437,6 +469,38 @@ export class MaterialAuthoringService {
       });
       await manager.getRepository(MaterialAuditEventEntity).insert(result.audit);
       return this.view(saved, summaries, refs, true);
+    });
+  }
+
+  private previewTarget(
+    principal: AuthenticatedUser,
+    id: string,
+    fileId: string,
+    scope?: MentorMaterialScope,
+  ): Promise<{ courseUnitId: string; revision: number; role: MaterialFileRole }> {
+    return this.db.transaction('REPEATABLE READ', async (manager) => {
+      await manager.query('SET TRANSACTION READ ONLY');
+      await this.authorize(principal, manager, false, scope);
+      const material = await this.load(id, manager);
+      const refs = await this.refs(id, manager);
+      const summaries = await this.files.readSummaries(
+        [
+          ...(material.fileObjectId ? [material.fileObjectId] : []),
+          ...refs.map((ref) => ref.fileId),
+        ],
+        manager,
+        true,
+      );
+      const context = scope
+        ? await this.mentorReadContext(principal, material.courseUnitId, scope, manager)
+        : null;
+      const snapshot = this.snapshot(material, summaries, refs);
+      // Manager may review any live material; preview still needs every reference READY.
+      if (!canPreviewMaterial(snapshot, await this.policy.actor(principal, manager), context))
+        throw new MaterialPolicyException(scope ? 'MATERIAL_NOT_FOUND' : 'FILE_NOT_READY');
+      const role = findMaterialFileRole(snapshot, fileId);
+      if (role === null) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+      return { courseUnitId: material.courseUnitId, revision: material.revision, role };
     });
   }
 
