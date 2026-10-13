@@ -26,18 +26,26 @@ import { FileProcessingService } from '../../src/modules/files/services/file-pro
 import { FileUploadPolicyService } from '../../src/modules/files/services/file-upload-policy.service.js';
 import { FilesService } from '../../src/modules/files/services/files.service.js';
 import { validateBinary } from '../../src/modules/files/validation/binary-validation.js';
+import { sanitizeArticle } from '../../src/modules/materials/domain/article-sanitizer.js';
 import { MaterialReviewStatus } from '../../src/modules/materials/domain/material-contract.js';
-import { StudentMaterialDto } from '../../src/modules/materials/dtos/student-material.dto.js';
+import {
+  StudentMaterialDetailDto,
+  StudentMaterialDto,
+} from '../../src/modules/materials/dtos/student-material.dto.js';
 import {
   MaterialContentType,
   MaterialEntity,
 } from '../../src/modules/materials/entities/material.entity.js';
+import {
+  MaterialFileReferenceEntity,
+  MaterialReferenceRole,
+} from '../../src/modules/materials/entities/material-file-reference.entity.js';
 import { MaterialPolicyService } from '../../src/modules/materials/services/material-policy.service.js';
 import { StudentMaterialsService } from '../../src/modules/materials/services/student-materials.service.js';
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
-import { fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
+import { binaryFixtures, fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
@@ -58,6 +66,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
         FileMetadataEntity,
         FileProcessingJobEntity,
         MaterialEntity,
+        MaterialFileReferenceEntity,
         ClassUnitReleaseAuditEntity,
       ],
       migrations: [
@@ -412,7 +421,9 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       ).rejects.toMatchObject({ code: '23514' });
     // Typed migration prevents these corrupt states. Unpublish still revokes valid reads.
     if (['file-failed', 'file-deleted', 'wrong-file-scope', 'wrong-kind'].includes(gate)) {
-      expect((await reads.detail(s.principal, s.classId, s.material.id)).file.status).toBe('READY');
+      expect((await reads.detail(s.principal, s.classId, s.material.id)).file?.status).toBe(
+        'READY',
+      );
       await db.getRepository(MaterialEntity).update(s.material.id, { publishedAt: null });
     }
     expect(
@@ -432,7 +443,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     await db
       .getRepository(FileMetadataEntity)
       .update(s.material.fileObjectId, { processingStatus: 'FAILED' });
-    expect((await reads.detail(s.principal, s.classId, s.material.id)).file.status).toBe('READY');
+    expect((await reads.detail(s.principal, s.classId, s.material.id)).file?.status).toBe('READY');
     config.set('MINIO_ENABLED', false);
     try {
       expect(
@@ -507,6 +518,138 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       status: 404,
     });
   });
+
+  async function readyFile(courseUnitId: string, filename: string, mimeType: string, data: Buffer) {
+    const intent = await files.createIntent(manager, {
+      courseUnitId,
+      originalFilename: filename,
+      declaredMimeType: mimeType,
+      declaredSizeBytes: data.length,
+    });
+    await upload(intent.uploadUrl, mimeType, data);
+    await files.complete(manager, intent.fileId);
+    const worker = new FileProcessingService(db, config, remote.storage, {
+      validate: validateBinary,
+    });
+    const claim = await worker.claim();
+    if (!claim) throw new Error('Missing validation claim');
+    await worker.process(claim);
+    expect((await files.detail(manager, intent.fileId)).status).toBe('READY');
+    return intent.fileId;
+  }
+
+  async function article(s: Awaited<ReturnType<typeof setup>>) {
+    const png = (await binaryFixtures()).find((item) => item.filename === 'image.png');
+    if (!png) throw new Error('Missing PNG fixture');
+    const imageId = await readyFile(s.unit.courseUnitId, png.filename, png.mimeType, png.bytes);
+    const approvedAt = new Date(Date.now() - 1000);
+    const saved = await db.getRepository(MaterialEntity).save(
+      db.getRepository(MaterialEntity).create({
+        ...s.material,
+        id: undefined,
+        fileObjectId: null,
+        contentType: MaterialContentType.ARTICLE,
+        contentHtml: sanitizeArticle(`<p>Read</p><img data-file-id="${imageId}" alt="diagram">`)
+          .contentHtml,
+        contentSchemaVersion: 1,
+        title: 'Article lesson',
+        sortOrder: 1,
+        reviewedAt: approvedAt,
+        firstApprovedAt: approvedAt,
+        publishedAt: approvedAt,
+      }),
+    );
+    await db.getRepository(MaterialFileReferenceEntity).insert([
+      { materialId: saved.id, fileId: imageId, role: MaterialReferenceRole.INLINE_IMAGE },
+      {
+        materialId: saved.id,
+        fileId: s.material.fileObjectId,
+        role: MaterialReferenceRole.ATTACHMENT,
+      },
+    ]);
+    return { id: saved.id, imageId, attachmentId: s.material.fileObjectId };
+  }
+
+  it('ARTICLE detail exposes sanitized HTML and signs only its own inline/attachment files', async () => {
+    const s = await setup();
+    await s.activate();
+    const a = await article(s);
+    const page = await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 });
+    expect(page.total).toBe(2);
+    const item = page.items.find((entry) => entry.material.id === a.id);
+    if (!item) throw new Error('Missing article item');
+    const summary = new StudentMaterialDto(item);
+    expect(summary).toMatchObject({ contentType: 'ARTICLE', file: null, attachmentCount: 1 });
+    expect(summary).not.toHaveProperty('contentHtml');
+    const detail = new StudentMaterialDetailDto(await reads.detail(s.principal, s.classId, a.id));
+    expect(detail).toMatchObject({
+      contentSchemaVersion: 1,
+      inlineImages: [{ id: a.imageId, kind: 'IMAGE' }],
+      attachments: [{ id: a.attachmentId }],
+    });
+    expect(detail.contentHtml).toContain(`data-file-id="${a.imageId}"`);
+    expect(detail.contentHtml).not.toContain('src=');
+
+    const inline = await reads.access(s.principal, s.classId, a.id, a.imageId);
+    expect(inline).toMatchObject({ role: 'INLINE_IMAGE', revision: 1 });
+    const image = await fetch(inline.url);
+    expect(image.status).toBe(200);
+    expect(image.headers.get('content-type')).toBe('image/png');
+    expect(image.headers.get('content-disposition')).toMatch(/^inline;/);
+    const attachment = await reads.access(s.principal, s.classId, a.id, a.attachmentId);
+    expect(attachment.role).toBe('ATTACHMENT');
+    expect((await fetch(attachment.url)).headers.get('content-disposition')).toMatch(
+      /^attachment;/,
+    );
+    // The same file is the primary of another visible material, but not of this ARTICLE.
+    await expect(reads.download(s.principal, s.classId, a.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      reads.access(s.principal, s.classId, s.material.id, a.imageId),
+    ).rejects.toMatchObject({ status: 404 });
+    expect((await reads.access(s.principal, s.classId, s.material.id, a.attachmentId)).role).toBe(
+      'PRIMARY',
+    );
+
+    const sign = files.signReadReference.bind(files);
+    const spy = vi.spyOn(files, 'signReadReference').mockImplementation(async (...args) => {
+      const signed = await sign(...args);
+      await db
+        .getRepository(MaterialFileReferenceEntity)
+        .delete({ materialId: a.id, role: MaterialReferenceRole.ATTACHMENT });
+      return signed;
+    });
+    try {
+      await expect(
+        reads.access(s.principal, s.classId, a.id, a.attachmentId),
+      ).rejects.toMatchObject({ status: 404 });
+    } finally {
+      spy.mockRestore();
+    }
+  }, 30000);
+
+  it('hides ARTICLE with a broken reference before total/page and denies its assets', async () => {
+    const s = await setup();
+    await s.activate();
+    const a = await article(s);
+    // DB triggers normally protect referenced files; bypass only in this isolated test DB.
+    await db.query('ALTER TABLE file_objects DISABLE TRIGGER trg_referenced_file');
+    try {
+      await db.query("UPDATE file_objects SET status='FAILED' WHERE id=$1", [a.imageId]);
+    } finally {
+      await db.query('ALTER TABLE file_objects ENABLE TRIGGER trg_referenced_file');
+    }
+    const page = await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 1 });
+    expect(page.total).toBe(1);
+    expect(page.items.map((item) => item.material.id)).toEqual([s.material.id]);
+    await expect(reads.detail(s.principal, s.classId, a.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(reads.access(s.principal, s.classId, a.id, a.attachmentId)).rejects.toMatchObject({
+      status: 404,
+    });
+  }, 30000);
 
   it('enforces revision approval and soft-delete constraints', async () => {
     const s = await setup();
