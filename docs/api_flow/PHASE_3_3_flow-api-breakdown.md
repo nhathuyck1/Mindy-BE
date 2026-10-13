@@ -1,8 +1,8 @@
 # Phase 3.3 — API breakdown cho FE
 
 Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
-release ở §9 còn planned. Chưa deploy/nghiệm thu VPS3.3.1–3.3.3.**
-Shapes Manager/Mentor/decision đã đối chiếu Swagger/source; phần release là đề xuất.
+release3.3.4 ở §9 đã implement local. Chưa deploy/nghiệm thu VPS3.3.1–3.3.4.**
+Shapes Manager/Mentor/decision/release đã đối chiếu Swagger/source.
 Upload 3.2 đã có, xem
 [breakdown upload](PHASE_3_2_flow-api-breakdown.md).
 
@@ -96,7 +96,7 @@ Route đầy đủ là `/api/v1` + path ghi dưới đây. Request tới **BE**,
 `access_token` qua browser `credentials: include`/adapter cùng origin; không Bearer
 token/localStorage. GET không body; POST/PATCH JSON cần `Content-Type: application/json`.
 Manager mutation3.3.1 và Mentor mutation3.3.2 kiểm `Origin` allowlist từ CORS_ORIGINS, reject thiếu/sai
-với **403 ORIGIN_NOT_ALLOWED**; release áp dụng khi triển khai. Browser tự gửi Origin;
+với **403 ORIGIN_NOT_ALLOWED**; release3.3.4 cũng đã áp dụng. Browser tự gửi Origin;
 adapter/server proxy phải bảo toàn header. DELETE cũng cần Origin, không JSON body.
 
 MANAGER routes chỉ Manager; MENTOR routes chỉ Mentor đang assigned Class chưa
@@ -429,7 +429,7 @@ không thu hồi tài liệu chung. 404 CLASS_UNIT_NOT_FOUND nếu wrong parent,
 Session mới trong flow Materials. Sync/no side effect/no polling; refresh context
 khi ancestry404/assignment403, không fallback Admin API.
 
-## 9. Release APIs (Classes, planned)
+## 9. Release APIs (Classes, implemented local3.3.4)
 
 PATCH `/api/v1/admin/classes/:classId/units/:unitId/release` (ADMIN) và
 PATCH `/api/v1/mentor/classes/:classId/units/:unitId/release` (MENTOR assigned).
@@ -442,7 +442,7 @@ Cookie/JSON/Origin, không query; ví dụ:
 
 status required chỉ LOCKED/OPEN; unlockAt optional ISO có timezone/null,
 omitted giữ giờ cũ/null xóa; past time hợp lệ. COMPLETED input422;
-Unit đang COMPLETED hoặc Class CANCELLED409 UNIT_RELEASE_CONFLICT (code mới).
+Unit đang COMPLETED hoặc Class CANCELLED409 UNIT_RELEASE_CONFLICT.
 200 cùng unit context DTO §8 (không nested sessions): status/unlockAt mới.
 Sync Class→Unit lock, release audit actor/before/after trong cùng commit;
 không đổi enrollment/progress/Material approval. Retry same payload no-op;
@@ -479,7 +479,7 @@ codes mới §8/9/Origin là dự kiến, test mapping trước FE integration. 
 | 422 DTO/MATERIAL_CONTENT_INVALID/MATERIAL_SCOPE_MISMATCH | Giữ form, field error khi details có; sửa IDs/fields. Không tự upload lại vì scope sai. |
 | 409 FILE_NOT_READY | Nếu file đang PROCESSING, quay status polling3.2; FAILED/DELETED không attach. Không retry Material mutation khi chưa READY. |
 | 409 MATERIAL_REVIEW_CONFLICT | Refetch item/queue, so revision/state; người dùng quyết định lại, không approve tự động bản mới. |
-| 409 UNIT_RELEASE_CONFLICT (new planned) | Refetch Unit/Class, disable completed/cancelled action. |
+| 409 UNIT_RELEASE_CONFLICT | Refetch Unit/Class, disable completed/cancelled action. |
 | 503 FILE_STORAGE_DISABLED/UNAVAILABLE | Thuộc bước upload3.2/preview3.4; metadata3.3 không gọi MinIO. Hiển thị upload tạm ngừng, retry hữu hạn cho unavailable. |
 | 5xx/network/response mất | GET retry hữu hạn; mutation refetch trước retry; create không auto retry, không coi timeout là chưa commit. |
 
@@ -609,3 +609,55 @@ Deploy cần migration1791853200000 sau typed schema1791849600000; không sửa 
 đã chạy. Chưa migrate dev/VPS hoặc nghiệm thu server. Release§9 và ARTICLE assets/
 binary preview3.4 vẫn planned. Rollback app giữ data; migration down chỉ khôi phục
 trigger cũ (withdrawal có thể lại bị READY guard chặn), không xóa Materials/audit.
+
+## Release3.3.4 handoff — 2026-10-13
+
+§9 hai PATCH đã có local; cần migration1791856800000, không cần MinIO để release.
+Request Content-Type application/json + Origin allowlist + access_token cookie.
+classId/unitId UUIDv4; unitId là Class Unit ID từ GET Admin detail hoặc Mentor picker,
+không truyền Course Unit ID. Không query/body extra fields/expectedRevision.
+Timestamp bắt buộc calendar date + T + HH:mm:ss + Z hoặc ±HH:mm, optional1–3
+chữ số millisecond; năm0001–9999 cả local date và UTC instant. Ngày không tồn tại,
+24:00, offset ngoài00:00–23:59, vượt bounds/precision hoặc không timezone422
+HTTP_ERROR. Past hợp lệ, không giới hạn bằng thời gian lớp.
+Class COMPLETED không tự chặn Unit chưa COMPLETED; Unit COMPLETED/Class CANCELLED409.
+
+Success200 là DTO trực tiếp (không data wrapper), Cache-Control:no-store:
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "classId": "22222222-2222-4222-8222-222222222222",
+  "courseUnitId": "33333333-3333-4333-8333-333333333333",
+  "title": "Introduction",
+  "position": 1,
+  "status": "OPEN",
+  "unlockAt": "2030-01-01T00:00:00.000Z"
+}
+```
+
+Datetime response UTC ISO, null nếu không lịch. Không nested sessions, revision,
+audit hoặc nội dung/storage. Origin thiếu/sai403 ORIGIN_NOT_ALLOWED; role sai403
+INSUFFICIENT_ROLE, Mentor sai assignment hoặc principal revoked403 MATERIAL_ACCESS_DENIED
+(service), auth invalid/revoked401 theo AccessTokenGuard; malformed path400
+HTTP_ERROR, body422 HTTP_ERROR; class/unit ancestry404 theo §9.
+
+UI disable submit khi đang gửi, giữ date field khi422;403/401 dừng thao tác và
+refresh quyền/login,404 refetch context,409 refetch Class/Unit rồi disable action
+completed/cancelled. Thành công refetch context/detail và Student list. Không polling
+hoặc worker để đến unlockAt: Student read tự so serverNow. No-op dùng cùng instant
+(dù khác timezone) không update/audit. Concurrent serialize; không tự replay sau
+mất response, tránh ghi đè quyết định mới. Postman có Admin login và6 release examples.
+
+Server acceptance: Admin mở/khóa/lịch; Mentor assigned làm tương tự; Mentor khác/
+Manager403; omitted/null và repeat; completed/cancelled409; Student ACTIVE cùng
+Material ở hai lớp release độc lập; CASH pending vẫn403; verify enrollment/progress/
+Material không đổi. Chưa có evidence VPS, không đánh dấu3.3.5 complete.
+
+## Development schema readiness — 2026-10-14
+
+Migration1791853200000 và1791856800000 đã chạy thành công trên development
+local mindy_center (localhost:5433);16/16 source migrations applied, không pending.
+§9 release và review/publication3.3.3 đã đủ prerequisite schema ở development.
+Không thay route/body/DTO/error/FE flow. Chưa xác nhận API smoke ở lượt này,
+không deploy/migrate VPS hoặc thay evidence server acceptance3.3.5.

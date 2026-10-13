@@ -1,12 +1,12 @@
 # Phase 3.3 — Material management, review và Class Unit release
 
-Cập nhật: **2026-10-13**. **3.3.1–3.3.3 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.4–3.3.5 còn planned.**
+Cập nhật: **2026-10-13**. **3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 còn planned.**
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
 
 Ngoại lệ thứ tự theo yêu cầu user2026-10-12: [ba Student FILE/VIDEO GET3.4](../../api_flow/PHASE_3_4_FLOW.md)
 đã có read persistence tối thiểu + signed GET. Manager CRUD/ARTICLE/refs/audit3.3.1 đã có additive migration mới;
-Mentor context/submission3.3.2 và Manager review/publication3.3.3 đã có; release còn planned,
+Mentor context/submission3.3.2 và Manager review/publication3.3.3 và release3.3.4 đã có local,
 không tạo lại bảng materials hoặc sửa migration read đã chạy.
 
 - Baseline: [3.1 policy](PHASE_3_1_POLICY_CONTRACT.md), [3.2 upload](PHASE_3_2_SAFE_UPLOAD.md).
@@ -37,7 +37,7 @@ Material FILE độc lập trong Unit hoặc attachment của ARTICLE theo typed
 upload READY tự nó chưa tạo bài học, chưa publish và chưa cấp quyền Student.
 PDF không tự chuyển thành HTML hay tự trích thành kiến thức. FILE/VIDEO Student
 read đã có; Manager ARTICLE/attachments/authoring3.3.1 đã implement local,
-Mentor authoring/submission3.3.2 và Manager review/publication3.3.3 đã có; release và Student ARTICLE/assets còn planned.
+Mentor authoring/submission3.3.2 và Manager review/publication3.3.3 và release3.3.4 đã có; Student ARTICLE/assets còn planned.
 
 Tham khảo: [CKEditor get/set data](https://ckeditor.com/docs/ckeditor5/latest/getting-started/setup/getting-and-setting-data.html),
 [OWASP HTML sanitization](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
@@ -211,7 +211,7 @@ regression bảo toàn file-only fixtures3.1/3.2 và không cấp Student API �
 
 ## 6. API dự kiến và FE handoff
 
-Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor context/content/submit **đã implement 3.3.2**, Manager decisions **đã implement 3.3.3**, release planned; chi tiết shapes/errors/UI trong
+Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor context/content/submit **đã implement 3.3.2**, Manager decisions **đã implement 3.3.3**, release **đã implement 3.3.4 local**; chi tiết shapes/errors/UI trong
 [breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 | Nhóm | Routes |
@@ -223,7 +223,7 @@ Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor conte
 | Release | PATCH /admin/classes/:classId/units/:unitId/release; PATCH /mentor/classes/:classId/units/:unitId/release |
 
 Cookie auth/role + object permission; Manager3.3.1 mutation có Origin allowlist check
-403 ORIGIN_NOT_ALLOWED (Mentor3.3.2 cũng đã có; release planned), không coi CORS là CSRF protection. Path UUID baseline400;
+403 ORIGIN_NOT_ALLOWED (Mentor3.3.2 và release3.3.4 cũng đã có), không coi CORS là CSRF protection. Path UUID baseline400;
 body/query invalid422. no-store metadata, no signed URLs.
 Manager inactive catalogue picker còn thiếu; API acceptance dùng Course Unit fixture
 hợp lệ, không cấp quyền Admin tạm hoặc đánh dấu UI picker đã xong.
@@ -357,3 +357,24 @@ up/down/up được test trên DB riêng, data/audit preserved; cần SQL/API re
 Local evidence và server acceptance ở [progress](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Không thay config/dependency, không chạy migration dev/VPS hoặc deploy; release3.3.4
 và handoff3.3.5 vẫn planned. Binary preview/Student ARTICLE assets thuộc3.4.
+
+## Triển khai 3.3.4 — 2026-10-13
+
+Classes sở hữu hai PATCH Admin/assigned Mentor release và additive migration
+1791856800000-class-unit-release-audit. Actor FOR SHARE → Class FOR UPDATE →
+Class Unit FOR UPDATE; recheck active role, assignment và ancestry dưới locks.
+Unit COMPLETED/Class CANCELLED409 UNIT_RELEASE_CONFLICT, cả request no-op.
+Class COMPLETED vẫn cho release Unit chưa COMPLETED theo contract đã chốt.
+
+status required LOCKED/OPEN, unlockAt omitted giữ/null xóa; timestamp timezone,
+year0001–9999 cả input và UTC instant, precision1–3 chữ số millisecond; invalid
+calendar/time/offset422. Past time hợp lệ, không bó vào startDate/endDate lớp.
+No-op giữ updatedAt và không audit; concurrent serialize, không expectedRevision.
+Update/audit cùng commit; rollback nếu audit fail. Bounded retry chỉ deadlock/
+serialization, tối đa3 attempts. Không gọi MinIO/SMTP hoặc Materials từ Classes.
+Origin guard đưa về common, Materials giữ alias cùng behavior/constructor.
+
+Migration chỉ thêm audit/index/composite FK class-unit và unique(id,class_id),
+không backfill hoặc sửa release/Materials/enrollment. Down xóa audit, chỉ test
+trên DB riêng; production rollback code giữ bảng/data. SQL/API review trước merge.
+Server acceptance và handoff3.3.5 còn pending; không migrate dev/VPS hoặc deploy.

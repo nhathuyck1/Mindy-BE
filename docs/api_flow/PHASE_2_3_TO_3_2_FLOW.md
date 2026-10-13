@@ -15,7 +15,7 @@ FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 | 2.3 | Student tìm lớp đã đăng ký, xem detail và lịch cá nhân | StudentLearningModule, collection My Classes, lịch nhiều lớp, DTO access context, full detail/CASH preview; suite local pass | Query-plan review trên fixture lớn, coverage PayOS settlement → list/lịch và staging/VPS smoke |
 | 3.1 | Quy định ai được tạo, sửa, duyệt và đọc tài liệu | Role MANAGER + migration; MaterialsModule/MaterialPolicyService; context providers; domain review/revision/access và test | Material entity, DB persistence, HTTP CRUD/review và Student download thuộc các slice sau |
 | 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, worker/locks/tests; nghiệm thu VPS theo user2026-10-12 | Material CRUD/review ở3.3; đọc/tải3.4; metadata/cleanup3.5; full integration3.6 |
-| 3.3 | Typed Material CRUD/review và Class Unit release | Manager typed CRUD3.3.1 + ARTICLE/sanitizer/refs/schema/audit; Mentor context/draft/submit3.3.2 local2026-10-13 | Manager review/publication3.3.3 local2026-10-13; release3.3.4 và server acceptance từng slice còn planned; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
+| 3.3 | Typed Material CRUD/review và Class Unit release | Manager typed CRUD3.3.1 + ARTICLE/sanitizer/refs/schema/audit; Mentor context/draft/submit3.3.2 local2026-10-13 | Manager review/publication3.3.3 local2026-10-13; release3.3.4 local2026-10-13; server acceptance từng slice còn planned; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
 
 Hai nhánh Student và Manager/Mentor làm việc độc lập, sau này gặp nhau ở Material.
 

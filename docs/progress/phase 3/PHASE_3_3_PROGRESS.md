@@ -32,10 +32,10 @@ file có CHECK theo loại, inline/attachment refs, Student article/asset access
 video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
 hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
 
-**3.3.1–3.3.3 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.4–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
+**3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 đã có Material FILE/VIDEO read persistence và ba Student GET theo
-[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/publication HTTP có ở3.3.3; release HTTP còn planned.
+[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/publication HTTP có ở3.3.3; release HTTP đã có3.3.4 local.
 Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 
 ## Lượt planning — 2026-10-11
@@ -63,7 +63,7 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 | 3.3.1 Typed Manager draft | Đã implement local; chờ VPS acceptance | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
 | 3.3.2 Mentor context/submission | Đã implement local; chờ VPS acceptance | Assignment + own draft + ID mapping + hidden pagination; evidence bên dưới |
 | 3.3.3 Review/publication | Đã implement local; chờ VPS acceptance | Queue/revision/races/no-op retry/firstApprovedAt + withdrawal migration |
-| 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
+| 3.3.4 Class Unit release | Đã implement local; chờ VPS acceptance | Actor/Class/Unit locks, time semantics, atomic Classes audit |
 | 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
 
 ## Lượt hoàn thiện plan — 2026-10-12
@@ -259,3 +259,72 @@ HTTP status/code/response và audit counts cho từng ca:
    được submission sau Mentor mất assignment; không cấp quyền Mentor lại.
 
 Chưa chạy những ca này trên VPS; local evidence không thay server evidence.
+
+## Triển khai 3.3.4 — 2026-10-13
+
+- Hai PATCH Admin/Mentor Class Unit release200/no-store, cookie/route role/Origin,
+  current active actor và current assignment. Path Class Unit UUIDv4/ancestry404.
+- LOCKED/OPEN required; unlockAt omitted giữ/null xóa. Past hợp lệ, ISO timezone,
+  năm0001–9999 cả local/UTC, millisecond1–3, invalid calendar/hour/offset/precision422.
+  Unit COMPLETED hoặc Class CANCELLED409 UNIT_RELEASE_CONFLICT kể cả no-op.
+  Class COMPLETED vẫn cho release Unit chưa COMPLETED theo §9 plan/API.
+- Actor FOR SHARE → Class FOR UPDATE → Unit FOR UPDATE, authorization recheck dưới
+  locks. Serialize reassignment/cancel/role/status/completion; no file/Material lock
+  hoặc MinIO/SMTP. Retry toàn transaction tối đa3 lần chỉ40P01/40001.
+- Update release + class_unit_release_audit atomic, no-op không save/audit; equivalent
+  timezone instants giữ updatedAt. Audit actor/class/unit/before/after/time, service
+  append-only. Concurrent opposite changes tạo audit chain khớp state cuối.
+- Migration additive1791856800000, composite FK (class_unit_id,class_id), unique
+  (class_units.id,class_id), status/change CHECK và indexes; không sửa migration cũ.
+  Clean up/down/up và seeded Class Unit/enrollment preservation đã test trên DB riêng.
+  Down xóa audit: production rollback code giữ schema/data, không down bảng có audit thật.
+- Origin guard chuyển common; Materials giữ alias cho cùng implementation. Full
+  HTTP regression xác minh Files/authoring/submission/review vẫn bảo vệ Origin.
+- Node22.20.0/pnpm12.6.0, PostgreSQL *_test + private local MinIO:
+  **pnpm check406/406 tests,34 suites; lint/type-check/build pass;0 skip.**
+  **pnpm test:http44/44 tests,2 suites;0 skip.**
+  Mới16 release integration cases (identity/Class/Unit races, audit rollback/FKs,
+  no-op/migration),24 DTO cases,4 HTTP cases; thêm Student regression chứng minh
+  shared Material release độc lập theo hai lớp, future/past/LOCKED/CASH pending và
+  không đổi Material/enrollment/progress. Exact time boundary giữ domain tests3.1.
+- Lượt kiểm tra đầu phát hiện strict ISO library làm sai năm có leading zero,
+  đã dùng bounded calendar/instant validator và test lại cả bounds. HTTP test mới
+  ban đầu để Unit OPEN làm ảnh hưởng fixture Student cũ; thêm cleanup nested suite,
+  rerun final HTTP44/44. Full evidence trên là lượt cuối sau sửa.
+- Swagger hai route + release enum, Postman34 requests (Admin login +6 release
+  examples), DBML/plan/flow/breakdown/index/progress đồng bộ. Kiểm JSON/local links/
+  git diff whitespace; sửa một link runbook cũ trong Postman README.
+- Branch codex/phase-3-3-4-unit-release. Chưa migrate development/VPS, commit/merge/
+  push/deploy hoặc server acceptance. SQL/API/auth/transaction review trước merge
+  theo repo rules;3.3.5 acceptance/handoff và staff binary preview/Student ARTICLE
+  assets3.4 vẫn pending, không đánh dấu toàn phase3.3 complete.
+
+### Server acceptance 3.3.4 cần chạy sau deploy
+
+1. Chạy migration1791856800000 sau các migration3.3.1/3.3.3, deploy/health/auth
+   smoke. Import Phase33, set Origin đúng CORS_ORIGINS; ghi SHA/migration IDs.
+2. Admin class detail lấy classId/Class Unit ID→OPEN/LOCKED/schedule. Login Mentor
+   hiện assigned→Unit picker→các thao tác tương tự. Manager/Student/wrong role403,
+   Mentor khác403; missing Origin403, UUID400, DTO422, wrong ancestry404.
+3. unlockAt omitted giữ/null xóa, past/future/timezone đồng instant; repeat giữ
+   updatedAt/audit count. UNIT COMPLETED/CANCELLED Class409 không update/audit.
+4. Hai lớp cùng Course Unit/approved Material: mở một lớp không mở lớp kia;
+   OPEN+future chờ serverNow, LOCKED+past vẫn chặn. CASH pending vẫn denied;
+   không đổi enrollment/progress/payment hoặc Material approval/revision/publication.
+5. Hai release concurrent serialize và audit khớp state cuối; assignment/actor revoke
+   chặn request tiếp theo, Unit completion/cancel409. Lost response refetch context,
+   không auto replay release cũ. Ghi HTTP status/code/DTO/audit/count evidence.
+
+Chưa chạy các ca này trên VPS; local evidence không thay server acceptance.
+
+## Migration development — 2026-10-14
+
+Theo yêu cầu user, dùng DATABASE_URL development trong .env (localhost:5433,
+mindy_center). Preflight migration:show có14 applied/2 pending: withdrawal3.3.3
+1791853200000 và release audit3.3.4 1791856800000. Chạy pnpm migration:run với
+Node22.20.0/pnpm12.6.0: cảhai execute thành công và COMMIT cùng transaction.
+Postflight16/16 source migrations applied, không pending; schema có
+class_unit_release_audit,6 constraints/4 indexes và2 Material content triggers.
+Development đã có schema3.3.4; không deploy/migrate VPS/nghiệm thu server3.3.5.
+Không chạy lại test BE/HTTP ở lượt migrate này; local gate406/44 phía trên là
+lượt implementation trước. Kiểm git diff whitespace cho cập nhật tài liệu.

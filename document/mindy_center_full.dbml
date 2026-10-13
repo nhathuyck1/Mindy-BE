@@ -282,10 +282,30 @@
     indexes {
       (class_id, course_unit_id) [unique]
       (class_id, position) [unique]
+      (id, class_id) [unique, name: 'uq_class_units_id_class']
       (course_unit_id)
     }
 
     Note: 'Created from the combination of a class and a shared course unit.'
+  }
+
+  Table class_unit_release_audit {
+    id uuid [pk, default: `gen_random_uuid()`]
+    actor_id uuid [not null]
+    class_id uuid [not null]
+    class_unit_id uuid [not null]
+    before_status class_unit_status [not null]
+    after_status class_unit_status [not null]
+    before_unlock_at timestamptz
+    after_unlock_at timestamptz
+    occurred_at timestamptz [not null]
+
+    indexes {
+      (class_unit_id, occurred_at, id) [name: 'idx_class_unit_release_audit_unit_time']
+      class_id
+      actor_id
+    }
+    Note: 'Classes-owned append-only service audit, atomic with release; same-value retries create no event. Composite FK (class_unit_id,class_id) references class_units(id,class_id); statuses LOCKED/OPEN only and before/after must differ. Migration 1791856800000 is authoritative.'
   }
 
   Table class_sessions {
@@ -1040,6 +1060,9 @@
   Ref: classes.course_id > courses.id
   Ref: classes.mentor_id > users.id
   Ref: class_units.class_id > classes.id
+  Ref: class_unit_release_audit.actor_id > users.id
+  Ref: class_unit_release_audit.class_id > classes.id
+  Ref: class_unit_release_audit.(class_unit_id, class_id) > class_units.(id, class_id)
   Ref: class_units.course_unit_id > course_units.id
   Ref: class_sessions.class_unit_id > class_units.id
   Ref: enrollments.student_id > users.id

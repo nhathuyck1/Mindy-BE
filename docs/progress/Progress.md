@@ -1,5 +1,25 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-14: Theo yêu cầu user, chạy migration cho development local
+  mindy_center tại localhost:5433 bằng Node22.20.0/pnpm12.6.0. Hai migration
+  MaterialPublicationWithdrawal1791853200000 và ClassUnitReleaseAudit1791856800000
+  đã execute thành công cùng transaction COMMIT. migration:show xác nhận16/16
+  source migrations đã áp dụng, không pending; query schema xác nhận audit table,
+  6 constraints/4 indexes và2 Material content triggers. Không deploy/VPS hoặc
+  chạy server acceptance; không dùng thao tác migrate làm evidence API/full tests.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-13: Triển khai3.3.4 Class Unit release cho Admin/assigned Mentor:
+  LOCKED/OPEN + omitted/null/timezone unlockAt; actor/Class/Unit locks, audit atomic,
+  no-op giữ timestamps, completed/cancelled409 và assignment/role revoke403.
+  Migration additive1791856800000 + composite ancestry FK/index/DBML, common Origin
+  guard tái dùng. Node22.20.0/pnpm12.6.0: pnpm check406/406 (34 suites),
+  HTTP44/44 (2 suites), 0 skip; lint/type-check/build pass. 16 release integration,
+  24 DTO, 4 HTTP mới và Student read regression trên PostgreSQL *_test/MinIO riêng.
+  Swagger/Postman34 requests, flow/API/plan/progress cập nhật. Chưa migrate dev/VPS,
+  merge/push/deploy/nghiệm thu server;3.3.5 và binary preview/ARTICLE assets3.4 còn pending.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-13: Triển khai3.3.3 Manager review/publication (queue filters, approve/reject/
   publish/unpublish), strict revision/reason, no-op audit/timestamps, atomic locks và
   firstApprovedAt/canEdit. Migration additive1791853200000 cho withdrawal/soft-delete

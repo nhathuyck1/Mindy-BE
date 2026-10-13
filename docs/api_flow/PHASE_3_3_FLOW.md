@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-13**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 đã implement local; chưa deploy. Release còn planned.**
+Cập nhật: **2026-10-13**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -9,7 +9,7 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
 Manager CRUD/ARTICLE/refs/audit3.3.1 đã có migration additive mới.
-Mentor context/submission3.3.2 và Manager review/publication3.3.3 đã có; release còn planned; không sửa migration read đã chạy.
+Mentor context/submission3.3.2 và Manager review/publication3.3.3 và release3.3.4 đã có; không sửa migration read đã chạy.
 
 ## 1. Kết quả sản phẩm
 
@@ -202,3 +202,27 @@ file không còn READY để xử lý; Student read/signing vẫn chỉ nhận R
 Xem [API breakdown](PHASE_3_3_flow-api-breakdown.md) và
 [local/server evidence](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Release3.3.4, ARTICLE assets và human binary preview3.4 vẫn planned; chưa deploy VPS.
+
+## Triển khai 3.3.4 — 2026-10-13
+
+Admin class detail hoặc Mentor Unit picker → chọn Class Unit → PATCH release
+OPEN/LOCKED + optional unlockAt → nhận safe Unit context → refetch Unit/Student list.
+Hai route Admin/Mentor đã implement local, cookie/role/Origin/no-store;
+Manager không có quyền release. Lịch omitted giữ/null xóa; OPEN+future chờ serverNow,
+LOCKED luôn chặn Student. Release độc lập theo lớp, không đổi shared Material,
+enrollment/progress/payment. Unit COMPLETED/Class CANCELLED409; assignment/role
+revoke403. Actor/Class/Unit locks + audit atomic, no-op không audit/timestamp mới.
+FE mất response hoặc409 phải refetch, không auto replay trạng thái cũ.
+
+Xem [API §9](PHASE_3_3_flow-api-breakdown.md#9-release-apis-classes-implemented-local334).
+Local gates ghi trong [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Chưa deploy/VPS acceptance3.3.1–3.3.4;3.3.5 và binary preview/Student ARTICLE/assets3.4 còn pending.
+
+## Migration development — 2026-10-14
+
+Đã chạy hai migration1791853200000/1791856800000 trên development local
+mindy_center (localhost:5433), COMMIT thành công; postflight16/16 applied,
+không pending, audit table/constraints/indexes và Material triggers đã xác minh.
+Flow/API contract không đổi; development schema hỗ trợ implementation3.3.4.
+Chưa deploy/VPS acceptance hoặc thực hiện3.3.5. Không chạy lại API tests trong
+lượt migration; xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
