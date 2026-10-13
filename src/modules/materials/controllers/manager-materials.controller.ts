@@ -33,7 +33,9 @@ import {
   CreateManagerMaterialDto,
   ManagerMaterialQueryDto,
   MaterialDeleteQueryDto,
+  MaterialRevisionDto,
   PatchManagerMaterialDto,
+  RejectMaterialDto,
 } from '../dtos/manager-material-input.dto.js';
 import { MaterialOriginGuard } from '../guards/material-origin.guard.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
@@ -112,5 +114,57 @@ export class ManagerMaterialsController {
     @Query() input: MaterialDeleteQueryDto,
   ) {
     return this.materials.delete(principal, id, input.expectedRevision);
+  }
+
+  @Post('materials/:materialId/approve')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: ManagerMaterialDetailDto })
+  @ApiOperation({ summary: 'Approve and publish the expected revision; retries preserve state' })
+  approve(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() input: MaterialRevisionDto,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.materials.review(principal, id, { action: 'APPROVE', ...input });
+  }
+
+  @Post('materials/:materialId/reject')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: ManagerMaterialDetailDto })
+  @ApiOperation({ summary: 'Reject a pending revision with a reason' })
+  reject(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() input: RejectMaterialDto,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.materials.review(principal, id, { action: 'REJECT', ...input });
+  }
+
+  @Post('materials/:materialId/publish')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: ManagerMaterialDetailDto })
+  @ApiOperation({ summary: 'Publish the currently approved revision with READY references' })
+  publish(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() input: MaterialRevisionDto,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.materials.review(principal, id, { action: 'PUBLISH', ...input });
+  }
+
+  @Post('materials/:materialId/unpublish')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOkResponse({ type: ManagerMaterialDetailDto })
+  @ApiOperation({ summary: 'Clear publication while preserving approval and revision' })
+  unpublish(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() input: MaterialRevisionDto,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.materials.review(principal, id, { action: 'UNPUBLISH', ...input });
   }
 }

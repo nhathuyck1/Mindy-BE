@@ -89,6 +89,17 @@ export class MaterialDeleteQueryDto extends MaterialRevisionDto {
   readonly expectedRevision!: number;
 }
 
+export class RejectMaterialDto extends MaterialRevisionDto {
+  @ApiProperty({
+    maxLength: 2000,
+    description: 'Nonempty rejection reason; trimmed before storage.',
+  })
+  @IsString()
+  @MaxLength(2000)
+  @Matches(/\S/)
+  readonly reason!: string;
+}
+
 export class PatchManagerMaterialDto extends PartialType(
   OmitType(CreateManagerMaterialDto, ['contentType', 'contentSchemaVersion'] as const),
   { skipNullProperties: false },

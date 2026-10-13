@@ -17,6 +17,7 @@ import { UserRole } from '../../users/user-role.enum.js';
 import { sanitizeArticle } from '../domain/article-sanitizer.js';
 import { canManageOwnDraft, canPreviewMaterial } from '../domain/material-access.js';
 import type {
+  MaterialCommand,
   MaterialContent,
   MaterialSnapshot,
   MaterialTransition,
@@ -198,6 +199,7 @@ export class MaterialAuthoringService {
           ...refs.map((ref) => ref.fileId),
         ],
         manager,
+        true,
       );
       const result = await this.policy.applyCommand(
         principal,
@@ -232,6 +234,7 @@ export class MaterialAuthoringService {
           ...refs.map((ref) => ref.fileId),
         ],
         manager,
+        true,
       );
       const context = scope
         ? await this.mentorReadContext(principal, material.courseUnitId, scope, manager)
@@ -371,6 +374,69 @@ export class MaterialAuthoringService {
       // A retry keeps updatedAt and every audit timestamp unchanged.
       const saved = result.audit ? await this.persist(result, prepared, manager) : material;
       return this.view(saved, summaries, refs, true, false);
+    });
+  }
+
+  async review(
+    principal: AuthenticatedUser,
+    id: string,
+    command:
+      | { action: 'APPROVE' | 'PUBLISH' | 'UNPUBLISH'; expectedRevision: number }
+      | Extract<MaterialCommand, { action: 'REJECT' }>,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.transaction(async (manager) => {
+      const material = await this.load(id, manager, true);
+      const refs = await this.refs(id, manager);
+      const prepared: PreparedContent = {
+        contentHtml: material.contentHtml,
+        fileId: material.fileObjectId,
+        inlineFileIds: refs
+          .filter((ref) => ref.role === MaterialReferenceRole.INLINE_IMAGE)
+          .map((ref) => ref.fileId),
+        attachmentFileIds: refs
+          .filter((ref) => ref.role === MaterialReferenceRole.ATTACHMENT)
+          .map((ref) => ref.fileId),
+      };
+      const summaries =
+        command.action === 'UNPUBLISH'
+          ? await this.files.readSummaries(
+              [...(prepared.fileId ? [prepared.fileId] : []), ...refs.map((ref) => ref.fileId)],
+              manager,
+              true,
+            )
+          : await this.resolve(
+              principal,
+              material.courseUnitId,
+              prepared,
+              manager,
+              [],
+              undefined,
+              material.sessionId,
+            );
+      await this.authorize(principal, manager, true);
+      const result = await this.policy.applyCommand(
+        principal,
+        this.snapshot(material, summaries, refs),
+        command,
+        new Date(),
+        undefined,
+        manager,
+      );
+      if (!result.audit) return this.view(material, summaries, refs, true);
+      // Review changes only workflow fields. Keep content and reference rows intact.
+      const state = result.material;
+      const saved = await manager.getRepository(MaterialEntity).save({
+        ...material,
+        reviewStatus: state.reviewStatus,
+        approvedRevision: state.approvedRevision,
+        reviewedBy: state.reviewedBy,
+        reviewedAt: state.reviewedAt,
+        firstApprovedAt: state.firstApprovedAt,
+        rejectionReason: state.rejectionReason,
+        publishedAt: state.publishedAt,
+      });
+      await manager.getRepository(MaterialAuditEventEntity).insert(result.audit);
+      return this.view(saved, summaries, refs, true);
     });
   }
 

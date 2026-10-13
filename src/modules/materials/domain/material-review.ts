@@ -201,6 +201,12 @@ export function applyMaterialCommand(
     case 'APPROVE':
     case 'REJECT': {
       if (!manager) deny();
+      if (
+        command.action === 'REJECT' &&
+        (command.reason.trim().length === 0 || command.reason.length > 2000)
+      ) {
+        throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');
+      }
       const target =
         command.action === 'APPROVE'
           ? MaterialReviewStatus.APPROVED
@@ -216,17 +222,12 @@ export function applyMaterialCommand(
         !(
           command.action === 'APPROVE' &&
           material.reviewStatus === MaterialReviewStatus.DRAFT &&
-          (material.createdInClassId === null || material.firstApprovedAt !== null)
+          ((material.createdInClassId === null && material.createdBy === actor.userId) ||
+            material.firstApprovedAt !== null)
         )
       )
         conflict();
       assertContent(material, material.courseUnitId, actor, context);
-      if (
-        command.action === 'REJECT' &&
-        (command.reason.trim().length === 0 || command.reason.length > 2000)
-      ) {
-        throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');
-      }
       updated = {
         ...material,
         reviewStatus: target,
