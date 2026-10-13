@@ -7,13 +7,16 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrivateFileUploads1791504000001 } from '../../src/database/migrations/1791504000001-private-file-uploads.js';
 import { StudentMaterialReads1791763200000 } from '../../src/database/migrations/1791763200000-student-material-reads.js';
 import { TypedManagerMaterials1791849600000 } from '../../src/database/migrations/1791849600000-typed-manager-materials.js';
+import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
+import { ClassUnitReleaseAuditEntity } from '../../src/modules/classes/entities/class-unit-release-audit.entity.js';
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../src/modules/classes/enums/class-unit-status.enum.js';
 import { ClassContentContextService } from '../../src/modules/classes/services/class-content-context.service.js';
+import { ClassUnitReleaseService } from '../../src/modules/classes/services/class-unit-release.service.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
 import { FileMetadataEntity } from '../../src/modules/files/entities/file-metadata.entity.js';
@@ -50,11 +53,18 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     if (!process.env.TEST_DATABASE_URL)
       throw new Error('Student material tests require dedicated TEST_DATABASE_URL + local MinIO');
     db = await paymentDatabase('student_materials', {
-      entities: [FileObjectEntity, FileMetadataEntity, FileProcessingJobEntity, MaterialEntity],
+      entities: [
+        FileObjectEntity,
+        FileMetadataEntity,
+        FileProcessingJobEntity,
+        MaterialEntity,
+        ClassUnitReleaseAuditEntity,
+      ],
       migrations: [
         PrivateFileUploads1791504000001,
         StudentMaterialReads1791763200000,
         TypedManagerMaterials1791849600000,
+        ClassUnitReleaseAudit1791856800000,
       ],
     });
     // Migration up/down/up is safe only on this isolated empty test database.
@@ -149,6 +159,75 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       activate,
     };
   }
+
+  it('release commands independently gate shared Student content without altering material/enrollment/progress', async () => {
+    const s = await setup(2);
+    const actor = { userId: s.order.mentor.id, role: UserRole.MENTOR, sessionId: randomUUID() };
+    const release = new ClassUnitReleaseService(db, fixture.users, new CoursesService(db));
+    const secondClass = s.order.classIds[1];
+    if (!secondClass) throw new Error('Missing second class');
+    const second = await db
+      .getRepository(ClassUnitEntity)
+      .findOneByOrFail({ classId: secondClass, position: 1 });
+    const beforePending = await db.query(
+      'SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id',
+      [s.principal.userId],
+    );
+    await release.update(actor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
+    await expect(reads.detail(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(
+      await db.query('SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id', [
+        s.principal.userId,
+      ]),
+    ).toEqual(beforePending);
+    await s.activate();
+    const materialBefore = await db
+      .getRepository(MaterialEntity)
+      .findOneByOrFail({ id: s.material.id });
+    const enrollmentsBefore = await db.query(
+      'SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id',
+      [s.principal.userId],
+    );
+    const progressBefore = await db.query('SELECT * FROM class_unit_progress ORDER BY id');
+    await release.update(actor, secondClass, second.id, {
+      status: ClassUnitStatus.OPEN,
+      unlockAt: new Date(Date.now() + 60000).toISOString(),
+    });
+    expect((await reads.detail(s.principal, s.classId, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await expect(reads.detail(s.principal, secondClass, s.material.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await release.update(actor, secondClass, second.id, {
+      status: ClassUnitStatus.OPEN,
+      unlockAt: new Date(Date.now() - 1).toISOString(),
+    });
+    expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await release.update(actor, s.classId, s.unit.id, {
+      status: ClassUnitStatus.LOCKED,
+      unlockAt: new Date(Date.now() - 1).toISOString(),
+    });
+    await expect(reads.download(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    expect(await db.getRepository(MaterialEntity).findOneByOrFail({ id: s.material.id })).toEqual(
+      materialBefore,
+    );
+    expect(
+      await db.query('SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id', [
+        s.principal.userId,
+      ]),
+    ).toEqual(enrollmentsBefore);
+    expect(await db.query('SELECT * FROM class_unit_progress ORDER BY id')).toEqual(progressBefore);
+  });
 
   it('filters hidden rows before count/page and maps only student-safe fields', async () => {
     const s = await setup();

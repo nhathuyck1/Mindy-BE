@@ -150,6 +150,152 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   }
+  describe('Phase 3.3.4 Class Unit release HTTP', () => {
+    afterAll(async () => {
+      await db.query("UPDATE class_units SET status='LOCKED',unlock_at=NULL WHERE id=$1", [
+        scope.classUnitId,
+      ]);
+    });
+    const releasePath = () => `/admin/classes/${scope.classId}/units/${scope.classUnitId}/release`;
+    const mentorRelease = () =>
+      `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
+    it('checks cookie/role/Origin and strict body/path validation', async () => {
+      const body = { status: 'OPEN' };
+      expect((await request(releasePath(), undefined, body, 'PATCH')).status).toBe(401);
+      for (const cookie of [managerCookie, mentorCookie, studentCookie])
+        expect((await request(releasePath(), cookie, body, 'PATCH')).status).toBe(403);
+      expect((await request(mentorRelease(), adminCookie, body, 'PATCH')).status).toBe(403);
+      for (const origin of [undefined, 'http://evil.test', 'null']) {
+        const response = await fetch(`${url}${releasePath()}`, {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/json',
+            cookie: adminCookie,
+            ...(origin === undefined ? {} : { origin }),
+          },
+          body: JSON.stringify(body),
+        });
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
+      }
+      for (const invalid of [
+        {},
+        { status: 'COMPLETED' },
+        { status: null },
+        { ...body, expectedRevision: 1 },
+        { ...body, unlockAt: '2026-02-30T12:00:00Z' },
+        { ...body, unlockAt: '2026-10-13T12:00:00' },
+        { ...body, unlockAt: 1 },
+      ])
+        expect((await request(releasePath(), adminCookie, invalid, 'PATCH')).status).toBe(422);
+      expect(
+        (await request('/admin/classes/bad/units/bad/release', adminCookie, body, 'PATCH')).status,
+      ).toBe(400);
+    });
+    it('sets/retains/clears schedule, preserves timestamps on retry and returns safe no-store context', async () => {
+      const opened = await request(
+        releasePath(),
+        adminCookie,
+        { status: 'OPEN', unlockAt: '2030-01-01T07:00:00+07:00' },
+        'PATCH',
+      );
+      expect(opened.status).toBe(200);
+      expect(opened.headers.get('cache-control')).toBe('no-store');
+      expect(await opened.json()).toMatchObject({
+        id: scope.classUnitId,
+        classId: scope.classId,
+        courseUnitId: scope.courseUnitId,
+        status: 'OPEN',
+        unlockAt: '2030-01-01T00:00:00.000Z',
+      });
+      const before = await db.query('SELECT * FROM class_units WHERE id=$1', [scope.classUnitId]);
+      const audits = await db.query(
+        'SELECT * FROM class_unit_release_audit WHERE class_unit_id=$1 ORDER BY id',
+        [scope.classUnitId],
+      );
+      expect(
+        (
+          await request(
+            mentorRelease(),
+            mentorCookie,
+            { status: 'OPEN', unlockAt: '2030-01-01T00:00:00Z' },
+            'PATCH',
+          )
+        ).status,
+      ).toBe(200);
+      expect(await db.query('SELECT * FROM class_units WHERE id=$1', [scope.classUnitId])).toEqual(
+        before,
+      );
+      expect(
+        await db.query(
+          'SELECT * FROM class_unit_release_audit WHERE class_unit_id=$1 ORDER BY id',
+          [scope.classUnitId],
+        ),
+      ).toEqual(audits);
+      expect(
+        await (await request(mentorRelease(), mentorCookie, { status: 'LOCKED' }, 'PATCH')).json(),
+      ).toMatchObject({ status: 'LOCKED', unlockAt: '2030-01-01T00:00:00.000Z' });
+      const cleared = await request(
+        mentorRelease(),
+        mentorCookie,
+        { status: 'OPEN', unlockAt: null },
+        'PATCH',
+      );
+      expect(cleared.status).toBe(200);
+      expect(Object.keys((await cleared.json()) as object).sort()).toEqual([
+        'classId',
+        'courseUnitId',
+        'id',
+        'position',
+        'status',
+        'title',
+        'unlockAt',
+      ]);
+    });
+    it('checks unit ancestry and completed/cancelled conflicts', async () => {
+      expect(
+        (
+          await request(
+            `/admin/classes/${scope.classId}/units/11111111-1111-4111-8111-111111111111/release`,
+            adminCookie,
+            { status: 'OPEN' },
+            'PATCH',
+          )
+        ).status,
+      ).toBe(404);
+      await db.query("UPDATE class_units SET status='COMPLETED' WHERE id=$1", [scope.classUnitId]);
+      try {
+        const response = await request(releasePath(), adminCookie, { status: 'OPEN' }, 'PATCH');
+        expect(response.status).toBe(409);
+        expect(await response.json()).toMatchObject({ code: 'UNIT_RELEASE_CONFLICT' });
+      } finally {
+        await db.query("UPDATE class_units SET status='OPEN' WHERE id=$1", [scope.classUnitId]);
+      }
+      await db.query("UPDATE classes SET status='CANCELLED' WHERE id=$1", [scope.classId]);
+      try {
+        expect(
+          (await request(mentorRelease(), mentorCookie, { status: 'OPEN' }, 'PATCH')).status,
+        ).toBe(409);
+      } finally {
+        await db.query("UPDATE classes SET status='OPEN' WHERE id=$1", [scope.classId]);
+      }
+    });
+    it('publishes both routes with separate roles and release enum in Swagger', async () => {
+      const response = await fetch(`${url.replace('/api/v1', '')}/docs-json`);
+      expect(response.status).toBe(200);
+      const spec = (await response.json()) as {
+        paths: Record<string, unknown>;
+        components: { schemas: Record<string, { properties: { status: { enum: string[] } } }> };
+      };
+      expect(spec.paths).toHaveProperty('/api/v1/admin/classes/{classId}/units/{unitId}/release');
+      expect(spec.paths).toHaveProperty('/api/v1/mentor/classes/{classId}/units/{unitId}/release');
+      expect(spec.components.schemas.UpdateClassUnitReleaseDto?.properties.status.enum).toEqual([
+        'LOCKED',
+        'OPEN',
+      ]);
+    });
+  });
+
   function declaration() {
     return {
       ...scope,
