@@ -1,7 +1,7 @@
 # Phase 3.3 — API breakdown cho FE
 
-Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4 đã implement và test local3.3.1;
-Mentor/review/release ở các phần sau còn planned. Chưa deploy/nghiệm thu VPS3.3.1.**
+Cập nhật: **2026-10-13**. **Manager CRUD ở §3/4 và Mentor context/submission ở §6/7/8 đã implement local3.3.1–3.3.2;
+review/release ở §5/9 còn planned. Chưa deploy/nghiệm thu VPS3.3.1–3.3.2.**
 Shapes Manager đã đối chiếu Swagger/source; phần Mentor/decision/release là đề xuất.
 Upload 3.2 đã có, xem
 [breakdown upload](PHASE_3_2_flow-api-breakdown.md).
@@ -21,10 +21,10 @@ Course Unit description là tổng quan; không bổ sung bảng course_unit_det
 hoặc endpoint mới trong lượt tư vấn. PDF upload trả fileId READY, sau đó gắn
 vào FILE hoặc attachment ARTICLE qua APIs authoring dự kiến bên dưới.
 Upload không tự tạo Material/publish hay chuyển PDF thành HTML. Manager3.3.1 đã có
-ARTICLE/attachments; Student ARTICLE/assets và Mentor authoring còn planned.
+ARTICLE/attachments; Mentor authoring3.3.2 đã có; Student ARTICLE/assets còn planned.
 
 User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
-bên dưới áp dụng thống nhất cho Manager create/PATCH/detail/list; Mentor còn planned.
+bên dưới áp dụng thống nhất cho Manager và Mentor create/PATCH/detail/list.
 Không đọc screenshot JSON như yêu cầu buộc đổi sang Tiptap JSON. Files3.2 routes
 vẫn unchanged; HTML string gửi vào Material body, không upload fileHTML tới Files.
 
@@ -95,8 +95,8 @@ Không thêm endpoint stream/HLS/external video trong scope đã chọn.
 Route đầy đủ là `/api/v1` + path ghi dưới đây. Request tới **BE**, dùng cookie
 `access_token` qua browser `credentials: include`/adapter cùng origin; không Bearer
 token/localStorage. GET không body; POST/PATCH JSON cần `Content-Type: application/json`.
-Manager mutation3.3.1 kiểm `Origin` allowlist từ CORS_ORIGINS, reject thiếu/sai
-với **403 ORIGIN_NOT_ALLOWED**; Mentor/release áp dụng khi triển khai. Browser tự gửi Origin;
+Manager mutation3.3.1 và Mentor mutation3.3.2 kiểm `Origin` allowlist từ CORS_ORIGINS, reject thiếu/sai
+với **403 ORIGIN_NOT_ALLOWED**; release áp dụng khi triển khai. Browser tự gửi Origin;
 adapter/server proxy phải bảo toàn header. DELETE cũng cần Origin, không JSON body.
 
 MANAGER routes chỉ Manager; MENTOR routes chỉ Mentor đang assigned Class chưa
@@ -320,11 +320,13 @@ hiển thị approval/rejection/published là trạng thái riêng.
 
 ## 6. Mentor Unit create/list
 
-**Chưa implement3.3.2.**
+**Đã implement3.3.2 local; chưa deploy.**
 
 ### GET `/api/v1/mentor/classes/:classId/units/:unitId/materials`
 
-Mentor assigned cookie; context từ §8, classId+unitId đúng ancestry; page/pageSize.
+Mentor assigned cookie; context từ §8, classId+unitId đúng ancestry; page/pageSize
+(default1/20, pageSize tối đa100), optional reviewStatus/contentType như Manager.
+Không nhận courseUnitId query; scope resolve từ path. Sort sortOrder ASC/id ASC.
 Ví dụ class `11111111-1111-4111-8111-111111111111`, unit
 `22222222-2222-4222-8222-222222222222`. 200 page Mentor view:
 APPROVED/published Material chính + own submission chưa từng approved trong
@@ -348,7 +350,7 @@ FE giữ form/thông báo hết quyền, không đổi IDs để attach.
 
 ## 7. Mentor item/edit/delete/submit
 
-**Chưa implement3.3.2.**
+**Đã implement3.3.2 local; chưa deploy.**
 
 Mọi route có classId+materialId, phải resolve class Unit tham chiếu owner Course
 Unit và kiểm assignment hiện tại; UUID400. Own draft/rejected chưa từng approved
@@ -366,13 +368,13 @@ chỉ được nếu Material chính đã APPROVED/published. 404 hidden materia
 Mentor mất assignment sau submit: không còn list/detail/edit/submit; Manager vẫn
 có thể duyệt. Lỗi403 dừng retry/refetch roster; dữ liệu form local không cấp quyền.
 
-## 8. Mentor context APIs (Classes, planned)
+## 8. Mentor context APIs (Classes, implemented3.3.2 local)
 
 ### GET `/api/v1/mentor/classes/:classId/units`
 
 Màn hình chọn unit sau roster. Mentor assigned cookie, classId UUID v4;
 page/pageSize, sort position ASC/id ASC, no body. Ví dụ `.../units?page=1&pageSize=20`.
-200 page items shape dự kiến:
+200 page items shape đã implement:
 
 ```json
 {
@@ -393,14 +395,14 @@ page/pageSize, sort position ASC/id ASC, no body. Ví dụ `.../units?page=1&pag
 
 id truyền thành unitId/classUnitId; courseUnitId truyền upload3.2; status
 LOCKED/OPEN/COMPLETED và unlockAt phục vụ release UI, không Student entitlement.
-No side effect. 404 CLASS_NOT_FOUND, 403 MATERIAL_ACCESS_DENIED (planned reuse
-cho content context denied), path400/query422/auth401. Empty = không units;
+No side effect. 404 CLASS_NOT_FOUND, 403 MATERIAL_ACCESS_DENIED,
+path400/query422/auth401. Empty = không units;
 disable upload cho đến có ID mapping. Refetch sau release/assignment change.
 
 ### GET `/api/v1/mentor/classes/:classId/units/:unitId/sessions`
 
 Optional session picker; cookie + current assignment, ancestry đúng; page/pageSize,
-sort sessionNumber ASC/id ASC. No body. 200 page, item dự kiến:
+sort sessionNumber ASC/id ASC. No body. 200 page, item đã implement:
 
 ```json
 {
@@ -472,7 +474,7 @@ codes mới §8/9/Origin là dự kiến, test mapping trước FE integration. 
 | 400 path UUID/JSON malformed | Sửa request/router; không retry. Code path từ filter baseline, không bịa tên code mới. |
 | 401 auth | Login/refresh theo auth adapter, dừng thao tác nếu session hết hạn. |
 | 403 MATERIAL_ACCESS_DENIED/FILE_OWNER_MISMATCH | Dừng retry, refetch assignment/role; bỏ quyền editor, không đổi owner để bypass. |
-| 403 ORIGIN_NOT_ALLOWED (Manager3.3.1 đã có) | Kiểm adapter/proxy/header allowlist; không gửi lại vô hạn. |
+| 403 ORIGIN_NOT_ALLOWED (Manager3.3.1/Mentor3.3.2 đã có) | Kiểm adapter/proxy/header allowlist; không gửi lại vô hạn. |
 | 404 MATERIAL_NOT_FOUND/FILE_NOT_FOUND/CLASS_NOT_FOUND/CLASS_UNIT_NOT_FOUND/CLASS_SESSION_NOT_FOUND | Item missing/hidden/wrong ancestry; refetch context/đóng item. Không phân biệt hidden qua UI. |
 | 422 DTO/MATERIAL_CONTENT_INVALID/MATERIAL_SCOPE_MISMATCH | Giữ form, field error khi details có; sửa IDs/fields. Không tự upload lại vì scope sai. |
 | 409 FILE_NOT_READY | Nếu file đang PROCESSING, quay status polling3.2; FAILED/DELETED không attach. Không retry Material mutation khi chưa READY. |
@@ -538,3 +540,42 @@ Postman: [Phase33 collection](../../postman/Mindy-Materials-Phase33.postman_coll
 Gán Origin đúng CORS_ORIGINS kể cả khi gọi bằng Postman; cookie jar từ login Manager.
 Local: check332/332, HTTP32/32, Files42/42, 0 skip; server cases ở [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Không có deploy/server evidence trong lượt này.
+
+## Triển khai 3.3.2 — 2026-10-13
+
+**Phạm vi hiện hành:** §3/4 Manager CRUD3.3.1 và §6/7/8 Mentor context/content/submit3.3.2
+đã implement local; §5 Manager decisions/publication và §9 release chưa implement.
+Các ghi chú triển khai3.3.1 là lịch sử. Không có migration mới3.3.2; cần schema3.3.1.
+
+Hai GET context trả no-store, page items/page/pageSize/total (default1/20, max100).
+Unit id là Class Unit ID truyền `unitId`/upload `classUnitId`, courseUnitId dùng Files;
+session id truyền sessionId optional. Unit title batch từ Catalog, không private URL.
+Mentor list nhận page/pageSize/reviewStatus/contentType; không courseUnitId query.
+List sortOrder/id ASC, visibility SQL trước total; own pending visible/canEdit false.
+Detail/mutation dùng cùng shape ManagerMaterialDetailDto §2 nhưng canEdit/own reason
+được tính theo actor/current class; summary bỏ HTML/schema version/refs arrays.
+
+Ví dụ Mentor submit với `{"expectedRevision":1}` trả200, no envelope bọc data,
+có `reviewStatus:"PENDING_REVIEW"`, `revision:1`, `canEdit:false`, canonical contentHtml,
+file nullable/inlineImages/attachments summaries. No-op repeat giữ updatedAt/audit;
+missing/null/fraction/out-of-range/string expectedRevision422 (JSON integer required).
+DELETE query chuyển number và required1..2147483647; same revision authorized204.
+ARTICLE input/canonical48 KiB và JSON64 KiB như Manager; immutable type/version.
+Every mutation cần Origin allowlist, thiếu/sai403 ORIGIN_NOT_ALLOWED; GET không cần Origin.
+
+Mentor published shared content vẫn đọc được khi Unit LOCKED/availableAt future,
+không dùng session làm ownership filter. Own draft lớp khác/other Mentor draft404;
+nonassignment/cancel/inactive/current role mismatch403. PATCH/SUBMIT không auto rebase;
+refetch revision rồi người dùng quyết định. Pending edit/delete và ever-approved
+edit/delete/submit403; rejected submit trước EDIT409. Mutation+refs+audit atomic,
+no storage signing/network; FILE upload intent quyền hiện tại kiểm lại trước attach.
+
+FE sequence: roster→context→ARTICLE hoặc Files3.2 READY→create→detail/edit→submit;
+editor khóa sau pending. Cache key có class/unit/material/filters; invalidate list/detail
+sau mutation, stop retry khi403; Manager review/binary preview/release chờ slice sau.
+Postman collection có22 requests, thêm Mentor login/context/typed create/list/detail/
+PATCH/submit/delete, lưu material_id/expected_revision từ200/201; create không auto retry.
+
+Local Node22.20.0: check348/348 (31 suites), HTTP36/36 (2 suites), Files42/42 (1 suite),
+0 skip, gồm real MinIO PDF/MP4→Mentor submit. [Progress](../progress/phase%203/PHASE_3_3_PROGRESS.md)
+ghi chi tiết tests và server cases; chưa deploy/nghiệm thu VPS.

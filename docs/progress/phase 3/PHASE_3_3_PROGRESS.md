@@ -32,10 +32,10 @@ file có CHECK theo loại, inline/attachment refs, Student article/asset access
 video Range/expiry. API/source 3.3 vẫn chưa implement; estimate file-only cũ cần
 hiệu chỉnh. User muốn nghiệm thu API trên server ở mỗi slice, không chỉ local.
 
-**3.3.1 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.2–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
+**3.3.1–3.3.2 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.3–3.3.5 chưa triển khai.** User xác nhận 3.1/3.2 đã xong.
 Policy/review domain, Files READY reference lock và Classes context có sẵn;
 đã có Material FILE/VIDEO read persistence và ba Student GET theo
-[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor/review/release HTTP còn planned.
+[read slice3.4](PHASE_3_4_PROGRESS.md); Manager authoring HTTP có ở3.3.1; Mentor context/authoring/submit có ở3.3.2; review/release HTTP còn planned.
 Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 
 ## Lượt planning — 2026-10-11
@@ -61,7 +61,7 @@ Khi triển khai typed schema3.3, mở rộng bằng migration additive mới.
 |---|---|---|
 | Plan | Hoàn tất | Plan + flow/API + progress/index đồng bộ |
 | 3.3.1 Typed Manager draft | Đã implement local; chờ VPS acceptance | ARTICLE-only/sanitize/refs/FILE/VIDEO + schema/READY/ancestry/audit/locks; server CRUD cases |
-| 3.3.2 Mentor context/submission | Chưa làm | Assignment + own draft + ID mapping + hidden pagination |
+| 3.3.2 Mentor context/submission | Đã implement local; chờ VPS acceptance | Assignment + own draft + ID mapping + hidden pagination; evidence bên dưới |
 | 3.3.3 Review/publication | Chưa làm | Revision/races/no-op retry/firstApprovedAt |
 | 3.3.4 Class Unit release | Chưa làm | Class/Unit locks, time semantics, Classes audit |
 | 3.3.5 Acceptance/handoff | Chưa làm | Full local checks + server evidence từng slice/actual FE contract; 3.4 handoff |
@@ -129,3 +129,70 @@ request/status/result cho các ca: text ARTICLE CRUD; ảnh IMAGE + PDF attachme
 FILE PDF/VIDEO MP4 READY3.2; stale PATCH409; DELETE retry204/detail404; foreign refs422;
 Admin/Mentor/Student403; missing/foreign Origin403; empty ARTICLE422; body413.
 Không tự đánh dấu server pass từ local checks. Rollback app giữ typed tables/data.
+
+## Triển khai 3.3.2 — 2026-10-13
+
+- Branch `codex/phase-3-3-2-mentor-submission`. Đọc toàn Flow.txt/rules/plan;
+  triển khai Materials thuộc Course Unit/shared live, Class provenance chỉ quản lý
+  own submission. Không đổi CASH/PayOS/Student entitlement/chat/mail flow.
+- Classes có GET `/mentor/classes/:classId/units` và `.../units/:unitId/sessions`:
+  current active Mentor/assignment/Class chưa CANCELLED, pagination1/20 max100,
+  title batch Catalog, không meeting URL/room/enrollment; mapping IDs như breakdown.
+- Materials có sáu routes Mentor typed create/list/detail/PATCH/delete/submit.
+  Đổi ManagerMaterialsService thành MaterialAuthoringService chung cho hai actors,
+  giữ toàn bộ sanitizer/reference/revision/audit baseline. List SQL visibility trước
+  count/page: published APPROVED chung + own never-approved đúng provenance Class.
+  Summary không HTML/refs arrays; detail có canonical HTML/verified refs, own reason,
+  canEdit chỉ DRAFT/REJECTED + firstApprovedAt null. Không áp Student release/time gates.
+- Mutation recheck actor/assignment/ancestry dưới locks: Material→union old/new files
+  UUID tăng dần→Users FOR SHARE→union Classes UUID tăng dần (file upload intents cũ/mới,
+  submission Class, session Class). ARTICLE-only cũng khóa actor/Class. Files batch
+  provider nhận optional contextClassIds; giữ single-file3.2. Không storage network
+  trong authoring transactions; retry deadlock/serialization tối đa3 lần như baseline.
+- SUBMIT DRAFT→PENDING_REVIEW giữ revision; retry pending cùng revision giữ updatedAt/
+  timestamps và không audit trùng. REJECTED phải EDIT trước, pending không EDIT/delete;
+  từng approved không được Mentor sửa/xóa/submit dù Manager đã sửa về DRAFT.
+  Soft-delete authorized retry204 giữ refs/binary; role/status/assignment bị thu hồi
+  chặn cả tombstone retry. Origin bắt buộc mutations, no-store metadata.
+- Không thêm migration/schema/config/dependency; dùng migration3.3.1. Swagger/Postman
+  22 requests cập nhật với Mentor login/context/ARTICLE/FILE/VIDEO/list/detail/edit/
+  submit/delete. Manager review/publication/release còn3.3.3/3.3.4; binary preview3.4.
+- Local checks **Node22.20.0/pnpm12.6.0**: `pnpm check` pass lint/type-check/build và
+  **348/348 tests, 31 suites, 0 skip**; `pnpm test:http` **36/36, 2 suites, 0 skip**;
+  `pnpm test:files` **42/42, 1 suite, 0 skip**. Mentor thêm16 DB integration cases và4
+  HTTP cases, gồm MinIO upload/validation thật PDF/MP4→READY→create→submit. PostgreSQL
+  dedicated *_test/bucket fixture riêng; các failure/retry logs có chủ đích.
+- Lượt HTTP đầu có sai field fixture khiến vòng upload không chạy; type-check phát
+  hiện, đã sửa sang filename/mimeType + assertion2 binaries và chạy lại HTTP thành công.
+  Kết quả cuối phía trên là lượt sau sửa trên Node22.20.0, không dùng lượt đầu làm
+  evidence upload. Runtime mặc định host24; portable Node22 checksum verified dùng
+  riêng cho gates, không đổi runtime/cấu hình hệ thống.
+- Final documentation check: `git diff --check` và lint pass; 7 Markdown files,
+  87 local links, 9 JSON examples và22 Postman requests hợp lệ (13 bodies JSON).
+- Kiểm concurrency submit/submit, EDIT/submit, reassignment/cancel trước lock,
+  actor/assignment revoke đợi mutation commit; audit-failure rollback, cross-class
+  file scope locks, own rejected EDIT/resubmit, published shared reads/hidden total.
+  Fixtures DB tạo state REJECTED/APPROVED để test; không phải Manager review API.
+- Không migrate dev/VPS, merge/push/deploy hoặc server acceptance. PR/API/auth review
+  cần trước merge theo repo rules; metrics/rate limiting/i18n tiếp tục baseline hardening,
+  không tự đánh dấu đã hoàn tất trong slice này.
+
+### Server acceptance 3.3.2 cần chạy sau deploy
+
+Đảm bảo migration3.3.1 đã chạy (slice3.3.2 không có migration mới), deploy app/health/
+auth smoke; import Phase33 collection. Chọn classId đang assigned Mentor, lấy Unit
+id/courseUnitId/sessionId từ context mới; Origin khớp allowlist. Ghi release SHA,
+migration IDs, status/code/result cho các ca:
+
+1. Context Unit/session đúng ID mapping, phân trang, wrong parent404; nonassignment/
+   cancelled403, wrong role403, anonymous401, UUID400/query422.
+2. Text-only ARTICLE201 canonical HTML + provenance/revision1; own READY FILE PDF,
+   VIDEO MP4 và ARTICLE IMAGE/PDF attachment sau upload3.2; foreign owner/scope bị chặn.
+3. Own draft EDIT revision+1; SUBMIT200 pending/revision giữ; repeat cùng revision
+   giữ timestamps/audit; pending EDIT/delete403, stale mutation409; DELETE draft
+   same revision204/detail404. Missing revision422/Origin403/oversized JSON413.
+4. Mentor khác hoặc lớp khác không thấy draft (detail404/list hidden trước total);
+   revoke assignment/cancel chặn context/list/detail/create/edit/delete/submit403,
+   Manager vẫn thấy submission. Review/reject/resubmit runtime chờ3.3.3.
+
+Chỉ ghi server pass khi thực hiện trên VPS; local fixtures không thay server evidence.

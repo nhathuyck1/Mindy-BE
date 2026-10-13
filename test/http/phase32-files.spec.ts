@@ -587,4 +587,248 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       expect(schema.components.schemas).toHaveProperty('ManagerMaterialDetailDto');
     });
   });
+
+  describe('Phase 3.3.2 Mentor context/submission HTTP', () => {
+    beforeAll(async () => {
+      await db.query(
+        "UPDATE classes SET mentor_id=(SELECT id FROM users WHERE email='mentor@http.test') WHERE id=$1",
+        [scope.classId],
+      );
+    });
+    const article = {
+      contentType: 'ARTICLE',
+      title: 'Mentor lesson',
+      contentHtml: '<p onclick="bad()">Knowledge</p>',
+    };
+    const unitPath = () => `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/materials`;
+    const itemPath = (id: string) => `/mentor/classes/${scope.classId}/materials/${id}`;
+
+    it('documents all context/content routes, validates roles/Origin/UUID/query/body', async () => {
+      const prefix = `/mentor/classes/${scope.classId}`;
+      for (const path of [
+        `${prefix}/units`,
+        `${prefix}/units/${scope.classUnitId}/sessions`,
+        unitPath(),
+      ]) {
+        expect((await request(path)).status).toBe(401);
+        for (const cookie of [managerCookie, adminCookie, studentCookie])
+          expect((await request(path, cookie)).status).toBe(403);
+        expect((await request(`${path}?pageSize=101`, mentorCookie)).status).toBe(422);
+      }
+      expect((await request('/mentor/classes/invalid/units', mentorCookie)).status).toBe(400);
+      for (const input of [
+        { ...article, createdBy: scope.classId },
+        { ...article, fileId: scope.courseUnitId },
+        { ...article, attachmentFileIds: null },
+      ])
+        expect((await request(unitPath(), mentorCookie, input)).status).toBe(422);
+      for (const origin of [undefined, 'null', 'https://evil.test']) {
+        const response = await fetch(`${url}${unitPath()}`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            cookie: mentorCookie,
+            ...(origin ? { origin } : {}),
+          },
+          body: JSON.stringify(article),
+        });
+        expect(response.status).toBe(403);
+        expect(await response.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
+      }
+      expect(
+        (await request(unitPath(), mentorCookie, { ...article, contentHtml: 'x'.repeat(70000) }))
+          .status,
+      ).toBe(413);
+      expect(
+        (await request(`${unitPath()}?courseUnitId=${scope.courseUnitId}`, mentorCookie)).status,
+      ).toBe(422);
+      const doc = (await (await fetch(`${url.replace('/api/v1', '')}/docs-json`)).json()) as {
+        paths: Record<string, unknown>;
+      };
+      for (const path of [
+        '/api/v1/mentor/classes/{classId}/units',
+        '/api/v1/mentor/classes/{classId}/units/{unitId}/sessions',
+        '/api/v1/mentor/classes/{classId}/units/{unitId}/materials',
+        '/api/v1/mentor/classes/{classId}/materials/{materialId}',
+        '/api/v1/mentor/classes/{classId}/materials/{materialId}/submit',
+      ])
+        expect(doc.paths).toHaveProperty(path);
+    });
+
+    it('follows picker → canonical draft → EDIT → SUBMIT/retry; locks pending editing and handles delete retries', async () => {
+      const units = await request(`/mentor/classes/${scope.classId}/units`, mentorCookie);
+      expect(units.status).toBe(200);
+      expect(units.headers.get('cache-control')).toBe('no-store');
+      expect(await units.json()).toMatchObject({
+        items: [{ id: scope.classUnitId, courseUnitId: scope.courseUnitId }],
+      });
+      const sessions = await request(
+        `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/sessions`,
+        mentorCookie,
+      );
+      expect(sessions.status).toBe(200);
+      expect(JSON.stringify(await sessions.json())).not.toMatch(/meetingUrl|roomName|enrollment/);
+      const response = await request(unitPath(), mentorCookie, article);
+      expect(response.status).toBe(201);
+      const created = (await response.json()) as { id: string };
+      expect(created).toMatchObject({
+        contentHtml: '<p>Knowledge</p>',
+        createdInClassId: scope.classId,
+        file: null,
+        canEdit: true,
+        revision: 1,
+      });
+      const path = itemPath(created.id);
+      expect(
+        (await request(path, mentorCookie, { title: 'missing revision' }, 'PATCH')).status,
+      ).toBe(422);
+      expect(
+        (await request(`${path}/submit`, mentorCookie, { expectedRevision: null })).status,
+      ).toBe(422);
+      expect(
+        (await request(path, mentorCookie, { expectedRevision: 1, title: 'Edited' }, 'PATCH'))
+          .status,
+      ).toBe(200);
+      expect(
+        (await request(path, mentorCookie, { expectedRevision: 1, title: 'stale' }, 'PATCH'))
+          .status,
+      ).toBe(409);
+      const pending = await request(`${path}/submit`, mentorCookie, { expectedRevision: 2 });
+      expect(pending.status).toBe(200);
+      const result = await pending.json();
+      expect(result).toMatchObject({ reviewStatus: 'PENDING_REVIEW', revision: 2, canEdit: false });
+      expect(
+        await (await request(`${path}/submit`, mentorCookie, { expectedRevision: 2 })).json(),
+      ).toEqual(result);
+      expect(
+        (await request(path, mentorCookie, { expectedRevision: 2, title: 'locked' }, 'PATCH'))
+          .status,
+      ).toBe(403);
+      expect(
+        (await request(`${path}?expectedRevision=2`, mentorCookie, undefined, 'DELETE')).status,
+      ).toBe(403);
+      expect((await request(path, mentorCookie)).status).toBe(200);
+      expect((await request(`${path}/submit`, mentorCookie, { expectedRevision: 1 })).status).toBe(
+        409,
+      );
+      expect(
+        await db.query('SELECT action FROM material_audit_events WHERE material_id=$1', [
+          created.id,
+        ]),
+      ).toHaveLength(3);
+      const another = (await (await request(unitPath(), mentorCookie, article)).json()) as {
+        id: string;
+      };
+      expect((await request(itemPath(another.id), mentorCookie, undefined, 'DELETE')).status).toBe(
+        422,
+      );
+      for (let i = 0; i < 2; i++)
+        expect(
+          (
+            await request(
+              `${itemPath(another.id)}?expectedRevision=1`,
+              mentorCookie,
+              undefined,
+              'DELETE',
+            )
+          ).status,
+        ).toBe(204);
+      expect((await request(itemPath(another.id), mentorCookie)).status).toBe(404);
+    });
+
+    it('uploads own PDF/MP4 to real MinIO, validates READY, creates FILE/VIDEO and submits', async () => {
+      const selected = binaries.filter((fixture) =>
+        ['application/pdf', 'video/mp4'].includes(fixture.mimeType),
+      );
+      expect(selected).toHaveLength(2);
+      for (const binary of selected) {
+        const kind = binary.mimeType === 'video/mp4' ? 'VIDEO' : 'PDF';
+        const response = await request('/files/upload-intents', mentorCookie, {
+          ...scope,
+          originalFilename: binary.filename,
+          declaredMimeType: binary.mimeType,
+          declaredSizeBytes: binary.bytes.length,
+        });
+        expect(response.status).toBe(201);
+        const intent = (await response.json()) as { fileId: string; uploadUrl: string };
+        await upload(intent.uploadUrl, binary.mimeType, binary.bytes);
+        expect((await request(`/files/${intent.fileId}/complete`, mentorCookie, {})).status).toBe(
+          202,
+        );
+        await invokeWorker(intent.fileId);
+        const createdResponse = await request(unitPath(), mentorCookie, {
+          contentType: kind === 'VIDEO' ? 'VIDEO' : 'FILE',
+          title: binary.filename,
+          fileId: intent.fileId,
+        });
+        expect(createdResponse.status).toBe(201);
+        const created = (await createdResponse.json()) as { id: string };
+        expect(created).toMatchObject({ file: { id: intent.fileId, kind } });
+        const submit = await request(`${itemPath(created.id)}/submit`, mentorCookie, {
+          expectedRevision: 1,
+        });
+        expect(submit.status).toBe(200);
+        expect(await submit.json()).toMatchObject({
+          reviewStatus: 'PENDING_REVIEW',
+          canEdit: false,
+        });
+      }
+    });
+
+    it('new assigned Mentor cannot see former drafts; revoke/cancel blocks all context/content access', async () => {
+      const response = await request(unitPath(), mentorCookie, article);
+      expect(response.status).toBe(201);
+      const own = (await response.json()) as { id: string };
+      expect(
+        (
+          await request('/admin/users', adminCookie, {
+            email: 'second-mentor@http.test',
+            displayName: 'Second',
+            password: 'Http-test-password1!',
+            role: 'MENTOR',
+          })
+        ).status,
+      ).toBe(201);
+      const login = await request('/auth/login', undefined, {
+        email: 'second-mentor@http.test',
+        password: 'Http-test-password1!',
+      });
+      const secondCookie = login.headers
+        .getSetCookie()
+        .map((value) => value.split(';')[0])
+        .join('; ');
+      const original = (await db.query('SELECT mentor_id,status FROM classes WHERE id=$1', [
+        scope.classId,
+      ])) as { mentor_id: string; status: string }[];
+      try {
+        await db.query(
+          "UPDATE classes SET mentor_id=(SELECT id FROM users WHERE email='second-mentor@http.test') WHERE id=$1",
+          [scope.classId],
+        );
+        expect((await request(itemPath(own.id), secondCookie)).status).toBe(404);
+        expect((await request(`${unitPath()}?reviewStatus=DRAFT`, secondCookie)).status).toBe(200);
+        expect(
+          await (await request(`${unitPath()}?reviewStatus=DRAFT`, secondCookie)).json(),
+        ).toMatchObject({ total: 0, items: [] });
+        for (const path of [`/mentor/classes/${scope.classId}/units`, unitPath(), itemPath(own.id)])
+          expect((await request(path, mentorCookie)).status).toBe(403);
+        expect(
+          (await request(`${itemPath(own.id)}/submit`, mentorCookie, { expectedRevision: 1 }))
+            .status,
+        ).toBe(403);
+        await db.query("UPDATE classes SET status='CANCELLED' WHERE id=$1", [scope.classId]);
+        expect((await request(unitPath(), secondCookie, article)).status).toBe(403);
+        expect((await request(`/mentor/classes/${scope.classId}/units`, secondCookie)).status).toBe(
+          403,
+        );
+        expect((await request(`/manager/materials/${own.id}`, managerCookie)).status).toBe(200);
+      } finally {
+        await db.query('UPDATE classes SET mentor_id=$2,status=$3 WHERE id=$1', [
+          scope.classId,
+          original[0]?.mentor_id,
+          original[0]?.status,
+        ]);
+      }
+    });
+  });
 });

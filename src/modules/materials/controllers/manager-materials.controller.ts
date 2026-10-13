@@ -37,7 +37,7 @@ import {
 } from '../dtos/manager-material-input.dto.js';
 import { MaterialOriginGuard } from '../guards/material-origin.guard.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
-import { ManagerMaterialsService } from '../services/manager-materials.service.js';
+import { MaterialAuthoringService } from '../services/material-authoring.service.js';
 
 @ApiTags('manager-materials')
 @ApiCookieAuth('access_token')
@@ -46,7 +46,7 @@ import { ManagerMaterialsService } from '../services/manager-materials.service.j
 @Roles(UserRole.MANAGER)
 @ApiErrors(400, 401, 403, 404, 409, 413, 422)
 export class ManagerMaterialsController {
-  constructor(private readonly materials: ManagerMaterialsService) {}
+  constructor(private readonly materials: MaterialAuthoringService) {}
 
   @Post('course-units/:courseUnitId/materials')
   @Header('Cache-Control', 'no-store')

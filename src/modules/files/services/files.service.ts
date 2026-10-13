@@ -272,6 +272,7 @@ export class FilesService {
     courseUnitId: string,
     manager: EntityManager,
     previousIds: readonly string[] = [],
+    contextClassIds: readonly string[] = [],
   ): Promise<Map<string, FileSummary>> {
     if (!manager.queryRunner?.isTransactionActive)
       throw new Error('File references require an active transaction');
@@ -288,6 +289,14 @@ export class FilesService {
             .getMany();
     // authorize() may lock Classes. Every file row is already locked at this point.
     const selected = new Map(rows.map((row) => [row.id, row]));
+    await this.policy.lockReferenceContext(
+      principal,
+      [
+        ...contextClassIds,
+        ...rows.flatMap((row) => (row.intentClassId ? [row.intentClassId] : [])),
+      ],
+      manager,
+    );
     const result = new Map<string, FileSummary>();
     const ordered = [...new Set(ids)].sort((a, b) => {
       const left = selected.get(a)?.intentClassId ?? '';

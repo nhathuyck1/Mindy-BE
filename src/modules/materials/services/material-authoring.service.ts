@@ -5,19 +5,29 @@ import { DataSource, type EntityManager } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { CoursesService } from '../../catalog/services/courses.service.js';
+import type { ClassContentContext } from '../../classes/domain/class-content-context.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { ClassContentContextService } from '../../classes/services/class-content-context.service.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { MentorContentContextService } from '../../classes/services/mentor-content-context.service.js';
 import type { FileSummary } from '../../files/files.contracts.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { FilesService } from '../../files/services/files.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import { sanitizeArticle } from '../domain/article-sanitizer.js';
+import { canManageOwnDraft, canPreviewMaterial } from '../domain/material-access.js';
 import type {
   MaterialContent,
   MaterialSnapshot,
   MaterialTransition,
 } from '../domain/material-contract.js';
+import { MaterialReviewStatus } from '../domain/material-contract.js';
 import { MaterialPolicyError } from '../domain/material-policy.error.js';
+import type {
+  ManagerMaterialDetailDto,
+  ManagerMaterialDto,
+  ManagerMaterialPageDto,
+} from '../dtos/manager-material.dto.js';
 import type {
   CreateManagerMaterialDto,
   ManagerMaterialQueryDto,
@@ -40,32 +50,54 @@ interface PreparedContent {
   fileId: string | null;
   attachmentFileIds: string[];
 }
+export interface MentorMaterialScope {
+  readonly classId: string;
+  readonly classUnitId?: string;
+}
 
 @Injectable()
-export class ManagerMaterialsService {
+export class MaterialAuthoringService {
   constructor(
     private readonly db: DataSource,
     private readonly policy: MaterialPolicyService,
     private readonly files: FilesService,
     private readonly courses: CoursesService,
     private readonly contexts: ClassContentContextService,
+    private readonly mentorContexts: MentorContentContextService,
   ) {}
 
   async create(
     principal: AuthenticatedUser,
     courseUnitId: string,
     input: CreateManagerMaterialDto,
-  ) {
+    scope?: MentorMaterialScope,
+  ): Promise<ManagerMaterialDetailDto> {
     const prepared = this.prepare(input.contentType, input);
     return this.transaction(async (manager) => {
-      const summaries = await this.resolve(principal, courseUnitId, prepared, manager);
-      await this.authorize(principal, manager, true);
+      if (scope) {
+        const initial = await this.contexts.getUnit(
+          scope.classUnitId ?? courseUnitId,
+          scope.classId,
+          manager,
+        );
+        courseUnitId = initial.courseUnitId;
+      }
+      const summaries = await this.resolve(
+        principal,
+        courseUnitId,
+        prepared,
+        manager,
+        [],
+        scope,
+        input.sessionId,
+      );
+      await this.authorize(principal, manager, true, scope);
       const content = this.content(input, prepared, summaries);
-      await this.lockSession(content.sessionId, courseUnitId, manager);
+      await this.lockSession(content.sessionId, courseUnitId, manager, scope);
       const result = await this.policy.createDraft(
         principal,
         randomUUID(),
-        { courseUnitId },
+        { courseUnitId, classId: scope?.classId, classUnitId: scope?.classUnitId },
         content,
         new Date(),
         manager,
@@ -75,7 +107,12 @@ export class ManagerMaterialsService {
     });
   }
 
-  async patch(principal: AuthenticatedUser, id: string, input: PatchManagerMaterialDto) {
+  async patch(
+    principal: AuthenticatedUser,
+    id: string,
+    input: PatchManagerMaterialDto,
+    scope?: MentorMaterialScope,
+  ): Promise<ManagerMaterialDetailDto> {
     // Sanitize user HTML before opening the transaction; revalidate the typed snapshot under locks.
     const article = input.contentHtml === undefined ? undefined : this.sanitize(input.contentHtml);
     if (Object.keys(input).filter((key) => key !== 'expectedRevision').length === 0) this.invalid();
@@ -98,11 +135,19 @@ export class ManagerMaterialsService {
         this.invalid();
       if (material.contentType !== MaterialContentType.ARTICLE && input.contentHtml !== undefined)
         this.invalid();
-      const summaries = await this.resolve(principal, material.courseUnitId, prepared, manager, [
-        ...(material.fileObjectId ? [material.fileObjectId] : []),
-        ...oldRefs.map((ref) => ref.fileId),
-      ]);
-      await this.authorize(principal, manager, true);
+      const summaries = await this.resolve(
+        principal,
+        material.courseUnitId,
+        prepared,
+        manager,
+        [
+          ...(material.fileObjectId ? [material.fileObjectId] : []),
+          ...oldRefs.map((ref) => ref.fileId),
+        ],
+        scope,
+        input.sessionId === undefined ? material.sessionId : input.sessionId,
+      );
+      await this.authorize(principal, manager, true, scope);
       const content = this.content(
         {
           title: material.title,
@@ -116,7 +161,7 @@ export class ManagerMaterialsService {
         prepared,
         summaries,
       );
-      await this.lockSession(content.sessionId, material.courseUnitId, manager);
+      await this.lockSession(content.sessionId, material.courseUnitId, manager, scope);
       // All content fields are supplied; every valid PATCH revokes current approval/publication.
       const before = this.snapshot(material, summaries, oldRefs);
       const { contentType: _type, contentSchemaVersion: _version, ...changes } = content;
@@ -125,7 +170,7 @@ export class ManagerMaterialsService {
         before,
         { action: 'EDIT', expectedRevision: input.expectedRevision, changes },
         new Date(),
-        undefined,
+        scope?.classId,
         manager,
       );
       const saved = await this.persist(result, prepared, manager);
@@ -133,10 +178,19 @@ export class ManagerMaterialsService {
     });
   }
 
-  async delete(principal: AuthenticatedUser, id: string, expectedRevision: number): Promise<void> {
+  async delete(
+    principal: AuthenticatedUser,
+    id: string,
+    expectedRevision: number,
+    scope?: MentorMaterialScope,
+  ): Promise<void> {
     await this.transaction(async (manager) => {
       const material = await this.load(id, manager, true, true);
-      await this.authorize(principal, manager, true);
+      await this.authorize(principal, manager, true, scope);
+      if (scope) {
+        await this.contexts.lockContentClass(scope.classId, manager);
+        await this.mentorContexts.assertClassAccess(principal, scope.classId, manager);
+      }
       const refs = await this.refs(id, manager);
       const summaries = await this.files.readSummaries(
         [
@@ -150,7 +204,7 @@ export class ManagerMaterialsService {
         this.snapshot(material, summaries, refs),
         { action: 'DELETE', expectedRevision },
         new Date(),
-        undefined,
+        scope?.classId,
         manager,
       );
       if (result.audit) {
@@ -162,10 +216,14 @@ export class ManagerMaterialsService {
     });
   }
 
-  async detail(principal: AuthenticatedUser, id: string) {
+  async detail(
+    principal: AuthenticatedUser,
+    id: string,
+    scope?: MentorMaterialScope,
+  ): Promise<ManagerMaterialDetailDto> {
     return this.db.transaction('REPEATABLE READ', async (manager) => {
       await manager.query('SET TRANSACTION READ ONLY');
-      await this.authorize(principal, manager);
+      await this.authorize(principal, manager, false, scope);
       const material = await this.load(id, manager);
       const refs = await this.refs(id, manager);
       const summaries = await this.files.readSummaries(
@@ -175,7 +233,22 @@ export class ManagerMaterialsService {
         ],
         manager,
       );
-      return this.view(material, summaries, refs, true);
+      const context = scope
+        ? await this.mentorReadContext(principal, material.courseUnitId, scope, manager)
+        : null;
+      const snapshot = this.snapshot(material, summaries, refs);
+      const actor = await this.policy.actor(principal, manager);
+      if (scope && !canPreviewMaterial(snapshot, actor, context))
+        throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+      return this.view(
+        material,
+        summaries,
+        refs,
+        true,
+        scope ? canManageOwnDraft(snapshot, actor, context) : true,
+        !scope ||
+          (material.createdBy === principal.userId && material.createdInClassId === scope.classId),
+      );
     });
   }
 
@@ -183,11 +256,20 @@ export class ManagerMaterialsService {
     principal: AuthenticatedUser,
     options: ManagerMaterialQueryDto,
     courseUnitId?: string,
-  ) {
+    scope?: MentorMaterialScope,
+  ): Promise<ManagerMaterialPageDto> {
     return this.db.transaction('REPEATABLE READ', async (manager) => {
       await manager.query('SET TRANSACTION READ ONLY');
-      await this.authorize(principal, manager);
-      const unitId = courseUnitId ?? options.courseUnitId;
+      await this.authorize(principal, manager, false, scope);
+      const context = scope
+        ? await this.mentorContexts.getUnitAccess(
+            principal,
+            scope.classId,
+            scope.classUnitId ?? '',
+            manager,
+          )
+        : null;
+      const unitId = context?.courseUnitId ?? courseUnitId ?? options.courseUnitId;
       if (unitId && (await this.courses.getUnitContext(unitId, manager)) === null)
         throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
       const query = manager
@@ -199,6 +281,17 @@ export class ManagerMaterialsService {
         query.andWhere('material.contentType = :type', { type: options.contentType });
       if (options.reviewStatus)
         query.andWhere('material.reviewStatus = :status', { status: options.reviewStatus });
+      if (scope)
+        query.andWhere(
+          `((material.reviewStatus = :approved AND material.approvedRevision = material.revision
+        AND material.publishedAt IS NOT NULL) OR (material.createdBy = :actorId
+        AND material.createdInClassId = :classId AND material.firstApprovedAt IS NULL))`,
+          {
+            approved: MaterialReviewStatus.APPROVED,
+            actorId: principal.userId,
+            classId: scope.classId,
+          },
+        );
       const [materials, total] = await query
         .orderBy(
           courseUnitId ? 'material.sortOrder' : 'material.createdAt',
@@ -213,7 +306,24 @@ export class ManagerMaterialsService {
         manager,
       );
       return {
-        items: materials.map((material) => this.view(material, summaries, [], false)),
+        items: materials.map((material) =>
+          this.view(
+            material,
+            summaries,
+            [],
+            false,
+            !scope ||
+              (material.createdBy === principal.userId &&
+                material.createdInClassId === scope.classId &&
+                material.firstApprovedAt === null &&
+                [MaterialReviewStatus.DRAFT, MaterialReviewStatus.REJECTED].includes(
+                  material.reviewStatus,
+                )),
+            !scope ||
+              (material.createdBy === principal.userId &&
+                material.createdInClassId === scope.classId),
+          ),
+        ),
         page: options.page,
         pageSize: options.pageSize,
         total,
@@ -221,9 +331,84 @@ export class ManagerMaterialsService {
     });
   }
 
-  private async authorize(principal: AuthenticatedUser, manager: EntityManager, lock = false) {
+  async submit(
+    principal: AuthenticatedUser,
+    id: string,
+    expectedRevision: number,
+    scope: MentorMaterialScope,
+  ): Promise<ManagerMaterialDetailDto> {
+    return this.transaction(async (manager) => {
+      const material = await this.load(id, manager, true);
+      const refs = await this.refs(id, manager);
+      const prepared: PreparedContent = {
+        contentHtml: material.contentHtml,
+        fileId: material.fileObjectId,
+        inlineFileIds: refs
+          .filter((ref) => ref.role === MaterialReferenceRole.INLINE_IMAGE)
+          .map((ref) => ref.fileId),
+        attachmentFileIds: refs
+          .filter((ref) => ref.role === MaterialReferenceRole.ATTACHMENT)
+          .map((ref) => ref.fileId),
+      };
+      const summaries = await this.resolve(
+        principal,
+        material.courseUnitId,
+        prepared,
+        manager,
+        [],
+        scope,
+        material.sessionId,
+      );
+      await this.authorize(principal, manager, true, scope);
+      const result = await this.policy.applyCommand(
+        principal,
+        this.snapshot(material, summaries, refs),
+        { action: 'SUBMIT', expectedRevision },
+        new Date(),
+        scope.classId,
+        manager,
+      );
+      // A retry keeps updatedAt and every audit timestamp unchanged.
+      const saved = result.audit ? await this.persist(result, prepared, manager) : material;
+      return this.view(saved, summaries, refs, true, false);
+    });
+  }
+
+  private async referenceClassIds(
+    scope: MentorMaterialScope | undefined,
+    sessionId: string | null | undefined,
+    manager: EntityManager,
+  ): Promise<string[]> {
+    const ids = scope ? [scope.classId] : [];
+    if (sessionId)
+      ids.push((await this.contexts.getSession(sessionId, scope?.classId, manager)).classId);
+    return ids;
+  }
+
+  private async mentorReadContext(
+    principal: AuthenticatedUser,
+    courseUnitId: string,
+    scope: MentorMaterialScope,
+    manager: EntityManager,
+  ): Promise<ClassContentContext> {
+    await this.mentorContexts.assertClassAccess(principal, scope.classId, manager);
+    const context = await this.contexts.getCourseUnitInClass(scope.classId, courseUnitId, manager);
+    return this.mentorContexts.getUnitAccess(
+      principal,
+      scope.classId,
+      context.classUnitId,
+      manager,
+    );
+  }
+
+  private async authorize(
+    principal: AuthenticatedUser,
+    manager: EntityManager,
+    lock = false,
+    scope?: MentorMaterialScope,
+  ) {
     const actor = await this.policy.actor(principal, manager, lock);
-    if (actor.role !== UserRole.MANAGER)
+    if (actor.role !== (scope ? UserRole.MENTOR : UserRole.MANAGER))
       throw new MaterialPolicyException('MATERIAL_ACCESS_DENIED');
   }
 
@@ -231,11 +416,12 @@ export class ManagerMaterialsService {
     sessionId: string | null,
     courseUnitId: string,
     manager: EntityManager,
+    scope?: MentorMaterialScope,
   ) {
     if (!sessionId) return;
-    const initial = await this.contexts.getSession(sessionId, undefined, manager);
+    const initial = await this.contexts.getSession(sessionId, scope?.classId, manager);
     await this.contexts.lockContentClass(initial.classId, manager);
-    const current = await this.contexts.getSession(sessionId, undefined, manager);
+    const current = await this.contexts.getSession(sessionId, scope?.classId, manager);
     const unit = await this.courses.getUnitContext(courseUnitId, manager);
     if (current.courseUnitId !== courseUnitId || current.courseId !== unit?.courseId)
       throw new MaterialPolicyException('MATERIAL_SCOPE_MISMATCH');
@@ -292,23 +478,28 @@ export class ManagerMaterialsService {
     prepared: PreparedContent,
     manager: EntityManager,
     previous: string[] = [],
+    scope?: MentorMaterialScope,
+    sessionId?: string | null,
   ) {
-    return this.files
-      .assertReadyReferences(
-        principal,
-        [
-          ...(prepared.fileId ? [prepared.fileId] : []),
-          ...prepared.inlineFileIds,
-          ...prepared.attachmentFileIds,
-        ],
-        unitId,
-        manager,
-        previous,
-      )
-      .then(async (selected) => {
-        const old = await this.files.readSummaries(previous, manager);
-        return new Map([...old, ...selected]);
-      });
+    return this.referenceClassIds(scope, sessionId, manager).then((classIds) =>
+      this.files
+        .assertReadyReferences(
+          principal,
+          [
+            ...(prepared.fileId ? [prepared.fileId] : []),
+            ...prepared.inlineFileIds,
+            ...prepared.attachmentFileIds,
+          ],
+          unitId,
+          manager,
+          previous,
+          classIds,
+        )
+        .then(async (selected) => {
+          const old = await this.files.readSummaries(previous, manager);
+          return new Map([...old, ...selected]);
+        }),
+    );
   }
 
   private content(
@@ -417,10 +608,28 @@ export class ManagerMaterialsService {
     material: MaterialEntity,
     summaries: Map<string, FileSummary>,
     refs: MaterialFileReferenceEntity[],
+    detail: true,
+    canEdit?: boolean,
+    showReason?: boolean,
+  ): ManagerMaterialDetailDto;
+  private view(
+    material: MaterialEntity,
+    summaries: Map<string, FileSummary>,
+    refs: MaterialFileReferenceEntity[],
+    detail: false,
+    canEdit?: boolean,
+    showReason?: boolean,
+  ): ManagerMaterialDto;
+  private view(
+    material: MaterialEntity,
+    summaries: Map<string, FileSummary>,
+    refs: MaterialFileReferenceEntity[],
     detail: boolean,
+    canEdit = true,
+    showReason = true,
   ) {
     const file = material.fileObjectId ? summaries.get(material.fileObjectId) : undefined;
-    return {
+    const summary = {
       id: material.id,
       courseUnitId: material.courseUnitId,
       contentType: material.contentType,
@@ -437,24 +646,24 @@ export class ManagerMaterialsService {
       reviewedBy: material.reviewedBy,
       reviewedAt: material.reviewedAt,
       firstApprovedAt: material.firstApprovedAt,
-      rejectionReason: material.rejectionReason,
+      rejectionReason: showReason ? material.rejectionReason : null,
       publishedAt: material.publishedAt,
       createdAt: material.createdAt,
       updatedAt: material.updatedAt,
-      canEdit: true,
+      canEdit,
       file: file ? new StudentMaterialFileDto(file) : null,
-      ...(detail
-        ? {
-            contentHtml: material.contentHtml,
-            contentSchemaVersion: material.contentSchemaVersion,
-            inlineImages: refs
-              .filter((ref) => ref.role === MaterialReferenceRole.INLINE_IMAGE)
-              .map((ref) => new StudentMaterialFileDto(this.summary(ref.fileId, summaries))),
-            attachments: refs
-              .filter((ref) => ref.role === MaterialReferenceRole.ATTACHMENT)
-              .map((ref) => new StudentMaterialFileDto(this.summary(ref.fileId, summaries))),
-          }
-        : {}),
+    };
+    if (!detail) return summary;
+    return {
+      ...summary,
+      contentHtml: material.contentHtml,
+      contentSchemaVersion: material.contentSchemaVersion,
+      inlineImages: refs
+        .filter((ref) => ref.role === MaterialReferenceRole.INLINE_IMAGE)
+        .map((ref) => new StudentMaterialFileDto(this.summary(ref.fileId, summaries))),
+      attachments: refs
+        .filter((ref) => ref.role === MaterialReferenceRole.ATTACHMENT)
+        .map((ref) => new StudentMaterialFileDto(this.summary(ref.fileId, summaries))),
     };
   }
 

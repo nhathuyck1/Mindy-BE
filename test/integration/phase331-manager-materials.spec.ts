@@ -10,6 +10,7 @@ import { CoursesService } from '../../src/modules/catalog/services/courses.servi
 import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
 import { ClassContentContextService } from '../../src/modules/classes/services/class-content-context.service.js';
+import { MentorContentContextService } from '../../src/modules/classes/services/mentor-content-context.service.js';
 import { FileObjectEntity } from '../../src/modules/files/entities/file-object.entity.js';
 import type { FileKind } from '../../src/modules/files/files.contracts.js';
 import { FileUploadPolicyService } from '../../src/modules/files/services/file-upload-policy.service.js';
@@ -20,7 +21,7 @@ import {
 } from '../../src/modules/materials/entities/material.entity.js';
 import { MaterialAuditEventEntity } from '../../src/modules/materials/entities/material-audit-event.entity.js';
 import { MaterialFileReferenceEntity } from '../../src/modules/materials/entities/material-file-reference.entity.js';
-import { ManagerMaterialsService } from '../../src/modules/materials/services/manager-materials.service.js';
+import { MaterialAuthoringService } from '../../src/modules/materials/services/material-authoring.service.js';
 import { MaterialPolicyService } from '../../src/modules/materials/services/material-policy.service.js';
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
@@ -35,7 +36,7 @@ function unexpectedStorage(): never {
 describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
   let db: DataSource;
   let fixture: ReturnType<typeof paymentFixture>;
-  let service: ManagerMaterialsService;
+  let service: MaterialAuthoringService;
   let files: FilesService;
   let principal: AuthenticatedUser;
   beforeAll(async () => {
@@ -70,12 +71,13 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
       copy: unexpectedStorage,
       read: unexpectedStorage,
     });
-    service = new ManagerMaterialsService(
+    service = new MaterialAuthoringService(
       db,
       new MaterialPolicyService(fixture.users, courses, contexts, fixture.enrollments, uploads),
       files,
       courses,
       contexts,
+      new MentorContentContextService(db, fixture.users, courses, contexts),
     );
   }, 60000);
   afterAll(async () => {

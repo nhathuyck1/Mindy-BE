@@ -1,5 +1,13 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-13: Triển khai3.3.2 Mentor Unit/session context + typed own draft
+  create/list/detail/EDIT/delete/submit; current assignment/actor/ancestry dưới locks,
+  visibility trước count/page, pending retry no-op/audit, Origin/no-store.
+  Node22.20.0: `pnpm check`348/348 (31 suites), HTTP36/36 (2 suites), Files42/42
+  (1 suite), 0 skip; lint/type-check/build pass, upload Mentor PDF/MP4 thật trên MinIO.
+  Swagger/Postman22 requests/flow/API/plan/progress cập nhật; không migration mới3.3.2,
+  chưa merge/push/deploy/nghiệm thu VPS. Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-13: Triển khai3.3.1 Manager typed draft CRUD (ARTICLE/FILE/VIDEO),
   sanitizer/refs/audit/additive migration + batch locks/current actor/Origin;
   Swagger/Postman/DBML/flow/API cập nhật. `pnpm check`332/332 (30 suites),

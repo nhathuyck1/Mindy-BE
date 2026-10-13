@@ -17,6 +17,12 @@ import {
 export class ClassContentContextService {
   constructor(private readonly dataSource: DataSource) {}
 
+  async getClass(classId: string, manager: EntityManager): Promise<ClassEntity> {
+    const row = await manager.getRepository(ClassEntity).findOneBy({ id: classId });
+    if (!row) throw new ClassNotFoundException();
+    return row;
+  }
+
   /** Public transaction lock; callers never reach into the Classes repository. */
   async lockContentClass(classId: string, manager: EntityManager): Promise<void> {
     const row = await manager

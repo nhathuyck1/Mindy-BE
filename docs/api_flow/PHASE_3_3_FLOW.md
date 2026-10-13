@@ -1,6 +1,6 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-13**. **Manager CRUD3.3.1 đã implement local; chưa deploy. Mentor/review/release còn planned.**
+Cập nhật: **2026-10-13**. **Manager CRUD3.3.1 và Mentor context/submission3.3.2 đã implement local; chưa deploy. Review/release còn planned.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
@@ -9,7 +9,7 @@ Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
 Manager CRUD/ARTICLE/refs/audit3.3.1 đã có migration additive mới.
-Mentor/review/release còn planned; không sửa migration read đã chạy.
+Mentor context/submission3.3.2 đã có; review/release còn planned; không sửa migration read đã chạy.
 
 ## 1. Kết quả sản phẩm
 
@@ -38,15 +38,15 @@ và release của từng lớp vẫn quyết định khi Student đọc ở 3.4.
 
 ```mermaid
 flowchart TD
-  C["Mentor roster classId đã có"] -.-> U["3.3: unit/session context đúng assignment"]
+  C["Mentor roster classId đã có"] --> U["3.3.2: unit/session context đúng assignment"]
   M["Manager chọn Course Unit UUID"] --> K{"ARTICLE / FILE / VIDEO"}
   K -.-> H["ARTICLE: HTML đã sanitize; text-only không cần upload"]
   K --> UP["3.2 đã nghiệm thu: upload assets / PDF / MP4 → READY"]
-  U -.-> H
-  U -.-> UP
-  UP -.-> D["3.3: tạo typed Material DRAFT revision 1"]
-  H -.-> D
-  D -.-> S["Mentor submit → PENDING_REVIEW"]
+  U --> H
+  U --> UP
+  UP --> D["3.3.1/3.3.2: tạo typed Material DRAFT revision 1"]
+  H --> D
+  D --> S["3.3.2: Mentor submit → PENDING_REVIEW"]
   S -.-> Q["Manager queue/detail + expectedRevision"]
   Q -.-> A["Approve → APPROVED + publishedAt"]
   Q -.-> R["Reject + reason → REJECTED"]
@@ -156,3 +156,26 @@ List không HTML, detail không URL/storage secrets. Origin mutation bắt buộ
 canEdit=true chỉ Manager hint, BE kiểm lại. Postman Phase33/Swagger/DBML đã cập nhật.
 Local: check332/332 (30 suites), HTTP32/32 (2 suites), Files42/42 (1 suite), 0 skip.
 Evidence local/rollout và server cases xem progress3.3; chưa deploy/VPS acceptance.
+
+## 10. Triển khai 3.3.2 — 2026-10-13
+
+Luồng đã có local: Mentor login → roster classId → GET units lấy Class Unit id và
+courseUnitId → GET sessions optional → soạn ARTICLE hoặc upload own assets3.2 READY
+→ POST Mentor Unit materials DRAFT/revision1/provenance Class → GET list/detail →
+PATCH own DRAFT/REJECTED với expectedRevision → POST submit PENDING_REVIEW.
+Pending không sửa/xóa; gửi lại đúng revision giữ state/timestamps/audit. Rejected
+phải EDIT trước resubmit; Mentor từng approved không được sửa/xóa/submit lại.
+Manager decision/release tiếp tục planned3.3.3/3.3.4; DB fixtures chỉ kiểm rule.
+
+Visibility lọc trước count/page: shared published APPROVED + own never-approved
+đúng provenance Class. Session không filter shared content; Unit LOCKED/availableAt
+future không chặn Mentor metadata. Assignment revoke/cancel/disabled/role change
+chặn current access, kể cả tombstone retry; draft Mentor khác detail404/không lộ total.
+Mutations Origin allowlist, metadata no-store, batch summaries không storage secrets.
+
+Khóa Material→union files→actor FOR SHARE→union Classes UUID tăng dần trước recheck
+file scopes/submission/session, ARTICLE-only cũng khóa Class. Không migration3.3.2;
+reuse schema3.3.1. Swagger/Postman22 requests và [breakdown](PHASE_3_3_flow-api-breakdown.md)
+đồng bộ. Local Node22.20.0: check348/348 (31 suites), HTTP36/36 (2 suites), Files42/42
+(1 suite), 0 skip; gồm upload PDF/MP4 thật→READY→Mentor draft→submit và revoke/locks.
+Server cases tại [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md); chưa deploy/VPS acceptance.

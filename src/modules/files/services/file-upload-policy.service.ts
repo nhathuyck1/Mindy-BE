@@ -20,6 +20,19 @@ export class FileUploadPolicyService {
     private readonly courses: CoursesService,
     private readonly contexts: ClassContentContextService,
   ) {}
+
+  /** Batch reference mutations lock actor before every Class, including text-only submissions. */
+  async lockReferenceContext(
+    principal: AuthenticatedUser,
+    classIds: readonly string[],
+    manager: EntityManager,
+  ): Promise<void> {
+    const user = await this.users.findActiveByRole(principal.userId, principal.role, manager, true);
+    if (user === null || (user.role !== UserRole.MANAGER && user.role !== UserRole.MENTOR))
+      throw uploadPolicyException(new UploadPolicyError('MATERIAL_ACCESS_DENIED'));
+    for (const id of [...new Set(classIds)].sort())
+      await this.contexts.lockContentClass(id, manager);
+  }
   async authorizeUpload(
     principal: AuthenticatedUser,
     scope: UploadScope,
