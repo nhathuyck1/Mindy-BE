@@ -15,7 +15,7 @@ Phase 2.2 adds `03 — Phase 2.2 payOS (manual live payment)`. Set collection va
 create/reuse link, then **manually** pay via the checkout URL. Checkout/link requests
 save `order_id`/`payment_id`. Read own order/class after the provider webhook commits.
 Login ADMIN before review/reconcile requests. Do not post synthetic paid callbacks
-to live orders. For deployment, see [payOS runbook](../docs/PAYOS_PHASE_2_2_DEPLOYMENT.md).
+to live orders. For deployment, see [payOS runbook](../docs/implement_phase/phase2/PAYOS_PHASE_2_2_DEPLOYMENT.md).
 
 Phase 2.3 adds `05 — Phase 2.3 My Classes + schedule`. Login student, list My Classes
 (the first row saves `class_id`), then open `/me/classes/{{class_id}}` when `accessMode`
@@ -79,4 +79,15 @@ Use expected_revision from the latest detail; on409 refetch and explicitly decid
 again. Approve publishes, unpublish retains approval; approve retry does not republish.
 Publish/unpublish retries retain timestamps and produce no duplicate audit. Requires
 migrations through1791853200000; local verification only, VPS acceptance pending.
-Release and binary preview remain later slices.
+Release3.3.4 is now available locally; binary preview remains a later slice.
+
+## Phase 3.3.4 Class Unit release
+
+Phase33 collection adds Admin login and six Admin/Mentor release examples.
+Set admin_email/admin_password, class_id and class_unit_id; log in with the role
+matching the route (cookie jar replaces the previous identity). Mentor IDs come
+from the Unit picker; Admin IDs from class detail. Requires migration1791856800000.
+OPEN + future unlockAt waits for server time; LOCKED always blocks. Omit unlockAt
+to retain, null to clear. Retry equal values keeps timestamps/audit. On409 or lost
+response, refetch and choose again; no expectedRevision or automatic replay.
+Local checks and VPS acceptance are tracked separately in Phase3.3 progress.
