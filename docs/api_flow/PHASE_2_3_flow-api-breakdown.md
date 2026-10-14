@@ -412,6 +412,110 @@ Kiểm chứng local sau mở rộng3 lớp: query đúng2 ONLINE/1 OFFLINE,15 C
 30 Session,0 mentor conflict; rerun0 lớp. pnpm check298/298 pass (27 suites),
 lint/type-check/build pass; không có deploy/VPS evidence mới.
 
+## 5.3 Admin danh sách và chi tiết học sinh theo lớp
+
+Implement local ngày 2026-10-13; chưa có evidence deploy/VPS.
+Flow: [quản trị roster](PHASE_2_3_FLOW.md#bổ-sung-quản-trị-học-sinh-theo-lớp--2026-10-13).
+
+Hai API cần cookie `access_token` hợp lệ, role ADMIN. MANAGER/MENTOR/STUDENT
+không được đọc. Admin đọc mọi Class, không cần assignment; không giới hạn trạng
+thái Class. Chỉ đọc enrollment PENDING_PAYMENT, ACTIVE, COMPLETED, bỏ CANCELLED.
+Student SUSPENDED vẫn hiển thị. Không có body/header idempotency, không side effect,
+không xác nhận thanh toán, không gọi PayOS. Gọi lặp trả trạng thái hiện tại.
+
+### GET /api/v1/admin/classes/:classId/students
+
+Màn hình chi tiết lớp/tab học sinh gọi sau `GET /api/v1/admin/classes`;
+`classId` lấy từ `items[].id`. Admin class detail hiện có vẫn trả units/sessions.
+Path `classId` bắt buộc UUID. Query chỉ có `page` (integer ≥1, default 1)
+và `pageSize` (integer 1–100, default 20). Query thừa bị reject 422.
+Sort đăng ký mới nhất trước, tie-break enrollment ID ASC; total tính trước phân trang.
+
+```http
+GET /api/v1/admin/classes/11111111-1111-4111-8111-111111111111/students?page=1&pageSize=20
+Cookie: access_token=<token>
+```
+
+200 trả trực tiếp page, không có wrapper `data`:
+
+```json
+{
+  "items": [{
+    "studentId": "22222222-2222-4222-8222-222222222222",
+    "studentName": "Nguyễn An",
+    "email": "an@example.test",
+    "phone": null,
+    "studentStatus": "ACTIVE",
+    "enrollmentId": "33333333-3333-4333-8333-333333333333",
+    "enrollmentStatus": "PENDING_PAYMENT",
+    "enrolledAt": null
+  }],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1
+}
+```
+
+`studentId` dùng mở detail; `studentName/email/phone` dùng hiển thị/liên hệ;
+phone nullable. `studentStatus`: ACTIVE/SUSPENDED (account);
+`enrollmentStatus`: PENDING_PAYMENT/ACTIVE/COMPLETED (đăng ký).
+`enrolledAt` là ISO timestamp UTC khi enrollment được activate, null lúc pending.
+`enrollmentId` định danh đăng ký, không dùng thay studentId. Pending không chứng
+minh đã thanh toán. Class tồn tại nhưng chưa có học sinh hoặc trang vượt total
+trả 200 `items: []`; total vẫn là tổng roster. Mỗi học sinh có tối đa một enrollment
+còn hiệu lực theo partial unique index hiện có.
+
+### GET /api/v1/admin/classes/:classId/students/:studentId
+
+FE bấm học sinh trong roster, truyền cùng classId và `items[].studentId` (UUID).
+Không có query/body. Không dùng `GET /admin/users/:userId` thay thế check membership.
+200 trả object có toàn bộ fields của một roster item, bổ sung:
+
+```json
+{
+  "studentId": "22222222-2222-4222-8222-222222222222",
+  "studentName": "Nguyễn An",
+  "email": "an@example.test",
+  "phone": null,
+  "studentStatus": "ACTIVE",
+  "enrollmentId": "33333333-3333-4333-8333-333333333333",
+  "enrollmentStatus": "ACTIVE",
+  "enrolledAt": "2026-10-13T03:10:00.000Z",
+  "classId": "11111111-1111-4111-8111-111111111111",
+  "orderDetailId": "44444444-4444-4444-8444-444444444444",
+  "registeredAt": "2026-10-13T03:00:00.000Z",
+  "accountCreatedAt": "2026-10-01T03:00:00.000Z",
+  "lastLoginAt": "2026-10-13T02:55:00.000Z"
+}
+```
+
+`registeredAt`: tạo enrollment/giữ chỗ; `accountCreatedAt`: tạo account;
+`lastLoginAt`: login cuối, nullable. Tất cả timestamps trả ISO UTC, FE chuyển timezone
+khi hiển thị. `orderDetailId` là UUID dòng order, không phải orderId. Không trả
+password/hash/token và không có payment summary/progress/attendance trong detail này.
+Student không có enrollment còn hiệu lực trong đúng Class (kể cả chỉ có CANCELLED)
+trả 404 CLASS_STUDENT_NOT_FOUND.
+
+### Lỗi, UI và kiểm chứng
+
+| Status/code | FE xử lý |
+|---|---|
+| 401 (auth guard) | Đăng nhập lại, clear cache |
+| 403 (role guard) | Ẩn quyền quản trị, không retry |
+| 400 HTTP_ERROR | Path không phải UUID; sửa ID |
+| 422 HTTP_ERROR | Query list sai/thừa; sửa phân trang |
+| 404 CLASS_NOT_FOUND | Class không tồn tại, quay lại danh sách lớp |
+| 404 CLASS_STUDENT_NOT_FOUND | Học sinh không thuộc roster hiện tại; refetch list |
+
+Error envelope `{statusCode, code, message, details?, requestId?}` theo filter hiện có.
+Tab roster/detail có loading/empty/success/error; giữ page khi refetch, cache theo
+actor/classId/studentId và clear khi logout. Không cần polling; refetch sau checkout,
+payment/enrollment/account-status change hoặc khi mở lại tab. Không optimistic ghi
+đăng ký từ GET. Prerequisite: deploy BE mới, các migration users/classes/enrollments
+hiện có, cookie/CORS đúng origin FE. Hai HTTP case mới pass trên DB test riêng:
+401/403/400/422/404, Swagger, list/detail, empty/page bounds, pending/active/completed,
+suspended account, bỏ cancelled và học sinh ở lớp khác. Chưa deploy/VPS.
+
 ## 6. Refetch, polling và prerequisite
 
 - Login/checkout → list; nhận PAID từ own order hoặc CASH confirm → refetch list,

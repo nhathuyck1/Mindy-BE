@@ -15,6 +15,15 @@ export function configureApp(app: NestExpressApplication): void {
   app.use(compression());
   app.use(cookieParser());
   app.use(requestContextMiddleware);
+  app.useBodyParser('json', {
+    limit: '256kb',
+    type: (req) =>
+      req.method === 'POST' &&
+      /^\/api\/v1\/management\/class-sessions\/[^/]+\/attendance\/recover\/?(?:\?|$)/.test(
+        req.url ?? '',
+      ) &&
+      /^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? ''),
+  });
   app.useBodyParser('json', { limit: '64kb' });
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });

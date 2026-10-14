@@ -1,4 +1,6 @@
+import type { EnrollmentEntity } from '../../enrollments/entities/enrollment.entity.js';
 import type { EnrollmentStatus } from '../../enrollments/enums/enrollment-status.enum.js';
+import type { UserEntity } from '../../users/user.entity.js';
 import type { ClassEntity } from '../entities/class.entity.js';
 import type { ClassSessionEntity } from '../entities/class-session.entity.js';
 import type { ClassUnitEntity } from '../entities/class-unit.entity.js';
@@ -19,6 +21,11 @@ export interface ClassUnitView {
 
 export interface ClassDetailView extends ClassView {
   readonly units: ClassUnitView[];
+}
+
+export interface AdminClassStudentView {
+  readonly enrollment: EnrollmentEntity;
+  readonly student: UserEntity;
 }
 
 /** The signed-in student's enrollment that authorizes a class read. */

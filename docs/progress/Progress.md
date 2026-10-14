@@ -1,5 +1,85 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-13 — Implement ADMIN class roster và student detail:
+  GET `/api/v1/admin/classes/:classId/students` (page/pageSize) và
+  GET `/api/v1/admin/classes/:classId/students/:studentId`. GET class list/detail
+  đã có và giữ contract. Roster chỉ enrollment PENDING_PAYMENT/ACTIVE/COMPLETED;
+  detail kiểm đúng cặp Class/Student, account SUSPENDED vẫn đọc được. DTO contact/
+  enrollment rõ ràng, không password/token; cross-module reads qua exported services,
+  không migration, không ghi payment/access. Đồng bộ Phase2.3 flow/breakdown và FE
+  contract Phase2. Local: changed-file Biome, type-check/build pass; built-app HTTP
+  Phase2.2 **13/13** pass (2 case mới). Full PostgreSQL suite **357/359** pass:
+  2 case `requires reason and state but not a deadline for ADMIN/MANAGER` trong
+  `phase42-attendance.spec.ts` fail vì mong reject SESSION_STATE_CONFLICT nhưng
+  recovery resolve. `pnpm check` dừng ở format của file ngoài phạm vi
+  `attendance-payment-evidence.service.ts`. Không sửa attendance trong increment này.
+  DB riêng `mindy_admin_roster*_test`, không migrate development/VPS; chưa deploy.
+  [Breakdown](../api_flow/PHASE_2_3_flow-api-breakdown.md#53-admin-danh-sách-và-chi-tiết-học-sinh-theo-lớp).
+
+- 2026-10-13 — Tiếp planning4.3 theo4.1/4.2: correction sau chốt/Staff canceled,
+  Staff audit reader và legacy/terminal recovery có evidence. Tạo22 AC,16 test
+  scenarios/5 bước triển khai, ma trận AC→source→tests→gaps và detailed FE contract;
+  giữ deadline hết ngày học kế tiếp, không actual start+24h. Ghi payment lineage/
+  CASH late admission basis và parser limit riêng cho recover1000 rows là gates.
+  Đồng bộ index/Phase4/combined flow. [Plan4.3](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md),
+  [Progress4.3](phase%204/PHASE_4_3_PROGRESS.md),
+  [Flow4.3](../api_flow/PHASE_4_3_FLOW.md),
+  [API4.3](../api_flow/PHASE_4_3_flow-api-breakdown.md).
+  Chỉ Markdown/source review;4.3 chưa implement, không BE runtime tests/DB
+  migration execution/FE/deploy mới. Totals359/33 của4.2 là baseline lịch sử.
+
+- 2026-10-13 — Sửa theo plan4.1/4.2 và steering thời gian: không overnight,
+  deadline Mentor hết ngày kế tiếp của ngày học trên lịch (thứ Ba→00:00 thứ Năm)
+  theo APP_TIME_ZONE, không actual start+24h. Context provider current role/status
+  checks; start clock sau mentor lock; additive migration1791849600002 giữ history
+  và bump version khi sửa stored deadline. Bổ sung mixed-writer/edge/Staff HTTP
+  tests, đóng GAP41-04–06/GAP42-07–09 local. **pnpm check359/359/36 suites,
+  lint/type-check/build pass; test:http33/33/4 suites**, không skip. PostgreSQL17
+  riêng *_test + MinIO test local; fake PayOS. Không FE/dev/VPS migrate/deploy/
+  commit/push. Student/material/leave/correction/legacy/cancel/guest/release vẫn
+  theo4.3–4.5. Chi tiết [Progress4.1](phase%204/PHASE_4_1_PROGRESS.md) /
+  [Progress4.2](phase%204/PHASE_4_2_PROGRESS.md), mục8.
+
+- 2026-10-13 — Viết plan chi tiết riêng4.1/4.2 rồi review migration/controllers/
+  services/DTO/test assertions với plan và progress. Core có implementation;
+  Student schedule vẫn Class mentor, full recovery/correction/cancel/material/
+  approved leave/guest/release còn mở. Ghi riêng coverage gaps về mixed-writer
+  races/edge/Staff HTTP và owner/gate; đồng bộ flow/API/index/current state.
+  [Plan4.1](../implement_phase/phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md),
+  [Plan4.2](../implement_phase/phase%204/PHASE_4_2_SESSION_ATTENDANCE.md),
+  [Progress4.1](phase%204/PHASE_4_1_PROGRESS.md),
+  [Progress4.2](phase%204/PHASE_4_2_PROGRESS.md).
+  Chỉ Markdown/diff/link/source review; không BE runtime tests/migrations/FE/deploy.
+  Các tổng check310/328 và HTTP29/30 bên dưới là evidence lịch sử implementation.
+
+- 2026-10-13: Triển khai4.2 AttendanceModule/migration, start/ACTIVE snapshot,
+  CASH admission/sync, regular mark/unmark/finalize và staff start/end recovery.
+  Composite cùng Class, clock24h/current assignment/version/audit/idempotency,
+  Class completion guard. `pnpm check`328/328 (35 suites), `pnpm test:http`30/30
+  (4 suites), PostgreSQL races/up-down-up/rollback refusal pass local.
+  Không FE/migrate dev/deploy/VPS/live payment. Tiếp4.3 corrections/audit/legacy
+  recovery, Student projections/leave/guest còn4.4.
+  [Progress4](phase%204/PHASE_4_PROGRESS.md),
+  [contract4.2](../api_flow/PHASE_4_flow-api-breakdown.md#15-implemented42--contract-thực-tế-và-handoff).
+
+- 2026-10-13: Triển khai mốc4.1 mentor availability/substitution, management
+  reads, effective schedule checker, mentor schedule/context, assignment/version/
+  audit/idempotency migration. pnpm check310/310 (31 suites), test:http29/29
+  (3 suites), PostgreSQL races và migration up/down/up/refusal pass local.
+  Không sửa FE/migrate dev/deploy/VPS/live payment. Tiếp4.2 lifecycle/roster.
+  [Progress4](phase%204/PHASE_4_PROGRESS.md), [contract4.1](../api_flow/PHASE_4_flow-api-breakdown.md#14-implemented41--contract-thực-tế-và-handoff).
+
+- 2026-10-13: Lập plan backend3.4 phối hợp3.3 theo user: người khác triển khai
+  3.3–3.6, user nhận deploy/server acceptance; FE do nhóm riêng, repo FE local
+  chỉ đọc. Preview PDF/MP4 và staff assets3.4 cùng mốc review3.3.3; typed Student
+  reader sau contract3.3.1, server journey sau publication/release. Một chủ schema/
+  migration additive, tái dùng ba Student FILE/VIDEO GET hiện có; contract GET
+  preview/assets + expectedRevision là dự kiến chưa implement. Đồng bộ plans,
+  flow/API/index/progress và handoff SHA/migrations/config/checks/Postman/smoke/
+  rollback. Chỉ tài liệu BE, không source/FE/migration/runtime tests/deploy.
+  [Plan3.4](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md),
+  [progress3.4](phase%203/PHASE_3_4_PROGRESS.md).
+
 - 2026-10-12: Theo yêu cầu seed3 lớp/3 Course, current demo gồm HTML/CSS và JS
   ONLINE, Python OFFLINE, mỗi lớp10 buổi thứ3/thứ7. Seed tạo thêm2 lớp cạnh HTML
   đã có, query local xác minh15 Class Unit/30 Session/0 mentor conflict; rerun0
@@ -40,6 +120,25 @@ Assignment
 Compiler / Judge
 
 ## Documentation updates
+
+- 2026-10-13 — review bổ sung Phase4: user chốt mở điểm danh trong ngày/overnight,
+  recovery legacy có chứng cứ, không giữ slot quá endsAt, completion chặn buổi
+  chưa xử lý; mentor nghỉ theo range/period trước hai ngày lịch có Manager duyệt.
+  Nghỉ buổi hỗ trợ slot/manual tránh student conflicts; FULL_DAY đổi ngày giữ
+  giờ và ghi học viên trùng. Bổ sung root replacement/auto endDate và học bù lớp
+  khác cùng Course Unit với placement/guest attendance/credit một lần.
+  Đồng bộ plan4/flow/API/progress và các dẫn chiếu; chỉ Markdown, chưa code/
+  migration/test BE/FE/deploy. Notification/email tự động còn hoãn.
+
+- 2026-10-13: User duyệt nghiệp vụ điểm danh và yêu cầu Manager tìm mentor trống
+  lịch/dạy thay; lập [plan Phase4](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
+  gồm4.1–4.5, phân công buổi vs lớp/effective mentor, transaction conflict recheck,
+  24h từ actual start, roster/CASH activation, audit/version/idempotency,
+  Student history/summary, thiếu điểm danh và makeup. Phase4 chạy song song
+  Phase3; giữ payment snapshot/materials policy. Đồng bộ
+  [flow/API](../api_flow/PHASE_4_FLOW.md), index/course/core/combined flow và
+  [progress4](phase%204/PHASE_4_PROGRESS.md). Chỉ tài liệu, kiểm diff/link;
+  chưa migrate/implement/chạy BE tests/deploy/nghiệm thu VPS Phase4.
 
 - 2026-10-12: User chốt mọi account tạo mới password6–128. Sửa CreateUserDto/
   Swagger từ12→6, FE schema/error/form hint6 và active runbooks. BE check298tests/
@@ -654,3 +753,15 @@ Compiler / Judge
   - Not done: automated HTTP E2E tests (Vitest/esbuild does not emit decorator metadata, so
     booting Nest in tests needs an SWC plugin decision), Postman collection update, staging
     smoke. Phase 1 exit criteria are still open as noted above.
+
+### 2026-10-13 — Phase4.3 implementation
+
+Correction COMPLETED/Staff CANCELLED, Staff audit reader và insert-only historical
+evidence recovery đã có. Migration1791849600003 giữ clocks/actors/history và exact
+paid lineage;route-specific256KiB/1000 rows đã test built app. Focused31 PG/2 migration/
+5 domain/4 HTTP pass; full regression gate và gap status theo [Progress4.3](phase%204/PHASE_4_3_PROGRESS.md).
+GAP42-01–03 đã có implementation/evidence4.3,Student/guest/cancel/leave/release vẫn
+4.4–4.5. Không FE/dev migration/VPS deploy/giao dịch thật mới trong lượt này.
+
+Evidence4.3 cuối lượt:pnpm check397/397 tests/39 suites,HTTP39/39 tests/5 suites,
+0 skip;GAP43-01–08/GAP42-01–03 đóng local,server/browser/release4.5 vẫn mở.

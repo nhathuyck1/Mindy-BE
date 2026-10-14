@@ -12,14 +12,17 @@ import { EnrollmentsService } from '../../enrollments/services/enrollments.servi
 import { UsersService } from '../../users/users.service.js';
 import { toLocalDate } from '../domain/class-calendar.js';
 import { isClassOpenForPurchase } from '../domain/class-lifecycle.js';
-import type { ClassDetailView, ClassView } from '../domain/class-views.js';
+import type { AdminClassStudentView, ClassDetailView, ClassView } from '../domain/class-views.js';
 import type { AdminClassPageOptionsDto } from '../dtos/class-page-options.dto.js';
 import { ClassEntity } from '../entities/class.entity.js';
 import { ClassSessionEntity } from '../entities/class-session.entity.js';
 import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 import type { DeliveryMode } from '../enums/delivery-mode.enum.js';
-import { ClassNotFoundException } from '../exceptions/class.exceptions.js';
+import {
+  ClassNotFoundException,
+  ClassStudentNotFoundException,
+} from '../exceptions/class.exceptions.js';
 
 export interface OpenClassFilter {
   readonly courseId?: string;
@@ -112,6 +115,45 @@ export class ClassReadService {
     }
 
     return this.loadDetail(this.dataSource.manager, classEntity);
+  }
+
+  async listStudentsForManagement(
+    classId: string,
+    page: PageRequest,
+  ): Promise<{ items: AdminClassStudentView[]; total: number }> {
+    await this.assertClassExists(classId);
+    const result = await this.enrollmentsService.listForClass(classId, page);
+    const students = await this.usersService.findByIds(result.items.map((row) => row.studentId));
+    const studentById = new Map(students.map((student) => [student.id, student]));
+    return {
+      items: result.items.map((enrollment) => {
+        const student = studentById.get(enrollment.studentId);
+        if (student === undefined) throw new ClassStudentNotFoundException();
+        return { enrollment, student };
+      }),
+      total: result.total,
+    };
+  }
+
+  async getStudentForManagement(
+    classId: string,
+    studentId: string,
+  ): Promise<AdminClassStudentView> {
+    await this.assertClassExists(classId);
+    const enrollment = await this.enrollmentsService.findEffectiveForClassStudent(
+      classId,
+      studentId,
+    );
+    if (enrollment === null) throw new ClassStudentNotFoundException();
+    const [student] = await this.usersService.findByIds([studentId]);
+    if (student === undefined) throw new ClassStudentNotFoundException();
+    return { enrollment, student };
+  }
+
+  private async assertClassExists(classId: string): Promise<void> {
+    if (!(await this.dataSource.getRepository(ClassEntity).existsBy({ id: classId }))) {
+      throw new ClassNotFoundException();
+    }
   }
 
   /** A class is public only while it can be purchased; anything else reads as not found. */

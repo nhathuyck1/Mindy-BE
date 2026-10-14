@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -9,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UnprocessableEntityException,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,12 +20,20 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-
+// biome-ignore lint/style/useImportType: Nest query validation needs runtime DTO metadata.
+import { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
+import type { AuthenticatedUser } from '../../auth/auth.types.js';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import {
+  AdminClassStudentDetailDto,
+  AdminClassStudentDto,
+  AdminClassStudentPageDto,
+} from '../dtos/admin-class-student.dto.js';
 import {
   ClassManagementDetailDto,
   ClassManagementDto,
@@ -46,6 +56,8 @@ import {
 import { ClassReadService } from '../services/class-read.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ClassesService } from '../services/classes.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { TeachingAssignmentService } from '../services/teaching-assignment.service.js';
 
 @ApiTags('admin-classes')
 @Controller('admin/classes')
@@ -57,6 +69,7 @@ export class AdminClassesController {
   constructor(
     private readonly classesService: ClassesService,
     private readonly readService: ClassReadService,
+    private readonly assignments: TeachingAssignmentService,
   ) {}
 
   @Get()
@@ -91,6 +104,38 @@ export class AdminClassesController {
     return new ClassManagementDetailDto(await this.classesService.create(dto));
   }
 
+  @Get(':classId/students')
+  @ApiOperation({ summary: 'List pending, active and completed students in a class for admin' })
+  @ApiOkResponse({ type: AdminClassStudentPageDto })
+  @ApiErrors(HttpStatus.BAD_REQUEST, HttpStatus.NOT_FOUND, HttpStatus.UNPROCESSABLE_ENTITY)
+  async students(
+    @Param('classId', new ParseUUIDPipe()) classId: string,
+    @Query() options: PageOptionsDto,
+  ): Promise<AdminClassStudentPageDto> {
+    const result = await this.readService.listStudentsForManagement(classId, options);
+    return new AdminClassStudentPageDto(
+      result.items.map((view) => new AdminClassStudentDto(view)),
+      options.page,
+      options.pageSize,
+      result.total,
+    );
+  }
+
+  @Get(':classId/students/:studentId')
+  @ApiOperation({
+    summary: 'Get student contact and registration details within a class for admin',
+  })
+  @ApiOkResponse({ type: AdminClassStudentDetailDto })
+  @ApiErrors(HttpStatus.BAD_REQUEST, HttpStatus.NOT_FOUND)
+  async student(
+    @Param('classId', new ParseUUIDPipe()) classId: string,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ): Promise<AdminClassStudentDetailDto> {
+    return new AdminClassStudentDetailDto(
+      await this.readService.getStudentForManagement(classId, studentId),
+    );
+  }
+
   @Patch(':classId')
   @ApiOperation({
     summary: 'Update a class; dates, capacity and delivery mode are editable only in DRAFT',
@@ -100,7 +145,31 @@ export class AdminClassesController {
   async update(
     @Param('classId', new ParseUUIDPipe()) classId: string,
     @Body() dto: UpdateClassDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Headers('idempotency-key') key: string | undefined,
   ): Promise<ClassManagementDetailDto> {
+    if (dto.mentorId !== undefined) {
+      if (
+        dto.expectedVersion === undefined ||
+        dto.reason === undefined ||
+        Object.keys(dto).some((field) => !['mentorId', 'expectedVersion', 'reason'].includes(field))
+      ) {
+        throw new UnprocessableEntityException(
+          'Assign mentors separately using reason and expectedVersion',
+        );
+      }
+      await this.assignments.assignClass(
+        classId,
+        {
+          mentorId: dto.mentorId,
+          expectedVersion: dto.expectedVersion,
+          reason: dto.reason.trim(),
+        },
+        actor,
+        key,
+      );
+      return new ClassManagementDetailDto(await this.readService.getDetail(classId));
+    }
     return new ClassManagementDetailDto(await this.classesService.update(classId, dto));
   }
 

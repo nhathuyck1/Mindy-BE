@@ -18,6 +18,9 @@ export class ClassEntity extends TimestampedEntity {
   @Column({ name: 'mentor_id', type: 'uuid' })
   mentorId!: string;
 
+  @Column({ name: 'assignment_version', type: 'integer', default: 1 })
+  assignmentVersion!: number;
+
   @Column({ name: 'code', type: 'varchar', length: 50, unique: true })
   code!: string;
 

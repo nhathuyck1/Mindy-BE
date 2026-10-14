@@ -1,8 +1,14 @@
 # Phase 3.3 — Material management, review và Class Unit release
 
-Cập nhật: **2026-10-12**. **Plan triển khai; chưa implement/nghiệm thu 3.3.**
+Cập nhật: **2026-10-13**. **Plan triển khai; chưa implement/nghiệm thu 3.3.**
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
+
+Điều phối user2026-10-13: người khác triển khai **3.3–3.6**, user nhận bàn giao
+deploy/nghiệm thu server. **FE là nhóm riêng; repo FE local chỉ để đọc, không sửa.**
+[Plan 3.4 phối hợp](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) đưa staff preview/asset
+access vào cùng mốc review3.3.3, Student typed reader làm sau contract3.3.1;
+không yêu cầu chờ hoàn tất toàn3.3 mới bắt đầu3.4.
 
 Ngoại lệ thứ tự theo yêu cầu user2026-10-12: [ba Student FILE/VIDEO GET3.4](../../api_flow/PHASE_3_4_FLOW.md)
 đã có read persistence tối thiểu + signed GET. CRUD/review/release/ARTICLE3.3
@@ -68,10 +74,13 @@ D6 file-only được thay bằng ARTICLE/FILE/VIDEO theo yêu cầu user 2026-1
 Mentor context picker, Class Unit release/audit, Swagger/Postman, tests và server
 acceptance workflow. Manager đọc ARTICLE đã sanitize ở detail để duyệt ngay 3.3.
 
-**Bàn giao 3.4** Student list/detail/asset access, Manager/Mentor binary preview,
-signed GET đúng object version và MP4 Range/seek/expiry. 3.3 chưa đủ human review
-binary; không dùng upload PUT hoặc Files status API làm download tạm.
-Metadata extraction/cleanup/purge ở 3.5; FE/full journey ở 3.6.
+**Phối hợp 3.4** Student list/detail/asset access, Manager/Mentor binary preview,
+signed GET đúng object version và MP4 Range/seek/expiry. Staff primary preview
+triển khai sau draft persistence3.3.1, Mentor consumer sau context3.3.2;
+staff inline/attachment access sau refs3.3.1. **Nghiệm thu human review3.3.3 cần
+preview/asset access tương ứng**, cùng mốc thay vì đợi toàn3.3 xong.
+Không dùng upload PUT hoặc Files status API làm download tạm.
+Metadata extraction/cleanup/purge ở3.5; BE full journey ở3.6, FE do nhóm riêng làm.
 Không thêm external video, HLS/transcode, snapshot nội dung, assignment/chat/compiler
 hoặc quyền học cho enrollment COMPLETED; CASH/PayOS/holds/mail giữ baseline.
 
@@ -239,19 +248,28 @@ progress/payment. LOCKED luôn chặn; OPEN + future unlockAt đợi serverNow, 
 |---|---|---|---|
 | 3.3.1 Typed Manager draft | Spike sanitizer/locks; typed domain; migrations/entities/refs/audit; Files batch summary/reference provider; Manager create/list/detail/PATCH/delete | ARTICLE-only/XSS/bounds, FILE/VIDEO kind/scope, replacement rollback, DB constraints/migration/locks, safe list/detail | Manager tạo/đọc/sửa ARTICLE; attach PDF/MP4 READY3.2; stale PATCH409; soft-delete; refs ngoại scope bị chặn |
 | 3.3.2 Mentor submission | Unit/session context; assigned list/detail/own create/edit/delete/submit | Mapping/ancestry, hidden count, assignment/cancel race, rejected-resubmit fixtures, Files regression | Mentor lấy IDs→draft ARTICLE/FILE/VIDEO→submit; khóa pending edit; Mentor khác không thấy draft; revoke chặn access |
-| 3.3.3 Review/publication | Queue filters, approve/reject/publish/unpublish, safe DTO/canEdit | Decision/PATCH races, idempotency audit, firstApprovedAt, edit revoke approval | Manager queue→review ARTICLE/reject→Mentor sửa/resubmit→approve; unpublish/publish; sửa published về DRAFT; binary preview chờ3.4 |
+| 3.3.3 Review/publication + mốc preview3.4 | Queue filters, approve/reject/publish/unpublish, safe DTO/canEdit; phối hợp3.4.1 primary preview và3.4.3 staff assets | Decision/PATCH races, idempotency audit, firstApprovedAt, edit revoke approval; preview/review cùng revision | Manager xem ARTICLE/PDF/MP4 và refs→reject/resubmit/approve; unpublish/publish; sửa published về DRAFT; human review cần evidence preview riêng |
 | 3.3.4 Class Unit release | Classes service/controller/DTO/release audit | Class/unit lock, assignment race, null/omitted/time bounds, completed/cancelled, audit rollback | Admin/Mentor OPEN/LOCKED/lịch; release hai lớp độc lập, không ảnh hưởng Material/enrollment; conflict completed |
-| 3.3.5 Acceptance/handoff | Full regressions; Swagger/Postman/DBML/flow/progress; bàn giao providers/fixtures3.4 | pnpm check + test:http + test:files, no critical skips; migration gate | Toàn workflow metadata3.2→3.3 cả3 loại; ghi release SHA/migration IDs/cases/results; user xác nhận3.3 |
+| 3.3.5 Acceptance/handoff | Full regressions; Swagger/Postman/DBML/flow/progress; providers/fixtures3.4 và handoff deploy cho user | pnpm check + test:http + test:files, no critical skips; migration gate | Workflow3.2→3.3 cả3 loại + preview review; ghi release SHA/migration IDs/cases/results; user deploy/nghiệm thu, nhóm FE tích hợp riêng |
 
 Mỗi slice gồm migration/service/API/tests/docs phù hợp, build reviewable trước
 rollout. Khi deploy: backup DB, migrations additive, deploy app, health/auth smoke,
 chạy cases slice, ghi evidence riêng. Sau mỗi slice cập nhật plan/progress/flow/API;
 không ghi server pass khi chỉ local pass.
 
+Thứ tự chung A–E và API preview/asset đề xuất nằm ở [plan3.4](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
+3.3.1 sở hữu migration/entity/typed policy/refs;3.4 sở hữu readers/access consumers.
+Một người sửa schema/policy chung tại một thời điểm, bàn giao nullable primary,
+canonical HTML/refs và fixtures trước merge reader. Không tạo thêm bảng materials3.4.
+Student reader/assets có thể phát triển bằng fixtures sau3.3.1; server happy path
+phải có approve/publication3.3.3 và release3.3.4 thực sự.
+
 Ước lượng **7–10 ngày công BE**, provisional:3.3.1 2,5–3,5;3.3.2 1–1,5;
 3.3.3 1–1,5;3.3.4 0,5–1;3.3.5 1–1,5. Chốt lại sau spike sanitizer/batch locks.
 Bao gồm tài liệu/checks và chuẩn bị acceptance; chưa tính chờ môi trường/user,
-FE hoặc signed GET/video playback3.4. Estimate5–7 ngày bản file-only đã thay thế.
+FE hoặc signed GET/video playback3.4. Preview phối hợp vẫn tính effort3.4 riêng;
+không cộng chồng hoặc suy ra thời gian lịch giảm một nửa khi một người làm cả hai.
+Estimate5–7 ngày bản file-only đã thay thế.
 
 ## 8. Test matrix và Definition of Done
 
@@ -267,18 +285,27 @@ FE hoặc signed GET/video playback3.4. Estimate5–7 ngày bản file-only đã
 
 Chạy pnpm check, pnpm test:http, pnpm test:files khi implement, dedicated DB *_test
 và bucket fixture riêng; báo suites/tests/skips thực tế. Có MinIO thật cho
-READY→Material happy path; không ký GET trong tests3.3. Student pending/locked
+READY→Material happy path; tests phối hợp preview3.4 có signed GET riêng. Student pending/locked
 body/assets leak và video Range/seek/expiry là runtime acceptance **3.4**.
 
 - [x] 3.2 nghiệm thu xong; plan ARTICLE/FILE/VIDEO thống nhất, flow/API/progress đồng bộ.
 - [ ] Typed domain/sanitizer/schema/refs/audits/lock protocol và migration SQL được review/test.
 - [ ] Manager/Mentor APIs + release chạy đúng quyền/revision/visibility, full local gates pass.
-- [ ] Mỗi slice có server evidence riêng; không skip critical cases hoặc claim binary review đã xong.
+- [ ] Review3.3.3 + staff preview/assets3.4 nghiệm thu cùng mốc; evidence API và human/browser review ghi riêng.
+- [ ] Mỗi slice có server evidence riêng; không skip critical cases hoặc claim binary review từ metadata tests.
 - [ ] Swagger/Postman/DBML/API breakdown phản ánh source thực; user nghiệm thu3.3.
 - [ ] Bàn giao3.4 typed read view/verified refs/policy/release/fixtures/error contracts.
 
-3.4 thêm signed GET đúng verified version, TTL<=60s/no-store, recheck quyền khi
-refresh URL; assetId phải thuộc Material. MP4 kiểm Range206/seek/expiry/refresh
+3.4 tái dùng signed GET FILE/VIDEO đã có, mở rộng staff preview và scoped assets
+đúng verified version, TTL<=60s/no-store; recheck quyền/revision/ref khi refresh URL.
+fileId của asset phải thuộc Material. MP4 kiểm Range206/seek/expiry/refresh
 giữ play state và ingress cap thực tế theo runbook3.2. 3.5 dùng primary FK +
 reference table + soft-delete/audit để không purge binary còn reference.
 Lượt này chỉ lập plan; chưa migration/source/FE/runtime tests/deploy3.3.
+
+## 9. Điều phối planning — 2026-10-13
+
+Theo user, 3.3–3.6 do người khác triển khai; user nhận deploy/server acceptance,
+FE do nhóm riêng. Thêm plan3.4 phối hợp và đưa preview/asset access vào mốc
+review3.3.3; Student ARTICLE consumer sau typed contract3.3.1, server journey
+sau approve/release. Chỉ cập nhật tài liệu, không sửa source/FE, migrate hoặc deploy.

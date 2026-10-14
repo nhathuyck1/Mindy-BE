@@ -23,6 +23,7 @@ import { PaymentConfirmationEmailEntity } from './entities/payment-confirmation-
 import { PaymentTransactionEntity } from './entities/payment-transaction.entity.js';
 import { PaymentWebhookEventEntity } from './entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from './entities/payos-payment-detail.entity.js';
+import { AttendancePaymentEvidenceService } from './services/attendance-payment-evidence.service.js';
 import { CashPaymentsService } from './services/cash-payments.service.js';
 import { MentorClassRosterService } from './services/mentor-class-roster.service.js';
 import { PaymentEmailService } from './services/payment-email.service.js';
@@ -56,6 +57,7 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
     MentorClassRosterController,
   ],
   providers: [
+    AttendancePaymentEvidenceService,
     CashPaymentsService,
     MentorClassRosterService,
     PayosAdapter,
@@ -66,5 +68,6 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
     PaymentEmailService,
     PaymentEmailWorker,
   ],
+  exports: [AttendancePaymentEvidenceService],
 })
 export class PaymentsModule {}

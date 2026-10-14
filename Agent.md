@@ -1,6 +1,7 @@
 This is not the normal nestjs you know. Before coding, check docs folder for all the logic and plan. Also after do something, write an update to the PROGRESS.md.
 Every phase will have it own implement plan and progress file.
 
+DO NOT TOUCH FE CODE, THE FE repo u can see its only for readonly
 Every time work is done in a phase (planning, implementation, fixes, review,
 tests, documentation or deployment), record it in that phase's Markdown flow
 documentation under `docs/api_flow/`, alongside the existing combined flow.
@@ -25,6 +26,8 @@ Preserve full payment, online confirmation email, cash pending preview and assig
 mentor cash confirmation from Flow.txt; pending group chat/DM is deferred to chat.
 Activate existing checkout holds after verified settlement; do not recreate enrollment
 tables or edit deployed migrations. Keep the remaining Phase 2.1 A1 checks explicit.
+
+
 
 docker compose up -d postgres
 pnpm migration:run

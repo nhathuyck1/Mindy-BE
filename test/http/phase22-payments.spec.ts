@@ -119,6 +119,151 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     });
   }
 
+  it('protects admin class student reads, validates input and exposes their Swagger contracts', async () => {
+    const roster = `/admin/classes/${classId}/students`;
+    const detail = `${roster}/${randomUUID()}`;
+    for (const path of [roster, detail]) {
+      expect((await request(path)).status).toBe(401);
+      for (const cookie of [studentCookie, mentorCookie])
+        expect((await request(path, cookie)).status).toBe(403);
+    }
+    for (const query of ['page=0', 'pageSize=101', 'pageSize=1.5', 'studentId=x'])
+      expect((await request(`${roster}?${query}`, adminCookie)).status).toBe(422);
+    expect((await request('/admin/classes/invalid/students', adminCookie)).status).toBe(400);
+    expect((await request(`${roster}/invalid`, adminCookie)).status).toBe(400);
+    const missing = await request(`/admin/classes/${randomUUID()}/students`, adminCookie);
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toMatchObject({ code: 'CLASS_NOT_FOUND' });
+    const absent = await request(detail, adminCookie);
+    expect(absent.status).toBe(404);
+    expect(await absent.json()).toMatchObject({ code: 'CLASS_STUDENT_NOT_FOUND' });
+    const swagger = (await (await fetch(`${url.replace('/api/v1', '')}/docs-json`)).json()) as {
+      paths: Record<string, unknown>;
+    };
+    expect(swagger.paths).toHaveProperty('/api/v1/admin/classes/{classId}/students');
+    expect(swagger.paths).toHaveProperty('/api/v1/admin/classes/{classId}/students/{studentId}');
+  });
+
+  it('lists class students with pagination and scopes student details to effective class registrations', async () => {
+    const input = {
+      email: 'roster@http.test',
+      password: '123456',
+      displayName: 'Roster student',
+      phone: '+84901234567',
+      role: 'STUDENT',
+    };
+    const created = await request('/admin/users', adminCookie, input);
+    expect(created.status).toBe(201);
+    const student = (await created.json()) as { id: string; createdAt: string };
+    const login = await request('/auth/login', undefined, {
+      email: input.email,
+      password: input.password,
+    });
+    const cookie = login.headers
+      .getSetCookie()
+      .map((c) => c.split(';')[0])
+      .join('; ');
+    expect((await request('/me/cart/items', cookie, { classId })).status).toBe(201);
+    expect((await request('/me/cart/checkout', cookie, { paymentType: 'PAYOS' })).status).toBe(201);
+    const roster = `/admin/classes/${classId}/students`;
+    const path = `${roster}/${student.id}`;
+    const list = await request(`${roster}?pageSize=1`, adminCookie);
+    expect(list.status).toBe(200);
+    expect(await list.json()).toMatchObject({
+      items: [
+        {
+          studentId: student.id,
+          studentName: input.displayName,
+          enrollmentStatus: 'PENDING_PAYMENT',
+        },
+      ],
+      page: 1,
+      pageSize: 1,
+      total: 1,
+    });
+    expect(await (await request(`${roster}?page=2&pageSize=1`, adminCookie)).json()).toMatchObject({
+      items: [],
+      page: 2,
+      pageSize: 1,
+      total: 1,
+    });
+    const response = await request(path, adminCookie);
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    const detail = JSON.parse(body) as {
+      enrollmentId: string;
+      registeredAt: string;
+      orderDetailId: string;
+    };
+    expect(detail).toMatchObject({
+      classId,
+      studentId: student.id,
+      studentName: input.displayName,
+      email: input.email,
+      phone: input.phone,
+      studentStatus: 'ACTIVE',
+      enrollmentStatus: 'PENDING_PAYMENT',
+      enrolledAt: null,
+      accountCreatedAt: student.createdAt,
+    });
+    for (const field of ['passwordHash', 'password', 'accessToken', 'refreshToken'])
+      expect(detail).not.toHaveProperty(field);
+    expect(detail.orderDetailId).toBeTruthy();
+    expect(detail.registeredAt).toBeTruthy();
+    const original = (await (await request(`/admin/classes/${classId}`, adminCookie)).json()) as {
+      courseId: string;
+      mentor: { id: string };
+      startDate: string;
+      endDate: string;
+    };
+    const emptyClass = await request('/admin/classes', adminCookie, {
+      courseId: original.courseId,
+      mentorId: original.mentor.id,
+      code: randomUUID(),
+      name: 'Empty roster',
+      deliveryMode: 'ONLINE',
+      startDate: original.startDate,
+      endDate: original.endDate,
+      maxStudents: 10,
+    });
+    expect(emptyClass.status).toBe(201);
+    const emptyId = ((await emptyClass.json()) as { id: string }).id;
+    expect(await (await request(`/admin/classes/${emptyId}/students`, adminCookie)).json()).toEqual(
+      {
+        items: [],
+        page: 1,
+        pageSize: 20,
+        total: 0,
+      },
+    );
+    const unrelated = await request(
+      `/admin/classes/${emptyId}/students/${student.id}`,
+      adminCookie,
+    );
+    expect(unrelated.status).toBe(404);
+    expect(await unrelated.json()).toMatchObject({ code: 'CLASS_STUDENT_NOT_FOUND' });
+    for (const status of ['ACTIVE', 'COMPLETED']) {
+      await db.query('UPDATE enrollments SET status=$1, enrolled_at=now() WHERE id=$2', [
+        status,
+        detail.enrollmentId,
+      ]);
+      expect(await (await request(path, adminCookie)).json()).toMatchObject({
+        enrollmentStatus: status,
+      });
+      expect(await (await request(roster, adminCookie)).json()).toMatchObject({ total: 1 });
+    }
+    await db.query("UPDATE users SET status='SUSPENDED' WHERE id=$1", [student.id]);
+    expect(await (await request(path, adminCookie)).json()).toMatchObject({
+      studentStatus: 'SUSPENDED',
+    });
+    await db.query("UPDATE enrollments SET status='CANCELLED' WHERE id=$1", [detail.enrollmentId]);
+    expect((await request(path, adminCookie)).status).toBe(404);
+    expect(await (await request(roster, adminCookie)).json()).toMatchObject({
+      items: [],
+      total: 0,
+    });
+  });
+
   it('lets admins create managers who can authenticate without inheriting other role permissions', async () => {
     const input = {
       email: 'manager@http.test',

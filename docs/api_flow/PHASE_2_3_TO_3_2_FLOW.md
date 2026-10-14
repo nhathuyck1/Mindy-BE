@@ -1,6 +1,6 @@
 # Flow Phase 2.3 → 3.1 → 3.2
 
-Đối chiếu source và progress; cập nhật plan/baseline ngày 2026-10-12.
+Đối chiếu source và progress; cập nhật plan/baseline ngày 2026-10-13.
 “Đã code” bên dưới chỉ nói về repo; không khẳng định đã deploy hoặc bật trên VPS.
 
 FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
@@ -8,7 +8,24 @@ FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
 FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 [API breakdown 2.3](PHASE_2_3_flow-api-breakdown.md).
 
+Điều phối2026-10-13: người khác triển khai3.3–3.6, user nhận deploy/server
+acceptance; FE do nhóm riêng làm, repo FE local chỉ đọc.
+[Plan3.4 phối hợp3.3](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+đưa staff preview/assets cùng review3.3.3, Student typed consumer sau contract3.3.1.
+Lượt này chỉ tài liệu BE, không source/FE/migration/runtime tests/deploy.
+
 ## 1. Mỗi phase cung cấp gì?
+
+Phase4 bắt đầu song song theo user2026-10-13; enrollment/lịch2.3 + MANAGER là
+prerequisites, attendance không đợi Material CRUD. [Flow4](PHASE_4_FLOW.md) /
+[API4 dự kiến](PHASE_4_flow-api-breakdown.md) bổ sung mentor availability/dạy
+thay theo buổi, mở điểm danh trong ngày (không overnight), roster/chốt/hạn hết
+ngày học kế tiếp, recovery legacy,
+nghỉ trước hai ngày lịch có duyệt, bù buổi/ngày và học bù lớp khác cùng Course Unit.
+Phase4.1–4.2 đã implementation/test local, chưa deploy; xem contract4 mục14–15.
+4.3 implemented/focused verified;4.4–4.5 vẫn planned; substitute không tự có quyền material
+authoring/review/release hoặc cash confirm theo Order snapshot. Shared
+Classes/StudentLearning/providers và migrations phối hợp trước merge.
 
 | Phase | Mục tiêu | Đã có trong checkout này | Phần còn thiếu |
 |---|---|---|---|
@@ -16,8 +33,24 @@ FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 | 3.1 | Quy định ai được tạo, sửa, duyệt và đọc tài liệu | Role MANAGER + migration; MaterialsModule/MaterialPolicyService; context providers; domain review/revision/access và test | Material entity, DB persistence, HTTP CRUD/review và Student download thuộc các slice sau |
 | 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, worker/locks/tests; nghiệm thu VPS theo user2026-10-12 | Material CRUD/review ở3.3; đọc/tải3.4; metadata/cleanup3.5; full integration3.6 |
 | 3.3 | Typed Material CRUD/review và Class Unit release | Hoàn thiện plan2026-10-12 sau nghiệm thu3.2; chưa implement | ARTICLE/sanitizer/refs/schema/audit/locks, Mentor context/submission, review/release; local/server gates từng slice; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
+| 3.4 | Student access + staff preview phối hợp3.3 | Ba Student FILE/VIDEO GET/read schema/signed GET local verified | Typed ARTICLE reader/assets; staff preview/assets cùng review3.3.3; [flow](PHASE_3_4_FLOW.md)/[breakdown](PHASE_3_4_flow-api-breakdown.md) và user deploy handoff |
 
 Hai nhánh Student và Manager/Mentor làm việc độc lập, sau này gặp nhau ở Material.
+
+Phase4 có [plan riêng4.1](../implement_phase/phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
+và [plan riêng4.2](../implement_phase/phase%204/PHASE_4_2_SESSION_ATTENDANCE.md):
+available mentor/assignment → lifecycle/roster có core source/local evidence lịch
+sử. Correction/recovery/audit4.3 → leave/cancel/replacement4.4a → guest/conflicts4.4b
+→ Student/operations4.4c → release4.5 còn planned. Coverage/dependencies4.1–4.2
+còn mở theo [Progress4.1](../progress/phase%204/PHASE_4_1_PROGRESS.md) và
+[Progress4.2](../progress/phase%204/PHASE_4_2_PROGRESS.md); review này chỉ Markdown.
+
+2026-10-13: tiếp [planning riêng4.3](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md)
+cho correction/audit/legacy evidence recovery, đóng GAP42-01–03 sau implementation.
+[Flow4.3](PHASE_4_3_FLOW.md) / [API4.3](PHASE_4_3_flow-api-breakdown.md) /
+[Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md) có22 AC/16 test scenarios,
+matrix source/gaps, payment evidence và HTTP limits. Chỉ tài liệu/source review;
+không runtime/FE/deploy mới, Student projections tiếp tục4.4c.
 
 Cập nhật scope 2026-10-11: Material ARTICLE lưu HTML đã sanitize để FE render;
 FILE và VIDEO MP4 dùng private MinIO, URL có thời hạn (HLS sau). ARTICLE chỉ có
@@ -63,10 +96,12 @@ flowchart TD
   end
   ARTICLE["3.3: ARTICLE HTML text-only không cần upload"] -.-> MAT
   READY -.-> MAT["3.3 planned: typed Material draft + READY refs nếu có"]
-  MAT -.-> REVIEW["Mentor submit → Manager approve/reject; áp dụng policy 3.1"]
+  MAT -.-> PRE["3.3 submit/detail → 3.4 staff preview/assets đúng revision"]
+  PRE -.-> REVIEW["Manager approve/reject cùng revision; áp dụng typed policy"]
   REVIEW -.-> GATE{"Policy3.3 typed: ACTIVE + release/time + approval/publication + valid content/READY refs"}
   DETAIL -.-> GATE
   GATE -->|"FILE/VIDEO đủ điều kiện"| READ["3.4: Student list/detail/signed download local verified"]
+  GATE -.->|"ARTICLE + refs đủ điều kiện"| AR["3.4 planned: canonical HTML + scoped assets"]
   GATE -.->|"Thiếu điều kiện"| DENY["Không cấp nội dung/download"]
 ```
 
@@ -229,3 +264,10 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
 - [Material review transitions](../../src/modules/materials/domain/material-review.ts)
 - [Upload authorization](../../src/modules/files/services/file-upload-policy.service.ts)
 - [File worker](../../src/modules/files/services/file-processing.worker.ts)
+
+2026-10-13 implementation4.3: correction sau chốt,Staff audit GET và historical
+evidence recovery đã có migration1791849600003 và runtime assertions. Handoff
+[Flow4.3](PHASE_4_3_FLOW.md)/[API4.3](PHASE_4_3_flow-api-breakdown.md);
+full local gates tại [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md).
+GAP42-01–03 thuộc implementation này;Student4.4c/guest4.4b/cancel-leave4.4a và
+release4.5 vẫn mở. Chưa deploy/VPS/browser/live-payment hoặc sửa FE.

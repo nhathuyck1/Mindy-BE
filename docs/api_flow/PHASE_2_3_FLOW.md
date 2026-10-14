@@ -1,6 +1,6 @@
 # Phase 2.3 — Flow Student: My Classes và lịch cá nhân
 
-Cập nhật: **2026-10-12**. Đã đối chiếu controller, DTO, service và test trong checkout.
+Cập nhật: **2026-10-13**. Đã đối chiếu controller, DTO, service và test trong checkout.
 Các API đã implement; evidence local nằm trong progress. Chưa xác minh release/VPS
 trong lượt tài liệu này.
 
@@ -8,6 +8,23 @@ API chi tiết: [PHASE_2_3_flow-api-breakdown.md](PHASE_2_3_flow-api-breakdown.m
 Liên hệ Materials/Files: [Flow 2.3 → 3.2](PHASE_2_3_TO_3_2_FLOW.md).
 Contract: [FE Phase 2.3](../PHASE_2_3_FE_CONTRACT.md).
 Tiến độ: [Progress 2.3](../progress/phase%202/PHASE_2_3_PROGRESS.md).
+
+## Bổ sung quản trị học sinh theo lớp — 2026-10-13
+
+Đã implement hai GET cho ADMIN: list học sinh theo Class và detail một học sinh
+trong Class. Luồng FE: `GET /api/v1/admin/classes` (đã có) → lấy `items[].id`
+→ `GET /api/v1/admin/classes/:classId` (đã có, units/sessions)
+và `GET /api/v1/admin/classes/:classId/students?page=1&pageSize=20`
+→ lấy `items[].studentId` → `GET /api/v1/admin/classes/:classId/students/:studentId`.
+Roster là enrollment còn hiệu lực: PENDING_PAYMENT, ACTIVE, COMPLETED; CANCELLED
+không xuất hiện. Detail kiểm tra cặp classId/studentId, không mở thông tin của
+học sinh ngoài lớp. Account SUSPENDED vẫn được admin đọc để quản lý.
+Các GET không cập nhật enrollment/payment hay cấp quyền học. Không cần migration.
+Hai HTTP case mới đã pass trên PostgreSQL test riêng cùng 11 case hiện có của
+suite Phase 2.2; TypeScript và build pass. Full test 357/359 pass (2 attendance
+failures ngoài roster); pnpm check vướng format attendance-payment-evidence ngoài
+phạm vi. Chi tiết ở progress. Chưa deploy/VPS. Breakdown đầy đủ:
+[§5.3](PHASE_2_3_flow-api-breakdown.md#53-admin-danh-sách-và-chi-tiết-học-sinh-theo-lớp).
 
 ## Luồng chính
 

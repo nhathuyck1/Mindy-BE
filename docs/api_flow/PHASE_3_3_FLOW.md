@@ -1,10 +1,14 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-12**. **Kế hoạch; các API 3.3 chưa implement/deploy.**
+Cập nhật: **2026-10-13**. **Kế hoạch; các API 3.3 chưa implement/deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_FLOW.md).
+
+Điều phối2026-10-13: [plan3.4 phối hợp](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+đưa staff preview/assets vào cùng mốc review3.3.3. Người khác triển khai3.3–3.6,
+user nhận deploy/server acceptance; FE là nhóm riêng, repo FE local chỉ để đọc.
 
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
@@ -48,8 +52,9 @@ flowchart TD
   H -.-> D
   D -.-> S["Mentor submit → PENDING_REVIEW"]
   S -.-> Q["Manager queue/detail + expectedRevision"]
-  Q -.-> A["Approve → APPROVED + publishedAt"]
-  Q -.-> R["Reject + reason → REJECTED"]
+  Q -.-> PRE["3.4 staff preview/assets đúng revision; Manager canPreview"]
+  PRE -.-> A["Approve → APPROVED + publishedAt"]
+  PRE -.-> R["Reject + reason → REJECTED"]
   R -.-> E["Mentor EDIT → DRAFT revision + 1 → submit lại"]
   D -.->|"Manager own draft"| A
   A -.-> ME["Manager EDIT → DRAFT, thu hồi approval/publication"]
@@ -57,7 +62,7 @@ flowchart TD
   A -.-> P["Manager unpublish/publish đúng approval"]
   REL["3.3: Admin/Mentor release Class Unit LOCKED/OPEN + unlockAt"] -.-> G
   A -.-> G["3.4: ACTIVE + class/unit/time + approval + valid content/READY refs"]
-  G -.-> READ["Student list/detail/assets; Manager/Mentor binary preview"]
+  G -.-> READ["Student list/detail/download/assets"]
 ```
 
 Nét đứt là việc chưa implement. Upload 3.2 đã nghiệm thu VPS theo xác nhận user
@@ -88,9 +93,11 @@ Diagram không công bố endpoint3.3/3.4 mới là dùng được.
    toàn catalogue picker chưa có, xem integration gap trong plan).
 2. GET materials/queue (mặc định queue filter FE PENDING_REVIEW); chọn item GET
    detail để lấy current revision. List không chứa download URL.
-3. Approve/reject dùng expectedRevision; approve publish cùng commit, reject cần
-   reason. ARTICLE detail trả HTML đã sanitize để đọc ngay3.3.
-   Binary preview thuộc 3.4; không giả định 3.3 đã đủ màn hình đọc file.
+3. ARTICLE detail trả HTML đã sanitize. Gọi staff primary preview hoặc scoped
+   assets3.4 với expectedRevision từ detail để xem PDF/MP4/ảnh/attachments;
+   text-only ARTICLE không cần primary URL. Approve/reject gửi đúng revision đã
+   xem; approve publish cùng commit, reject cần reason. Preview/assets triển khai
+   và nghiệm thu human review cùng mốc3.3.3, không chờ toàn3.3 xong.
 4. 409: refetch item/queue, hiển thị bản hiện tại, không tự approve revision mới.
    Response mất: refetch, retry cùng revision khi state còn đúng; no-op không tạo audit.
 5. Manager EDIT HTML/primary/inline/attachment refs/sortOrder/availableAt/sessionId tăng revision và
@@ -119,7 +126,8 @@ Hai lớp cùng Course Unit dùng chung Material, release độc lập theo từ
 - Metadata responses `private, no-store`; invalidate unit list/item/queue theo
   mutation, release refetch unit context và Student views khi 3.4 tích hợp.
 - Cần migration/code 3.3/auth role; upload mới cần MinIO/worker 3.2. Existing
-  metadata/read/review không cần gọi storage network. Download cần triển khai 3.4.
+  metadata/read/review không cần gọi storage network. Student FILE/VIDEO download
+  đã có local; staff preview/assets và typed reader còn planned theo3.4.
 
 ## 7. Nhật ký — 2026-10-11
 
@@ -140,3 +148,11 @@ Giữ thứ tự3.3.1 typed Manager draft →3.3.2 Mentor submission →3.3.3 re
 trong plan, ghi evidence riêng; signed GET/Student access/video runtime thuộc3.4.
 Estimate BE provisional7–10 ngày, chốt sau sanitizer/batch-lock spike.
 Kiểm diff/link/JSON tài liệu; không sửa API runtime, chạy BE tests, migrate hoặc deploy.
+
+## 9. Điều phối 3.3/3.4 — 2026-10-13
+
+3.3.1 sở hữu additive schema/refs/typed policy;3.4 làm consumer sau contract,
+staff preview cùng3.3.3 và Student server journey sau publication/release3.3.4.
+Sửa diagram để staff preview dùng canPreview riêng trước review, không đi qua
+Student release/enrollment gates. Đồng bộ plan/breakdown/progress và handoff user
+deploy; chỉ tài liệu BE, không source/FE/migration/runtime test/deploy.

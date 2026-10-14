@@ -1,6 +1,6 @@
 # Phase 3 — File + Materials
 
-Cập nhật: **2026-10-12**. 3.1 D1–D6 đã code policy/contract/providers và role
+Cập nhật: **2026-10-13**. 3.1 D1–D6 đã code policy/contract/providers và role
 MANAGER, kiểm tra local pass; 3.2 hoàn tất local và nghiệm thu VPS theo user.
 Material persistence/review và Student download tiếp tục ở 3.3/3.4.
 Contract chi tiết: [Phase 3.1](./PHASE_3_1_POLICY_CONTRACT.md).
@@ -32,10 +32,13 @@ Material là tài liệu chính của Course Unit: **Course Unit 1–N Material*
 các lớp dùng chung tài liệu của Course Unit. Không thêm material owner Class
 Unit/Session. Optional Session link chỉ chỉ định sử dụng, không đổi owner/visibility.
 
-User phụ trách Phase 3, người khác làm
-[Phase 2.3](../phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md) song song. Thứ tự P3 là
-3.1 → 3.2 → 3.3 → 3.4 → 3.5 → 3.6; không chờ calendar/navigation để bắt đầu,
-nhưng tích hợp toàn hành trình FE là gate riêng trước nghiệm thu tích hợp.
+Điều phối user2026-10-13: người khác triển khai **3.3–3.6**, user nhận bàn giao
+deploy/server acceptance. **FE do nhóm riêng làm; repo FE local chỉ để đọc.**
+[Plan3.4 phối hợp](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) đưa staff preview/assets
+cùng mốc review3.3.3; Student typed consumer sau contract3.3.1 và server cases sau
+publication/release. Thứ tự P3 là roadmap với dependencies từng slice, không yêu
+cầu chờ toàn3.3 mới bắt đầu3.4. Tích hợp/browser FE cần phối hợp nhóm riêng và
+evidence riêng trước nghiệm thu toàn journey.
 
 - Manager role riêng quản lý/sửa/duyệt tài liệu chính dùng chung.
 - Mentor được gán lớp upload draft của Course Unit trong lớp đó, submit chờ
@@ -58,7 +61,8 @@ Nguồn: [Flow.txt](../../../document/Flow.txt),
 
 Code có Catalog/Classes/Enrollments/Commerce/Payments và MaterialsModule export
 policy facade/domain transitions. Files upload/storage/validation đã có ở 3.2;
-Material persistence/API chưa có, đã lập plan 3.3.
+Material FILE/VIDEO read persistence và ba Student GET đã có local ở3.4;
+typed authoring/review/release/ARTICLE3.3 và staff preview/assets3.4 còn planned.
 Class Unit có status/unlockAt, EnrollmentsService có hasActiveAccess() ACTIVE.
 MinIO/Redis env không chứng minh storage/worker hoạt động. CASH preview/confirm và
 mentor roster đã có; evidence roster deploy không chứng minh PayOS tiền thật đã pass.
@@ -154,7 +158,7 @@ Session navigation resolve Course Unit để hiện tài liệu chính, không t
 | 3.1 | D1–D6, Manager role, domain policy, context providers và contract | Hoàn tất local: 171 tests/16 suites + build, HTTP 5/5; upload và review persistence/API chưa triển khai. |
 | [3.2](./PHASE_3_2_SAFE_UPLOAD.md) | Files migration/adapter/private MinIO, intent/complete/detail, validation jobs; plan đã rà soát sau 3.1 pass, giữ policy/errors và chiều Materials → Files | Manager/Mentor đúng scope upload thật → READY/FAILED; overwrite/retry/restart tests. |
 | [3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md) | Đã lập plan: Course Unit Materials, Manager CRUD/review, Mentor context/draft/submit, release API | Chưa implement; READY không bypass review; revision race/assignment/approval/soft-delete/audit tests. |
-| 3.4 | ACTIVE Unit list/download, Swagger/Postman/FE contract | Pending/locked/draft/rejected/cross-class bị chặn; shared đọc đúng mỗi lớp. |
+| [3.4](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) | FILE/VIDEO Student GET đã có; planned staff preview/assets cùng review3.3.3, ARTICLE reader sau typed contract3.3.1 | ACTIVE/release/approval/time và ref membership/revision; staff canPreview riêng; handoff deploy user/contract nhóm FE |
 | 3.5 | Metadata extraction/retry, cleanup/retention/purge/audit | Metadata fail giữ READY; không purge file có ref hoặc job live. |
 | 3.6 | Full gates, migration/storage runbook, staging + 2.3 integration | Evidence local/staging/VPS/payment live ghi riêng; không skip critical test. |
 
