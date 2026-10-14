@@ -765,3 +765,32 @@ GAP42-01–03 đã có implementation/evidence4.3,Student/guest/cancel/leave/rel
 
 Evidence4.3 cuối lượt:pnpm check397/397 tests/39 suites,HTTP39/39 tests/5 suites,
 0 skip;GAP43-01–08/GAP42-01–03 đóng local,server/browser/release4.5 vẫn mở.
+
+### 2026-10-14 — Phase4 API summary theo hai commit
+
+Đối chiếu `8a1c7e8`/`246abf4`: commit đầu chỉ docs; commit sau thêm 15 endpoint
+Phase4.1–4.3 và 2 Admin student endpoints. Tạo [bảng API và flow liên kết](../api_flow/PHASE_4_API_SUMMARY.md),
+ghi ID/version handoff, CASH sync, correction/audits và historical evidence recovery;
+đồng bộ flow/breakdown/progress Phase4, phân biệt API hiện có và kế hoạch4.4–4.5.
+Verification chỉ route coverage/local links/JSON/code fences/diff checks; không chạy
+lại BE tests/migration, không sửa FE, không deploy/VPS hoặc giao dịch thật mới.
+
+### 2026-10-14 — Review Actions deploy failure sau Check pass
+
+Logs user cung cấp cho release `e0c9174`: CI397/397 và HTTP39/39 pass, lint/
+type-check/build pass. Deploy dừng ở preflight Git status do VPS có untracked
+`..env.production.swp`, trước fetch/build/backup/migration/API replacement.
+[VPS runbook](../VPS_DEPLOYMENT.md) bổ sung bảo toàn editor swap ngoài checkout
+và retry failed jobs sau Git sạch. Chỉ log/source review và docs; không thay code/
+workflow, chưa thao tác VPS hoặc xác nhận release thành công.
+
+2026-10-14 — Deployment handoff clarification: Phase4.1–4.3 adds no required env
+variable. Keep APP_TIME_ZONE consistent between migration and API; existing
+Asia/Ho_Chi_Minh default applies if unset. DATABASE_URL remains the existing
+production PostgreSQL URL. TypeORM migration:run executes all pending migrations
+in timestamp order and skips recorded ones; do not invoke numeric filenames
+individually. Existing dev deployment workflow already builds, backs up DB and
+runs the compiled one-off migration before replacing the API. Manual Compose
+commands must preserve compose.files-production.yaml when .env.minio.production
+exists so Files scratch configuration is retained. This is read-only source
+verification/documentation; no migration, server deploy or runtime test was run.

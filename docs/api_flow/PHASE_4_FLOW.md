@@ -1,5 +1,12 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+**Đối chiếu hai commit ngày 14/10/2026:** `8a1c7e8` chỉ tài liệu;
+`246abf4` thêm 15 endpoint Phase4.1–4.3 và 2 endpoint Admin xem học viên.
+[File tổng hợp API đã có và flow gọi nối tiếp](PHASE_4_API_SUMMARY.md) chỉ rõ
+IDs/version truyền giữa các bước, CASH, correction, evidence recovery và phần
+còn planned. Các log planning/baseline dưới đây là lịch sử; trạng thái hiện tại
+có correction/recovery/audits4.3, Student/leave/makeup/guest còn4.4, release4.5 mở.
+
 **2026-10-13 — Core4.1–4.2 và core coverage đã kiểm local; dependencies/
 release mở; 4.3 implemented/focused verified;4.4–4.5 planned; chưa deploy.**
 [Plan](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md) ·
@@ -16,10 +23,10 @@ plan riêng [4.1](../implement_phase/phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
 correction → Staff audit reader → legacy/terminal evidence recovery → HTTP/handoff.
 22 AC/16 test scenarios và source/gap matrix, giữ calendar deadline; proposed
 admissionBasis/evidence schema/parser limit riêng tại
-[API4.3](PHASE_4_3_flow-api-breakdown.md). Chỉ Markdown/source review, chưa
-implementation/runtime tests/migration execution/FE/deploy4.3.
-Diagram/flow dưới đây mô tả nghiệp vụ toàn Phase4; các bước Student/correction/
-legacy/cancel/guest chưa có source được nêu riêng, không coi toàn diagram đã code.
+[API4.3](PHASE_4_3_flow-api-breakdown.md). Đây là ghi chép planning lịch sử;
+4.3 đã implementation/local tests ở cuối file. Chưa xác nhận FE/deploy4.3.
+Diagram/flow dưới đây mô tả nghiệp vụ toàn Phase4; Student/cancel/guest còn
+kế hoạch, correction/legacy recovery4.3 đã có source; không coi toàn diagram đã code.
 
 Rule hiện hành sau user sửa2026-10-13: không overnight; deadline Mentor hết ngày
 kế tiếp của ngày học trên lịch (thứ Ba →00:00 thứ Năm), không rolling24h.
@@ -228,3 +235,24 @@ evidence recovery đã có migration1791849600003 và runtime assertions. Handof
 full local gates tại [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md).
 GAP42-01–03 thuộc implementation này;Student4.4c/guest4.4b/cancel-leave4.4a và
 release4.5 vẫn mở. Chưa deploy/VPS/browser/live-payment hoặc sửa FE.
+
+## 2026-10-14 — Tổng hợp hai commit và flow API hiện hành
+
+Đối chiếu `8a1c7e8`/`246abf4` với controller/DTO/services/error mapping và test
+assertions; tạo [API summary](PHASE_4_API_SUMMARY.md) theo yêu cầu, gồm toàn bộ
+17 endpoint mới, các route cũ liên quan, data handoff và flow phân công → lịch
+mentor → context/roster → start → mark → finalize → correction/audit, cùng CASH
+sync và historical evidence recovery. Sửa các dòng current-state lỗi thời ở
+breakdown tổng; giữ log baseline/local evidence lịch sử. Không thay đổi API/runtime.
+Kiểm tra tĩnh route coverage/local links/JSON/code fences và diff; không chạy lại
+BE tests, migration, FE, deploy hoặc giao dịch thật trong lượt tài liệu này.
+
+## 2026-10-14 — Review log deploy bị chặn trước rollout
+
+Log Actions user cung cấp cho release `e0c9174` ghi Check pass 397 tests/39 HTTP
+tests, nhưng VPS checkout có untracked `..env.production.swp`; clean-checkout
+guard dừng trước fetch/build/backup/migration/start API. Không đổi flow/API hoặc
+workflow. [Runbook](../VPS_DEPLOYMENT.md) bổ sung đóng/recover editor, chuyển swap
+sang backup riêng ngoài checkout, kiểm Git sạch và re-run failed jobs.
+Lượt này chỉ đọc log/source và cập nhật docs; chưa thao tác VPS hoặc xác nhận
+deploy thành công, release4.5 vẫn mở.

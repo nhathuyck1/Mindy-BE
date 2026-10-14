@@ -119,3 +119,14 @@ Final verification:397/397 tests/39 suites,0 skip qua pnpm check;39/39 tests/5 s
 0 skip qua pnpm test:http. Final Swagger hardening required:true của recovery
 reason đã được kiểm chứng lại bằng full HTTP gate;DTO validation regression,lint/
 type-check/build pass. GAP43-01–08 và gaps kế thừa GAP42-01–03 đóng local;GAP43-09/release4.5 mở.
+
+2026-10-14 — Deployment handoff clarification: Phase4.1–4.3 adds no required env
+variable. Keep APP_TIME_ZONE consistent between migration and API; existing
+Asia/Ho_Chi_Minh default applies if unset. DATABASE_URL remains the existing
+production PostgreSQL URL. TypeORM migration:run executes all pending migrations
+in timestamp order and skips recorded ones; do not invoke numeric filenames
+individually. Existing dev deployment workflow already builds, backs up DB and
+runs the compiled one-off migration before replacing the API. Manual Compose
+commands must preserve compose.files-production.yaml when .env.minio.production
+exists so Files scratch configuration is retained. This is read-only source
+verification/documentation; no migration, server deploy or runtime test was run.

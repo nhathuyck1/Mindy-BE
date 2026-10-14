@@ -251,3 +251,26 @@ GAP42-01–03 đã có implementation/evidence4.3,Student/guest/cancel/leave/rel
 
 Evidence4.3 cuối lượt:pnpm check397/397 tests/39 suites,HTTP39/39 tests/5 suites,
 0 skip;GAP43-01–08/GAP42-01–03 đóng local,server/browser/release4.5 vẫn mở.
+
+## 2026-10-14 — Đối chiếu hai commit và API summary
+
+- Review `8a1c7e8` (chỉ tài liệu) và `246abf4` (implementation4.1–4.3): 15 endpoint
+  Phase4 + 2 endpoint Admin student mới; các route Admin/CASH/Student cũ được
+  phân biệt rõ trong [API summary](../../api_flow/PHASE_4_API_SUMMARY.md).
+- File summary có bảng method/endpoint/quyền/chức năng, ID/version handoff và
+  flow assignment/start/mark/finalize/correction/audit/CASH sync/evidence recovery.
+- Đồng bộ flow và breakdown tổng, sửa nhãn correction/recovery/audits còn ghi
+  chưa implement. Student/leave/makeup/guest/release giữ trạng thái planned/mở.
+- Kiểm chứng lượt này chỉ documentation checks: route coverage theo controller
+  trước/sau commit, local links, JSON examples, code fences, `git diff --check`.
+  Không chạy lại runtime tests/migration, không sửa FE, không deploy/VPS/payment.
+
+## 2026-10-14 — Deploy preflight failure, Check passed
+
+User cung cấp Actions logs `logs_104514482910`, release `e0c9174`. CI lint,
+type-check/build pass; 397 tests/39 suites và 39 HTTP tests/5 suites pass.
+Deploy lúc20:23 Asia/Bangkok dừng ở clean VPS checkout vì untracked
+`..env.production.swp`; chưa fetch/build/backup/migration/API rollout trong job.
+Đã đối chiếu guard trong deploy.yml và ghi procedure bảo toàn swap ngoài checkout
+rồi re-run failed jobs ở [runbook](../../VPS_DEPLOYMENT.md). Không thay workflow/
+API, không truy cập VPS hoặc chạy lại tests; deploy success/readiness chưa xác nhận.
