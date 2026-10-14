@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, UnprocessableEntityException } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager } from 'typeorm';
 
@@ -16,9 +16,11 @@ import type { ScheduleClassSessionDto } from '../dtos/schedule-class-session.dto
 import type { UpdateClassDto } from '../dtos/update-class.dto.js';
 import type { UpdateClassSessionTimeDto } from '../dtos/update-class-session-time.dto.js';
 import { ClassEntity } from '../entities/class.entity.js';
+import { ClassSessionEntity } from '../entities/class-session.entity.js';
 import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 import { ClassUnitStatus } from '../enums/class-unit-status.enum.js';
+import { SessionStatus } from '../enums/session-status.enum.js';
 import {
   ClassCodeAlreadyExistsException,
   ClassCourseInactiveException,
@@ -27,6 +29,7 @@ import {
   ClassNotEditableException,
   ClassNotFoundException,
 } from '../exceptions/class.exceptions.js';
+import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ClassReadService } from './class-read.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -104,6 +107,11 @@ export class ClassesService {
   }
 
   async update(classId: string, input: UpdateClassDto): Promise<ClassDetailView> {
+    if (input.mentorId !== undefined) {
+      throw new UnprocessableEntityException(
+        'Mentor changes must use the audited assignment command',
+      );
+    }
     return this.dataSource.transaction(async (manager) => {
       const classEntity = await this.lockClass(manager, classId);
       this.assertEditable(classEntity);
@@ -114,11 +122,6 @@ export class ClassesService {
         }
       }
 
-      const mentorChanged = input.mentorId !== undefined && input.mentorId !== classEntity.mentorId;
-      if (input.mentorId !== undefined && mentorChanged) {
-        await this.assertMentorEligible(input.mentorId, HttpStatus.UNPROCESSABLE_ENTITY);
-        classEntity.mentorId = input.mentorId;
-      }
       if (input.name !== undefined) {
         classEntity.name = input.name.trim();
       }
@@ -134,9 +137,6 @@ export class ClassesService {
       }
 
       await manager.getRepository(ClassEntity).save(classEntity);
-      if (mentorChanged && this.scheduleService.bindsMentorCalendar(classEntity)) {
-        await this.scheduleService.assertMentorAvailable(manager, classEntity);
-      }
       return this.readService.loadDetail(manager, classEntity);
     });
   }
@@ -147,6 +147,8 @@ export class ClassesService {
       const classEntity = await this.lockClass(manager, classId);
       this.assertEditable(classEntity);
       await this.scheduleService.addSession(manager, classEntity, input);
+      classEntity.assignmentVersion += 1;
+      await manager.getRepository(ClassEntity).save(classEntity);
       return this.readService.loadDetail(manager, classEntity);
     });
   }
@@ -160,6 +162,8 @@ export class ClassesService {
       const classEntity = await this.lockClass(manager, classId);
       this.assertEditable(classEntity);
       await this.scheduleService.updateSessionTimes(manager, classEntity, sessionIds, input);
+      classEntity.assignmentVersion += 1;
+      await manager.getRepository(ClassEntity).save(classEntity);
       return this.readService.loadDetail(manager, classEntity);
     });
   }
@@ -172,6 +176,22 @@ export class ClassesService {
         throw new ClassCourseInactiveException();
       }
       await this.assertMentorEligible(classEntity.mentorId, HttpStatus.CONFLICT);
+      const sessions = await manager
+        .getRepository(ClassSessionEntity)
+        .createQueryBuilder('session')
+        .innerJoin(ClassUnitEntity, 'unit', 'unit.id = session.classUnitId')
+        .where('unit.classId = :id AND session.status = :status', {
+          id: classId,
+          status: SessionStatus.SCHEDULED,
+        })
+        .getMany();
+      for (const mentorId of new Set(
+        sessions.map((s) => s.mentorOverrideId ?? classEntity.mentorId),
+      )) {
+        if (!(await this.usersService.findActiveByRole(mentorId, UserRole.MENTOR, manager))) {
+          throw new ClassMentorNotEligibleException(HttpStatus.CONFLICT);
+        }
+      }
       await this.scheduleService.assertReadyToOpen(manager, classEntity);
     });
   }
@@ -183,7 +203,18 @@ export class ClassesService {
 
   /** IN_PROGRESS -> COMPLETED: the class becomes read-only history. */
   async complete(classId: string): Promise<ClassDetailView> {
-    return this.transition(classId, ClassStatus.COMPLETED);
+    return this.transition(classId, ClassStatus.COMPLETED, async (manager) => {
+      const unresolved: unknown[] = await manager.query(
+        `SELECT 1 FROM class_sessions s JOIN class_units u ON u.id=s.class_unit_id
+        WHERE u.class_id=$1 AND s.status::text IN ('SCHEDULED','IN_PROGRESS') LIMIT 1`,
+        [classId],
+      );
+      if (unresolved.length)
+        throw new TeachingConflictException(
+          'SESSION_STATE_CONFLICT',
+          'Finalize or cancel all outstanding sessions before completing the class',
+        );
+    });
   }
 
   async cancel(classId: string): Promise<ClassDetailView> {
@@ -201,6 +232,17 @@ export class ClassesService {
       await guard?.(manager, classEntity);
 
       classEntity.status = target;
+      classEntity.assignmentVersion += 1;
+      await manager
+        .getRepository(ClassSessionEntity)
+        .createQueryBuilder()
+        .update()
+        .set({ version: () => 'version + 1' })
+        .where('class_unit_id IN (SELECT id FROM class_units WHERE class_id = :id)', {
+          id: classId,
+        })
+        .andWhere('status = :status', { status: SessionStatus.SCHEDULED })
+        .execute();
       await manager.getRepository(ClassEntity).save(classEntity);
       return this.readService.loadDetail(manager, classEntity);
     });

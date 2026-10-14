@@ -120,7 +120,8 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
   }
 
   it('migrates new tables up/down/up without dropping existing hold schema', async () => {
-    // The manager-role migration now follows payment tables in the current schema.
+    // Assignment and manager-role migrations follow payment tables in the current schema.
+    await db.undoLastMigration();
     await db.undoLastMigration();
     await db.undoLastMigration();
     expect(await db.query("SELECT to_regclass('payment_transactions') AS name")).toEqual([

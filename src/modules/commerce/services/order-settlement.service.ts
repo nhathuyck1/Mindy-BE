@@ -21,6 +21,33 @@ export interface PendingCashDetail {
 /** Public commerce API; callers supply the transaction manager. */
 @Injectable()
 export class OrderSettlementService {
+  /** Immutable line ancestry with committed settlement metadata, batched in the caller transaction. */
+  async attendancePaymentLines(
+    manager: EntityManager,
+    ids: readonly string[],
+  ): Promise<
+    {
+      detailId: string;
+      classId: string;
+      orderId: string;
+      studentId: string;
+      totalAmount: string;
+      paymentType: PaymentType;
+      paidAt: Date;
+      cashMentorId: string | null;
+    }[]
+  > {
+    if (!ids.length) return [];
+    return manager.query(
+      `SELECT d.id AS "detailId", d.class_id AS "classId",
+      o.id AS "orderId", o.student_id AS "studentId", o.total_amount AS "totalAmount",
+      o.payment_type AS "paymentType", o.paid_at AS "paidAt", o.cash_mentor_id AS "cashMentorId"
+      FROM order_details d JOIN orders o ON o.id=d.order_id
+      WHERE d.id=ANY($1::uuid[]) AND o.status='PAID' AND o.paid_at IS NOT NULL`,
+      [[...ids]],
+    );
+  }
+
   async listCash(
     manager: EntityManager,
     mentorId: string,

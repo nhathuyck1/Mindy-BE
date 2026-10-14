@@ -9,6 +9,16 @@ export class ClassNotFoundException extends AppHttpException {
   }
 }
 
+export class ClassStudentNotFoundException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.NOT_FOUND,
+      'CLASS_STUDENT_NOT_FOUND',
+      'The student was not found in this class',
+    );
+  }
+}
+
 export class ClassUnitNotFoundException extends AppHttpException {
   constructor() {
     super(HttpStatus.NOT_FOUND, 'CLASS_UNIT_NOT_FOUND', 'The class unit was not found');
@@ -90,6 +100,16 @@ export class ClassSessionTimeRangeInvalidException extends AppHttpException {
       HttpStatus.UNPROCESSABLE_ENTITY,
       'CLASS_SESSION_TIME_RANGE_INVALID',
       'The session must start before it ends',
+    );
+  }
+}
+
+export class ClassSessionOvernightNotAllowedException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'CLASS_SESSION_OVERNIGHT_NOT_ALLOWED',
+      'A teaching session must stay within one calendar day in the center time zone',
     );
   }
 }

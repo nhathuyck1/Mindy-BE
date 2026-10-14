@@ -1,3 +1,7 @@
+import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
+import { MentorConflictService } from '../../src/modules/classes/services/mentor-conflict.service.js';
+import { TeachingAssignmentService } from '../../src/modules/classes/services/teaching-assignment.service.js';
+import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import 'reflect-metadata';
 
 import { randomUUID } from 'node:crypto';
@@ -65,7 +69,7 @@ if (databaseUrl.length > 0 && !isTestDatabase) {
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const DAY_MS = 86_400_000;
-const PHASE_2_MIGRATION_COUNT = 7;
+const PHASE_2_MIGRATION_COUNT = 8; // Includes the additive assignment schema used by current entities.
 
 const config = {
   getOrThrow<T>(key: string): T {
@@ -138,6 +142,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         RemoveManagerRole1790900000004,
         AddCourseImgUrl1791072000000,
         RestoreManagerRole1791504000000,
+        SessionMentorAssignment1791849600000,
       ],
     });
     await dataSource.initialize();
@@ -269,6 +274,30 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
     );
   }
 
+  async function assignClassMentor(classId: string, mentorId: string): Promise<ClassDetailView> {
+    const actor = await createUser(UserRole.ADMIN);
+    const users = new UsersService(dataSource.getRepository(UserEntity));
+    const read = new TeachingReadService(dataSource, config, users);
+    const assignment = new TeachingAssignmentService(
+      dataSource,
+      users,
+      read,
+      new MentorConflictService(),
+    );
+    const current = await readService.getDetail(classId);
+    await assignment.assignClass(
+      classId,
+      {
+        mentorId,
+        reason: 'Assignment regression',
+        expectedVersion: current.classEntity.assignmentVersion,
+      },
+      { userId: actor.id, sessionId: randomUUID(), role: UserRole.ADMIN },
+      randomUUID(),
+    );
+    return readService.getDetail(classId);
+  }
+
   it('reverts and reruns the Phase 2 migrations', async () => {
     for (let step = 0; step < PHASE_2_MIGRATION_COUNT; step += 1) {
       await dataSource.undoLastMigration();
@@ -284,6 +313,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
   });
 
   it('preserves manager accounts on refused rollback and restores the role after down/up', async () => {
+    await dataSource.undoLastMigration(); // Empty assignment schema; manager enum is now last.
     const manager = await createUser(UserRole.MANAGER);
     await expect(dataSource.undoLastMigration()).rejects.toThrow(
       'Cannot remove the MANAGER role while users still have it',
@@ -295,7 +325,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
     await dataSource.getRepository(UserEntity).delete(manager.id);
     await dataSource.undoLastMigration();
     await expect(createUser(UserRole.MANAGER)).rejects.toMatchObject({ code: '22P02' });
-    expect(await dataSource.runMigrations()).toHaveLength(1);
+    expect(await dataSource.runMigrations()).toHaveLength(2);
     const restored = await createUser(UserRole.MANAGER);
     expect(restored.role).toBe(UserRole.MANAGER);
     await dataSource.getRepository(UserEntity).delete(restored.id);
@@ -467,6 +497,13 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         ClassStatus.IN_PROGRESS,
       );
       expect(await rejectionCode(readService.getOpenDetail(classId))).toBe('CLASS_NOT_FOUND');
+      expect(await rejectionCode(classesService.complete(classId))).toBe('SESSION_STATE_CONFLICT');
+      // Legacy lifecycle fixture explicitly resolves scheduled work before class completion.
+      await dataSource.query(
+        `UPDATE class_sessions SET status='CANCELLED' WHERE class_unit_id IN
+        (SELECT id FROM class_units WHERE class_id=$1)`,
+        [classId],
+      );
       expect((await classesService.complete(classId)).classEntity.status).toBe(
         ClassStatus.COMPLETED,
       );
@@ -821,9 +858,9 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       });
       const classId = draft.classEntity.id;
 
+      await assignClassMentor(classId, nextMentor.id);
       const updated = await classesService.update(classId, {
         name: '  Renamed class ',
-        mentorId: nextMentor.id,
         maxStudents: 3,
         deliveryMode: DeliveryMode.ONLINE,
         meetingUrl: 'https://meet.example.com/room',
@@ -844,9 +881,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         'CLASS_DATE_RANGE_INVALID',
       );
       expect(
-        await rejectionCode(
-          classesService.update(classId, { mentorId: (await createUser(UserRole.STUDENT)).id }),
-        ),
+        await rejectionCode(assignClassMentor(classId, (await createUser(UserRole.STUDENT)).id)),
       ).toBe('CLASS_MENTOR_NOT_ELIGIBLE');
       expect((await readService.getDetail(classId)).classEntity.mentorId).toBe(nextMentor.id);
     });
@@ -859,12 +894,12 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       await openClassAt(busyMentor.id, slot);
       const classId = await openClassAt(owner.id, slot);
 
-      expect(await rejectionCode(classesService.update(classId, { mentorId: busyMentor.id }))).toBe(
+      expect(await rejectionCode(assignClassMentor(classId, busyMentor.id))).toBe(
         'CLASS_MENTOR_SCHEDULE_CONFLICT',
       );
       expect((await readService.getDetail(classId)).classEntity.mentorId).toBe(owner.id);
 
-      const moved = await classesService.update(classId, { mentorId: freeMentor.id });
+      const moved = await assignClassMentor(classId, freeMentor.id);
       expect(moved.classEntity.mentorId).toBe(freeMentor.id);
     });
 

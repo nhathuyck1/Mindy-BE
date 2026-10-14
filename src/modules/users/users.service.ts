@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { type EntityManager, In, type Repository } from 'typeorm';
+import { type EntityManager, In, type Repository, type SelectQueryBuilder } from 'typeorm';
 import type { CreateUserDto } from './dtos/create-user.dto.js';
 import type { UserPageOptionsDto } from './dtos/user-page-options.dto.js';
 import {
@@ -9,7 +9,7 @@ import {
   UserPhoneAlreadyExistsException,
 } from './exceptions/user.exceptions.js';
 import { UserEntity } from './user.entity.js';
-import type { UserRole } from './user-role.enum.js';
+import { UserRole } from './user-role.enum.js';
 import { UserStatus } from './user-status.enum.js';
 
 export function normalizeEmail(email: string): string {
@@ -54,12 +54,23 @@ export class UsersService {
     return repository.findOne({ where: { id, role, status: UserStatus.ACTIVE } });
   }
 
-  async findByIds(ids: readonly string[]): Promise<UserEntity[]> {
+  async findByIds(ids: readonly string[], manager?: EntityManager): Promise<UserEntity[]> {
     if (ids.length === 0) {
       return [];
     }
 
-    return this.users.findBy({ id: In([...ids]) });
+    return (manager?.getRepository(UserEntity) ?? this.users).findBy({ id: In([...ids]) });
+  }
+
+  /** Public read provider: consumers may add their own schedule predicates before pagination. */
+  activeMentorsQuery(manager: EntityManager): SelectQueryBuilder<UserEntity> {
+    return manager
+      .getRepository(UserEntity)
+      .createQueryBuilder('mentor')
+      .where('mentor.role = :mentorRole AND mentor.status = :mentorStatus', {
+        mentorRole: UserRole.MENTOR,
+        mentorStatus: UserStatus.ACTIVE,
+      });
   }
 
   async createUser(input: CreateUserDto, passwordHash: string): Promise<UserEntity> {

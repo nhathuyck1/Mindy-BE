@@ -189,3 +189,26 @@ chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới x
   UI/refetch/polling và điều kiện release. Liên kết contract/progress/flow tổng hợp.
 - Chỉ review và sửa tài liệu; kiểm JSON ví dụ, link local và diff, không chạy lại
   BE tests/migration hoặc xác minh deploy/live. Giữ evidence runtime ở mục trên.
+
+## Admin class roster/student detail — 2026-10-13
+
+- Đã implement `GET /api/v1/admin/classes/:classId/students?page=1&pageSize=20`
+  và `GET /api/v1/admin/classes/:classId/students/:studentId`, role ADMIN.
+  API class list/detail đã có, không thêm route trùng. Controller mỏng, read service
+  điều phối exported EnrollmentsService/UsersService; batch users, sort/page/count ổn định.
+- DTO list: studentId/studentName/email/phone/studentStatus và enrollmentId/
+  enrollmentStatus/enrolledAt. Detail thêm classId/orderDetailId/registeredAt/
+  accountCreatedAt/lastLoginAt. Chỉ enrollment còn hiệu lực, không CANCELLED;
+  suspended account vẫn quản lý được. Missing class/student-in-class 404 với code riêng.
+- Changed-file Biome, type-check, production build pass. Built-app PostgreSQL HTTP
+  suite Phase2.2 13/13 pass, gồm 2 case mới: auth/roles/validation/Swagger;
+  roster/detail/page-empty/scope/status/privacy. Không real payment/network provider.
+- Full `pnpm test` với TEST_DATABASE_URL riêng: 357/359 pass, 2 failures ngoài roster
+  tại `test/integration/phase42-attendance.spec.ts` (staff recovery state expectation).
+  `pnpm check` dừng ở format ngoài phạm vi trong
+  `src/modules/payments/services/attendance-payment-evidence.service.ts`.
+  Không chỉnh feature attendance đang có để làm xanh increment này.
+- Đồng bộ [flow](../../api_flow/PHASE_2_3_FLOW.md),
+  [API breakdown §5.3](../../api_flow/PHASE_2_3_flow-api-breakdown.md#53-admin-danh-sách-và-chi-tiết-học-sinh-theo-lớp)
+  và [FE contract Phase2](../../PHASE_2_FE_CONTRACT.md). Không schema/migration,
+  không FE edits, không DB development/VPS migration hoặc deploy.

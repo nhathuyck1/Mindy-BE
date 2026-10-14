@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsDefined,
   IsEnum,
   IsInt,
   IsISO8601,
@@ -35,6 +36,25 @@ export class UpdateClassDto {
   @ValidateIf(isProvided)
   @IsUUID('4')
   readonly mentorId?: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 1,
+    description: 'Required with mentorId; current assignmentVersion',
+  })
+  @ValidateIf((o: UpdateClassDto) => o.mentorId !== undefined)
+  @IsDefined()
+  @IsInt()
+  @Min(1)
+  readonly expectedVersion?: number;
+
+  @ApiPropertyOptional({ type: String, maxLength: 1000, description: 'Required with mentorId' })
+  @ValidateIf((o: UpdateClassDto) => o.mentorId !== undefined)
+  @IsDefined()
+  @IsString()
+  @Matches(/\S/)
+  @Length(1, 1000)
+  readonly reason?: string;
 
   @ApiPropertyOptional({ type: String, format: 'date' })
   @ValidateIf(isProvided)

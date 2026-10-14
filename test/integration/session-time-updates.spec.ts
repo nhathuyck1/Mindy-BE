@@ -138,7 +138,7 @@ describe.skipIf(!separateTestUrl('session_times'))('session time updates (Postgr
     });
   });
 
-  it('preserves both dates of an overnight session', async () => {
+  it('rejects edits to a legacy overnight session without changing its stored dates or version', async () => {
     const { classId, first, second } = await fixture(true);
     const firstDate = toLocalDate(first.startsAt, ZONE);
     const secondDate = toLocalDate(second.startsAt, ZONE);
@@ -146,11 +146,18 @@ describe.skipIf(!separateTestUrl('session_times'))('session time updates (Postgr
       startsAt: new Date(`${firstDate}T23:00:00+07:00`),
       endsAt: new Date(`${secondDate}T01:00:00+07:00`),
     });
-    await f.classes.updateSessionTimes(classId, [first.id], {
-      startTime: '23:30',
-      endTime: '01:30',
+    const before = await stored(first.id);
+    await expect(
+      f.classes.updateSessionTimes(classId, [first.id], {
+        startTime: '23:30',
+        endTime: '01:30',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'CLASS_SESSION_OVERNIGHT_NOT_ALLOWED' } });
+    expect(await stored(first.id)).toMatchObject({
+      startsAt: before.startsAt,
+      endsAt: before.endsAt,
+      version: before.version,
     });
-    expect((await stored(first.id)).endsAt).toEqual(new Date(`${secondDate}T01:30:00+07:00`));
   });
 
   it('serializes concurrent edits across classes sharing a mentor and rolls back the losing request', async () => {

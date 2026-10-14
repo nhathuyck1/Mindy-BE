@@ -26,6 +26,82 @@ export interface SeatHoldRequest {
 export class EnrollmentsService {
   constructor(private readonly dataSource: DataSource) {}
 
+  /** Current roster includes pending, active and completed registrations, not cancelled history. */
+  async listForClass(
+    classId: string,
+    page: { readonly page: number; readonly pageSize: number },
+  ): Promise<{ items: EnrollmentEntity[]; total: number }> {
+    const [items, total] = await this.dataSource.getRepository(EnrollmentEntity).findAndCount({
+      where: { classId, status: In([...EFFECTIVE_ENROLLMENT_STATUSES]) },
+      order: { createdAt: 'DESC', id: 'ASC' },
+      skip: (page.page - 1) * page.pageSize,
+      take: page.pageSize,
+    });
+    return { items, total };
+  }
+
+  async findEffectiveForClassStudent(
+    classId: string,
+    studentId: string,
+  ): Promise<EnrollmentEntity | null> {
+    return this.dataSource.getRepository(EnrollmentEntity).findOneBy({
+      classId,
+      studentId,
+      status: In([...EFFECTIVE_ENROLLMENT_STATUSES]),
+    });
+  }
+
+  /** Historical metadata only. Caller holds Class -> Session; no payment locks. */
+  async attendanceHistory(
+    manager: EntityManager,
+    ids: readonly string[],
+  ): Promise<EnrollmentEntity[]> {
+    return ids.length ? manager.getRepository(EnrollmentEntity).findBy({ id: In([...ids]) }) : [];
+  }
+
+  /** Read committed entitlement only; attendance never acquires payment/enrollment locks. */
+  async attendanceCandidates(
+    manager: EntityManager,
+    classId: string,
+    cutoff: Date,
+    allowCashAdmission: boolean,
+  ): Promise<{ id: string; studentId: string }[]> {
+    return manager.query(
+      `SELECT e.id, e.student_id AS "studentId" FROM enrollments e
+      WHERE e.class_id=$1 AND e.status='ACTIVE' AND e.created_at <= $2
+      AND (e.enrolled_at <= $2 OR ($3 AND EXISTS (
+        SELECT 1 FROM order_details d JOIN orders o ON o.id=d.order_id
+        WHERE d.id=e.order_detail_id AND o.payment_type='CASH' AND o.status='PAID')))
+      ORDER BY e.id`,
+      [classId, cutoff, allowCashAdmission],
+    );
+  }
+
+  async pendingAttendanceCount(
+    manager: EntityManager,
+    classId: string,
+    now: Date,
+  ): Promise<number> {
+    const rows: { count: string }[] = await manager.query(
+      `SELECT count(*) FROM enrollments e
+      JOIN order_details d ON d.id=e.order_detail_id JOIN orders o ON o.id=d.order_id
+      WHERE e.class_id=$1 AND e.status='PENDING_PAYMENT' AND o.payment_type='CASH'
+        AND o.status='PENDING' AND o.expires_at > $2`,
+      [classId, now],
+    );
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  async attendanceStudents(
+    manager: EntityManager,
+    ids: readonly string[],
+  ): Promise<Map<string, string>> {
+    const rows = ids.length
+      ? await manager.getRepository(EnrollmentEntity).findBy({ id: In([...ids]) })
+      : [];
+    return new Map(rows.map((e) => [e.id, e.studentId]));
+  }
+
   /** The seat hold created for this exact order detail, if it is still pending. */
   async findPendingHold(
     studentId: string,

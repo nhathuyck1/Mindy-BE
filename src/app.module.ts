@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { environmentSchema } from './config/environment.schema.js';
 import { createTypeOrmOptions } from './database/typeorm-options.js';
+import { AttendanceModule } from './modules/attendance/attendance.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { ClassesModule } from './modules/classes/classes.module.js';
@@ -34,6 +35,7 @@ import { UsersModule } from './modules/users/users.module.js';
     HealthModule,
     UsersModule,
     AuthModule,
+    AttendanceModule,
     CatalogModule,
     EnrollmentsModule,
     ClassesModule,

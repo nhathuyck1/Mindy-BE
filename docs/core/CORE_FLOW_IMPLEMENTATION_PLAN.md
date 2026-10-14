@@ -294,12 +294,46 @@ Required integration tests include duplicate callbacks, mismatched amount, inval
 
 Current plan **2026-10-13**: [Phase 4](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md),
 [flow](../api_flow/PHASE_4_FLOW.md), [planned APIs](../api_flow/PHASE_4_flow-api-breakdown.md).
-User approved mentor start/manual attendance/finalization, a 24h edit window
-from the first actual start, and MANAGER corrections without a time limit.
+User approved mentor start/manual attendance/finalization and MANAGER corrections
+without a time limit. Updated2026-10-13: no overnight sessions; Mentor edits run
+until the end of the day following the scheduled teaching day, exclusive midnight
+on teaching day+2 in APP_TIME_ZONE (Tuesday→Thursday00:00), independent of opening time.
+Normal start remains on the scheduled teaching day; legacy recovery requires evidence.
 Manager can find available mentors and replace a session's teaching mentor,
 including during an active session; a class mentor change is a separate command.
 Phase 4 runs alongside Phase 3 using the existing enrollment/schedule baseline.
-These contracts are planned, not implemented or deployed.
+Slices4.1–4.2 are implemented and locally verified (check359/359, HTTP33/33);
+deployment remains pending. Attendance correction/legacy recovery4.3 and
+leave/makeup/student projections4.4 remain planned. Actual API contract: §14–15
+of the Phase4 breakdown. Class completion now rejects unfinished sessions.
+
+Detailed plans and code/progress reconciliation (2026-10-13):
+[4.1 plan](../implement_phase/phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md) /
+[4.1 progress](../progress/phase%204/PHASE_4_1_PROGRESS.md),
+[4.2 plan](../implement_phase/phase%204/PHASE_4_2_SESSION_ATTENDANCE.md) /
+[4.2 progress](../progress/phase%204/PHASE_4_2_PROGRESS.md).
+The continuation has a dedicated [4.3 plan](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md),
+[progress](../progress/phase%204/PHASE_4_3_PROGRESS.md),
+[flow](../api_flow/PHASE_4_3_FLOW.md) and
+[implemented API contract](../api_flow/PHASE_4_3_flow-api-breakdown.md):22 AC,
+16 verification scenarios, correction/audit/evidence recovery with calendar
+deadline and terminal history preservation. Implemented with focused PostgreSQL/built-app HTTP evidence;full gates in Progress4.3,no deployment evidence. Student/guest/cancel/leave remain later slices.
+Core source exists; historical local totals do not close the full acceptance matrix.
+The subsequent repair added mixed-writer races, edge/Staff HTTP journeys, context
+actor checks, a post-lock clock recheck and additive calendar deadline migration.
+pnpm check now passes359/359 tests/36 suites. Current evidence is in separate
+progress files; Student effective mentor projection, material context, approved
+leave/cancel and deployment remain open dependencies;correction/evidence recovery/audit4.3 are implemented.
+
+The reviewed scope also includes mentor leave ranges/periods submitted at least
+two calendar days ahead, with MANAGER/ADMIN approval before any timetable change.
+Partial-day makeup supports suggested/manual slots free of student conflicts;
+full-day changes preserve clock times and record student conflicts for management.
+Approval cancels original sessions, creates linked replacements and extends the
+class end date atomically when needed. Approved leave blocks new assignments.
+Management may place an ACTIVE student into one equivalent session of another
+class referencing the same Course Unit, with separate guest attendance and one
+credit toward the original obligation. Notifications/email automation remain deferred.
 
 Implement attendance only after enrollment and class sessions are stable.
 
@@ -308,7 +342,11 @@ Implement attendance only after enrollment and class sessions are stable.
 - Restrict writes to the effective session mentor within the edit window, or
   MANAGER/ADMIN with reason and audit. Session overrides do not grant payment
   confirmation or shared material management permissions.
-- Add paginated class roster, schedule and revenue/order operational queries.
+- Add paginated class roster, schedule, leave/conflict queues and own attendance
+  history/summary. Incomplete queues default to all backlog; revenue/order reports
+  are outside Phase4. Class completion rejects unfinished sessions/placements.
+- Keep ordinary attendance same-class using composite FKs; cross-class makeup
+  uses placements/guest records, not a foreign-class enrollment in ordinary rows.
 
 ## Migration strategy
 
@@ -336,3 +374,8 @@ Every migration requires a reviewed `up` and `down`, a clean-database CI run and
 - Swagger documents success and expected error responses.
 - `pnpm lint`, `pnpm type-check`, `pnpm test` and `pnpm build` pass.
 - No board or compiler dependency is introduced into a core-flow module.
+
+2026-10-13:Phase4.3 implemented correction,Staff audit history,evidence recovery
+with additive migration1791849600003 and route-specific256KiB parser. Full gates
+and rollout are recorded in [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md).
+No new FE/deployment/live-payment evidence;Phase4.4/4.5 remain pending.

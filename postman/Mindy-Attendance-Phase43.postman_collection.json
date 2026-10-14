@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "Mindy Phase 4.3 - Attendance Corrections and Evidence Recovery",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Backend implemented locally; deploy migration 1791849600003 after Phase 4.1/4.2/calendar migrations. Cookie auth. Staff = ACTIVE MANAGER/ADMIN; history/recovery Staff only. Correction uses PUT on existing snapshot rows. Staff requires reason; Mentor before the calendar deadline may correct COMPLETED, including COMPLETED Class; canceled Class/Session requires Staff. Recovery is insert-only, requires verified settlement and historical hold plus Staff classroom evidence. No unknown historical actors are inferred. Do not run recover against rows already admitted. Recovery 1-1000 records, 256 KiB; other routes 64 KiB. Keep original key/version/body for retries; read roster again before each new intent. Mutations store nextSessionVersion; copy it into sessionVersion for the next intent. No deployment/live evidence is implied."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "enrollmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "actualStartedAt",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "actualEndedAt",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admissionBasis",
+      "value": "PAID_BEFORE_START",
+      "type": "string"
+    },
+    {
+      "key": "evidenceNote",
+      "value": "Classroom register confirms this historical attendance obligation",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Read attendance roster",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff correction after finalization",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"reason\": \"Correct result from classroom register\",\n  \"records\": [{\"enrollmentId\":\"{{enrollmentId}}\",\"status\":\"PRESENT\"}]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mentor correction within calendar deadline",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"records\": [{\"enrollmentId\":\"{{enrollmentId}}\",\"status\":\"PRESENT\"}]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff audit history",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/management/class-sessions/{{sessionId}}/attendance-audits?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Staff audit history for enrollment",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/management/class-sessions/{{sessionId}}/attendance-audits?enrollmentId={{enrollmentId}}&page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Staff recover missing historical attendance",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/class-sessions/{{sessionId}}/attendance/recover",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"reason\": \"Recover missing classroom register\",\n  \"evidenceNote\": \"{{evidenceNote}}\",\n  \"actualStartedAt\": \"{{actualStartedAt}}\",\n  \"actualEndedAt\": \"{{actualEndedAt}}\",\n  \"records\": [{\"enrollmentId\":\"{{enrollmentId}}\",\"status\":\"PRESENT\",\"admissionBasis\":\"{{admissionBasis}}\"}]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

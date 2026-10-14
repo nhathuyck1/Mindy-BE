@@ -16,7 +16,23 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 9. [Phase 3.2 — Upload private và xác minh file, đã chốt local/VPS](./phase%203/PHASE_3_2_SAFE_UPLOAD.md)
 10. [Phase 3.3 — Material management/review và Class Unit release, đã lập plan](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
 11. [Phase 3.4 — Material access/staff preview, plan phối hợp 3.3](./phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
-12. [Phase 4 — Attendance, session operations và mentor dạy thay, đã lập plan](./phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
+12. [Phase 4 — Attendance, nghỉ dạy, học bù và mentor dạy thay, 4.1–4.2 verified local](./phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
+13. [Phase 4.1 — Mentor availability/substitution, plan chi tiết và review code](./phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
+14. [Phase 4.2 — Session lifecycle/attendance, plan chi tiết và review code](./phase%204/PHASE_4_2_SESSION_ATTENDANCE.md)
+15. [Phase 4.3 — Correction, evidence recovery và audit history, implemented local](./phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md)
+
+2026-10-13: tiếp planning4.3 theo cấu trúc4.1/4.2:22 AC,16 test scenarios,
+5 bước correction→audit→evidence foundation→recover→HTTP/handoff và ma trận
+source/tests/gaps. [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md) /
+[Flow4.3](../api_flow/PHASE_4_3_FLOW.md) /
+[API4.3 dự kiến](../api_flow/PHASE_4_3_flow-api-breakdown.md).
+Planning log ở trên là lịch sử. Implementation4.3 hiện đã có focused runtime gates;full gates xem Progress4.3,chưa deploy.
+
+Review và sửa2026-10-13: core4.1/4.2 cùng gap test gates pass local
+(check359/359, HTTP33/33); dependencies/release chưa đóng. Theo dõi AC→code→tests→gap tại
+[Progress4.1](../progress/phase%204/PHASE_4_1_PROGRESS.md) và
+[Progress4.2](../progress/phase%204/PHASE_4_2_PROGRESS.md).
+Plan riêng giữ scope nghiệm thu, không đổi phần chưa làm thành done.
 
 Phase 2.3 đã implement; các suite PostgreSQL/HTTP hiện có pass local ngày 2026-10-10.
 Xem [contract FE](../PHASE_2_3_FE_CONTRACT.md) và progress bên dưới.
@@ -85,10 +101,16 @@ entity trước rồi mới quay lại làm controller/service.
 ## Quy ước chung
 
 Phase 4 đã lập plan ngày2026-10-13, user bắt đầu song song khi người khác làm
-Phase3; chưa code/migrate/deploy: 4.1 available mentor và dạy thay → 4.2 Session
-start/roster/mark/finalize → 4.3 correction/audit24h → 4.4 Student/operations/makeup
-→ 4.5 integration/release. GET trống lịch tính cả primary/substitute, PATCH kiểm
-lại concurrency; giữ cash Order snapshot và Materials policy. Xem
+Phase3; 4.1–4.2 implemented/tested local, chưa deploy: 4.1 available mentor và dạy thay → 4.2 Session
+start/roster/mark/finalize → 4.3 correction/recovery/audit theo calendar deadline → 4.4a nghỉ trước
+hai ngày lịch có duyệt/bù buổi hoặc ngày/auto endDate → 4.4b học bù lớp khác cùng
+Course Unit/guest credit → 4.4c Student/operations → 4.5 integration/release.
+Mentor mở điểm danh trong ngày học, không overnight; hạn ghi/chốt hết ngày kế tiếp
+theo APP_TIME_ZONE (thứ Ba→00:00 thứ Năm). Chưa chốt không kéo
+dài interval chiếm lịch. GET trống lịch hiện tính primary/substitute; nghỉ APPROVED
+chỉ nối vào candidates/checker khi4.4a triển khai,
+PATCH/approval kiểm concurrency; giữ cash Order snapshot và Materials policy.
+Notification/email tự động còn hoãn. Các slice sau4.2 vẫn planned. Xem
 [flow](../api_flow/PHASE_4_FLOW.md),
 [API dự kiến](../api_flow/PHASE_4_flow-api-breakdown.md) và
 [progress](../progress/phase%204/PHASE_4_PROGRESS.md). Shared Classes/StudentLearning
@@ -107,3 +129,14 @@ và migration sequence cần phối hợp người làm Phase3 trước merge.
 - Đọc toàn bộ `document/Flow.txt` trước khi chốt rule nghiệp vụ; ghi rõ diễn giải
   triển khai và yêu cầu được hoãn, không bỏ cash preview/mentor confirmation/mail.
 
+
+2026-10-13: Phase4.1 đã implement/test local (check310/310, HTTP29/29).
+4.2–4.5 giữ planned; xem Progress và contract4.1. Chưa deploy migration4.1.
+
+2026-10-13: Tiếp4.2 đã implement/test local: attendance migration/roster/start/
+sync/mark/finalize/staff clock recovery; check328/328, HTTP30/30. Full actual
+contract ở API breakdown mục15. 4.3–4.5 vẫn planned, chưa deploy migrations4.1/4.2.
+
+Implementation4.3 ngày2026-10-13:correction/audit/evidence recovery đã có API/schema/
+public payment providers và parser256KiB. [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md)
+ghi local gates và rollout;4.4a/b/c→4.5 tiếp tục pending,chưa deploy.

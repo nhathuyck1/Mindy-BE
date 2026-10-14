@@ -66,7 +66,13 @@ ACTIVE enrollment uses the same material gates. No external-link material in MVP
 
 ### Class operations
 
-Owns `classes`, `class_units`, `class_sessions` and planned `attendance_records`.
+Owns `classes`, `class_units` and `class_sessions`. Phase4 AttendanceModule now
+owns ordinary attendance/audits (4.2 implemented local); cross-class guest records remain planned. Ordinary
+rows retain same-class ancestry. Teaching operations coordinates approved leave,
+replacement schedules and student conflicts. See the
+[reviewed Phase4 plan](./implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md);
+Slices4.1–4.2 are implemented/tested local; leave/makeup/correction/history remain
+planned and deployment pending. See API breakdown §14–15 for the actual contract.
 A class is a scheduled delivery of one course. EnrollmentsModule separately owns
 `enrollments` and `class_unit_progress`, including checkout holds and learning access.
 
