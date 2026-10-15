@@ -12,6 +12,7 @@ import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/17
 import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
 import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
 import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
+import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -125,6 +126,7 @@ export async function paymentDatabase(
       AddCourseImgUrl1791072000000,
       PayosPayments1791158400000,
       RestoreManagerRole1791504000000,
+      SessionMentorAssignment1791849600000,
       ...(extra.migrations ?? []),
     ],
     synchronize: false,

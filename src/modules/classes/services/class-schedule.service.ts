@@ -4,7 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import type { EntityManager } from 'typeorm';
 
 import { normalizeOptionalText } from '../../../common/text/normalize-text.js';
-import { isWithinClassPeriod, withLocalTime } from '../domain/class-calendar.js';
+import {
+  isSingleTeachingDay,
+  isWithinClassPeriod,
+  withLocalTime,
+} from '../domain/class-calendar.js';
 import type { ScheduleClassSessionDto } from '../dtos/schedule-class-session.dto.js';
 import type { UpdateClassSessionTimeDto } from '../dtos/update-class-session-time.dto.js';
 import type { ClassEntity } from '../entities/class.entity.js';
@@ -13,16 +17,18 @@ import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 import { SessionStatus } from '../enums/session-status.enum.js';
 import {
-  ClassMentorScheduleConflictException,
   ClassNotReadyToOpenException,
   ClassSessionLocalTimeInvalidException,
   ClassSessionNotEditableException,
   ClassSessionNotFoundException,
   ClassSessionOutsideClassPeriodException,
   ClassSessionOverlapException,
+  ClassSessionOvernightNotAllowedException,
   ClassSessionTimeRangeInvalidException,
   ClassUnitNotFoundException,
 } from '../exceptions/class.exceptions.js';
+
+import { MentorConflictService } from './mentor-conflict.service.js';
 
 /** Classes whose sessions occupy their mentor's calendar. */
 const SCHEDULE_BINDING_STATUSES: readonly ClassStatus[] = [
@@ -36,7 +42,10 @@ const SCHEDULE_BINDING_STATUSES: readonly ClassStatus[] = [
  */
 @Injectable()
 export class ClassScheduleService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly conflicts: MentorConflictService = new MentorConflictService(),
+  ) {}
 
   bindsMentorCalendar(classEntity: ClassEntity): boolean {
     return SCHEDULE_BINDING_STATUSES.includes(classEntity.status);
@@ -51,6 +60,9 @@ export class ClassScheduleService {
     const endsAt = new Date(input.endsAt);
     if (startsAt.getTime() >= endsAt.getTime()) {
       throw new ClassSessionTimeRangeInvalidException();
+    }
+    if (!isSingleTeachingDay(startsAt, endsAt, this.timeZone())) {
+      throw new ClassSessionOvernightNotAllowedException();
     }
 
     const unit = await manager.getRepository(ClassUnitEntity).findOne({
@@ -68,7 +80,7 @@ export class ClassScheduleService {
       .createQueryBuilder('session')
       .innerJoin(ClassUnitEntity, 'unit', 'unit.id = session.classUnitId')
       .where('unit.classId = :classId', { classId: classEntity.id })
-      .andWhere('session.status = :status', { status: SessionStatus.SCHEDULED })
+      .andWhere("session.status::text IN ('SCHEDULED', 'IN_PROGRESS')")
       .andWhere('session.startsAt < :endsAt AND session.endsAt > :startsAt', { startsAt, endsAt })
       .getExists();
     if (overlaps) {
@@ -119,11 +131,14 @@ export class ClassScheduleService {
       const endsAt = withLocalTime(session.endsAt, input.endTime, timeZone);
       if (!startsAt || !endsAt) throw new ClassSessionLocalTimeInvalidException();
       if (startsAt >= endsAt) throw new ClassSessionTimeRangeInvalidException();
+      if (!isSingleTeachingDay(startsAt, endsAt, timeZone))
+        throw new ClassSessionOvernightNotAllowedException();
       if (!isWithinClassPeriod({ startsAt, endsAt }, classEntity, timeZone)) {
         throw new ClassSessionOutsideClassPeriodException();
       }
       session.startsAt = startsAt;
       session.endsAt = endsAt;
+      session.version += 1;
     }
     await repository.save(sessions);
     const overlaps: unknown[] = await manager.query(
@@ -134,9 +149,10 @@ export class ClassScheduleService {
          AND first.ends_at > second.starts_at
        JOIN class_units second_unit ON second_unit.id = second.class_unit_id
        WHERE first_unit.class_id = $1 AND second_unit.class_id = $1
-         AND first.status = $2::session_status_enum AND second.status = $2::session_status_enum
+         AND first.status::text IN ('SCHEDULED', 'IN_PROGRESS')
+         AND second.status::text IN ('SCHEDULED', 'IN_PROGRESS')
        LIMIT 1`,
-      [classEntity.id, SessionStatus.SCHEDULED],
+      [classEntity.id],
     );
     if (overlaps.length > 0) throw new ClassSessionOverlapException();
     if (this.bindsMentorCalendar(classEntity)) {
@@ -156,7 +172,11 @@ export class ClassScheduleService {
     const timeZone = this.timeZone();
     if (
       sessions.length === 0 ||
-      sessions.some((session) => !isWithinClassPeriod(session, classEntity, timeZone))
+      sessions.some(
+        (session) =>
+          !isWithinClassPeriod(session, classEntity, timeZone) ||
+          !isSingleTeachingDay(session.startsAt, session.endsAt, timeZone),
+      )
     ) {
       throw new ClassNotReadyToOpenException();
     }
@@ -170,29 +190,25 @@ export class ClassScheduleService {
    * concurrent schedule changes for one mentor until the transaction ends.
    */
   async assertMentorAvailable(manager: EntityManager, classEntity: ClassEntity): Promise<void> {
-    await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
-      classEntity.mentorId,
-    ]);
-    const conflicts: unknown[] = await manager.query(
-      `SELECT 1
-       FROM "class_sessions" mine
-       JOIN "class_units" mine_unit ON mine_unit.id = mine.class_unit_id
-       JOIN "class_sessions" other
-         ON other.starts_at < mine.ends_at AND other.ends_at > mine.starts_at
-       JOIN "class_units" other_unit ON other_unit.id = other.class_unit_id
-       JOIN "classes" other_class ON other_class.id = other_unit.class_id
-       WHERE mine_unit.class_id = $1
-         AND mine.status = $3::"session_status_enum"
-         AND other.status = $3::"session_status_enum"
-         AND other_class.id <> $1
-         AND other_class.mentor_id = $2
-         AND other_class.status = ANY($4::"class_status_enum"[])
-       LIMIT 1`,
-      [classEntity.id, classEntity.mentorId, SessionStatus.SCHEDULED, SCHEDULE_BINDING_STATUSES],
+    const sessions = await manager
+      .getRepository(ClassSessionEntity)
+      .createQueryBuilder('session')
+      .innerJoin(ClassUnitEntity, 'unit', 'unit.id = session.classUnitId')
+      .where('unit.classId = :id', { id: classEntity.id })
+      .andWhere("session.status::text IN ('SCHEDULED', 'IN_PROGRESS')")
+      .getMany();
+    await this.conflicts.assertAvailable(
+      manager,
+      sessions.map((session) => ({
+        sessionId: session.id,
+        startsAt: session.startsAt,
+        endsAt: session.endsAt,
+        mentorId:
+          session.status === SessionStatus.SCHEDULED
+            ? (session.mentorOverrideId ?? classEntity.mentorId)
+            : (session.teachingMentorId ?? classEntity.mentorId),
+      })),
     );
-    if (conflicts.length > 0) {
-      throw new ClassMentorScheduleConflictException();
-    }
   }
 
   private timeZone(): string {

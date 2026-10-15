@@ -1,0 +1,4 @@
+export enum AttendanceAdmissionBasis {
+  PAID_BEFORE_START = 'PAID_BEFORE_START',
+  CASH_LATE_ADMISSION = 'CASH_LATE_ADMISSION',
+}

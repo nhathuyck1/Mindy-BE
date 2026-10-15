@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module.js';
+import { ClassesModule } from '../classes/classes.module.js';
+import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
+import { PaymentsModule } from '../payments/payments.module.js';
+import { UsersModule } from '../users/users.module.js';
+import { AttendanceController } from './controllers/attendance.controller.js';
+import { AttendanceManagementController } from './controllers/attendance-management.controller.js';
+import { AttendanceRecordEntity } from './entities/attendance-record.entity.js';
+import { AttendanceRecoveryAuditEntity } from './entities/attendance-recovery-audit.entity.js';
+import { AttendanceRecoveryAuditItemEntity } from './entities/attendance-recovery-audit-item.entity.js';
+import { AttendanceService } from './services/attendance.service.js';
+import { AttendanceAuditService } from './services/attendance-audit.service.js';
+
+@Module({
+  imports: [
+    AuthModule,
+    ClassesModule,
+    EnrollmentsModule,
+    UsersModule,
+    PaymentsModule,
+    TypeOrmModule.forFeature([
+      AttendanceRecordEntity,
+      AttendanceRecoveryAuditEntity,
+      AttendanceRecoveryAuditItemEntity,
+    ]),
+  ],
+  controllers: [AttendanceController, AttendanceManagementController],
+  providers: [AttendanceService, AttendanceAuditService],
+  exports: [AttendanceService],
+})
+export class AttendanceModule {}

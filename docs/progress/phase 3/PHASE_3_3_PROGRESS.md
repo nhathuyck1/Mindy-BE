@@ -1,11 +1,27 @@
 # Phase 3.3 — Tiến độ Material management
 
-Cập nhật: **2026-10-13**.
+Cập nhật: **2026-10-15**.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).
 API đã có + dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 ## Hiện trạng
+
+- 2026-10-15: Đã xử lý conflict với dev/Phase4, giữ implementation Materials13–14/10.
+  Quyết định schema22/bridge và kết quả tích hợp ở mục cuối; các ghi chép bên dưới
+  ngày11–13/10 là lịch sử planning tại thời điểm đó, không thay trạng thái hiện hành.
+
+- 2026-10-13: Theo user, người khác triển khai3.3–3.6; user nhận deploy/server
+  acceptance; FE do nhóm riêng, repo FE local chỉ để đọc. Lập
+  [plan3.4 phối hợp](../../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+  và cập nhật plan3.3: typed schema/refs/policy3.3.1 bàn giao consumer; staff
+  preview/assets3.4 nghiệm thu cùng review3.3.3; Student server journey sau
+  publication/release. Contract preview/asset GET + expectedRevision là planned,
+  không source/API runtime change. Một người sở hữu schema/migration; user nhận
+  SHA/migrations/config/checks/Postman/smoke/rollback khi triển khai bàn giao.
+  Chỉ tài liệu BE; không sửa source/FE, migrate, runtime tests hoặc deploy.
+  Planning checks: git diff --check pass; 14 tài liệu/152 local links/1 anchor/
+  14 JSON examples hợp lệ, code fences cân bằng. Evidence này chỉ cho tài liệu.
 
 - 2026-10-12 (tư vấn UX Unit/bài học): User muốn CKEditor FE + HTML BE như trang
   đọc kiến thức. Đề xuất Course Unit metadata/description + nhiều Material ARTICLE,
@@ -369,3 +385,54 @@ lượt implementation trước. Kiểm git diff whitespace cho cập nhật tà
   PR/API/auth review trước merge tiếp tục theo repo rules; toàn phase3.3 chưa complete.
 
 - Final documentation check: git diff --check và lint pass; kiểm107 local links,5 path FE thuộc audit cũ trỏ sibling repo không có tại workspace hiện tại đã đổi thành tham chiếu text có nhãn lịch sử;102 local links còn lại resolve được.
+
+## Tích hợp Phase3.3/3.4 với Phase4 — 2026-10-15
+
+Gộp `dev` e0c9174 (merge14/10, implementation Phase4 ngày13/10) vào
+`feat/phase-3-3` a363012 (Materials implementation13–14/10, plan3.4 cập nhật15/10).
+Giữ nguyên các nhật ký và tổng test ở đúng ngày thực hiện; không dùng ngày merge
+mới hơn để ghi đè implementation hoặc đánh dấu VPS/browser đã nghiệm thu.
+
+- Giữ authoring/review/release3.3 và ARTICLE/scoped access/staff preview3.4;
+  hợp nhất Classes controllers/providers/exports với teaching/lifecycle/attendance4.1–4.3.
+  Giữ actor FOR SHARE của Materials và các read providers mới của Phase4.
+- Contract hiện hành là POST files/access, response có role/revision; planning
+  GET preview/assets + expectedRevision ngày13/10 chỉ giữ dưới nhãn lịch sử.
+  Không đổi quyền Materials/CASH sang substitute chỉ vì có teaching assignment.
+- Class completion tiếp tục chặn Session SCHEDULED/IN_PROGRESS theo Phase4.
+  Fixture3.3.4 kiểm guard409, chuyển Sessions sang terminal rồi complete Class;
+  Unit chưa COMPLETED vẫn được release theo policy3.3.4. Không nới business guard.
+- Hai nhánh từng tạo cùng constraint `uq_class_units_id_class`. Không sửa/đổi
+  tên migration đã chạy: thêm `1791849599999-prepare-release-unit-constraint`
+  và `1791856799999-isolate-attendance-unit-constraint` để rename constraint/index,
+  giữ OID/FK và dữ liệu, rồi để các migration lịch sử chạy nguyên trạng.
+  Hai ID là **khóa thứ tự tương thích**, không phải ngày tạo mới: cả hai được viết
+  ngày15/10, lần lượt trước attendance4.2 và release-audit3.3.4. TypeORM chạy các
+  migration chưa có theo identity/name và thứ tự timestamp; cần phát hành đầy đủ
+  catalog, không chạy riêng migration lịch sử gây va chạm.
+- Source hiện có22 migration. Hai migration cùng timestamp1791849600000 có tên
+  khác nhau, giữ nguyên. Các con số16 (Materials) và17 (dev/Phase4) là baseline
+  lịch sử, không sửa thành22 trong nhật ký cũ. Test tích hợp mới kiểm clean22,
+  upgrade16→22 và17→22, giữ data/FK index, down/up và không pending.
+- Không migrate development/VPS hoặc thay code FE. Server/user sign-off và browser
+  CORS/PDF/MP4 seek/refresh vẫn pending. Các cảnh báo dependency đã báo ở lượt quét
+  trước không nằm trong phạm vi sửa conflict này.
+
+Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 và Progress chung;
+3/3 ca migration compatibility đã pass trên PostgreSQL test riêng.
+
+### Kết quả kiểm chứng cuối sau tích hợp — 2026-10-15
+
+- Node22.20.0/pnpm12.6.0, dedicated PostgreSQL17 test tại localhost:15433 và MinIO
+  test local: **pnpm check513/513,48 suites; lint/type-check/build pass**.
+- **pnpm test:http60/60,5 suites**, dùng cấu hình mặc định đã nhận từ dev
+  (fileParallelism:false), built Nest runtime/cookies/guards và migrations đầy đủ22.
+  Không critical skip hoặc unhandled errors trong hai lượt cuối.
+- Sau khi rút gọn suffix DB fixture để không bị PostgreSQL truncate mất _test,
+  chạy lại lint/type-check và focused migration compatibility: **3/3 pass**.
+  Thay đổi cuối này chỉ ở tên/guard DB test, không đổi production code/migrations.
+- Lượt trước bridge có HTTP startup fail vì constraint trùng; kết quả60/60 ở trên
+  là lượt chạy sau sửa, không dùng skip ở lượt thất bại làm evidence pass.
+- 14 conflict đã giải quyết; không sửa migration lịch sử, không migrate DB
+  development/VPS hoặc FE. Giữ ngày13/10 planning/Phase4,13–14/10 implementation
+  Materials,15/10 integration như các mục riêng. Server/browser/user sign-off còn pending.

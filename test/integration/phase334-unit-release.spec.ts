@@ -6,10 +6,12 @@ import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migration
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
+import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
 import { ClassUnitReleaseAuditEntity } from '../../src/modules/classes/entities/class-unit-release-audit.entity.js';
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../src/modules/classes/enums/class-unit-status.enum.js';
+import { SessionStatus } from '../../src/modules/classes/enums/session-status.enum.js';
 import { ClassUnitReleaseService } from '../../src/modules/classes/services/class-unit-release.service.js';
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
@@ -192,6 +194,20 @@ describe('Phase 3.3.4 Class Unit release + PostgreSQL', () => {
   it('allows release in a completed class when its unit is not completed', async () => {
     const s = await setup();
     await fixture.classes.start(s.classId);
+    await expect(fixture.classes.complete(s.classId)).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'SESSION_STATE_CONFLICT' },
+    });
+    // Phase 4 requires terminal sessions before class completion; Unit release is independent.
+    await db
+      .getRepository(ClassSessionEntity)
+      .createQueryBuilder()
+      .update()
+      .set({ status: SessionStatus.COMPLETED })
+      .where('class_unit_id IN (SELECT id FROM class_units WHERE class_id = :classId)', {
+        classId: s.classId,
+      })
+      .execute();
     await fixture.classes.complete(s.classId);
     expect((await service.update(s.actor, s.classId, s.unit.id, { status: OPEN })).status).toBe(
       OPEN,

@@ -1,7 +1,7 @@
 # Core business logic
 
 Updated 2026-10-05 against all of `document/Flow.txt`, implemented checkout and
-[Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
+[Phase 2.2](./implement_phase/phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
 confirmation passed; BE payments are implemented and locally tested; VPS release
 and real settlement remain pending user execution. Full payment and
 online confirmation email are required; pending cash preview and mentor confirmation
@@ -48,7 +48,7 @@ row locks/expected-revision checks with durable audit in Phase 3.3. Server-owned
 file references/snapshots are inputs to policy, never raw client JSON.
 
 Owns planned `materials` and material review/audit. The user approved D1–D6 on
-2026-10-09 in [Phase 3.1](./implement_phase/PHASE_3_1_POLICY_CONTRACT.md).
+2026-10-09 in [Phase 3.1](./implement_phase/phase%203/PHASE_3_1_POLICY_CONTRACT.md).
 One Course Unit has many Materials; every Material has a required Course Unit
 owner and is the main shared document of that unit across classes. Optional
 Session association does not change ownership or make that main document private
@@ -66,7 +66,13 @@ ACTIVE enrollment uses the same material gates. No external-link material in MVP
 
 ### Class operations
 
-Owns `classes`, `class_units`, `class_sessions` and planned `attendance_records`.
+Owns `classes`, `class_units` and `class_sessions`. Phase4 AttendanceModule now
+owns ordinary attendance/audits (4.2 implemented local); cross-class guest records remain planned. Ordinary
+rows retain same-class ancestry. Teaching operations coordinates approved leave,
+replacement schedules and student conflicts. See the
+[reviewed Phase4 plan](./implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md);
+Slices4.1–4.2 are implemented/tested local; leave/makeup/correction/history remain
+planned and deployment pending. See API breakdown §14–15 for the actual contract.
 A class is a scheduled delivery of one course. EnrollmentsModule separately owns
 `enrollments` and `class_unit_progress`, including checkout holds and learning access.
 

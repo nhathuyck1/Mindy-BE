@@ -1,10 +1,46 @@
 import { describe, expect, it } from 'vitest';
 
-import { isWithinClassPeriod, toLocalDate, withLocalTime } from './class-calendar.js';
+import {
+  attendanceDeadline,
+  isSingleTeachingDay,
+  isWithinClassPeriod,
+  toLocalDate,
+  withLocalTime,
+} from './class-calendar.js';
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 describe('class calendar', () => {
+  it('ends attendance at midnight after the next teaching day, independent of opening time', () => {
+    for (const hour of ['00:00:00', '08:00:00', '19:00:00', '23:59:59'])
+      expect(attendanceDeadline(new Date(`2026-10-13T${hour}+07:00`), TIME_ZONE)).toEqual(
+        new Date('2026-10-15T00:00:00+07:00'),
+      );
+    expect(attendanceDeadline(new Date('2026-12-31T19:00:00+07:00'), TIME_ZONE)).toEqual(
+      new Date('2027-01-02T00:00:00+07:00'),
+    );
+  });
+
+  it('uses calendar dates across DST, not a fixed number of elapsed hours', () => {
+    expect(attendanceDeadline(new Date('2026-03-07T12:00:00-05:00'), 'America/New_York')).toEqual(
+      new Date('2026-03-09T00:00:00-04:00'),
+    );
+    expect(attendanceDeadline(new Date('2026-10-31T12:00:00-04:00'), 'America/New_York')).toEqual(
+      new Date('2026-11-02T00:00:00-05:00'),
+    );
+  });
+
+  it('rejects overnight and multi-day teaching, permitting an exclusive midnight end', () => {
+    const start = new Date('2026-10-13T23:00:00+07:00');
+    expect(isSingleTeachingDay(start, new Date('2026-10-14T00:00:00+07:00'), TIME_ZONE)).toBe(true);
+    expect(isSingleTeachingDay(start, new Date('2026-10-14T00:00:00.001+07:00'), TIME_ZONE)).toBe(
+      false,
+    );
+    expect(isSingleTeachingDay(start, new Date('2026-10-15T01:00:00+07:00'), TIME_ZONE)).toBe(
+      false,
+    );
+  });
+
   it('changes only the local clock time, including midnight and a UTC date boundary', () => {
     const instant = new Date('2026-10-12T18:30:00Z');
     expect(withLocalTime(instant, '07:30', TIME_ZONE)).toEqual(new Date('2026-10-13T00:30:00Z'));

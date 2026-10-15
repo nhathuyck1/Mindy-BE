@@ -31,6 +31,26 @@ tại để order cũ vẫn đọc được khi đổi cấu hình kênh.
 integer; 422: query thiếu/sai định dạng. Response tạo/reuse link đã bổ sung
 `providerOrderCode` (number); CASH summary trả trường này `null`.
 
+## Admin roster và student detail — 2026-10-13
+
+Danh sách lớp và class detail đã có `GET /api/v1/admin/classes` và
+`GET /api/v1/admin/classes/:classId`. Bổ sung hai API chỉ cho ADMIN:
+
+- `GET /api/v1/admin/classes/:classId/students?page=1&pageSize=20`:
+  `{items, page, pageSize, total}`; page ≥1, pageSize 1–100 (default 20).
+  Items có studentId/studentName/email/phone/studentStatus,
+  enrollmentId/enrollmentStatus/enrolledAt. Lấy studentId để mở detail.
+- `GET /api/v1/admin/classes/:classId/students/:studentId`: cùng fields trên,
+  thêm classId/orderDetailId/registeredAt/accountCreatedAt/lastLoginAt;
+  kiểm tra enrollment còn hiệu lực của đúng cặp Class/Student.
+
+Chỉ PENDING_PAYMENT/ACTIVE/COMPLETED, không trả CANCELLED; account SUSPENDED vẫn
+đọc được. Chưa có học sinh trả page rỗng; detail ngoài lớp trả 404
+CLASS_STUDENT_NOT_FOUND. Cookie auth, UUID path; timestamps ISO UTC, phone/enrolledAt/
+lastLoginAt nullable. Không thay đổi payment/access hoặc trả password/token.
+Implement/test HTTP local, chưa deploy. [Flow](api_flow/PHASE_2_3_FLOW.md) và
+[API breakdown §5.3](api_flow/PHASE_2_3_flow-api-breakdown.md#53-admin-danh-sách-và-chi-tiết-học-sinh-theo-lớp).
+
 ## CASH
 
 ### Bổ sung quản trị giờ Session — 2026-10-12

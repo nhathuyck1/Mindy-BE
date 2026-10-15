@@ -1,6 +1,6 @@
 # Course flow — bản để kiểm tra trước Phase 3
 
-> Trạng thái: **D1–D6 Phase 3 đã duyệt; các quyết định attendance/bù/chứng chỉ còn mở**.
+> Trạng thái: **D1–D6 Phase 3 đã duyệt; Phase 4.1–4.2 implemented/tested local ngày2026-10-13, 4.3–4.5 pending/chưa deploy; chứng chỉ còn hoãn**.
 > Nguồn nghiệp vụ và mô hình dữ liệu: [`Flow.txt`](./Flow.txt), [`usecase-course.drawio`](./usecase-course.drawio) và [`mindy_center_full.dbml`](./mindy_center_full.dbml).  
 > Nguồn quyết định triển khai hiện hành: [`CORE_BUSINESS_LOGIC.md`](../docs/CORE_BUSINESS_LOGIC.md), [`PHASE_2_FE_CONTRACT.md`](../docs/PHASE_2_FE_CONTRACT.md), [`Progress.md`](../docs/progress/Progress.md).  
 > Tài liệu này mô tả **flow mong muốn**; các mục ghi “chưa triển khai” không phải API/tính năng đã có.
@@ -20,7 +20,7 @@
 | **Course** | Khóa học mẫu do Admin quản lý: thông tin công khai, giá và danh sách Course Unit. Course không có lịch dạy và tự nó không cấp quyền học. |
 | **Course Unit** | Nội dung/chương học có thứ tự trong Course. |
 | **Class** | Lớp mở từ một Course, có hình thức ONLINE/OFFLINE, mentor, sức chứa, thời gian và trạng thái. Student đăng ký **Class**. |
-| **Class Unit** | Bản nội dung của Course Unit được đưa vào Class khi tạo lớp; thứ tự/trạng thái của lớp có thể được quản lý độc lập. |
+| **Class Unit** | Liên kết Class–Course Unit được tạo khi mở cấu trúc lớp, giữ tham chiếu nội dung dùng chung và thứ tự/trạng thái riêng; không clone toàn bộ nội dung. |
 | **Class Session** | Buổi học có lịch cụ thể thuộc một Class Unit. DBML gắn điểm danh, assignment và board trực tiếp với Session; materials hiện gắn với Course Unit. |
 | **Enrollment** | Quan hệ Student–Class. Lúc checkout là giữ chỗ `PENDING_PAYMENT`; sau khi thanh toán hợp lệ là `ACTIVE`. |
 | **Attendance Record** | Kết quả điểm danh của một Enrollment tại một Class Session. DBML giới hạn một bản ghi cho mỗi cặp `(enrollment_id, class_session_id)`. |
@@ -31,7 +31,7 @@ Quan hệ chính:
 flowchart LR
     C[Course] --> CU[Course Unit]
     C --> CL[Class]
-    CU -->|sao chép nội dung khi tạo lớp| CLU[Class Unit]
+    CU -->|tham chiếu khi tạo lớp| CLU[Class Unit]
     CL --> CLU
     CLU --> S[Class Session]
     ST[Student] -->|đăng ký và thanh toán| E[Enrollment]
@@ -111,7 +111,12 @@ Order chưa trả tiền quá hạn chuyển `EXPIRED`; giữ chỗ được h�
 
 1. Mentor cập nhật hồ sơ (kinh nghiệm, feedback), môn và thời gian có thể dạy; xem lịch dạy.
 2. Có hai cách nhận slot: mentor tự nhận slot đủ điều kiện hoặc Admin phân công. Admin xem log đăng ký và duyệt yêu cầu nhận slot.
-3. Mentor cần nghỉ/dạy bù gửi yêu cầu; Admin duyệt. Sau duyệt, chọn slot thay thế trong tuần và email báo Student liên quan trước buổi học theo quy tắc thời hạn cần chốt ở mục 8.
+3. Phase4 đã chốt: mentor chọn từ ngày–đến ngày và sáng00–12/chiều12–18/tối18–24/
+   cả ngày, gửi trước ít nhất hai ngày lịch; Manager/Admin duyệt trước khi đổi lịch.
+   Nghỉ buổi chọn buổi bù bằng slot gợi ý hoặc nhập giờ, tránh trùng học viên.
+   Nghỉ cả ngày đổi ngày giữ giờ, ghi học viên trùng để quản lý xếp bù lớp khác.
+   Sau duyệt hủy source/tạo replacement/gia hạn endDate nếu cần, chỉ cập nhật lịch;
+   notification/email tự động để sau, mentor chủ động nhắn học viên.
 
 Các bước tự nhận slot, đăng ký nghỉ và duyệt bù là use case trong nguồn, **chưa được coi là API đã có**.
 
@@ -133,17 +138,43 @@ Student xem thời khóa biểu cá nhân, Class Unit/Session và tham gia buổ
 ```mermaid
 flowchart LR
     S[Class Session] --> R[Danh sách Enrollment của cùng Class]
-    R --> M[Mentor được gán hoặc Admin ghi điểm danh]
+    R --> M[Mentor hiệu lực của buổi hoặc Manager/Admin ghi điểm danh]
     M --> A[Attendance Record: 1 Enrollment + 1 Session]
     A --> V[Student xem điểm danh của mình]
     A --> C[Cuối kỳ: tính tỷ lệ để xét chứng chỉ]
 ```
 
-1. Mentor được gán vào Class mở Session và xem danh sách học viên thuộc Class đó. Kế hoạch core cũng cho phép Admin ghi điểm danh; quyền ghi cụ thể cần được thể hiện rõ ở Phase 4.
-2. Người có quyền ghi một trạng thái cho từng học viên/buổi: `PRESENT`, `ABSENT`, `LATE` hoặc `EXCUSED`. DBML có `checked_in_at`, `recorded_by`, `created_at`; nó **chưa** quy định điểm danh tự động khi vào phòng online hay quét mã tại lớp offline.
+1. Theo quyết định user2026-10-13, mentor hiệu lực của Session bấm Bắt đầu rồi
+   điểm danh thủ công ONLINE/OFFLINE; snapshot ACTIVE roster. Manager/Admin có
+   quyền phục hồi buổi mentor quên bắt đầu/chốt với lý do và thời gian có chứng cứ.
+   Mở điểm danh bất kỳ giờ trong ngày học, không overnight; ngoài ngày chỉ
+   quản lý recovery. Manager cũng phục hồi legacy COMPLETED bằng roster có chứng cứ.
+2. MVP dùng `UNMARKED`, `PRESENT`, `ABSENT`. Chưa tick trong buổi là Chưa điểm
+   danh; Kết thúc/chốt mới chuyển chưa tick thành Vắng. Chưa bắt đầu là trạng
+   thái Session riêng. `LATE`/`EXCUSED` trong DBML là scope sau, không auto check-in.
 3. Hệ thống phải kiểm tra Enrollment và Session thuộc **cùng Class** trước khi ghi. Khóa duy nhất `(enrollment_id, class_session_id)` ngăn tạo hai kết quả cho cùng một học viên/buổi; sửa kết quả cũ là thao tác cập nhật có kiểm soát, không thêm bản ghi thứ hai.
-4. Student chỉ xem kết quả điểm danh của mình theo từng Session và tổng hợp của Class. CASH pending có thể đến lớp offline theo Flow.txt, nhưng quyền **được ghi điểm danh trước khi Mentor xác nhận tiền** chưa được chốt; không suy ra quyền mở materials/nội dung từ việc có mặt.
-5. Buổi nghỉ/dạy bù ở mục 5.1 phải được phản ánh trong lịch Session. Việc giữ hay thay bản ghi điểm danh của buổi cũ, và buổi bù có tính vào mẫu số tỷ lệ hay không, còn cần chốt.
+4. Mentor được giao buổi sửa đến hết ngày kế tiếp của ngày học trên lịch theo
+   APP_TIME_ZONE (thứ Ba→00:00 thứ Năm); giờ bấm mở không đổi hạn. Manager/Admin
+   sửa bất kỳ lúc nào có reason/audit. Student chỉ own attendance. CASH pending
+   chỉ preview lịch, cần activate trước khi admit roster; mentor dạy thay không
+   kế thừa cash confirm theo Order snapshot. Enrollment có sau start không bị
+   ghi vắng ngược; rời lớp giữ lịch sử snapshot.
+5. Manager tìm mentor ACTIVE không trùng lịch primary/substitute và gán dạy
+   thay từng buổi, kể cả giữa buổi; đổi mentor chủ nhiệm là command riêng.
+   Assignment giữa buổi không reset deadline. Hủy giữ attendance nhưng loại
+   mẫu số, buổi bù liên kết original CANCELLED và chỉ replacement đã chốt được
+   tính. Không tự ABSENT vì hết giờ, không tự gửi email/notification trong Phase4.
+6. Lịch chỉ chiếm interval dự kiến; qua endsAt chưa chốt không giữ slot kế tiếp.
+   Completion chặn Session SCHEDULED/IN_PROGRESS và placement bù chưa giải quyết.
+7. Manager xếp học viên ACTIVE bị trùng sang một Session của Class khác cùng Course
+   Unit, xác nhận nội dung tương đương và sức chứa/lịch hợp lệ. Placement và guest
+   attendance riêng, không ghi enrollment ngoại lớp vào attendance_records thường.
+   Student có đúng quyền buổi nhận bù; guest result thay source một lần trong rate,
+   pending guest loại mẫu số. Không tạo order/enrollment hoặc mở materials lớp nhận.
+
+Plan/flow/API hiện hành: [Phase4](../docs/implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md),
+[flow](../docs/api_flow/PHASE_4_FLOW.md), [API dự kiến](../docs/api_flow/PHASE_4_flow-api-breakdown.md).
+Nghiệp vụ đã chốt không đồng nghĩa migration/API đã implement hoặc deploy.
 
 **Đối chiếu DBML:** `attendance_records` liên kết `enrollments`, `class_sessions`, tùy chọn `recorded_by → users`; có unique theo Enrollment/Session và index theo Session/status. Bảng hiện không có `updated_at`, người sửa, lý do sửa hoặc liên kết Session gốc–buổi bù. Nếu Phase 4 cần lịch sử chỉnh sửa hoặc tính buổi bù có chứng cứ, phải bổ sung schema; không mặc định DBML hiện có đã hỗ trợ.
 
@@ -175,7 +206,7 @@ riêng. [Contract3.3](../docs/implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAG
 |---|---|---|
 | Course/Class catalog, giỏ, checkout, giữ chỗ, PayOS BE, CASH preview/mentor confirm | 2 / 2.2 | Đã triển khai và kiểm tra local; bản sửa tạo QR ngày 2026-10-06 còn cần deploy/kiểm chứng trên VPS. Giao dịch PayOS tiền thật và nghiệm thu live chưa có bằng chứng hoàn tất. |
 | File và materials | **3** | D1–D6 đã duyệt: tài liệu chính Course Unit shared, Manager quản lý/review, Mentor upload chờ duyệt. Role Manager có migration mới; upload/review/material API chưa triển khai. |
-| Điểm danh và truy vấn vận hành | 4 | DBML đã phác bảng/trạng thái/quan hệ, nhưng chưa có migration/module/API điểm danh. Flow ghi và tính tỷ lệ còn các quyết định ở mục 8. |
+| Điểm danh và truy vấn vận hành | 4 | 4.1 assignment/availability và4.2 regular roster/start/sync/mark/finalize/staff clock recovery implemented/tested local; migrations mới, check328/328, HTTP30/30. Correction/legacy recovery/audit reads4.3 và leave/makeup/guest/Student projections4.4 vẫn planned; chưa deploy. |
 | Chat/DM, thông báo | 6 | Chưa triển khai; CASH pending chat là yêu cầu giữ lại. |
 | Assignment/chấm bài, board, compiler/judge, chứng chỉ, form tư vấn/gợi ý khóa học | Chưa chốt phase cụ thể | Có trong Flow/use case, không được hiểu là đã hoàn thành. |
 
@@ -193,11 +224,21 @@ Class Unit/Session. Không triển khai điểm danh; giữ quyết định đó
 3. **Đã chốt quyền xem:** Student ACTIVE, Class không hủy, Class Unit đã mở/đến giờ,
    Material approved/published/đến giờ, file READY. CASH pending chỉ preview tiêu đề/lịch.
 4. **Cách tạo Class:** mỗi Class lấy toàn bộ Course Unit tại thời điểm tạo như hiện tại, hay Admin có thể chọn một phần Course Unit?
-5. **Dạy bù:** “trước 1 ngày” là hạn gửi yêu cầu nghỉ, hạn Admin duyệt, hay thời điểm muộn nhất email phải đến Student? Buổi bù có thể ở tuần khác không?
-6. **Đối tượng được điểm danh:** chỉ Enrollment `ACTIVE`, hay cả CASH `PENDING_PAYMENT` đang được phép đến lớp offline? Nếu cash hết hạn/hủy sau khi đã dự học, giữ lịch sử điểm danh và tính chứng chỉ ra sao?
-7. **Người ghi/sửa điểm danh:** mentor chính của Class, Admin, hay mentor dạy bù cũng được ghi? Cho phép sửa sau khi Session kết thúc trong bao lâu, có bắt buộc lưu người sửa/lý do/lịch sử không?
-8. **Cách xác định có mặt:** Mentor đánh dấu thủ công cho ONLINE/OFFLINE, Student tự check-in, hay hệ thống lấy tín hiệu vào phòng? `checked_in_at` chỉ là trường dữ liệu, không tự quyết định cơ chế này.
-9. **Buổi bù và kết quả thiếu:** hủy Session cũ rồi tạo Session mới hay đổi lịch cùng Session? Một buổi bù thay thế hay cộng thêm vào tổng số buổi? Nếu Mentor không ghi điểm danh, coi là vắng hay chưa có dữ liệu?
+5. **Đã chốt Phase4:** nghỉ báo trước hai ngày lịch, Manager/Admin duyệt; bù có thể
+   khác tuần và gia hạn endDate tự động. Nghỉ buổi tránh student conflict; nghỉ
+   ngày giữ giờ và ghi học viên trùng. Không triển khai email/notification tự động.
+6. **Đã chốt Phase4:** ACTIVE roster; pending cần activation/admission hợp lệ,
+   không attendance chính thức trước thanh toán; giữ lịch sử khi rời lớp.
+7. **Đã chốt Phase4:** effective Session mentor sửa đến hết ngày kế tiếp của ngày học,
+   Manager/Admin không deadline có reason/audit; Manager tìm mentor trống và
+   phân công thay theo buổi/lớp qua command riêng.
+8. **Đã chốt Phase4:** mentor tick thủ công ONLINE/OFFLINE; không auto check-in.
+9. **Đã chốt Phase4:** đổi lịch cùng Session nếu chưa start hoặc hủy + replacement
+   liên kết; original canceled không mẫu số, thiếu chưa chốt không tự vắng.
+   Chi tiết kỹ thuật/cutoff/historical data theo plan Phase4.
 10. **Chứng chỉ:** cần chốt `X`, `Y`, cách tính `LATE`/`EXCUSED`, buổi bù và điểm bài tập. Đây là điều kiện cuối kỳ, chưa ảnh hưởng trực tiếp đến Phase 3.
 
-Nếu các điểm 1–3 được xác nhận, tài liệu này đủ làm nền để viết plan và triển khai Phase 3 File + Materials. Các điểm 4–10 cần giữ để chốt ở phase tương ứng; đặc biệt 6–9 là điều kiện để thiết kế Phase 4 Attendance đúng flow.
+Các điểm1–3 đã được duyệt Phase3;5–9 cùng nghỉ/bù/học bù lớp khác được chốt
+trong plan Phase4 ngày2026-10-13. Điểm4 và10 ngoài phạm vi đã chốt giữ ở phase
+tương ứng. Phase4 có đăng ký nghỉ có duyệt; email/notification tự động và
+chứng chỉ còn hoãn. Quyết định chat mới thay yêu cầu email trước1ngày trong nguồn cũ.

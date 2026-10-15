@@ -1,12 +1,19 @@
-# Phase 3.4 — FE integration: Student Materials
+# Phase 3.4 — API handoff: Student Materials và staff preview
 
-Cập nhật **2026-10-14**. Đã implement và local verified: ba Student GET (nay gồm
+Cập nhật **2026-10-15**. Đã implement và local verified: ba Student GET (nay gồm
 ARTICLE/inline images/attachments), Student file access POST (§4) và staff preview
 POST cho Manager/Mentor (§5). **Chưa deploy/VPS, chưa nghiệm thu browser FE.**
 [Flow](PHASE_3_4_FLOW.md) · [Progress](../progress/phase%203/PHASE_3_4_PROGRESS.md).
 Authoring/review/release HTTP thuộc [3.3](PHASE_3_3_flow-api-breakdown.md) (đã có local).
 
-## Contract chung
+[Plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md)
+và [planning13/10 đã thay thế](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
+§1–3 là ba Student GET; §4–5 là POST file access/staff preview đã implement local
+ngày14/10. Contract FE phải khớp source/Swagger này; GET preview/assets trong
+planning13/10 không phải API hiện hành. User nhận deploy/server acceptance,
+nhóm FE tích hợp riêng; repo FE local chỉ đọc.
+
+## Contract chung đã implement cho ba Student GET
 
 Prefix `/api/v1`. Actor STUDENT, cookie `access_token`; browser FE dùng authenticated
 same-origin adapter và `credentials` theo session client hiện có. Không gửi
@@ -290,3 +297,23 @@ version/expiry/Range/PDF/MP4; từ 2026-10-14 thêm ARTICLE HTML/inline PNG/atta
 disposition, foreign fileId404, broken reference ẩn trước total, recheck sau ký,
 staff preview pending/unpublished, role/Origin/UUID. Browser Range/seek/refresh/CORS,
 UI FE và deployed/VPS acceptance **còn chờ**.
+
+## Lịch sử contract — planning 2026-10-13, implementation 2026-10-14
+
+Planning13/10 đề xuất GET preview/assets với expectedRevision và ARTICLE primary422. Các đề xuất chưa từng implement này đã được thay bởi contract POST files/access hiện hành: không expectedRevision query, response có revision, ARTICLE primary download404, disposition theo role. Giữ mục đích preview trước review, quyền/membership và recheck sau ký; không thêm các GET cũ vào FE allowlist. Chi tiết lịch sử tại [plan13/10](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md), implementation tại [plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
+
+## Tích hợp với dev/Phase4 — 2026-10-15
+
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

@@ -1,10 +1,14 @@
 # Phase 3.3 — Flow Material management và release
 
-Cập nhật: **2026-10-14**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
+Cập nhật: **2026-10-15**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
 Progress: [3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Baseline: [upload 3.2](PHASE_3_2_FLOW.md), [flow tổng hợp](PHASE_2_3_TO_3_2_FLOW.md).
+
+Điều phối2026-10-13: [plan3.4 phối hợp](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+đưa staff preview/assets vào cùng mốc review3.3.3. Người khác triển khai3.3–3.6,
+user nhận deploy/server acceptance; FE là nhóm riêng, repo FE local chỉ để đọc.
 
 2026-10-12: Theo yêu cầu làm ba Student GET trước, có
 [read slice FILE/VIDEO3.4](PHASE_3_4_FLOW.md) + bảng materials tối thiểu và signed GET.
@@ -34,39 +38,39 @@ Manager quyết định trên đúng revision. Approve đồng thời publish; a
 và release của từng lớp vẫn quyết định khi Student đọc ở 3.4. Được duyệt không
 đồng nghĩa mọi Student/lớp được mở ngay. Session link không giấu Material chung.
 
-## 2. Flow dự kiến
+## 2. Flow đã implement local
 
 ```mermaid
 flowchart TD
   C["Mentor roster classId đã có"] --> U["3.3.2: unit/session context đúng assignment"]
   M["Manager chọn Course Unit UUID"] --> K{"ARTICLE / FILE / VIDEO"}
-  K -.-> H["ARTICLE: HTML đã sanitize; text-only không cần upload"]
+  K --> H["ARTICLE: HTML đã sanitize; text-only không cần upload"]
   K --> UP["3.2 đã nghiệm thu: upload assets / PDF / MP4 → READY"]
   U --> H
   U --> UP
   UP --> D["3.3.1/3.3.2: tạo typed Material DRAFT revision 1"]
   H --> D
   D --> S["3.3.2: Mentor submit → PENDING_REVIEW"]
-  S -.-> Q["Manager queue/detail + expectedRevision"]
-  Q -.-> A["Approve → APPROVED + publishedAt"]
-  Q -.-> R["Reject + reason → REJECTED"]
-  R -.-> E["Mentor EDIT → DRAFT revision + 1 → submit lại"]
-  D -.->|"Manager own draft"| A
-  A -.-> ME["Manager EDIT → DRAFT, thu hồi approval/publication"]
-  ME -.-> A
-  A -.-> P["Manager unpublish/publish đúng approval"]
-  REL["3.3: Admin/Mentor release Class Unit LOCKED/OPEN + unlockAt"] -.-> G
-  A -.-> G["3.4: ACTIVE + class/unit/time + approval + valid content/READY refs"]
-  G -.-> READ["Student list/detail/assets; Manager/Mentor binary preview"]
+  S --> Q["Manager queue/detail + expectedRevision"]
+  Q --> PRE["3.4 staff preview/assets đúng revision; Manager canPreview"]
+  PRE --> A["Approve → APPROVED + publishedAt"]
+  PRE --> R["Reject + reason → REJECTED"]
+  R --> E["Mentor EDIT → DRAFT revision + 1 → submit lại"]
+  D -->|"Manager own draft"| A
+  A --> ME["Manager EDIT → DRAFT, thu hồi approval/publication"]
+  ME --> A
+  A --> P["Manager unpublish/publish đúng approval"]
+  REL["3.3: Admin/Mentor release Class Unit LOCKED/OPEN + unlockAt"] --> G
+  A --> G["3.4: ACTIVE + class/unit/time + approval + valid content/READY refs"]
+  G --> READ["Student list/detail/download/assets"]
 ```
 
-Nét đứt là việc chưa implement. Upload 3.2 đã nghiệm thu VPS theo xác nhận user
-2026-10-12; ảnh PDF/MP4 READY/private objects ghi ở progress3.2.
-Diagram không công bố endpoint3.3/3.4 mới là dùng được.
+Diagram mô tả APIs đã implement local, không thay evidence VPS/browser.
+Upload3.2 đã nghiệm thu VPS theo user2026-10-12;3.3/3.4 vẫn chờ server acceptance.
 
 ## 3. Mentor tạo và gửi duyệt
 
-1. `GET /mentor/classes` đã có lấy classId. Routes context dự kiến 3.3 trả
+1. `GET /mentor/classes` lấy classId. Routes context3.3 đã implement trả
    classUnitId/courseUnitId; optional session picker trả sessionId đúng unit.
    Không đoán mapping theo title/position hoặc gọi Admin API.
 2. ARTICLE text-only: soạn HTML; nếu có inline images/attachments hoặc FILE/VIDEO,
@@ -88,9 +92,12 @@ Diagram không công bố endpoint3.3/3.4 mới là dùng được.
    toàn catalogue picker chưa có, xem integration gap trong plan).
 2. GET materials/queue (mặc định queue filter FE PENDING_REVIEW); chọn item GET
    detail để lấy current revision. List không chứa download URL.
-3. Approve/reject dùng expectedRevision; approve publish cùng commit, reject cần
-   reason. ARTICLE detail trả HTML đã sanitize để đọc ngay3.3.
-   Binary preview thuộc 3.4; không giả định 3.3 đã đủ màn hình đọc file.
+3. ARTICLE detail trả HTML đã sanitize. Gọi POST files/access3.4 với materialId/fileId
+   lấy từ detail để xem PDF/MP4/ảnh/attachments; response có revision để đối chiếu
+   với detail trước review, không gửi expectedRevision trong access query.
+   Text-only ARTICLE không cần primary URL. Approve/reject gửi expectedRevision
+   đúng bản đã xem; approve publish cùng commit, reject cần reason. API preview
+   đã có local; human/browser review và server acceptance vẫn cần evidence riêng.
 4. 409: refetch item/queue, hiển thị bản hiện tại, không tự approve revision mới.
    Response mất: refetch, retry cùng revision khi state còn đúng; no-op không tạo audit.
 5. Manager EDIT HTML/primary/inline/attachment refs/sortOrder/availableAt/sessionId tăng revision và
@@ -119,7 +126,8 @@ Hai lớp cùng Course Unit dùng chung Material, release độc lập theo từ
 - Manager3.3.1 metadata responses `no-store`; invalidate unit list/item/queue theo
   mutation, release refetch unit context và Student views khi 3.4 tích hợp.
 - Cần migration/code 3.3/auth role; upload mới cần MinIO/worker 3.2. Existing
-  metadata/read/review không cần gọi storage network. Download cần triển khai 3.4.
+  metadata/read/review không cần gọi storage network. Student FILE/VIDEO download
+  và ARTICLE/refs, staff preview/assets đã có local theo3.4; server/browser còn pending.
 
 ## 7. Nhật ký — 2026-10-11
 
@@ -140,6 +148,16 @@ Giữ thứ tự3.3.1 typed Manager draft →3.3.2 Mentor submission →3.3.3 re
 trong plan, ghi evidence riêng; signed GET/Student access/video runtime thuộc3.4.
 Estimate BE provisional7–10 ngày, chốt sau sanitizer/batch-lock spike.
 Kiểm diff/link/JSON tài liệu; không sửa API runtime, chạy BE tests, migrate hoặc deploy.
+
+## Điều phối 3.3/3.4 — 2026-10-13 (lịch sử planning)
+
+3.3.1 sở hữu additive schema/refs/typed policy;3.4 làm consumer sau contract,
+staff preview cùng3.3.3 và Student server journey sau publication/release3.3.4.
+Sửa diagram để staff preview dùng canPreview riêng trước review, không đi qua
+Student release/enrollment gates. Đồng bộ plan/breakdown/progress và handoff user
+deploy; chỉ tài liệu BE, không source/FE/migration/runtime test/deploy.
+
+Các mốc triển khai dưới đây cập nhật trạng thái sau lượt planning; contract access hiện hành ở breakdown3.4.
 
 ## 9. Triển khai 3.3.1 — 2026-10-13
 
@@ -239,3 +257,19 @@ PENDING evidence và providers/fixtures3.4 ở [§10 breakdown](PHASE_3_3_flow-a
 Kết quả gate cuối ghi [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
 Chưa deploy/VPS acceptance/user sign-off; Student ARTICLE/assets, staff binary
 preview và video runtime thuộc3.4. Local pass không đánh dấu toàn3.3 complete.
+
+## Tích hợp với dev/Phase4 — 2026-10-15
+
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

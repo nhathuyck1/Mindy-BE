@@ -1,11 +1,16 @@
-# Phase 3.4 — Student Material list/detail/download
+# Phase 3.4 — Student Material access và staff preview
 
-Cập nhật **2026-10-14**. Student list/detail/download + file access (ARTICLE/FILE/VIDEO,
+Cập nhật **2026-10-15**. Student list/detail/download + file access (ARTICLE/FILE/VIDEO,
 inline images, attachments) và staff preview Manager/Mentor đã implement, local verified.
 Chưa deploy/nghiệm thu VPS; chưa tích hợp UI/browser FE.
 [API breakdown](PHASE_3_4_flow-api-breakdown.md) ·
 [Progress](../progress/phase%203/PHASE_3_4_PROGRESS.md) ·
 [Rà soát FE](PHASE_3_4_FE_API_GAPS.md).
+
+[Plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
+Phân công user2026-10-13: bên triển khai bàn giao3.3–3.6; user nhận deploy/server
+acceptance, nhóm FE tích hợp riêng và repo FE local chỉ đọc. [Planning13/10](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+giữ để tra lịch sử; implementation14/10 và contract ở trên là trạng thái hiện hành.
 
 ## Phạm vi và quyết định thứ tự triển khai
 
@@ -86,3 +91,23 @@ Không redirect/stream bytes qua BE; không generic Student `/files/:fileId/down
   [API breakdown §4–5](PHASE_3_4_flow-api-breakdown.md).
 - Kiểm chứng local 2026-10-14: `pnpm check` 411/411 (35 suites), `pnpm test:http`
   48/48 (2 suites), PostgreSQL `_test` + MinIO local; chưa VPS/browser.
+
+## Điều phối 3.3/3.4 — lịch sử planning 2026-10-13
+
+Planning chốt 3.3 sở hữu schema/refs/policy, 3.4 làm typed reader và staff preview/assets. Staff canPreview độc lập Student ACTIVE/release/time gates; backend bàn giao API/storage evidence, user deploy, nhóm FE tích hợp và nghiệm thu browser riêng. Lượt13/10 chỉ tài liệu, không runtime tests/deploy. Đề xuất GET preview/assets + expectedRevision lúc đó không phải endpoint hiện hành; implementation14/10 dùng POST files/access như contract ở trên. [Plan lịch sử](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md); [plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
+
+## Tích hợp với dev/Phase4 — 2026-10-15
+
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

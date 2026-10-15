@@ -38,10 +38,13 @@ Material là tài liệu chính của Course Unit: **Course Unit 1–N Material*
 các lớp dùng chung tài liệu của Course Unit. Không thêm material owner Class
 Unit/Session. Optional Session link chỉ chỉ định sử dụng, không đổi owner/visibility.
 
-User phụ trách Phase 3, người khác làm
-[Phase 2.3](../phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md) song song. Thứ tự P3 là
-3.1 → 3.2 → 3.3 → 3.4 → 3.5 → 3.6; không chờ calendar/navigation để bắt đầu,
-nhưng tích hợp toàn hành trình FE là gate riêng trước nghiệm thu tích hợp.
+Điều phối user2026-10-13: người khác triển khai **3.3–3.6**, user nhận bàn giao
+deploy/server acceptance. **FE do nhóm riêng làm; repo FE local chỉ để đọc.**
+[Plan3.4 phối hợp](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) đưa staff preview/assets
+cùng mốc review3.3.3; Student typed consumer sau contract3.3.1 và server cases sau
+publication/release. Thứ tự P3 là roadmap với dependencies từng slice, không yêu
+cầu chờ toàn3.3 mới bắt đầu3.4. Tích hợp/browser FE cần phối hợp nhóm riêng và
+evidence riêng trước nghiệm thu toàn journey.
 
 - Manager role riêng quản lý/sửa/duyệt tài liệu chính dùng chung.
 - Mentor được gán lớp upload draft của Course Unit trong lớp đó, submit chờ

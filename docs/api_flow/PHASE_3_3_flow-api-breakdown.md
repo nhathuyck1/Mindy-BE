@@ -1,6 +1,6 @@
 # Phase 3.3 — API breakdown cho FE
 
-Cập nhật: **2026-10-14**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
+Cập nhật: **2026-10-15**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
 release3.3.4 ở §9 đã implement local. Chưa deploy/nghiệm thu VPS3.3.1–3.3.4.**
 Shapes Manager/Mentor/decision/release đã đối chiếu Swagger/source.
 Upload 3.2 đã có, xem
@@ -8,6 +8,11 @@ Upload 3.2 đã có, xem
 
 Flow: [3.3](PHASE_3_3_FLOW.md). Plan:
 [Material management](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
+
+Phối hợp2026-10-13: [plan3.4](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+và [preview/assets breakdown](PHASE_3_4_flow-api-breakdown.md) đưa staff access
+vào cùng mốc review3.3.3. Người khác triển khai3.3–3.6, user deploy/nghiệm thu
+server; FE do nhóm riêng làm, repo FE local chỉ để đọc.
 
 Ngoại lệ thứ tự2026-10-12: [ba Student FILE/VIDEO GET3.4](PHASE_3_4_flow-api-breakdown.md)
 đã implement + materials read persistence tối thiểu. ARTICLE/refs/schema và Manager
@@ -21,7 +26,7 @@ Course Unit description là tổng quan; không bổ sung bảng course_unit_det
 hoặc endpoint mới trong lượt tư vấn. PDF upload trả fileId READY, sau đó gắn
 vào FILE hoặc attachment ARTICLE qua APIs authoring dự kiến bên dưới.
 Upload không tự tạo Material/publish hay chuyển PDF thành HTML. Manager3.3.1 đã có
-ARTICLE/attachments; Mentor authoring3.3.2 đã có; Student ARTICLE/assets còn planned.
+ARTICLE/attachments; Mentor authoring3.3.2 và Student ARTICLE/assets3.4 đã có local.
 
 User chọn **BE lưu HTML**; video private MP4/URL expiry, HLS làm sau. Contract
 bên dưới áp dụng thống nhất cho Manager và Mentor create/PATCH/detail/list.
@@ -73,15 +78,16 @@ và contentSchemaVersion immutable ởMVP. Mọi sửa HTML/ref vẫn EDIT/tăng
 Queue/list giữ summary không HTML; Manager/Mentor detail trả HTML theo quyền và
 view nhưcũ. Các command/canEdit/review flow không đổi vì loại nội dung.
 
-3.4 planned cần Student `GET /api/v1/me/classes/:classId/materials/:materialId`
-detail body+refs sau ACTIVE/class/release/time/approval policy. Asset access
-POST `/api/v1/me/classes/:classId/materials/:materialId/files/:fileId/access`
-và Manager/Mentor preview tương ứng, body `{}`; fileId phải referenced và thuộc
-Material, 200 `{url,expiresAt}`, TTL<=60s/no-store/version chính xác.
-Inline image/video dùng signed GET inline, attachment dùng disposition attachment
-do BE quyết định. Pending/locked/hidden404, entitlement/assignment403, không auth401,
-storage disabled/outage503; không cấp URL chỉ vì biết fileId.
-Read/asset3.4 chưa implement; breakdown3.4 phải mô tả đầy đủ DTO/errors/UI khi triển khai.
+3.4 đã implement Student detail body+refs sau ACTIVE/class/release/time/approval.
+Student access: POST `/api/v1/me/classes/:classId/materials/:materialId/files/:fileId/access`;
+staff routes ở [breakdown3.4 §4–5](PHASE_3_4_flow-api-breakdown.md).
+Không expectedRevision query; response200 `{materialId,fileId,role,revision,url,expiresAt}`,
+TTL<=60s/no-store và verified version. fileId phải referenced bởi chính Material;
+cùng Course Unit chưa đủ. PRIMARY/INLINE_IMAGE dùng inline, ATTACHMENT dùng attachment.
+Recheck actor/assignment/enrollment/revision/membership sau ký; hidden/changed404,
+entitlement/assignment403, READY race409, storage disabled/signing failure503.
+ARTICLE primary download404, dùng detail/scoped file access. Planning GET preview/
+assets + expectedRevision ngày13/10 đã được thay bởi implementation POST ngày14/10.
 
 FE render HTML đã sanitize trong vùng đọc bài; resolve data-file-id bằng asset API,
 không persist signed URLs trong HTML/editor. Video Range/seek/URL expiry cần
@@ -490,8 +496,9 @@ URLs trong cache (3.3 không phát URL). Không polling vô hạn cho pending re
 
 Prerequisites: implement+migrate3.3, cookie auth roles, proxy Origin/CORS đúng;
 upload3.2 MinIO/versioning/worker bật nếu tạo/thay file. Không có claims deploy/
-VPS trong lượt này. Human preview3.4 và Manager inactive catalogue picker còn
-thiếu trước nghiệm thu UI toàn flow. Chạy local DB/HTTP/full gates khi implement;
+VPS trong lượt này. Human preview/assets3.4 triển khai cùng mốc review3.3.3;
+Manager inactive catalogue picker vẫn là gap trước nghiệm thu UI toàn flow.
+Chạy local DB/HTTP/full gates khi implement;
 happy paths ARTICLE-only hoặc upload READY→Mentor typed draft→submit→Manager approve→release,
 error branches/revision/assignment tests theo plan.
 
@@ -736,3 +743,23 @@ Admin thay quyền Manager. Chưa nghiệm thu UI FE hoặc sửa repo Mindy-FE.
 2026-10-14: Phần bàn giao trên đã được 3.4 implement local (Student ARTICLE/assets,
 POST file access, staff preview). Contract tại
 [breakdown 3.4 §4–5](PHASE_3_4_flow-api-breakdown.md); không đổi API 3.3 §3–9.
+
+## Điều phối preview/review — lịch sử planning 2026-10-13
+
+Lượt planning phối hợp staff preview/assets với review và bàn giao schema/fixtures; chỉ cập nhật tài liệu, không runtime tests/deploy trong lượt đó. Đề xuất GET preview/assets + expectedRevision ngày13/10 đã được thay bởi POST `.../files/:fileId/access` khi implement ngày14/10; xem [contract3.4 hiện hành](PHASE_3_4_flow-api-breakdown.md). Response access có revision để FE đối chiếu detail trước quyết định review; approve/reject vẫn kiểm expectedRevision riêng.
+
+## Tích hợp với dev/Phase4 — 2026-10-15
+
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

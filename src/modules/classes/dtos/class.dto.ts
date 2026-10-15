@@ -154,6 +154,8 @@ export class ClassDetailDto extends ClassDto {
 
 /** Management view: adds lifecycle state, the meeting URL and audit timestamps. */
 export class ClassManagementDto extends ClassDto {
+  @ApiProperty({ type: Number, minimum: 1 })
+  readonly assignmentVersion: number;
   @ApiProperty({ type: String, enum: ClassStatus })
   readonly status: ClassStatus;
 
@@ -168,6 +170,7 @@ export class ClassManagementDto extends ClassDto {
 
   constructor(view: ClassView) {
     super(view);
+    this.assignmentVersion = view.classEntity.assignmentVersion;
     this.status = view.classEntity.status;
     this.meetingUrl = view.classEntity.meetingUrl;
     this.createdAt = view.classEntity.createdAt;

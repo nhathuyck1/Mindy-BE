@@ -1,6 +1,6 @@
 # Flow Phase 2.3 → 3.1 → 3.2
 
-Đối chiếu source và progress; cập nhật plan/baseline ngày 2026-10-12.
+Đối chiếu source và progress; cập nhật tích hợp ngày 2026-10-15; lịch sử planning13/10 được ghi riêng.
 “Đã code” bên dưới chỉ nói về repo; không khẳng định đã deploy hoặc bật trên VPS.
 
 FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
@@ -8,16 +8,49 @@ FE tích hợp upload: [Flow 3.2](PHASE_3_2_FLOW.md) và
 FE tích hợp My Classes/lịch: [Flow 2.3](PHASE_2_3_FLOW.md) và
 [API breakdown 2.3](PHASE_2_3_flow-api-breakdown.md).
 
+Điều phối2026-10-13: người khác triển khai3.3–3.6, user nhận deploy/server
+acceptance; FE do nhóm riêng làm, repo FE local chỉ đọc.
+[Plan3.4 phối hợp3.3](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+đưa staff preview/assets cùng review3.3.3, Student typed consumer sau contract3.3.1.
+Ghi chú điều phối13/10 chỉ là lịch sử planning; kết quả tích hợp15/10 ghi ở cuối tài liệu.
+
 ## 1. Mỗi phase cung cấp gì?
+
+Phase4 bắt đầu song song theo user2026-10-13; enrollment/lịch2.3 + MANAGER là
+prerequisites, attendance không đợi Material CRUD. [Flow4](PHASE_4_FLOW.md) /
+[API4 dự kiến](PHASE_4_flow-api-breakdown.md) bổ sung mentor availability/dạy
+thay theo buổi, mở điểm danh trong ngày (không overnight), roster/chốt/hạn hết
+ngày học kế tiếp, recovery legacy,
+nghỉ trước hai ngày lịch có duyệt, bù buổi/ngày và học bù lớp khác cùng Course Unit.
+Phase4.1–4.2 đã implementation/test local, chưa deploy; xem contract4 mục14–15.
+4.3 implemented/focused verified;4.4–4.5 vẫn planned; substitute không tự có quyền material
+authoring/review/release hoặc cash confirm theo Order snapshot. Shared
+Classes/StudentLearning/providers và migrations phối hợp trước merge.
 
 | Phase | Mục tiêu | Đã có trong checkout này | Phần còn thiếu |
 |---|---|---|---|
 | 2.3 | Student tìm lớp đã đăng ký, xem detail và lịch cá nhân | StudentLearningModule, collection My Classes, lịch nhiều lớp, DTO access context, full detail/CASH preview; suite local pass | Query-plan review trên fixture lớn, coverage PayOS settlement → list/lịch và staging/VPS smoke |
 | 3.1 | Quy định ai được tạo, sửa, duyệt và đọc tài liệu | Role MANAGER + migration; MaterialsModule/MaterialPolicyService; context providers; domain review/revision/access và test | Material entity, DB persistence, HTTP CRUD/review và Student download thuộc các slice sau |
 | 3.2 | Upload file private và xác minh nội dung thực | Files API, private/versioned MinIO adapter, file/job/metadata tables, worker/locks/tests; nghiệm thu VPS theo user2026-10-12 | Material CRUD/review ở3.3; đọc/tải3.4; metadata/cleanup3.5; full integration3.6 |
-| 3.3 | Typed Material CRUD/review và Class Unit release | Manager typed CRUD3.3.1 + ARTICLE/sanitizer/refs/schema/audit; Mentor context/draft/submit3.3.2 local2026-10-13 | Manager review/publication3.3.3 local2026-10-13; release3.3.4 local2026-10-13; server acceptance từng slice còn planned; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
+| 3.3 | Typed Material CRUD/review và Class Unit release | Manager/Mentor authoring/context/submission, review/publication/release và acceptance/handoff implemented local13–14/10 | VPS/user sign-off pending; [flow](PHASE_3_3_FLOW.md)/[breakdown](PHASE_3_3_flow-api-breakdown.md) |
+| 3.4 | Student access + staff preview phối hợp3.3 | ARTICLE/FILE/VIDEO list/detail/download, scoped file access và staff preview đã implement local2026-10-14 | Giữ canPreview riêng với canRead; VPS/browser/FE còn pending; [flow](PHASE_3_4_FLOW.md)/[breakdown](PHASE_3_4_flow-api-breakdown.md) |
 
 Hai nhánh Student và Manager/Mentor làm việc độc lập, sau này gặp nhau ở Material.
+
+Phase4 có [plan riêng4.1](../implement_phase/phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
+và [plan riêng4.2](../implement_phase/phase%204/PHASE_4_2_SESSION_ATTENDANCE.md):
+available mentor/assignment → lifecycle/roster có core source/local evidence lịch
+sử. Correction/recovery/audit4.3 → leave/cancel/replacement4.4a → guest/conflicts4.4b
+→ Student/operations4.4c → release4.5 còn planned;4.3 đã có implementation/local evidence. Coverage/dependencies4.1–4.2
+còn mở theo [Progress4.1](../progress/phase%204/PHASE_4_1_PROGRESS.md) và
+[Progress4.2](../progress/phase%204/PHASE_4_2_PROGRESS.md); review này chỉ Markdown.
+
+2026-10-13: tiếp [planning riêng4.3](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md)
+cho correction/audit/legacy evidence recovery, đóng GAP42-01–03 sau implementation.
+[Flow4.3](PHASE_4_3_FLOW.md) / [API4.3](PHASE_4_3_flow-api-breakdown.md) /
+[Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md) có22 AC/16 test scenarios,
+matrix source/gaps, payment evidence và HTTP limits. Chỉ tài liệu/source review;
+không runtime/FE/deploy mới, Student projections tiếp tục4.4c.
 
 Cập nhật scope 2026-10-11: Material ARTICLE lưu HTML đã sanitize để FE render;
 FILE và VIDEO MP4 dùng private MinIO, URL có thời hạn (HLS sau). ARTICLE chỉ có
@@ -31,8 +64,8 @@ Plan3.3 thống nhất typed content, local/server gate từng slice, không ch�
 
 ## 2. Flow tổng thể
 
-Nét liền: flow nền tảng/API hiện có. Nét đứt: phần chưa có HTTP/persistence trong checkout này.
-Policy 3.1 đã code nhưng việc gắn policy vào Material API nằm ở phase sau.
+Diagram mô tả flow đã implement local qua3.4; không thay evidence deploy/browser.
+Policy3.1 đã được gắn vào Material persistence/HTTP3.3–3.4.
 
 ```mermaid
 flowchart TD
@@ -61,13 +94,15 @@ flowchart TD
     WORK -->|"Không hợp lệ / hết retry"| FAILED["FAILED + errorCode"]
     INT -->|"Intent hết hạn trước complete"| FAILED
   end
-  ARTICLE["3.3: ARTICLE HTML text-only không cần upload"] -.-> MAT
-  READY -.-> MAT["3.3 planned: typed Material draft + READY refs nếu có"]
-  MAT -.-> REVIEW["Mentor submit → Manager approve/reject; áp dụng policy 3.1"]
-  REVIEW -.-> GATE{"Policy3.3 typed: ACTIVE + release/time + approval/publication + valid content/READY refs"}
-  DETAIL -.-> GATE
+  ARTICLE["3.3: ARTICLE HTML text-only không cần upload"] --> MAT
+  READY --> MAT["3.3: typed Material draft + READY refs nếu có"]
+  MAT --> PRE["3.3 submit/detail → 3.4 staff preview/assets đúng revision"]
+  PRE --> REVIEW["Manager approve/reject cùng revision; áp dụng typed policy"]
+  REVIEW --> GATE{"Policy3.3 typed: ACTIVE + release/time + approval/publication + valid content/READY refs"}
+  DETAIL --> GATE
   GATE -->|"FILE/VIDEO đủ điều kiện"| READ["3.4: Student list/detail/signed download local verified"]
-  GATE -.->|"Thiếu điều kiện"| DENY["Không cấp nội dung/download"]
+  GATE -->|"ARTICLE + refs đủ điều kiện"| AR["3.4: canonical HTML + scoped assets"]
+  GATE -->|"Thiếu điều kiện"| DENY["Không cấp nội dung/download"]
 ```
 
 ## 3. API hiện có và dự kiến
@@ -91,8 +126,8 @@ không phải API upload multipart của NestJS.
 | `GET /files/:fileId` | Manager / Mentor đủ quyền hiện hành | Status, errorCode và metadataStatus; không trả download URL | Đã code 3.2 |
 
 **3.1 không thêm một bộ HTTP Material API.** Các hàm createDraft/applyCommand/canRead
-đã có ở service/domain, nhưng chưa có controller hay persistence Material.
-Contract API trong plan không có nghĩa route đã tồn tại.
+đã có ở service/domain từ3.1; persistence/authoring/review/release3.3 và typed
+Student/access/staff preview3.4 hiện đã implement local. Xem breakdown3.3/3.4 cho routes.
 
 ## 4. Flow Student của 2.3
 
@@ -124,7 +159,7 @@ FULL không tự mở Material. Xem breakdown 2.3 để tích hợp từng endpo
   submit để Manager duyệt. Mentor không tự approve/publish hoặc sửa nội dung đã
   từng được duyệt; Manager quản lý nội dung chung.
 - Domain có CREATE/EDIT/SUBMIT/APPROVE/REJECT/PUBLISH/UNPUBLISH/DELETE, revision
-  và audit output. Đây là state transition trong code, chưa ghi Material vào DB.
+  và audit output. 3.1 định nghĩa transition;3.3 đã persist Material/refs/audit trong transaction.
 - APPROVE ghi approval đúng revision và publishedAt hiện tại; availableAt/release
   vẫn có thể trì hoãn quyền đọc. REJECT ghi lý do. EDIT tăng revision, chuyển về
   DRAFT và thu hồi approval/publication cũ.
@@ -185,8 +220,8 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
   `MINIO_ENABLED=false`, Files trả503 FILE_STORAGE_DISABLED; đây là hành vi
   cấu hình, không phải mô tả VPS hiện đang tắt storage.
 - CI dùng MinIO fixture riêng; không phụ thuộc flag/MinIO của VPS.
-- Student FILE/VIDEO read routes3.4 đã local verified; sản phẩm còn cần3.3
-  authoring/review/release, FE integration và rollout tương ứng.
+- Student ARTICLE/FILE/VIDEO và staff/scoped access3.4 đã implement local cùng3.3
+  authoring/review/release; server rollout và FE/browser acceptance vẫn pending.
 
 ## 8. Nhật ký đối chiếu
 
@@ -229,3 +264,26 @@ Giới hạn thường 25 MiB; MP4 200 MiB. Không chỉ tin extension/MIME clie
 - [Material review transitions](../../src/modules/materials/domain/material-review.ts)
 - [Upload authorization](../../src/modules/files/services/file-upload-policy.service.ts)
 - [File worker](../../src/modules/files/services/file-processing.worker.ts)
+
+2026-10-13 implementation4.3: correction sau chốt,Staff audit GET và historical
+evidence recovery đã có migration1791849600003 và runtime assertions. Handoff
+[Flow4.3](PHASE_4_3_FLOW.md)/[API4.3](PHASE_4_3_flow-api-breakdown.md);
+full local gates tại [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md).
+GAP42-01–03 thuộc implementation này;Student4.4c/guest4.4b/cancel-leave4.4a và
+release4.5 vẫn mở. Chưa deploy/VPS/browser/live-payment hoặc sửa FE.
+
+## Tích hợp với dev/Phase4 — 2026-10-15
+
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

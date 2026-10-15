@@ -1,0 +1,356 @@
+{
+  "info": {
+    "name": "Mindy Phase 4.2 - Session Attendance",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local implementation; migrate 1791849600001 and 1791849600002 before use with the same APP_TIME_ZONE as the API. No overnight sessions. Mentor deadline is midnight after the day following the scheduled teaching day (Tuesday -> Thursday 00:00), independent of actual opening time. Cookie auth: mentor effective assignment or MANAGER/ADMIN. Staff always require reason. Post-finalization correction/audit browsing and evidence recovery use the Phase43 collection (migration 1791849600003 required). Keep idempotencyKey unchanged for retries, generate a new UUID v4 for each new intent. GET updates sessionVersion; mutations store nextSessionVersion. Copy nextSessionVersion to sessionVersion and create a new key before the next intent; keep original version/body/key on retry."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "enrollmentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "actualStartedAt",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "actualEndedAt",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Read attendance roster",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Start session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/start",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sync cash roster",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance/sync-roster",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mark present",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"records\": [\n    {\n      \"enrollmentId\": \"{{enrollmentId}}\",\n      \"status\": \"PRESENT\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unmark before finalize",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/attendance",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"records\": [\n    {\n      \"enrollmentId\": \"{{enrollmentId}}\",\n      \"status\": \"UNMARKED\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finalize session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/finalize",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff recovery start",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/start",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"reason\": \"Verified missed start\",\n  \"actualStartedAt\": \"{{actualStartedAt}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff recovery finalize",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/finalize",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": {{sessionVersion}},\n  \"reason\": \"Verified end\",\n  \"actualEndedAt\": \"{{actualEndedAt}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  const body = pm.response.json();",
+              "  pm.collectionVariables.set(pm.request.method === 'GET' ? 'sessionVersion' : 'nextSessionVersion', String(body.session.version));",
+              "  if (body.items && body.items.length) pm.collectionVariables.set('enrollmentId', body.items[0].enrollmentId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

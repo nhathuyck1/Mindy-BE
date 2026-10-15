@@ -335,3 +335,13 @@ FAILED không thu hồi READY; URL ngắn hạn không phải reference bền v�
 Bàn giao 3.6/2.3/FE: sáu routes/schemas/errors, Class Unit ID mapping, renderer/
 viewer/refresh/logout behavior và checklist browser, nêu rõ evidence local/VPS.
 Learning completion không được suy từ download/seek hoặc session đã kết thúc.
+
+## Tích hợp catalog migration với Phase4 — 2026-10-15
+
+Không đổi sáu routes hay thêm schema feature riêng của3.4. Bản gộp dev e0c9174
+với implementation3.3/3.4 có22 source migrations: thêm hai compatibility bridge
+để tách unique constraint trùng giữa attendance4.2 và release3.3.4. Migration
+lịch sử giữ nguyên; hai ID bridge là thứ tự chạy trước các DDL gây va chạm,
+không phải ngày tạo. Clean22/upgrade16→22/17→22/data/FK/down-up3/3 pass local.
+Chi tiết quyết định, full gates và rollout tại [progress3.3](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Local pass không thay VPS/browser/FE hoặc user sign-off.
