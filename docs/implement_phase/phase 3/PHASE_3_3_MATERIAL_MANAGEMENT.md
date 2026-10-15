@@ -1,6 +1,6 @@
 # Phase 3.3 — Material management, review và Class Unit release
 
-Cập nhật: **2026-10-13**. **Plan triển khai; chưa implement/nghiệm thu 3.3.**
+Cập nhật: **2026-10-15**. **3.3.1–3.3.4 đã implement local; chưa deploy/nghiệm thu VPS. 3.3.5 đã chuẩn bị local acceptance/handoff; VPS evidence và user sign-off còn pending.**
 3.2 đã nghiệm thu VPS theo xác nhận user ngày 2026-10-12; không còn gate chờ upload.
 Plan này hợp nhất bản nháp 2026-10-11 và scope ARTICLE / FILE / VIDEO đã chốt.
 
@@ -11,8 +11,8 @@ access vào cùng mốc review3.3.3, Student typed reader làm sau contract3.3.1
 không yêu cầu chờ hoàn tất toàn3.3 mới bắt đầu3.4.
 
 Ngoại lệ thứ tự theo yêu cầu user2026-10-12: [ba Student FILE/VIDEO GET3.4](../../api_flow/PHASE_3_4_FLOW.md)
-đã có read persistence tối thiểu + signed GET. CRUD/review/release/ARTICLE3.3
-vẫn chưa implement; typed schema phải mở rộng bằng migration additive mới,
+đã có read persistence tối thiểu + signed GET. Manager CRUD/ARTICLE/refs/audit3.3.1 đã có additive migration mới;
+Mentor context/submission3.3.2 và Manager review/publication3.3.3 và release3.3.4 đã có local,
 không tạo lại bảng materials hoặc sửa migration read đã chạy.
 
 - Baseline: [3.1 policy](PHASE_3_1_POLICY_CONTRACT.md), [3.2 upload](PHASE_3_2_SAFE_UPLOAD.md).
@@ -42,7 +42,8 @@ Sau upload, binary nằm ở MinIO và Files trả fileId READY. File có thể 
 Material FILE độc lập trong Unit hoặc attachment của ARTICLE theo typed plan;
 upload READY tự nó chưa tạo bài học, chưa publish và chưa cấp quyền Student.
 PDF không tự chuyển thành HTML hay tự trích thành kiến thức. FILE/VIDEO Student
-read đã có; ARTICLE, attachments và authoring vẫn là phần chưa implement của3.3.
+read đã có; Manager ARTICLE/attachments/authoring3.3.1 đã implement local,
+Mentor authoring/submission3.3.2 và Manager review/publication3.3.3 và release3.3.4 đã có; Student ARTICLE/assets còn planned.
 
 Tham khảo: [CKEditor get/set data](https://ckeditor.com/docs/ckeditor5/latest/getting-started/setup/getting-and-setting-data.html),
 [OWASP HTML sanitization](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
@@ -120,8 +121,8 @@ metadataStatus PENDING/FAILED không chặn attach nếu binary vẫn READY.
   thể dùng bởi nhiều Material; primary và attachment trùng cùng Material bị reject;
   inline và attachment cùng file được phép với hai role.
 - HTML input và canonical output tối đa48 KiB UTF-8; JSON request tổng64 KiB.
-  Giới hạn JSON tính cả escaping/metadata/refs; vượt limit trả413. Đề xuất DOM depth32,
-  nodes5.000; chốt sau spike3.3.1 và ghi lại contract trước merge.
+  Giới hạn JSON tính cả escaping/metadata/refs; vượt limit trả413. Chốt DOM depth32 (kể cả text node),
+  nodes5.000; sanitizer kiểm cả input và canonical output.
 - Allowlist: headings/paragraph/bold/italic/underline/lists/table/blockquote/code/
   pre/link/image. Dùng parser + sanitizer, không regex; loại script/event handlers/
   iframe/object/embed và style. Link chỉ http/https/mailto, không javascript/data.
@@ -219,7 +220,7 @@ regression bảo toàn file-only fixtures3.1/3.2 và không cấp Student API �
 
 ## 6. API dự kiến và FE handoff
 
-Mọi route dưới /api/v1, **chưa implement**; chi tiết shapes/errors/UI trong
+Mọi route dưới /api/v1; Manager CRUD **đã implement 3.3.1**, Mentor context/content/submit **đã implement 3.3.2**, Manager decisions **đã implement 3.3.3**, release **đã implement 3.3.4 local**; chi tiết shapes/errors/UI trong
 [breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
 
 | Nhóm | Routes |
@@ -230,8 +231,8 @@ Mọi route dưới /api/v1, **chưa implement**; chi tiết shapes/errors/UI tr
 | Mentor content | GET/POST /mentor/classes/:classId/units/:unitId/materials; GET/PATCH/DELETE /mentor/classes/:classId/materials/:materialId; POST .../submit |
 | Release | PATCH /admin/classes/:classId/units/:unitId/release; PATCH /mentor/classes/:classId/units/:unitId/release |
 
-Cookie auth/role + object permission; mutation có Origin allowlist check (planned
-403 ORIGIN_NOT_ALLOWED), không coi CORS là CSRF protection. Path UUID baseline400;
+Cookie auth/role + object permission; Manager3.3.1 mutation có Origin allowlist check
+403 ORIGIN_NOT_ALLOWED (Mentor3.3.2 và release3.3.4 cũng đã có), không coi CORS là CSRF protection. Path UUID baseline400;
 body/query invalid422. no-store metadata, no signed URLs.
 Manager inactive catalogue picker còn thiếu; API acceptance dùng Course Unit fixture
 hợp lệ, không cấp quyền Admin tạm hoặc đánh dấu UI picker đã xong.
@@ -257,7 +258,8 @@ rollout. Khi deploy: backup DB, migrations additive, deploy app, health/auth smo
 chạy cases slice, ghi evidence riêng. Sau mỗi slice cập nhật plan/progress/flow/API;
 không ghi server pass khi chỉ local pass.
 
-Thứ tự chung A–E và API preview/asset đề xuất nằm ở [plan3.4](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
+Thứ tự phối hợp A–E nằm ở [planning3.4 lịch sử13/10](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
+API hiện hành và gates còn lại theo [plan3.4 ngày15/10](PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
 3.3.1 sở hữu migration/entity/typed policy/refs;3.4 sở hữu readers/access consumers.
 Một người sửa schema/policy chung tại một thời điểm, bàn giao nullable primary,
 canonical HTML/refs và fixtures trước merge reader. Không tạo thêm bảng materials3.4.
@@ -290,22 +292,163 @@ body/assets leak và video Range/seek/expiry là runtime acceptance **3.4**.
 
 - [x] 3.2 nghiệm thu xong; plan ARTICLE/FILE/VIDEO thống nhất, flow/API/progress đồng bộ.
 - [ ] Typed domain/sanitizer/schema/refs/audits/lock protocol và migration SQL được review/test.
-- [ ] Manager/Mentor APIs + release chạy đúng quyền/revision/visibility, full local gates pass.
-- [ ] Review3.3.3 + staff preview/assets3.4 nghiệm thu cùng mốc; evidence API và human/browser review ghi riêng.
-- [ ] Mỗi slice có server evidence riêng; không skip critical cases hoặc claim binary review từ metadata tests.
+- [x] Manager/Mentor APIs + release chạy đúng quyền/revision/visibility, full local gates pass (3.3.5); VPS evidence vẫn riêng.
+- [ ] Mỗi slice có server evidence riêng; không skip critical cases hoặc claim binary review đã xong.
+- [ ] Review3.3.3 + staff preview/assets3.4 có server evidence cùng mốc; evidence API và human/browser review ghi riêng.
 - [ ] Swagger/Postman/DBML/API breakdown phản ánh source thực; user nghiệm thu3.3.
-- [ ] Bàn giao3.4 typed read view/verified refs/policy/release/fixtures/error contracts.
+- [x] Bàn giao3.4 contracts/providers/refs/policy/release/fixtures và giới hạn hiện hữu tại §10 API breakdown; typed Student ARTICLE/assets implementation vẫn thuộc3.4.
 
 3.4 tái dùng signed GET FILE/VIDEO đã có, mở rộng staff preview và scoped assets
 đúng verified version, TTL<=60s/no-store; recheck quyền/revision/ref khi refresh URL.
 fileId của asset phải thuộc Material. MP4 kiểm Range206/seek/expiry/refresh
 giữ play state và ingress cap thực tế theo runbook3.2. 3.5 dùng primary FK +
 reference table + soft-delete/audit để không purge binary còn reference.
-Lượt này chỉ lập plan; chưa migration/source/FE/runtime tests/deploy3.3.
+Lịch sử planning giữ ở progress. 3.3.1–3.3.2 đã có source/tests/docs; chưa deploy/VPS acceptance.
 
-## 9. Điều phối planning — 2026-10-13
+## 9. Kết quả spike và implementation 3.3.1 — 2026-10-13
 
-Theo user, 3.3–3.6 do người khác triển khai; user nhận deploy/server acceptance,
-FE do nhóm riêng. Thêm plan3.4 phối hợp và đưa preview/asset access vào mốc
-review3.3.3; Student ARTICLE consumer sau typed contract3.3.1, server journey
-sau approve/release. Chỉ cập nhật tài liệu, không sửa source/FE, migrate hoặc deploy.
+- Sanitizer `sanitize-html 2.18.0` + `htmlparser2 12.0.0`, ESM import đã build/test.
+  Allowlist/config cụ thể trong `article-sanitizer.ts`; chỉ href tuyệt đối http/https/mailto,
+  ảnh chỉ data-file-id UUIDv4/alt; strip src/style/events/iframe/object/embed/svg/math.
+  Input/canonical48 KiB UTF-8, depth32/nodes5.000, image nodes50; toàn JSON64 KiB.
+- Migration `1791849600000-typed-manager-materials`: mở rộng materials hiện có,
+  nullable primary có typed CHECK; refs/audit/indexes/triggers. Enum thay bằng rename/cast
+  cùng transaction (tránh sử dụng enum value mới chưa commit). Có clean up/down/up
+  và upgrade giữ FILE cũ. Down từ chối khi có ARTICLE/refs/audit; rollback app giữ data.
+- Protocol Manager: Material nếu có → union files UUID tăng dần → actor Users FOR SHARE
+  → Class context session → parent share locks/FKs → save refs/state/audit atomic.
+  Provider batch khóa mọi file trước authorize Classes; các context file Mentor được
+  xử lý theo class UUID tăng dần. Không MinIO/SMTP trong transaction; retry toàn
+  transaction tối đa3 lần chỉ cho40P01/40001; domain409 không retry.
+- DB file-state/scope/kind/version protections giữ cả refs của tombstone. Actor share
+  lock serialize với role/status UPDATE. Parent IDs session→Class Unit, Class Unit→
+  Class/Course Unit, Class/Course Unit→Course **bất biến kể cả chưa có refs**: đây là
+  quyết định spike để tránh reverse-reference write skew và không bắt parent services
+  import Materials. Thay parent phải tạo record mới; đổi giờ/status/release vẫn được.
+  Provenance Class Unit có share lock khi attach và delete guard.
+- HTTP Manager CRUD có cookie roles/current actor, Origin bắt buộc khớp CORS_ORIGINS,
+  no-store, expectedRevision. DELETE nhận query expectedRevision theo breakdown.
+  List Unit sortOrder/id ASC; global list createdAt DESC/id ASC; filter trước count/page.
+  Detail/mutation canonical HTML + safe summaries; list omit HTML/refs arrays/version.
+- Local checks và server acceptance ghi riêng tại progress3.3. SQL đã được đọc lại
+  và kiểm bằng integration/concurrency tests; reviewer của PR cần được chỉ định trước
+  merge theo repo rules. Chưa merge/deploy, chưa thực hiện server acceptance.
+
+## 10. Implementation 3.3.2 — 2026-10-13
+
+- Classes cung cấp hai GET context Unit/session, phân trang và safe projection;
+  Unit `id` là Class Unit ID, `courseUnitId` dùng upload, session `id` dùng sessionId.
+  Quyền current active MENTOR/assignment/Class chưa CANCELLED; title lấy batch Catalog.
+- Materials cung cấp sáu routes Mentor list/create/detail/PATCH/delete/submit;
+  dùng `MaterialAuthoringService` chung với Manager để giữ sanitize/refs/revision/audit.
+  List lọc visibility trong SQL trước total/page, sortOrder/id ASC; detail canonical
+  HTML và summaries, canEdit chỉ own DRAFT/REJECTED chưa từng approved đúng lớp.
+  Published shared content không áp Student release/time/session-origin gates.
+- Create/EDIT/SUBMIT: Material nếu có → union files UUID tăng dần → Users FOR SHARE
+  → union Classes UUID tăng dần (upload intent cũ/mới + submission + session) →
+  resolve current assignment/ancestry → atomic state/refs/audit. ARTICLE-only cũng
+  khóa actor/Class. Provider Files nhận optional contextClassIds, giữ single-file3.2.
+  DELETE giữ refs/binary, chỉ khóa Material→actor→Class; retry authorized204.
+- SUBMIT giữ revision, PENDING retry không save hoặc audit lại; REJECTED cần EDIT;
+  ever-approved không được Mentor EDIT/DELETE/SUBMIT lại. Assignment/status revoke
+  serialize với mutations và chặn các request tiếp theo. Origin guard cho mọi mutation,
+  response no-store; không gọi MinIO hoặc phát signed GET ở authoring metadata.
+- Không schema/migration mới3.3.2; dùng additive schema3.3.1. DBML không đổi.
+  Tests rejected/approved dùng fixture DB, không cấp Manager decision HTTP trước3.3.3.
+- Local gate Node22.20.0/pnpm12.6.0: check348/348 (31 suites), HTTP36/36 (2 suites),
+  Files42/42 (1 suite), 0 skip; PostgreSQL *_test/private MinIO riêng. Mentor mới16
+  integration cases +4 HTTP cases gồm thật upload→READY PDF/MP4→typed draft→submit.
+  Swagger/Postman22 requests, flow/API/progress cập nhật; chưa deploy/VPS acceptance.
+
+## Triển khai 3.3.3 — 2026-10-13
+
+Queue filters dùng global list đã có; thêm bốn Manager command HTTP200/no-store,
+strict revision/reason DTO, role/cookie/Origin guard và safe detail/canEdit.
+Mutation Material lock→files UUID→actor→Classes, apply policy + workflow save/audit
+atomic; no-op không save/audit. Không thay reference rows trong review/publication.
+APPROVE own Manager DRAFT hoặc pending; giữ firstApprovedAt khi Manager edit/reapprove.
+
+Phát hiện READY guard cũ áp cả UNPUBLISH/DELETE; thêm migration additive
+1791853200000-material-publication-withdrawal, không sửa migration3.3.1. Chỉ bỏ gate
+cho withdrawal/soft-delete với content/identity/revision/review giữ nguyên; mọi
+insert/content/review/publication mới vẫn chạy guard. Staff read summary có option
+metadata unavailable nội bộ; Student READY contract giữ nguyên. Migration clean
+up/down/up được test trên DB riêng, data/audit preserved; cần SQL/API review trước merge.
+
+Local evidence và server acceptance ở [progress](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không thay config/dependency, không chạy migration dev/VPS hoặc deploy; release3.3.4
+và handoff3.3.5 vẫn planned. Binary preview/Student ARTICLE assets thuộc3.4.
+
+## Triển khai 3.3.4 — 2026-10-13
+
+Classes sở hữu hai PATCH Admin/assigned Mentor release và additive migration
+1791856800000-class-unit-release-audit. Actor FOR SHARE → Class FOR UPDATE →
+Class Unit FOR UPDATE; recheck active role, assignment và ancestry dưới locks.
+Unit COMPLETED/Class CANCELLED409 UNIT_RELEASE_CONFLICT, cả request no-op.
+Class COMPLETED vẫn cho release Unit chưa COMPLETED theo contract đã chốt.
+
+status required LOCKED/OPEN, unlockAt omitted giữ/null xóa; timestamp timezone,
+year0001–9999 cả input và UTC instant, precision1–3 chữ số millisecond; invalid
+calendar/time/offset422. Past time hợp lệ, không bó vào startDate/endDate lớp.
+No-op giữ updatedAt và không audit; concurrent serialize, không expectedRevision.
+Update/audit cùng commit; rollback nếu audit fail. Bounded retry chỉ deadlock/
+serialization, tối đa3 attempts. Không gọi MinIO/SMTP hoặc Materials từ Classes.
+Origin guard đưa về common, Materials giữ alias cùng behavior/constructor.
+
+Migration chỉ thêm audit/index/composite FK class-unit và unique(id,class_id),
+không backfill hoặc sửa release/Materials/enrollment. Down xóa audit, chỉ test
+trên DB riêng; production rollback code giữ bảng/data. SQL/API review trước merge.
+Server acceptance và handoff3.3.5 còn pending; không migrate dev/VPS hoặc deploy.
+
+## Triển khai 3.3.5 — 2026-10-14
+
+Acceptance/handoff local đã chuẩn bị; không thêm API/schema/migration/dependency.
+Built-app HTTP thêm ba workflow độc lập ARTICLE ảnh inline/PDF attachment, FILE
+PDF, VIDEO MP4 từ upload MinIO thật đến reject/edit/resubmit/approve/release/
+withdraw/publish/edit revoke. Kiểm refs giữ qua decisions, release không đổi
+Material/enrollment, safe no-store DTO và stale409. Thêm startup migration gate
+đối chiếu 16 source IDs với migrations DB và Postman Phase33 với Swagger runtime.
+DBML typed refs/audit không đổi; JSON Postman numeric templates được kiểm sau
+substitution. Server runbook, evidence PENDING và bàn giao providers/fixtures/
+read gaps3.4 tại [§10 API breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Local results ghi progress3.3. Chưa deploy/nghiệm thu VPS/user sign-off; không đánh
+dấu toàn phase3.3 complete. Các ghi chép planned trước đây là lịch sử theo ngày.
+
+## Điều phối planning — lịch sử 2026-10-13
+
+Lượt planning ghi người triển khai3.3–3.6 bàn giao SHA/migrations/config/checks/Postman/rollback cho user deploy và nhóm FE tích hợp. 3.3 sở hữu schema/refs/policy;3.4 staff preview/assets phục vụ review, Student journey sau publication/release. Lượt đó chỉ tài liệu; các mục implementation13–14/10 phía trên mới là evidence source/runtime. [Plan3.4 hiện hành](PHASE_3_4_STUDENT_MATERIAL_ACCESS.md); [planning13/10](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) giữ để tra lịch sử.
+
+## Tích hợp Phase3.3/3.4 với Phase4 — 2026-10-15
+
+Gộp `dev` e0c9174 (merge14/10, implementation Phase4 ngày13/10) vào
+`feat/phase-3-3` a363012 (Materials implementation13–14/10, plan3.4 cập nhật15/10).
+Giữ nguyên các nhật ký và tổng test ở đúng ngày thực hiện; không dùng ngày merge
+mới hơn để ghi đè implementation hoặc đánh dấu VPS/browser đã nghiệm thu.
+
+- Giữ authoring/review/release3.3 và ARTICLE/scoped access/staff preview3.4;
+  hợp nhất Classes controllers/providers/exports với teaching/lifecycle/attendance4.1–4.3.
+  Giữ actor FOR SHARE của Materials và các read providers mới của Phase4.
+- Contract hiện hành là POST files/access, response có role/revision; planning
+  GET preview/assets + expectedRevision ngày13/10 chỉ giữ dưới nhãn lịch sử.
+  Không đổi quyền Materials/CASH sang substitute chỉ vì có teaching assignment.
+- Class completion tiếp tục chặn Session SCHEDULED/IN_PROGRESS theo Phase4.
+  Fixture3.3.4 kiểm guard409, chuyển Sessions sang terminal rồi complete Class;
+  Unit chưa COMPLETED vẫn được release theo policy3.3.4. Không nới business guard.
+- Hai nhánh từng tạo cùng constraint `uq_class_units_id_class`. Không sửa/đổi
+  tên migration đã chạy: thêm `1791849599999-prepare-release-unit-constraint`
+  và `1791856799999-isolate-attendance-unit-constraint` để rename constraint/index,
+  giữ OID/FK và dữ liệu, rồi để các migration lịch sử chạy nguyên trạng.
+  Hai ID là **khóa thứ tự tương thích**, không phải ngày tạo mới: cả hai được viết
+  ngày15/10, lần lượt trước attendance4.2 và release-audit3.3.4. TypeORM chạy các
+  migration chưa có theo identity/name và thứ tự timestamp; cần phát hành đầy đủ
+  catalog, không chạy riêng migration lịch sử gây va chạm.
+- Source hiện có22 migration. Hai migration cùng timestamp1791849600000 có tên
+  khác nhau, giữ nguyên. Các con số16 (Materials) và17 (dev/Phase4) là baseline
+  lịch sử, không sửa thành22 trong nhật ký cũ. Test tích hợp mới kiểm clean22,
+  upgrade16→22 và17→22, giữ data/FK index, down/up và không pending.
+- Không migrate development/VPS hoặc thay code FE. Server/user sign-off và browser
+  CORS/PDF/MP4 seek/refresh vẫn pending. Các cảnh báo dependency đã báo ở lượt quét
+  trước không nằm trong phạm vi sửa conflict này.
+
+Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 và Progress chung;
+3/3 ca migration compatibility đã pass trên PostgreSQL test riêng.

@@ -1,11 +1,18 @@
 # Phase 3 — Tiến độ File + Materials
 
-Cập nhật: **2026-10-13**.
+Cập nhật: **2026-10-15**.
 Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
 ## Hiện trạng
 
-- 2026-10-13: Điều phối hiện hành theo user: người khác triển khai3.3–3.6,
+- 2026-10-15: Đã xử lý conflict với dev/Phase4, giữ implementation Materials13–14/10.
+  Quyết định schema22/bridge và kết quả tích hợp ở mục cuối; các ghi chép bên dưới
+  ngày11–13/10 là lịch sử planning tại thời điểm đó, không thay trạng thái hiện hành.
+
+- 2026-10-14:3.3.1–3.3.4 đã implement local;3.3.5 acceptance/handoff local đã chuẩn bị. Full gates và VPS evidence ở [progress3.3](PHASE_3_3_PROGRESS.md); VPS/sign-off còn pending. Student FILE/VIDEO read đã có; ngày2026-10-14 ARTICLE/assets/staff preview đã implement local ([progress3.4](PHASE_3_4_PROGRESS.md)); browser video runtime/VPS còn pending.
+
+
+- 2026-10-13: Lịch sử điều phối theo user: người khác triển khai3.3–3.6,
   user nhận deploy/server acceptance; FE là nhóm riêng và repo local chỉ đọc.
   [Plan3.4 phối hợp](../../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
   đưa staff preview/assets cùng review3.3.3; typed Student reader sau contract3.3.1,
@@ -48,9 +55,9 @@ Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE
   link tùy chọn, không đổi ownership. Manager quản lý/sửa/duyệt; Mentor upload chờ duyệt.
 
 **3.1 hoàn tất local; 3.2 hoàn tất local và nghiệm thu VPS theo user2026-10-12.
-Files upload/storage/validation API đã có. Material FILE/VIDEO read persistence,
-migration và ba Student GET đã có local; authoring/review/release/ARTICLE/staff
-preview vẫn planned. Không dùng evidence3.2 làm nghiệm thu3.3/3.4.**
+Files upload/storage/validation API đã có. Typed Material authoring/review/release3.3
+và Student ARTICLE/FILE/VIDEO reads, scoped assets/staff preview3.4 đã implement local.
+VPS/browser/FE và user sign-off3.3/3.4 vẫn pending; evidence3.2 không thay nghiệm thu này.**
 
 - Điều phối mới: user làm Phase 3, người khác làm Phase 2.3 song song. Không dùng
   2.3 như điều kiện bắt đầu P3; tích hợp navigation là gate nghiệm thu riêng.
@@ -79,8 +86,8 @@ preview vẫn planned. Không dùng evidence3.2 làm nghiệm thu3.3/3.4.**
 | Lập plan | Hoàn tất | Plan, tiến độ riêng và index; schema/policy/API/milestone/test/rollout dự kiến. |
 | 3.1 Policy + contract | Hoàn tất code/test local D1–D6 | Role, domain policy/review transitions, facade/context providers; pnpm check 171 tests/16 suites + build, HTTP 5/5. |
 | 3.2 Upload slice | Hoàn tất local + nghiệm thu VPS theo user2026-10-12 | Files/MinIO/migration/worker/reference; PDF/MP4 READY/private objects; chi tiết progress3.2. |
-| 3.3 Material management | Authoring/review/release vẫn planned | Read persistence FILE/VIDEO tối thiểu đã thêm trước theo yêu cầu3.4; ARTICLE/refs/audits/writes cần migration additive mới. |
-| 3.4 Student access + staff preview | Ba FILE/VIDEO GET local verified; plan phối hợp3.3 đã có | Preview/assets cùng review3.3.3, ARTICLE reader sau contract3.3.1; chưa code phần bổ sung/FE integration/VPS. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
+| 3.3 Material management | 3.3.1–3.3.5 implemented/local verified | Typed authoring/review/release, refs/audit/schema và acceptance/handoff; VPS/user sign-off pending. |
+| 3.4 Student access + staff preview | ARTICLE/FILE/VIDEO và scoped assets/staff preview implemented local14/10 | Pinned-version URLs/recheck/Range/expiry và typed reads có local evidence; VPS/browser/FE pending. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
 | 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
 | 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 
@@ -91,7 +98,7 @@ preview vẫn planned. Không dùng evidence3.2 làm nghiệm thu3.3/3.4.**
 - Không đổi source, DBML, deployed migration, cấu hình production hoặc gửi giao dịch.
 - Giữ các chỉnh sửa đã có trong `docs/progress/Progress.md`; thêm entry mới riêng.
 
-## Điểm mở khi bắt đầu triển khai
+## Điểm mở khi bắt đầu triển khai — baseline lịch sử09–12/10
 
 1. Implement scope Course Unit đã chốt; Mentor draft/submit và Manager review đúng revision.
 2. Giữ shared live đã duyệt; snapshot/versioning nội dung không nằm MVP.
@@ -99,3 +106,19 @@ preview vẫn planned. Không dùng evidence3.2 làm nghiệm thu3.3/3.4.**
 4. Giữ vấn đề quyền học sau enrollment COMPLETED để quyết định riêng.
 5. Khi nghiệm thu, phân biệt local test, storage staging, production và payment live;
    các thiếu hụt Phase 0/1/2 không tự được đánh dấu hoàn tất nhờ Phase 3.
+
+### Kết quả kiểm chứng cuối sau tích hợp — 2026-10-15
+
+- Node22.20.0/pnpm12.6.0, dedicated PostgreSQL17 test tại localhost:15433 và MinIO
+  test local: **pnpm check513/513,48 suites; lint/type-check/build pass**.
+- **pnpm test:http60/60,5 suites**, dùng cấu hình mặc định đã nhận từ dev
+  (fileParallelism:false), built Nest runtime/cookies/guards và migrations đầy đủ22.
+  Không critical skip hoặc unhandled errors trong hai lượt cuối.
+- Sau khi rút gọn suffix DB fixture để không bị PostgreSQL truncate mất _test,
+  chạy lại lint/type-check và focused migration compatibility: **3/3 pass**.
+  Thay đổi cuối này chỉ ở tên/guard DB test, không đổi production code/migrations.
+- Lượt trước bridge có HTTP startup fail vì constraint trùng; kết quả60/60 ở trên
+  là lượt chạy sau sửa, không dùng skip ở lượt thất bại làm evidence pass.
+- 14 conflict đã giải quyết; không sửa migration lịch sử, không migrate DB
+  development/VPS hoặc FE. Giữ ngày13/10 planning/Phase4,13–14/10 implementation
+  Materials,15/10 integration như các mục riêng. Server/browser/user sign-off còn pending.

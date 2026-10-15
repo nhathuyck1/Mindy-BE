@@ -2,6 +2,7 @@ import type { ClassContentContext } from '../../classes/domain/class-content-con
 import { ClassStatus } from '../../classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../classes/enums/class-unit-status.enum.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import { hasReadyMaterialContent } from './material-content.js';
 import {
   type MaterialActor,
   type MaterialReadContext,
@@ -66,8 +67,7 @@ export function canReadMaterial(material: MaterialSnapshot, context: MaterialRea
     material.publishedAt !== null &&
     hasReached(material.publishedAt, now) &&
     hasReached(material.availableAt, now) &&
-    material.file.status === 'READY' &&
-    material.file.courseUnitId === material.courseUnitId
+    hasReadyMaterialContent(material, material.courseUnitId)
   );
 }
 
@@ -94,11 +94,7 @@ export function canPreviewMaterial(
   actor: MaterialActor,
   context: ClassContentContext | null,
 ): boolean {
-  if (
-    material.deletedAt !== null ||
-    material.file.status !== 'READY' ||
-    material.file.courseUnitId !== material.courseUnitId
-  )
+  if (material.deletedAt !== null || !hasReadyMaterialContent(material, material.courseUnitId))
     return false;
   if (isMaterialManager(actor)) return true;
   if (

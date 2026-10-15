@@ -1,5 +1,6 @@
 import type { ClassContentContext } from '../../classes/domain/class-content-context.js';
 import type { UserRole } from '../../users/user-role.enum.js';
+import type { MaterialContentType } from '../entities/material.entity.js';
 
 export enum MaterialReviewStatus {
   DRAFT = 'DRAFT',
@@ -28,7 +29,13 @@ export interface MaterialContent {
   readonly sortOrder: number;
   readonly availableAt: Date | null;
   readonly sessionId: string | null;
-  readonly file: MaterialFileReference;
+  readonly file: MaterialFileReference | null;
+  /** Optional only for legacy file-backed policy callers from Phase 3.1/3.2. */
+  readonly contentType?: MaterialContentType;
+  readonly contentHtml?: string | null;
+  readonly contentSchemaVersion?: number | null;
+  readonly inlineImages?: readonly MaterialFileReference[];
+  readonly attachments?: readonly MaterialFileReference[];
 }
 
 /** Course Unit is the sole owner. createdInClassId records mentor submission provenance. */

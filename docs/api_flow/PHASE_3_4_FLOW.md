@@ -1,14 +1,16 @@
 # Phase 3.4 — Student Material access và staff preview
 
-Cập nhật **2026-10-13**. Ba GET đã implement và kiểm chứng local cho **FILE/VIDEO**.
+Cập nhật **2026-10-15**. Student list/detail/download + file access (ARTICLE/FILE/VIDEO,
+inline images, attachments) và staff preview Manager/Mentor đã implement, local verified.
 Chưa deploy/nghiệm thu VPS; chưa tích hợp UI/browser FE.
 [API breakdown](PHASE_3_4_flow-api-breakdown.md) ·
 [Progress](../progress/phase%203/PHASE_3_4_PROGRESS.md) ·
 [Rà soát FE](PHASE_3_4_FE_API_GAPS.md).
 
-[Plan3.4 phối hợp3.3](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md).
-Phân công user2026-10-13: người khác triển khai3.3–3.6; user nhận deploy/server
-acceptance; FE do nhóm riêng làm, repo FE local chỉ để đọc. Lượt này sửa tài liệu BE.
+[Plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
+Phân công user2026-10-13: bên triển khai bàn giao3.3–3.6; user nhận deploy/server
+acceptance, nhóm FE tích hợp riêng và repo FE local chỉ đọc. [Planning13/10](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
+giữ để tra lịch sử; implementation14/10 và contract ở trên là trạng thái hiện hành.
 
 ## Phạm vi và quyết định thứ tự triển khai
 
@@ -36,6 +38,9 @@ flowchart TD
   D -->|Có| E[GET me/classes/classId/materials/materialId]
   D -->|Chưa release hoặc chưa có nội dung| F[Trang rỗng; không suy ra file READY là nội dung đã xuất bản]
   E --> G[GET me/classes/classId/materials/materialId/download]
+  E -->|ARTICLE| J[Render contentHtml; img data-file-id / attachments]
+  J --> K[POST me/classes/classId/materials/materialId/files/fileId/access]
+  K --> H
   G --> H[JSON url/expiresAt; GET trực tiếp storage]
   H -->|URL hết hạn| G
   G -->|Quyền bị thu hồi| I[Dừng player/download; refetch quyền/lớp]
@@ -74,43 +79,35 @@ Không redirect/stream bytes qua BE; không generic Student `/files/:fileId/down
 - VPS/live payment/browser CORS chưa kiểm chứng ở lượt này. Xem progress để biết
   kết quả full HTTP cuối cùng và phụ thuộc authoring/release trước nghiệm thu sản phẩm.
 
-## Phối hợp 3.3/3.4 — kế hoạch 2026-10-13
+- 2026-10-14: Hoàn thiện phần còn lại của 3.4 theo bàn giao §10 3.3: Student list/detail
+  hiện ARTICLE (file null, attachmentCount; detail thêm contentHtml/contentSchemaVersion/
+  inlineImages/attachments), visibility query loại Material có reference không READY
+  trước total/page; route mới POST `.../files/:fileId/access` (Student) và staff preview
+  POST `/manager/materials/:id/files/:fileId/access`,
+  `/mentor/classes/:classId/materials/:id/files/:fileId/access`. fileId phải thuộc
+  Material (PRIMARY/INLINE_IMAGE/ATTACHMENT do server resolve); attachment ký
+  disposition attachment; ký ngoài transaction và recheck revision/role. Download
+  primary giữ contract (ARTICLE →404). Không migration/env mới. Xem
+  [API breakdown §4–5](PHASE_3_4_flow-api-breakdown.md).
+- Kiểm chứng local 2026-10-14: `pnpm check` 411/411 (35 suites), `pnpm test:http`
+  48/48 (2 suites), PostgreSQL `_test` + MinIO local; chưa VPS/browser.
 
-3.3.1 bàn giao typed schema/policy/refs/Manager draft;3.3.2 bàn giao Mentor context/
-submission. 3.4.1 staff preview và3.4.3 staff assets cùng mốc review3.3.3 để
-Manager xem PDF/MP4 hoặc ảnh/attachments ARTICLE trước approve/reject.
-Manager preview không qua Student ACTIVE/release/time gates; Mentor phải còn
-assignment và chỉ xem own eligible submission hoặc current approved/published.
-Không ghép staff preview vào nhánh Student canRead.
+## Điều phối 3.3/3.4 — lịch sử planning 2026-10-13
 
-```mermaid
-flowchart TD
-  D["3.3 draft/pending detail: revision + primary/refs"] -.-> P["3.4 staff preview / scoped assets: expectedRevision"]
-  P -.-> V["JSON URL + revision; storage PDF/MP4/ảnh/attachment"]
-  V -.-> R["3.3 approve/reject đúng revision đã xem"]
-  R -.->|"Approve + published"| G["Student ACTIVE + Class Unit release + time gates"]
-  G -.-> A["3.4 typed list/detail: ARTICLE canonical HTML hoặc FILE/VIDEO metadata"]
-  A -.->|"FILE/VIDEO"| DL["Primary download GET đã có, authorize lại"]
-  A -.->|"INLINE_IMAGE/ATTACHMENT"| AS["Scoped asset GET đề xuất, check membership/revision"]
-  DL --> BYTES["GET/Range trực tiếp storage, TTL<=60s"]
-  AS -.-> BYTES
-```
+Planning chốt 3.3 sở hữu schema/refs/policy, 3.4 làm typed reader và staff preview/assets. Staff canPreview độc lập Student ACTIVE/release/time gates; backend bàn giao API/storage evidence, user deploy, nhóm FE tích hợp và nghiệm thu browser riêng. Lượt13/10 chỉ tài liệu, không runtime tests/deploy. Đề xuất GET preview/assets + expectedRevision lúc đó không phải endpoint hiện hành; implementation14/10 dùng POST files/access như contract ở trên. [Plan lịch sử](../implement_phase/phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md); [plan hiện hành](../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).
 
-Nét đứt là phần phối hợp chưa implement; Student FILE/VIDEO download đã có nhưng
-workflow production tạo/duyệt/release vẫn chờ3.3. ARTICLE text-only không có
-primary file và không cần ký URL. HTML chỉ lưu data-file-id, client resolve URL
-trong memory; asset cùng Course Unit nhưng không reference bởi Material bị chặn.
-Staff/Student metadata không chứa signed URL; access endpoint recheck quyền,
-revision/ref/READY verified version sau ký, không giữ transaction khi gọi storage.
+## Tích hợp với dev/Phase4 — 2026-10-15
 
-PDF dùng FILE để xem/tải hoặc attachment của ARTICLE. MP4 dùng VIDEO để phát
-trong trang; backend cấp metadata/signed GET, nhóm FE làm viewer/player riêng.
-Contract mới đề xuất GET preview/assets với required expectedRevision; full routes,
-DTO/examples/errors và xử lý revision conflict nằm ở breakdown3.4.
+Giữ implementation3.3/3.4 ngày13–14/10 và kế hoạch hiện hành15/10, cùng teaching/
+attendance4.1–4.3 từ dev e0c9174. Planning GET preview/assets13/10 không thay contract
+POST files/access đã implement14/10. ClassesModule giữ controllers/providers của
+cả hai nhánh; Class completion guard Phase4 được giữ, fixture release3.3.4 được
+điều chỉnh theo prerequisite Session terminal. Không mở quyền Materials cho substitute.
+Hai migration compatibility mới đưa catalog thành22 mà không sửa migration cũ;
+clean22, upgrade16→22 và17→22/data/FK/down-up có3/3 cases pass. Chi tiết quyết định
+thứ tự/schema tại [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/browser acceptance.
 
-Các slice3.4.1–3.4.4 và local/server gates nằm ở plan. Người triển khai giao user
-release SHA/migrations/config/check results/Postman/smoke/rollback để deploy.
-Backend/API storage evidence và browser evidence nhóm FE phải ghi riêng.
-Lượt2026-10-13 không thêm source/API runtime, migration, BE tests hoặc deploy.
-Kiểm tài liệu: git diff --check pass; 14 docs, 152 local links/1 anchor và
-14 JSON examples hợp lệ, code fences cân bằng; không thay evidence runtime.
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

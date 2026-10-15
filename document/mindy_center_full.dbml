@@ -282,10 +282,30 @@
     indexes {
       (class_id, course_unit_id) [unique]
       (class_id, position) [unique]
+      (id, class_id) [unique, name: 'uq_class_units_id_class']
       (course_unit_id)
     }
 
     Note: 'Created from the combination of a class and a shared course unit.'
+  }
+
+  Table class_unit_release_audit {
+    id uuid [pk, default: `gen_random_uuid()`]
+    actor_id uuid [not null]
+    class_id uuid [not null]
+    class_unit_id uuid [not null]
+    before_status class_unit_status [not null]
+    after_status class_unit_status [not null]
+    before_unlock_at timestamptz
+    after_unlock_at timestamptz
+    occurred_at timestamptz [not null]
+
+    indexes {
+      (class_unit_id, occurred_at, id) [name: 'idx_class_unit_release_audit_unit_time']
+      class_id
+      actor_id
+    }
+    Note: 'Classes-owned append-only service audit, atomic with release; same-value retries create no event. Composite FK (class_unit_id,class_id) references class_units(id,class_id); statuses LOCKED/OPEN only and before/after must differ. Migration 1791856800000 is authoritative.'
   }
 
   Table class_sessions {
@@ -642,18 +662,74 @@
   // LMS, ASSIGNMENTS & ATTENDANCE
   // -----------------------------------------------------------------------------
 
+  Enum material_content_type {
+    ARTICLE
+    FILE
+    VIDEO
+  }
+
+  Enum material_review_status {
+    DRAFT
+    PENDING_REVIEW
+    APPROVED
+    REJECTED
+  }
+
   Table materials {
     id uuid [pk]
     course_unit_id uuid [not null]
-    file_object_id uuid [not null]
+    file_object_id uuid
+    content_type material_content_type [not null]
+    content_html text
+    content_schema_version integer
     title varchar(250) [not null]
+    description varchar(5000)
     sort_order integer [not null, default: 0]
+    available_at timestamptz
+    session_id uuid
     created_by uuid [not null]
+    created_in_class_id uuid
+    revision integer [not null, default: 1]
+    review_status material_review_status [not null, default: 'DRAFT']
+    approved_revision integer
+    reviewed_by uuid
+    reviewed_at timestamptz
+    first_approved_at timestamptz
+    rejection_reason varchar(2000)
+    published_at timestamptz
+    deleted_at timestamptz
     created_at timestamptz [not null, default: `now()`]
-
+    updated_at timestamptz [not null, default: `now()`]
     indexes {
-      (course_unit_id, sort_order)
+      (course_unit_id, sort_order, id)
+      (review_status, created_at, id)
+      (created_by, created_in_class_id, review_status)
     }
+    Note: '3.3.1 additive migration: ARTICLE has HTML <=48 KiB/version1/no primary; FILE/VIDEO have primary/no HTML/version. SQL checks/triggers protect READY/scope/kind/ancestry/immutable first approval. Live indexes exclude deleted rows.'
+  }
+
+  Table material_file_references {
+    material_id uuid [not null]
+    file_id uuid [not null]
+    role varchar(20) [not null, note: 'INLINE_IMAGE or ATTACHMENT']
+    indexes {
+      (material_id, file_id, role) [pk]
+      file_id
+    }
+  }
+
+  Table material_audit_events {
+    id uuid [pk]
+    material_id uuid [not null]
+    actor_id uuid [not null]
+    action varchar(20) [not null]
+    revision integer [not null]
+    occurred_at timestamptz [not null]
+    indexes {
+      (material_id, occurred_at, id)
+      actor_id
+    }
+    Note: 'Append-only; no HTML/raw payload/storage secrets. No unique(action,revision): publish/unpublish/publish may occur in one revision.'
   }
 
   Table assignments {
@@ -984,6 +1060,9 @@
   Ref: classes.course_id > courses.id
   Ref: classes.mentor_id > users.id
   Ref: class_units.class_id > classes.id
+  Ref: class_unit_release_audit.actor_id > users.id
+  Ref: class_unit_release_audit.class_id > classes.id
+  Ref: class_unit_release_audit.(class_unit_id, class_id) > class_units.(id, class_id)
   Ref: class_units.course_unit_id > course_units.id
   Ref: class_sessions.class_unit_id > class_units.id
   Ref: enrollments.student_id > users.id
@@ -1026,6 +1105,13 @@
   Ref: materials.course_unit_id > course_units.id
   Ref: materials.file_object_id > file_objects.id
   Ref: materials.created_by > users.id
+  Ref: materials.reviewed_by > users.id
+  Ref: materials.session_id > class_sessions.id
+  Ref: materials.created_in_class_id > classes.id
+  Ref: material_file_references.material_id > materials.id
+  Ref: material_file_references.file_id > file_objects.id
+  Ref: material_audit_events.material_id > materials.id
+  Ref: material_audit_events.actor_id > users.id
   Ref: assignments.class_session_id > class_sessions.id
   Ref: assignments.created_by > users.id
   Ref: assignment_submissions.assignment_id > assignments.id

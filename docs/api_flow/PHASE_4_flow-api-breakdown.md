@@ -774,3 +774,17 @@ evidence recovery đã có migration1791849600003 và runtime assertions. Handof
 full local gates tại [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md).
 GAP42-01–03 thuộc implementation này;Student4.4c/guest4.4b/cancel-leave4.4a và
 release4.5 vẫn mở. Chưa deploy/VPS/browser/live-payment hoặc sửa FE.
+
+## Tích hợp Materials3.3/3.4 — 2026-10-15
+
+ClassesModule giữ teaching/lifecycle/attendance4.1–4.3 cùng context/release3.3;
+không cấp quyền Materials/CASH cho substitute từ teaching assignment. Guard hoàn
+thành Class vẫn đòi Sessions terminal; test release3.3.4 đã cập nhật prerequisite.
+Hai migration compatibility giải quyết unique constraint trùng mà không sửa
+migration lịch sử; source22, clean/upgrades/data/FK/down-up3/3 pass local.
+[Quyết định tích hợp](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi contract Phase4, không migrate development/VPS hoặc nghiệm thu FE.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

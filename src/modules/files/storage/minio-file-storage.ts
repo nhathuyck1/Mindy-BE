@@ -12,7 +12,12 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
 import { ConfigService } from '@nestjs/config';
-import type { FileStorage, ObjectVersion, StorageLocation } from '../files.contracts.js';
+import type {
+  ContentDisposition,
+  FileStorage,
+  ObjectVersion,
+  StorageLocation,
+} from '../files.contracts.js';
 
 @Injectable()
 export class MinioFileStorage implements FileStorage {
@@ -67,14 +72,19 @@ export class MinioFileStorage implements FileStorage {
       throw new Error('FILE_VERSION_REQUIRED');
     return { versionId: result.VersionId, size: result.ContentLength };
   }
-  async presignGet(location: StorageLocation, filename: string, ttl: number): Promise<string> {
+  async presignGet(
+    location: StorageLocation,
+    filename: string,
+    ttl: number,
+    disposition: ContentDisposition = 'inline',
+  ): Promise<string> {
     return getSignedUrl(
       this.publicClient,
       new GetObjectCommand({
         Bucket: location.bucket,
         Key: location.key,
         VersionId: location.versionId,
-        ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        ResponseContentDisposition: `${disposition}; filename*=UTF-8''${encodeURIComponent(filename)}`,
         ResponseCacheControl: 'private, no-store',
       }),
       { expiresIn: ttl },

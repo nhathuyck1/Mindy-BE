@@ -4,7 +4,10 @@ import { MaterialContentType, type MaterialEntity } from '../entities/material.e
 
 export interface StudentMaterialView {
   readonly material: MaterialEntity;
-  readonly file: FileSummary;
+  /** Primary FILE/VIDEO binary; null for ARTICLE. */
+  readonly file: FileSummary | null;
+  readonly inlineImages: readonly FileSummary[];
+  readonly attachments: readonly FileSummary[];
   readonly classId: string;
   readonly classUnitId: string;
 }
@@ -60,7 +63,14 @@ export class StudentMaterialDto {
   readonly availableAt: Date | null;
   @ApiProperty({ type: String, format: 'date-time' }) readonly publishedAt: Date;
   @ApiProperty({ type: String, format: 'date-time' }) readonly updatedAt: Date;
-  @ApiProperty({ type: () => StudentMaterialFileDto }) readonly file: StudentMaterialFileDto;
+  @ApiProperty({
+    type: () => StudentMaterialFileDto,
+    nullable: true,
+    description: 'Primary FILE/VIDEO metadata; null for ARTICLE.',
+  })
+  readonly file: StudentMaterialFileDto | null;
+  @ApiProperty({ type: Number, description: 'Number of downloadable attachments.' })
+  readonly attachmentCount: number;
   constructor(view: StudentMaterialView) {
     const { material } = view;
     this.id = material.id;
@@ -77,7 +87,32 @@ export class StudentMaterialDto {
     if (material.publishedAt === null) throw new Error('Student material must be published');
     this.publishedAt = material.publishedAt;
     this.updatedAt = material.updatedAt;
-    this.file = new StudentMaterialFileDto(view.file);
+    this.file = view.file ? new StudentMaterialFileDto(view.file) : null;
+    this.attachmentCount = view.attachments.length;
+  }
+}
+
+export class StudentMaterialDetailDto extends StudentMaterialDto {
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'ARTICLE only: server-sanitized canonical HTML. Inline images use <img data-file-id> without src; resolve them through the file access endpoint.',
+  })
+  readonly contentHtml: string | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'ARTICLE only; currently 1.' })
+  readonly contentSchemaVersion: number | null;
+  @ApiProperty({ type: () => [StudentMaterialFileDto] })
+  readonly inlineImages: StudentMaterialFileDto[];
+  @ApiProperty({ type: () => [StudentMaterialFileDto] })
+  readonly attachments: StudentMaterialFileDto[];
+  constructor(view: StudentMaterialView) {
+    super(view);
+    const article = view.material.contentType === MaterialContentType.ARTICLE;
+    this.contentHtml = article ? view.material.contentHtml : null;
+    this.contentSchemaVersion = article ? view.material.contentSchemaVersion : null;
+    this.inlineImages = view.inlineImages.map((file) => new StudentMaterialFileDto(file));
+    this.attachments = view.attachments.map((file) => new StudentMaterialFileDto(file));
   }
 }
 

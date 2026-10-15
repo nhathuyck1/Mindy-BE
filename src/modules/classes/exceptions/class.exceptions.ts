@@ -3,6 +3,16 @@ import { HttpStatus } from '@nestjs/common';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
 import type { ClassStatus } from '../enums/class-status.enum.js';
 
+export class UnitReleaseConflictException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'UNIT_RELEASE_CONFLICT',
+      'A completed unit or cancelled class cannot change release',
+    );
+  }
+}
+
 export class ClassNotFoundException extends AppHttpException {
   constructor() {
     super(HttpStatus.NOT_FOUND, 'CLASS_NOT_FOUND', 'The class was not found');

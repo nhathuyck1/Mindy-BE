@@ -49,9 +49,16 @@ export class UsersService {
     id: string,
     role: UserRole,
     manager?: EntityManager,
+    lock = false,
   ): Promise<UserEntity | null> {
     const repository = manager?.getRepository(UserEntity) ?? this.users;
-    return repository.findOne({ where: { id, role, status: UserStatus.ACTIVE } });
+    return repository.findOne({
+      where: { id, role, status: UserStatus.ACTIVE },
+      // FOR SHARE conflicts with role/status UPDATE, unlike FK key-share locks.
+      ...(lock && manager?.queryRunner?.isTransactionActive
+        ? { lock: { mode: 'pessimistic_read' as const } }
+        : {}),
+    });
   }
 
   async findByIds(ids: readonly string[], manager?: EntityManager): Promise<UserEntity[]> {

@@ -6,6 +6,7 @@ import {
   isAssignedMentor,
   isMaterialManager,
 } from './material-access.js';
+import { assertTypedMaterialContent, materialReferences } from './material-content.js';
 import {
   type MaterialActor,
   type MaterialCommand,
@@ -42,11 +43,13 @@ function assertContent(
   ) {
     throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');
   }
-  if (courseUnitId.length === 0 || content.file.courseUnitId !== courseUnitId) {
+  assertTypedMaterialContent(content);
+  const refs = materialReferences(content);
+  if (courseUnitId.length === 0 || refs.some((file) => file.courseUnitId !== courseUnitId)) {
     throw new MaterialPolicyError('MATERIAL_SCOPE_MISMATCH');
   }
-  if (content.file.status !== 'READY') throw new MaterialPolicyError('FILE_NOT_READY');
-  if (!isMaterialManager(actor) && content.file.ownerUserId !== actor.userId) {
+  if (refs.some((file) => file.status !== 'READY')) throw new MaterialPolicyError('FILE_NOT_READY');
+  if (!isMaterialManager(actor) && refs.some((file) => file.ownerUserId !== actor.userId)) {
     throw new MaterialPolicyError('FILE_OWNER_MISMATCH');
   }
   if (
@@ -150,15 +153,23 @@ export function applyMaterialCommand(
   switch (command.action) {
     case 'EDIT': {
       if (!manager && !ownDraft) deny();
-      if (!Number.isSafeInteger(material.revision + 1)) conflict();
+      if (material.revision >= 2147483647) conflict();
       const fields = Object.keys(command.changes);
       if (
         fields.length === 0 ||
         fields.some(
           (field) =>
-            !['title', 'description', 'sortOrder', 'availableAt', 'sessionId', 'file'].includes(
-              field,
-            ),
+            ![
+              'title',
+              'description',
+              'sortOrder',
+              'availableAt',
+              'sessionId',
+              'file',
+              'contentHtml',
+              'inlineImages',
+              'attachments',
+            ].includes(field),
         ) ||
         Object.values(command.changes).some((value) => value === undefined)
       ) {
@@ -190,6 +201,12 @@ export function applyMaterialCommand(
     case 'APPROVE':
     case 'REJECT': {
       if (!manager) deny();
+      if (
+        command.action === 'REJECT' &&
+        (command.reason.trim().length === 0 || command.reason.length > 2000)
+      ) {
+        throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');
+      }
       const target =
         command.action === 'APPROVE'
           ? MaterialReviewStatus.APPROVED
@@ -205,17 +222,12 @@ export function applyMaterialCommand(
         !(
           command.action === 'APPROVE' &&
           material.reviewStatus === MaterialReviewStatus.DRAFT &&
-          (material.createdInClassId === null || material.firstApprovedAt !== null)
+          ((material.createdInClassId === null && material.createdBy === actor.userId) ||
+            material.firstApprovedAt !== null)
         )
       )
         conflict();
       assertContent(material, material.courseUnitId, actor, context);
-      if (
-        command.action === 'REJECT' &&
-        (command.reason.trim().length === 0 || command.reason.length > 2000)
-      ) {
-        throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');
-      }
       updated = {
         ...material,
         reviewStatus: target,

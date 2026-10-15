@@ -1,5 +1,7 @@
 # Phase 3.4 — Material access và staff preview, phối hợp Phase 3.3
 
+> **Lịch sử planning ngày2026-10-13; đã được thay thế bởi [plan3.4 hiện hành ngày2026-10-15](PHASE_3_4_STUDENT_MATERIAL_ACCESS.md).** Source ngày14/10 đã implement ARTICLE/assets/staff preview bằng POST `.../files/:fileId/access`; các GET preview/assets + expectedRevision bên dưới chưa từng implement. Giữ nội dung để tra phân công và lịch sử, không dùng làm contract FE hoặc trạng thái hiện hành. VPS/browser/FE vẫn pending.
+
 Cập nhật: **2026-10-13**. **Kế hoạch backend; phần bổ sung chưa implement/deploy.**
 Ba Student FILE/VIDEO GET đã có và local verified ngày 2026-10-12;
 evidence tại [progress 3.4](../../progress/phase%203/PHASE_3_4_PROGRESS.md).
