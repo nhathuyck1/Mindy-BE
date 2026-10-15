@@ -1,5 +1,12 @@
 # Phase 4 — API breakdown cho frontend
 
+**2026-10-15 — slice đầu4.4a có source:** ba route management Session ở mục10
+(schedule/cancel/makeups), Class cancellation batch và SessionView ancestry.
+Contract implemented hiện hành ở [API4.4](PHASE_4_4_flow-api-breakdown.md),
+evidence ở [progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md).
+Mục11–12 và Student projections/history/summary/queues vẫn **PLANNED**;
+không suy từ slice Session operations thành approved leave/guest đã có.
+
 **2026-10-14 — API4.1–4.3 đã implement; API4.4–4.5 vẫn PLANNED; chưa xác nhận deploy.**
 [Bảng toàn bộ 17 API mới và flow gọi nối tiếp của hai commit](PHASE_4_API_SUMMARY.md).
 [Flow](PHASE_4_FLOW.md) ·
@@ -33,6 +40,11 @@ trong đó đã implement. Danh sách hiện có và flow tích hợp xem file s
 thứ Ba→00:00 thứ Năm. Không overnight, không cộng24h từ actualStartedAt.
 Migration1791849600002 cập nhật clocks cũ/tăng version nếu thay đổi; API dùng cùng
 APP_TIME_ZONE với migration. GET refetch sau replay/migration để lấy hạn hiện tại.
+
+**Hiện hành15/10:** Guest roster/PUT/finalize/context/audits và placements đã có
+core4.4b; mọi ghi chú guest PLANNED trong baseline4.1–4.3 dưới đây là lịch sử.
+Tích hợp mới dùng [contract4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md).
+Approved leave và Student schedule/history/summary4.4c vẫn chưa có.
 
 ## 1. Contract chung áp dụng cho từng API bên dưới
 
@@ -492,6 +504,12 @@ Email/chat/notification không phải side effect của bất kỳ action nghỉ
 
 ## 12. Student conflict queue và học bù lớp khác — slice 4.4b
 
+**Cập nhật15/10: core4.4b đã implement/test local.** Contract chính xác, fields
+bổ sung/lỗi/phiên bản/permissions xem [API4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md).
+Approved-leave availability còn thiếu provider4.4a trong source hiện tại;
+Student schedule/history/summary4.4c chưa implement. Thiết kế tổng dưới đây không
+được dùng để suy ra đã deploy hoặc candidates đã kiểm approved leave.
+
 ### GET `/api/v1/management/student-schedule-conflicts`
 
 Staff; page/pageSize, optional classId/status; mặc định toàn OPEN/MAKEUP_ASSIGNED,
@@ -791,3 +809,15 @@ preflight bị chặn bởi untracked `..env.production.swp` trên VPS. Chưa ch
 rollout, không thay contract API. Recovery procedure ở
 [VPS runbook](../VPS_DEPLOYMENT.md); cần retry rồi có release evidence mới để
 xác nhận các API hiện có đã bật trên VPS.
+
+## 2026-10-15 — Plan chi tiết Phase 4.4a–c
+
+[Plan 4.4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+chốt thứ tự a → b → c và kế thừa các nhóm API PLANNED tại mục 8–12; chưa thêm
+endpoint runtime hoặc đổi contract API4.1–4.3 trong lượt này. Mở rộng guest sau
+này phải giữ payload regular hiện hữu, tách guest records theo makeupPlacementId.
+Đăng ký/thanh toán sau duyệt lịch bù vẫn theo baseline; trùng mới được ghi vào
+conflict queue để Manager xử lý theo lựa chọn user. Xem [flow tổng](PHASE_4_FLOW.md).
+Chỉ kiểm tài liệu/link/diff, không runtime tests/migrations/FE/deployment mới.
+Trạng thái server/Postman 4.3 theo xác nhận user ngày 15/10 trong backlog;
+không suy ra 4.4 đã có API hoặc đã deploy.

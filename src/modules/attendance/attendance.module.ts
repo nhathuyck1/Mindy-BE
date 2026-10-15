@@ -4,17 +4,23 @@ import { AuthModule } from '../auth/auth.module.js';
 import { ClassesModule } from '../classes/classes.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { PaymentsModule } from '../payments/payments.module.js';
+import { ScheduleReservationsModule } from '../schedule-reservations/schedule-reservations.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AttendanceController } from './controllers/attendance.controller.js';
 import { AttendanceManagementController } from './controllers/attendance-management.controller.js';
+import { MakeupManagementController } from './controllers/makeup-management.controller.js';
+import { StudentMakeupController } from './controllers/student-makeup.controller.js';
 import { AttendanceRecordEntity } from './entities/attendance-record.entity.js';
 import { AttendanceRecoveryAuditEntity } from './entities/attendance-recovery-audit.entity.js';
 import { AttendanceRecoveryAuditItemEntity } from './entities/attendance-recovery-audit-item.entity.js';
 import { AttendanceService } from './services/attendance.service.js';
 import { AttendanceAuditService } from './services/attendance-audit.service.js';
+import { GuestAttendanceService } from './services/guest-attendance.service.js';
+import { MakeupPlacementService } from './services/makeup-placement.service.js';
 
 @Module({
   imports: [
+    ScheduleReservationsModule,
     AuthModule,
     ClassesModule,
     EnrollmentsModule,
@@ -26,8 +32,18 @@ import { AttendanceAuditService } from './services/attendance-audit.service.js';
       AttendanceRecoveryAuditItemEntity,
     ]),
   ],
-  controllers: [AttendanceController, AttendanceManagementController],
-  providers: [AttendanceService, AttendanceAuditService],
+  controllers: [
+    AttendanceController,
+    AttendanceManagementController,
+    MakeupManagementController,
+    StudentMakeupController,
+  ],
+  providers: [
+    AttendanceService,
+    AttendanceAuditService,
+    MakeupPlacementService,
+    GuestAttendanceService,
+  ],
   exports: [AttendanceService],
 })
 export class AttendanceModule {}

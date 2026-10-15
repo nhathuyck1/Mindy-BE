@@ -1,5 +1,10 @@
 # Phase 4 — Attendance, nghỉ dạy, học bù và mentor dạy thay
 
+**Cập nhật2026-10-15:** bắt đầu4.4a bằng Session management schedule/cancel/
+makeups và Class cancellation batch. [Progress4.4](../../progress/phase%204/PHASE_4_4_PROGRESS.md)
+core4.4b có source/local checks; leave approval/approved intervals/4.4c còn pending.
+Baseline dưới đây giữ lịch sử; chưa có deployment4.4/4.5.
+
 Ngày lập: **2026-10-13**. Trạng thái: **core 4.1–4.2 có source/evidence local lịch sử;
 core coverage đã đóng local; dependencies/release còn mở; 4.3 implemented/focused verified;4.4–4.5 pending; chưa deploy**.
 User duyệt nghiệp vụ trong chat ngày 2026-10-13: điểm danh trong ngày học,
@@ -15,6 +20,8 @@ API/schema4.3 đã implement;4.4–4.5 vẫn là thiết kế. API4.1–4.3 cầ
 Plan chi tiết riêng: [4.1 — Mentor substitution](PHASE_4_1_MENTOR_SUBSTITUTION.md)
 và [4.2 — Session attendance](PHASE_4_2_SESSION_ATTENDANCE.md),
 [4.3 — Correction/recovery/history](PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md).
+Plan tiếp theo: [4.4 — Nghỉ có duyệt, học bù và Student operations](PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+(2026-10-15, IN PROGRESS; schedule operations4.4a và core4.4b có source, leave/4.4c còn thiếu).
 Đối chiếu AC → code → tests → gaps tại
 [Progress 4.1](../../progress/phase%204/PHASE_4_1_PROGRESS.md) và
 [Progress 4.2](../../progress/phase%204/PHASE_4_2_PROGRESS.md).
@@ -524,3 +531,14 @@ Core có implementation, nhưng Student mentor projection, substitute material
 context, approved leave, full recovery/correction/cancel/guest và release vẫn mở.
 Mixed-writer concurrency, edge và Staff HTTP test matrix chưa phủ đầy đủ.
 Chỉ Markdown và source review; kiểm diff/link, không runtime tests/migrate/FE/deploy.
+
+
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate hiện hành xem Progress4.4.

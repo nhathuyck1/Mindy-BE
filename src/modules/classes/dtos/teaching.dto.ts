@@ -11,6 +11,12 @@ export class TeachingMentorDto {
 }
 
 export class TeachingSessionDto {
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  readonly makeupForSessionId!: string | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  readonly makeupRootSessionId!: string | null;
+
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   readonly actualStartedAt!: Date | null;
 
@@ -206,6 +212,8 @@ export class MentorTeachingScheduleDto extends TeachingSessionPageDto {
 }
 
 export class TeachingSessionContextDto {
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  readonly makeupPlacementId!: string | null;
   @ApiProperty({ type: () => TeachingSessionDto })
   readonly session!: TeachingSessionDto;
 

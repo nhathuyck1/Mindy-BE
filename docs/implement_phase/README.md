@@ -1,5 +1,10 @@
 # Implementation phases
 
+2026-10-15: bắt đầu [Phase4.4](phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+bằng Session operations đầu4.4a và Class cancellation batch; check413/413 và
+HTTP42/42 local,0 skip. [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md)
+core4.4b đã có source; giữ leave approval/approved intervals/4.4c/4.5 mở; chưa deploy4.4.
+
 Thư mục này chuyển các milestone cấp cao trong `CORE_FLOW_IMPLEMENTATION_PLAN.md`
 thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 
@@ -140,3 +145,14 @@ contract ở API breakdown mục15. 4.3–4.5 vẫn planned, chưa deploy migrat
 Implementation4.3 ngày2026-10-13:correction/audit/evidence recovery đã có API/schema/
 public payment providers và parser256KiB. [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md)
 ghi local gates và rollout;4.4a/b/c→4.5 tiếp tục pending,chưa deploy.
+
+
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate hiện hành xem Progress4.4.

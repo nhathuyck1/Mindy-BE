@@ -1,3 +1,4 @@
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -27,7 +28,7 @@ describe.skipIf(!separateTestUrl('phase43_migration'))(
     });
 
     it('clean up/down/up preserves legacy no-data, actors and clocks without guessed backfill', async () => {
-      await db.undoLastMigration();
+      await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'down');
       const f = paymentFixture(db),
         a = await f.order();
       await db.query("UPDATE class_sessions SET status='COMPLETED' WHERE class_id=$1", [
@@ -36,7 +37,7 @@ describe.skipIf(!separateTestUrl('phase43_migration'))(
       const before = await db.query(
         'SELECT id,status,actual_started_at,actual_ended_at,teaching_mentor_id,version FROM class_sessions',
       );
-      await db.runMigrations();
+      await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'up');
       expect(
         await db.query(
           'SELECT id,status,actual_started_at,actual_ended_at,teaching_mentor_id,version FROM class_sessions',
@@ -44,8 +45,8 @@ describe.skipIf(!separateTestUrl('phase43_migration'))(
       ).toEqual(before);
       expect(await db.query('SELECT 1 FROM attendance_recovery_audits')).toHaveLength(0);
       expect(await db.query('SELECT 1 FROM attendance_records')).toHaveLength(0);
-      await db.undoLastMigration();
-      await db.runMigrations();
+      await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'down');
+      await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'up');
       expect(
         await db.query(
           'SELECT id,status,actual_started_at,actual_ended_at,teaching_mentor_id,version FROM class_sessions',
@@ -117,7 +118,9 @@ describe.skipIf(!separateTestUrl('phase43_migration'))(
         await expect(db.query(`DELETE FROM ${table} WHERE id=$1`, [id])).rejects.toMatchObject({
           driverError: { code: '23503' },
         });
-      await expect(db.undoLastMigration()).rejects.toThrow('history exists');
+      await expect(
+        rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'down'),
+      ).rejects.toThrow('history exists');
       expect(await db.query('SELECT 1 FROM attendance_recovery_audit_items')).toHaveLength(1);
       await db.query(
         `INSERT INTO attendance_audits(attendance_id,actor_id,new_status,action,version,occurred_at)

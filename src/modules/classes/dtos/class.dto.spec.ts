@@ -41,6 +41,8 @@ function buildView(occupiedSeats: number): ClassDetailView {
     updatedAt: now,
   };
   const session: ClassSessionEntity = {
+    makeupForSessionId: null,
+    makeupRootSessionId: null,
     id: '66666666-6666-4666-8666-666666666666',
     classUnitId: unit.id,
     mentorOverrideId: null,

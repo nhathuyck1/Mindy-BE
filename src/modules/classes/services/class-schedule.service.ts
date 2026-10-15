@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ConfigService } from '@nestjs/config';
 import type { EntityManager } from 'typeorm';
-
 import { normalizeOptionalText } from '../../../common/text/normalize-text.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
 import {
   isSingleTeachingDay,
   isWithinClassPeriod,
@@ -27,6 +28,7 @@ import {
   ClassSessionTimeRangeInvalidException,
   ClassUnitNotFoundException,
 } from '../exceptions/class.exceptions.js';
+import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
 
 import { MentorConflictService } from './mentor-conflict.service.js';
 
@@ -44,11 +46,121 @@ const SCHEDULE_BINDING_STATUSES: readonly ClassStatus[] = [
 export class ClassScheduleService {
   constructor(
     private readonly config: ConfigService,
+    private readonly reservations: ScheduleReservationsService,
     private readonly conflicts: MentorConflictService = new MentorConflictService(),
   ) {}
 
   bindsMentorCalendar(classEntity: ClassEntity): boolean {
     return SCHEDULE_BINDING_STATUSES.includes(classEntity.status);
+  }
+
+  assertInterval(session: ClassSessionEntity, c: ClassEntity): void {
+    if (!(session.startsAt < session.endsAt)) throw new ClassSessionTimeRangeInvalidException();
+    if (!isSingleTeachingDay(session.startsAt, session.endsAt, this.timeZone()))
+      throw new ClassSessionOvernightNotAllowedException();
+    if (
+      !isWithinClassPeriod(
+        { startsAt: session.startsAt, endsAt: new Date(session.endsAt.getTime() - 1) },
+        c,
+        this.timeZone(),
+      )
+    )
+      throw new ClassSessionOutsideClassPeriodException();
+  }
+
+  async saveRescheduled(m: EntityManager, c: ClassEntity, s: ClassSessionEntity): Promise<void> {
+    await this.assertNoPlacements(m, [s.id]);
+    this.assertInterval(s, c);
+    s.version += 1;
+    await m.getRepository(ClassSessionEntity).save(s);
+    await this.assertNoClassOverlap(m, c.id);
+    if (this.bindsMentorCalendar(c)) await this.assertMentorAvailable(m, c);
+    await this.recordConflicts(m, c.id);
+  }
+
+  snapshot(s: ClassSessionEntity): Record<string, unknown> {
+    return {
+      sessionId: s.id,
+      classUnitId: s.classUnitId,
+      startsAt: s.startsAt,
+      endsAt: s.endsAt,
+      status: s.status,
+      version: s.version,
+      mentorOverrideId: s.mentorOverrideId,
+      teachingMentorId: s.teachingMentorId,
+      makeupForSessionId: s.makeupForSessionId,
+      makeupRootSessionId: s.makeupRootSessionId,
+    };
+  }
+
+  async audit(
+    m: EntityManager,
+    c: ClassEntity,
+    s: ClassSessionEntity,
+    actorId: string | null,
+    reason: string,
+    action: 'RESCHEDULE' | 'CANCEL' | 'MAKEUP' | 'CLASS_CANCEL',
+    before: Record<string, unknown>,
+    endBefore: string,
+  ): Promise<void> {
+    await m.query(
+      `INSERT INTO session_schedule_audits
+      (class_id,session_id,actor_id,action,reason,old_state,new_state,class_end_date_before,class_end_date_after,version)
+      VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10)`,
+      [
+        c.id,
+        s.id,
+        actorId,
+        action,
+        reason,
+        JSON.stringify(before),
+        JSON.stringify(this.snapshot(s)),
+        endBefore,
+        c.endDate,
+        s.version,
+      ],
+    );
+  }
+
+  async cancelSession(
+    m: EntityManager,
+    c: ClassEntity,
+    s: ClassSessionEntity,
+    actorId: string | null,
+    reason: string,
+    action: 'CANCEL' | 'CLASS_CANCEL',
+  ): Promise<void> {
+    const before = this.snapshot(s);
+    if (await this.reservations.hasOutgoingUnresolved(m, s.id))
+      throw new TeachingConflictException(
+        'SESSION_HAS_MAKEUP_PLACEMENTS',
+        'Resolve outgoing placements before cancelling the source session',
+      );
+    await m.query("SELECT set_config('mindy.actor_id',$1,true)", [actorId ?? '']);
+    s.status = SessionStatus.CANCELLED;
+    s.version += 1;
+    await m.getRepository(ClassSessionEntity).save(s);
+    await this.audit(m, c, s, actorId, reason, action, before, c.endDate);
+  }
+
+  /** Caller owns the Class lock. Locks all Session rows before changing any state. */
+  async cancelClassSessions(
+    m: EntityManager,
+    c: ClassEntity,
+    actorId: string | null,
+  ): Promise<void> {
+    const sessions = await m
+      .getRepository(ClassSessionEntity)
+      .createQueryBuilder('s')
+      .where('s.class_unit_id IN (SELECT id FROM class_units WHERE class_id=:classId)', {
+        classId: c.id,
+      })
+      .andWhere("s.status::text IN ('SCHEDULED','IN_PROGRESS')")
+      .orderBy('s.id', 'ASC')
+      .setLock('for_no_key_update')
+      .getMany();
+    for (const s of sessions)
+      await this.cancelSession(m, c, s, actorId, 'Class cancelled', 'CLASS_CANCEL');
   }
 
   async addSession(
@@ -116,6 +228,7 @@ export class ClassScheduleService {
     input: UpdateClassSessionTimeDto,
   ): Promise<void> {
     const repository = manager.getRepository(ClassSessionEntity);
+    await this.assertNoPlacements(manager, sessionIds);
     const sessions = await repository
       .createQueryBuilder('session')
       .innerJoin(ClassUnitEntity, 'unit', 'unit.id = session.classUnitId')
@@ -141,6 +254,36 @@ export class ClassScheduleService {
       session.version += 1;
     }
     await repository.save(sessions);
+    await this.assertNoClassOverlap(manager, classEntity.id);
+    if (this.bindsMentorCalendar(classEntity)) {
+      await this.assertMentorAvailable(manager, classEntity);
+    }
+    await this.recordConflicts(manager, classEntity.id);
+  }
+
+  async assertNoPlacements(m: EntityManager, ids: readonly string[]): Promise<void> {
+    if (await this.reservations.hasSessionPlacements(m, ids))
+      throw new TeachingConflictException(
+        'SESSION_HAS_MAKEUP_PLACEMENTS',
+        'Resolve or cancel placements before changing this session schedule',
+      );
+  }
+
+  async recordConflicts(m: EntityManager, classId: string): Promise<void> {
+    const students = await this.reservations.classStudentIds(m, classId);
+    await this.reservations.lockStudents(m, students);
+    await this.reservations.recordMakeupConflicts(m, students, new Date());
+  }
+
+  async assertMakeupsResolved(m: EntityManager, classId: string): Promise<void> {
+    if (await this.reservations.hasUnresolved(m, classId))
+      throw new TeachingConflictException(
+        'CLASS_HAS_UNRESOLVED_MAKEUPS',
+        'Resolve outstanding makeup placements before completing this class',
+      );
+  }
+
+  async assertNoClassOverlap(manager: EntityManager, classId: string): Promise<void> {
     const overlaps: unknown[] = await manager.query(
       `SELECT 1 FROM class_sessions first
        JOIN class_units first_unit ON first_unit.id = first.class_unit_id
@@ -152,12 +295,9 @@ export class ClassScheduleService {
          AND first.status::text IN ('SCHEDULED', 'IN_PROGRESS')
          AND second.status::text IN ('SCHEDULED', 'IN_PROGRESS')
        LIMIT 1`,
-      [classEntity.id],
+      [classId],
     );
     if (overlaps.length > 0) throw new ClassSessionOverlapException();
-    if (this.bindsMentorCalendar(classEntity)) {
-      await this.assertMentorAvailable(manager, classEntity);
-    }
   }
 
   /** A class can open only with at least one scheduled session, all inside its period. */

@@ -1,7 +1,15 @@
+import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
 import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
+import { SessionAttendance1791849600001 } from '../../src/database/migrations/1791849600001-session-attendance.js';
+import { CalendarAttendanceDeadline1791849600002 } from '../../src/database/migrations/1791849600002-calendar-attendance-deadline.js';
+import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
+import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
+import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
 import { MentorConflictService } from '../../src/modules/classes/services/mentor-conflict.service.js';
 import { TeachingAssignmentService } from '../../src/modules/classes/services/teaching-assignment.service.js';
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import 'reflect-metadata';
 
 import { randomUUID } from 'node:crypto';
@@ -69,7 +77,6 @@ if (databaseUrl.length > 0 && !isTestDatabase) {
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 const DAY_MS = 86_400_000;
-const PHASE_2_MIGRATION_COUNT = 8; // Includes the additive assignment schema used by current entities.
 
 const config = {
   getOrThrow<T>(key: string): T {
@@ -143,6 +150,12 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         AddCourseImgUrl1791072000000,
         RestoreManagerRole1791504000000,
         SessionMentorAssignment1791849600000,
+        SessionScheduleOperations1792022400000,
+        PayosPayments1791158400000,
+        SessionAttendance1791849600001,
+        CalendarAttendanceDeadline1791849600002,
+        AttendanceRecoveryEvidence1791849600003,
+        CrossClassMakeup1792022400001,
       ],
     });
     await dataSource.initialize();
@@ -151,7 +164,10 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
     await dataSource.runMigrations();
 
     const usersService = new UsersService(dataSource.getRepository(UserEntity));
-    const enrollmentsService = new EnrollmentsService(dataSource);
+    const enrollmentsService = new EnrollmentsService(
+      dataSource,
+      new ScheduleReservationsService(),
+    );
     categoriesService = new CourseCategoriesService(dataSource);
     coursesService = new CoursesService(dataSource);
     readService = new ClassReadService(
@@ -165,7 +181,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       dataSource,
       coursesService,
       usersService,
-      new ClassScheduleService(config),
+      new ClassScheduleService(config, new ScheduleReservationsService()),
       readService,
     );
     const offersService = new ClassOffersService(
@@ -173,6 +189,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       coursesService,
       enrollmentsService,
       readService,
+      new ScheduleReservationsService(),
     );
     expiryService = new OrderExpiryService(dataSource, enrollmentsService);
     cartService = new CartService(dataSource, offersService);
@@ -277,7 +294,12 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
   async function assignClassMentor(classId: string, mentorId: string): Promise<ClassDetailView> {
     const actor = await createUser(UserRole.ADMIN);
     const users = new UsersService(dataSource.getRepository(UserEntity));
-    const read = new TeachingReadService(dataSource, config, users);
+    const read = new TeachingReadService(
+      dataSource,
+      config,
+      users,
+      new ScheduleReservationsService(),
+    );
     const assignment = new TeachingAssignmentService(
       dataSource,
       users,
@@ -299,7 +321,12 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
   }
 
   it('reverts and reruns the Phase 2 migrations', async () => {
-    for (let step = 0; step < PHASE_2_MIGRATION_COUNT; step += 1) {
+    const applied: unknown[] = await dataSource.query(
+      'SELECT 1 FROM migrations WHERE timestamp >= $1',
+      [1790900000000],
+    );
+    expect(applied.length).toBeGreaterThan(0);
+    for (let step = 0; step < applied.length; step += 1) {
       await dataSource.undoLastMigration();
     }
     const tables: { table_name: string }[] = await dataSource.query(
@@ -309,23 +336,22 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
     expect(tables.map((row) => row.table_name)).toContain('users');
 
     const rerun = await dataSource.runMigrations();
-    expect(rerun).toHaveLength(PHASE_2_MIGRATION_COUNT);
+    expect(rerun).toHaveLength(applied.length);
   });
 
   it('preserves manager accounts on refused rollback and restores the role after down/up', async () => {
-    await dataSource.undoLastMigration(); // Empty assignment schema; manager enum is now last.
     const manager = await createUser(UserRole.MANAGER);
-    await expect(dataSource.undoLastMigration()).rejects.toThrow(
-      'Cannot remove the MANAGER role while users still have it',
-    );
+    await expect(
+      rehearseMigration(dataSource, new RestoreManagerRole1791504000000(), 'down'),
+    ).rejects.toThrow('Cannot remove the MANAGER role while users still have it');
     expect(await dataSource.getRepository(UserEntity).findOneBy({ id: manager.id })).toMatchObject({
       role: UserRole.MANAGER,
     });
 
     await dataSource.getRepository(UserEntity).delete(manager.id);
-    await dataSource.undoLastMigration();
+    await rehearseMigration(dataSource, new RestoreManagerRole1791504000000(), 'down');
     await expect(createUser(UserRole.MANAGER)).rejects.toMatchObject({ code: '22P02' });
-    expect(await dataSource.runMigrations()).toHaveLength(2);
+    await rehearseMigration(dataSource, new RestoreManagerRole1791504000000(), 'up');
     const restored = await createUser(UserRole.MANAGER);
     expect(restored.role).toBe(UserRole.MANAGER);
     await dataSource.getRepository(UserEntity).delete(restored.id);

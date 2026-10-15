@@ -1,3 +1,4 @@
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -26,7 +27,7 @@ describe.skipIf(!separateTestUrl('teaching'))(
     beforeAll(async () => {
       db = await paymentDatabase('teaching');
       f = paymentFixture(db);
-      read = new TeachingReadService(db, f.config, f.users);
+      read = new TeachingReadService(db, f.config, f.users, new ScheduleReservationsService());
       assignments = new TeachingAssignmentService(db, f.users, read, new MentorConflictService());
       staff = {
         userId: (await f.user(UserRole.MANAGER)).id,

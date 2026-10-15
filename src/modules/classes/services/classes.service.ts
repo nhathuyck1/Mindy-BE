@@ -204,6 +204,7 @@ export class ClassesService {
   /** IN_PROGRESS -> COMPLETED: the class becomes read-only history. */
   async complete(classId: string): Promise<ClassDetailView> {
     return this.transition(classId, ClassStatus.COMPLETED, async (manager) => {
+      await this.scheduleService.assertMakeupsResolved(manager, classId);
       const unresolved: unknown[] = await manager.query(
         `SELECT 1 FROM class_sessions s JOIN class_units u ON u.id=s.class_unit_id
         WHERE u.class_id=$1 AND s.status::text IN ('SCHEDULED','IN_PROGRESS') LIMIT 1`,
@@ -217,8 +218,10 @@ export class ClassesService {
     });
   }
 
-  async cancel(classId: string): Promise<ClassDetailView> {
-    return this.transition(classId, ClassStatus.CANCELLED);
+  async cancel(classId: string, actorId: string | null = null): Promise<ClassDetailView> {
+    return this.transition(classId, ClassStatus.CANCELLED, async (manager, c) => {
+      await this.scheduleService.cancelClassSessions(manager, c, actorId);
+    });
   }
 
   private async transition(

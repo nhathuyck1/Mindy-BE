@@ -251,7 +251,8 @@ export class AdminClassesController {
   @ApiErrors(HttpStatus.NOT_FOUND, HttpStatus.CONFLICT)
   async cancel(
     @Param('classId', new ParseUUIDPipe()) classId: string,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<ClassManagementDetailDto> {
-    return new ClassManagementDetailDto(await this.classesService.cancel(classId));
+    return new ClassManagementDetailDto(await this.classesService.cancel(classId, actor.userId));
   }
 }

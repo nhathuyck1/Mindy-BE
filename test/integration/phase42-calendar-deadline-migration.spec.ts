@@ -1,3 +1,4 @@
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -22,13 +23,13 @@ describe.skipIf(!separateTestUrl('calendar_deadline'))(
     });
 
     it('rehearses an unused policy up/down/up on a clean database', async () => {
-      await db.undoLastMigration();
-      await db.runMigrations();
+      await rehearseMigration(db, new CalendarAttendanceDeadline1791849600002(), 'down');
+      await rehearseMigration(db, new CalendarAttendanceDeadline1791849600002(), 'up');
       expect(await db.query('SELECT 1 FROM attendance_records')).toHaveLength(0);
     });
 
     it('corrects an existing rolling deadline, preserves history and rejects rollback after use', async () => {
-      await db.undoLastMigration();
+      await rehearseMigration(db, new CalendarAttendanceDeadline1791849600002(), 'down');
       const f = paymentFixture(db),
         order = await f.order();
       const session = (await f.read.getDetail(order.classIds[0] ?? '')).units[0]?.sessions[0];
@@ -47,7 +48,7 @@ describe.skipIf(!separateTestUrl('calendar_deadline'))(
           new Date(actual.getTime() + 86400000),
         ],
       );
-      await db.runMigrations();
+      await rehearseMigration(db, new CalendarAttendanceDeadline1791849600002(), 'up');
       const rows: {
         editable_until: Date;
         version: number;
@@ -64,7 +65,9 @@ describe.skipIf(!separateTestUrl('calendar_deadline'))(
         version: session.version + 1,
       });
       expect(await db.query('SELECT 1 FROM attendance_records')).toHaveLength(0);
-      await expect(db.undoLastMigration()).rejects.toThrow('retain schema and policy');
+      await expect(
+        rehearseMigration(db, new CalendarAttendanceDeadline1791849600002(), 'down'),
+      ).rejects.toThrow('retain schema and policy');
     });
 
     it('matches application calendar deadlines through DST and leaves already-correct versions unchanged', async () => {

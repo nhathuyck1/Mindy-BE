@@ -20,6 +20,10 @@ export class AttendanceRecoveryEvidenceDto {
 }
 
 export class AttendanceAuditDto {
+  @ApiProperty({ enum: ['REGULAR', 'MAKEUP'] }) readonly entryType!: 'REGULAR' | 'MAKEUP';
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly makeupPlacementId!:
+    | string
+    | null;
   @ApiProperty({ type: String, format: 'uuid' }) readonly id!: string;
   @ApiProperty({ type: String, format: 'uuid' }) readonly attendanceId!: string;
   @ApiProperty({ type: String, format: 'uuid' }) readonly enrollmentId!: string;

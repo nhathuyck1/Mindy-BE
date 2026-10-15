@@ -1,5 +1,16 @@
 # Phase 4 — Tổng hợp API và flow liên kết
 
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
 Đối chiếu ngày **14/10/2026** trên nhánh `Feat/Phase4`, HEAD `246abf4`.
 File này liệt kê toàn bộ API mới trong hai commit Phase 4, các API cũ liên quan và thứ tự FE gọi chúng. Nguồn xác nhận là controller, DTO, service, error filter và assertions trong test; tên commit không được dùng để suy ra tính năng đã triển khai.
 
@@ -8,11 +19,20 @@ File này liệt kê toàn bộ API mới trong hai commit Phase 4, các API cũ
 | `8a1c7e8` | 13/10/2026 | Chỉ thay đổi 21 file tài liệu, kế hoạch và progress; **không thêm endpoint hoặc runtime code**. |
 | `246abf4` | 14/10/2026 | Thêm code/migration/test cho Phase 4.1–4.3, **15 endpoint Phase 4 mới + 2 endpoint Admin xem học viên**, đồng thời sửa một số API lớp đã có. |
 
-**Trạng thái:** các API trong bảng 1 đã có source. Progress ghi nhận kiểm thử local trước đó; lần đối chiếu này không chạy lại runtime tests và không xác nhận deploy/VPS. Phase 4.4–4.5 còn phần kế hoạch, xem mục 6.
+**Baseline 14/10:** các API trong bảng 1 đã có source. Progress ghi nhận kiểm thử local trước đó; lần đối chiếu này không chạy lại runtime tests và không xác nhận deploy/VPS.
+
+**Cập nhật 15/10 — bắt đầu 4.4a:** đã code ba API management Session: PATCH
+`/api/v1/management/class-sessions/:sessionId/schedule`, POST cùng prefix
+`/:sessionId/cancel` và `/:sessionId/makeups`; ADMIN/MANAGER với version/key/reason.
+Hủy Class Admin đã hủy batch Session còn mở và giữ attendance/history atomic.
+SessionView thêm hai ancestry IDs nullable. Contract hiện hành của slice mới ở
+[API4.4](PHASE_4_4_flow-api-breakdown.md), gate ở
+[Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md). Leave/approved intervals,
+core4.4b được bổ sung theo mục cập nhật trên; leave/Student projections4.4c và4.5 còn pending; chưa deploy4.4.
 
 Tài liệu chi tiết: [Flow tổng](PHASE_4_FLOW.md), [API breakdown tổng](PHASE_4_flow-api-breakdown.md), [API 4.1](PHASE_4_1_flow-api-breakdown.md), [API 4.2](PHASE_4_2_flow-api-breakdown.md), [API 4.3](PHASE_4_3_flow-api-breakdown.md).
 
-## 1. Toàn bộ 17 endpoint mới
+## 1. Baseline 17 endpoint mới trong hai commit4.1–4.3
 
 Tất cả route có prefix **`/api/v1`**, cần cookie `access_token`; FE gửi `credentials: 'include'`. Staff = `ADMIN` hoặc `MANAGER`. Mentor phải là người được phân công hiệu lực cho đúng buổi khi đọc context/điểm danh. **Cả 17 endpoint thành công đều trả HTTP 200, JSON trực tiếp, không bọc `{data}`.**
 
@@ -27,7 +47,7 @@ Tất cả route có prefix **`/api/v1`**, cần cookie `access_token`; FE gửi
 | PATCH | `/api/v1/management/classes/:classId/mentor` | Staff | Đổi mentor chính. Body `{mentorId, reason, expectedVersion}`; version lấy từ `assignmentVersion`. Giữ override và snapshot mentor của buổi đã bắt đầu. |
 | PATCH | `/api/v1/management/class-sessions/:sessionId/mentor` | Staff | Gán mentor dạy thay hoặc gỡ override bằng `mentorId: null`. Body `{mentorId, reason, expectedVersion}`; version lấy từ buổi. Đổi giữa buổi giữ giờ bắt đầu/hạn điểm danh. |
 | GET | `/api/v1/mentor/schedule` | MENTOR | Lịch dạy của chính mentor, gồm PRIMARY/SUBSTITUTE. Query `page`, `pageSize`, optional `classId`, cặp `from`/`to`; mặc định tuần hiện tại, range tối đa 93 ngày. |
-| GET | `/api/v1/class-sessions/:sessionId/context` | Staff / mentor hiệu lực | Context đúng một buổi: `{session, roomName, meetingUrl, accessScope: "SESSION"}`. Meeting URL null khi lớp/buổi đã hoàn thành hoặc hủy. |
+| GET | `/api/v1/class-sessions/:sessionId/context` | Staff / mentor hiệu lực / own Student guest4.4b | Context đúng một buổi: `{session, roomName, meetingUrl, accessScope: "SESSION"}`. Meeting URL null khi lớp/buổi đã hoàn thành hoặc hủy. |
 
 Hai API candidates hỗ trợ `search` trim tối đa 100 ký tự và phân trang. `availabilityBasis` hiện là `TEACHING_SCHEDULE_ONLY`: không trùng lịch dạy; chưa kiểm lịch nghỉ có duyệt. GET không giữ slot, PATCH kiểm lại khi ghi. Lớp DRAFT chưa chiếm lịch mentor, lúc mở lớp phải kiểm lại.
 
@@ -38,14 +58,14 @@ Hai API candidates hỗ trợ `search` trim tối đa 100 ký tự và phân tra
 | GET | `/api/v1/class-sessions/:sessionId/attendance` | Staff / mentor hiệu lực | Roster snapshot phân trang; trả `session.version`, `permissions`, `items[].enrollmentId`, `totals` toàn roster và `pendingPaymentCount`. Trước start có thể rỗng. |
 | POST | `/api/v1/class-sessions/:sessionId/start` | Staff / mentor hiệu lực | Body `{expectedVersion, reason?, actualStartedAt?}`. `SCHEDULED → IN_PROGRESS`, snapshot học viên đủ điều kiện và mentor dạy; lớp OPEN tự sang IN_PROGRESS. Chỉ Staff được gửi giờ bắt đầu quá khứ. |
 | POST | `/api/v1/class-sessions/:sessionId/attendance/sync-roster` | Staff / mentor hiệu lực | Body `{expectedVersion, reason?}`; thêm học viên đủ điều kiện còn thiếu sau khi CASH đã được xác nhận. Không nhận danh sách ID từ client. |
-| PUT | `/api/v1/class-sessions/:sessionId/attendance` | Staff / mentor hiệu lực | Body `{expectedVersion, reason?, records:[{enrollmentId,status}]}`. Ghi batch 1–100 record; `UNMARKED`/`PRESENT`/`ABSENT` khi đang học. Phase 4.3 mở rộng cùng route để sửa sau chốt. |
+| PUT | `/api/v1/class-sessions/:sessionId/attendance` | Staff / mentor hiệu lực | Body `{expectedVersion, reason?, records:[{enrollmentId,status}], guestRecords?:[{makeupPlacementId,status}]}`. Max100 mỗi array, ít nhất một item tổng; `UNMARKED`/`PRESENT`/`ABSENT` khi đang học. Phase 4.3 mở rộng cùng route để sửa sau chốt. |
 | POST | `/api/v1/class-sessions/:sessionId/finalize` | Staff / mentor hiệu lực | Body `{expectedVersion, reason?, actualEndedAt?}`. `IN_PROGRESS → COMPLETED`; mọi `UNMARKED` thành `ABSENT`. Chỉ Staff được gửi giờ kết thúc quá khứ. |
 
 ### 1.3. Phase 4.3 — Lịch sử và phục hồi
 
 | Method | Endpoint | Quyền | Chức năng / dữ liệu nối bước sau |
 |---|---|---|---|
-| GET | `/api/v1/management/class-sessions/:sessionId/attendance-audits` | Staff | Lịch sử ADMIT/MARK/FINALIZE/CORRECT/RECOVER; query `page`, `pageSize`, optional `enrollmentId` thuộc cùng lớp. Trả trạng thái cũ/mới, actor, reason, version, thời gian và evidence recovery nếu có. |
+| GET | `/api/v1/management/class-sessions/:sessionId/attendance-audits` | Staff | Lịch sử ADMIT/MARK/FINALIZE/CORRECT/RECOVER; query `page`, `pageSize`, optional `enrollmentId` regular/guest đúng target, hoặc `makeupPlacementId` của snapshot4.4b. Trả trạng thái cũ/mới, actor, reason, version, thời gian và evidence recovery nếu có. |
 | POST | `/api/v1/management/class-sessions/:sessionId/attendance/recover` | Staff | Phục hồi các record **chưa tồn tại** bằng thời gian/kết quả/chứng cứ lịch sử. Body có `expectedVersion`, `reason`, `evidenceNote`, `actualStartedAt`, `actualEndedAt`, `records`. Tối đa 1000 record, JSON body tối đa 256 KiB. |
 
 Sửa record đã tồn tại sau chốt dùng **PUT attendance** ở bảng 1.2; không có endpoint `/correct` riêng. Mentor sửa buổi COMPLETED trong hạn; Staff có thể sửa COMPLETED hoặc CANCELLED đã từng start, không bị giới hạn deadline nhưng phải có reason.
@@ -75,7 +95,7 @@ Các route này tồn tại trước hai commit; không tính vào 17 endpoint m
 | POST | `/api/v1/admin/classes/:classId/open` | DRAFT → OPEN; kiểm readiness, lịch và mentor override trước mở đăng ký. |
 | POST | `/api/v1/admin/classes/:classId/start` | OPEN → IN_PROGRESS, đóng đăng ký cấp lớp. Khác POST start của **buổi**, không tạo attendance snapshot. |
 | POST | `/api/v1/admin/classes/:classId/complete` | IN_PROGRESS → COMPLETED; chặn nếu còn buổi SCHEDULED/IN_PROGRESS (`409 SESSION_STATE_CONFLICT`). |
-| POST | `/api/v1/admin/classes/:classId/cancel` | Hủy lớp theo lifecycle đã có; hiện chưa hủy hàng loạt buổi/audit buổi như kế hoạch 4.4a. |
+| POST | `/api/v1/admin/classes/:classId/cancel` | Hủy lớp theo lifecycle; từ slice đầu4.4a hủy batch SCHEDULED/IN_PROGRESS Session cùng transaction, giữ COMPLETED/attendance/clocks và ghi audit với actor Admin. |
 
 ### 2.2. Thanh toán CASH và màn học viên — tái sử dụng Phase 2
 
@@ -110,7 +130,7 @@ Các route này tồn tại trước hai commit; không tính vào 17 endpoint m
 
 Attendance GET trả `{session,items,page,pageSize,total,totals,pendingPaymentCount}`. Session có `version`, clocks/deadline, effective mentor và permissions `{canStart,canEditAttendance,canFinalize,canSyncRoster,canRecover,canViewAttendanceAudits}`. Context/schedule dùng TeachingSessionDto, không trả các permissions attendance này.
 
-Attendance mutation trả `{session,totals,changedEnrollmentIds,changedMakeupPlacementIds:[]}`. Item hiện chỉ `entryType: "REGULAR"`, `makeupPlacementId: null`; guest/makeup chưa có. `checkedInAt` là giờ server đánh dấu PRESENT gần nhất, không phải giờ học viên đến.
+Attendance mutation trả `{session,totals,changedEnrollmentIds,changedMakeupPlacementIds}`. Từ4.4b item có `entryType: "REGULAR"|"MAKEUP"`, MAKEUP có makeupPlacementId, enrollmentId nguồn; totals/page union regular+guest. `checkedInAt` là giờ server đánh dấu PRESENT gần nhất, không phải giờ học viên đến.
 
 ## 4. Flow các API liên kết
 
@@ -243,7 +263,7 @@ UI cần loading/empty/error/success; disable action đang gửi. Có thể poll
 
 ## 6. Phần còn kế hoạch và điều kiện dùng trên môi trường
 
-**Chưa có source endpoint cho:** Student attendance history/summary và projection trên schedule; management incomplete/backlog queue; reschedule/cancel/makeup buổi theo flow mới; mentor leave request/approve; student conflict/makeup placement/guest roster. Các route tương ứng trong breakdown tổng là **PLANNED**, không cộng vào 17 API đã có.
+**Chưa có source endpoint cho:** Student attendance history/summary và projection trên schedule; management incomplete queue; mentor leave request/approve. Student conflict/makeup placement/guest roster đã có core4.4b theo contract riêng. Chỉ các route còn thiếu tương ứng là **PLANNED**; xem [contract4.4b](PHASE_4_4_flow-api-breakdown.md). Ba route Session reschedule/cancel/makeup đã có ở slice đầu4.4a ngày15/10, được liệt kê riêng ở đầu file, ngoài 17 API baseline hai commit.
 
 Các migrations Phase 4 có trong commit `246abf4`, cần chạy theo thứ tự sau prerequisites của dự án trước khi bật API trên môi trường:
 
@@ -251,6 +271,10 @@ Các migrations Phase 4 có trong commit `246abf4`, cần chạy theo thứ tự
 2. `1791849600001-session-attendance` — attendance roster và lifecycle.
 3. `1791849600002-calendar-attendance-deadline` — deadline theo ngày lịch, sửa version khi cần.
 4. `1791849600003-attendance-recovery-evidence` — evidence/audit recovery.
+
+Slice đầu4.4a bổ sung migration `1792022400000-session-schedule-operations`
+sau baseline trên; chưa có deploy4.4. [Postman4.4](../../postman/Mindy-Session-Operations-Phase44.postman_collection.json)
+và [API4.4](PHASE_4_4_flow-api-breakdown.md) mô tả version/key/ancestry/rollback.
 
 Phase 3/MinIO/material authoring không phải prerequisite của điểm danh. Quyền tài liệu vẫn theo domain tương ứng; substitute không tự có quyền quản lý tài liệu.
 

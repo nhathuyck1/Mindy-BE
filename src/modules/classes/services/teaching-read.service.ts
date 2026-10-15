@@ -5,6 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
 import type { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { UsersService } from '../../users/users.service.js';
@@ -50,6 +52,7 @@ export class TeachingReadService {
     private readonly db: DataSource,
     private readonly config: ConfigService,
     private readonly users: UsersService,
+    private readonly reservations: ScheduleReservationsService,
   ) {}
 
   timeZone(): string {
@@ -205,8 +208,13 @@ export class TeachingReadService {
   async context(id: string, actor: AuthenticatedUser): Promise<TeachingSessionContextDto> {
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const { session, classEntity } = await this.loadSession(m, id);
+      const makeupPlacementId =
+        actor.role === UserRole.STUDENT
+          ? await this.reservations.guestContext(m, id, actor.userId)
+          : null;
       if (
-        ![UserRole.ADMIN, UserRole.MANAGER, UserRole.MENTOR].includes(actor.role) ||
+        (![UserRole.ADMIN, UserRole.MANAGER, UserRole.MENTOR].includes(actor.role) &&
+          !makeupPlacementId) ||
         !(await this.users.findActiveByRole(actor.userId, actor.role, m)) ||
         (actor.role === UserRole.MENTOR &&
           effectiveMentorId(session, classEntity.mentorId) !== actor.userId)
@@ -223,6 +231,7 @@ export class TeachingReadService {
         roomName: session.roomName,
         meetingUrl: terminal ? null : (session.meetingUrl ?? classEntity.meetingUrl),
         accessScope: 'SESSION',
+        makeupPlacementId,
       };
     });
   }
@@ -251,7 +260,8 @@ export class TeachingReadService {
       .getRepository(ClassSessionEntity)
       .createQueryBuilder('s')
       .where('s.id = :id', { id });
-    if (lock) q.setLock('pessimistic_write');
+    // Non-key writes must remain compatible with FK checks in concurrent conflict recording.
+    if (lock) q.setLock('for_no_key_update');
     const session = await q.getOne();
     if (!session) throw new ClassSessionNotFoundException();
     return { session, classEntity };
@@ -316,6 +326,8 @@ export class TeachingReadService {
         sessionId: s.id,
         classId: c.id,
         classUnitId: s.classUnitId,
+        makeupForSessionId: s.makeupForSessionId,
+        makeupRootSessionId: s.makeupRootSessionId,
         title: s.title,
         startsAt: s.startsAt,
         endsAt: s.endsAt,

@@ -1,0 +1,591 @@
+{
+  "info": {
+    "name": "Mindy Phase 4.4 - Session Operations and Cross-class Makeup",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Initial 4.4a slice only. Requires migration1792022400000. Login using existing auth collection/cookie jar as ACTIVE ADMIN/MANAGER. Leave/approval/guest/Student summaries are pending. Read Class detail; set sessionId,classUnitId,sessionVersion. Each new mutation intent needs a UUIDv4 idempotencyKey. Retries KEEP original body/version/key. Mutations store nextSessionVersion; copy it only for the next intent and use a new key. Source must be latest cancelled leaf for makeup; class OPEN/IN_PROGRESS; same Unit/duration/future. Makeup extends endDate atomically. Default dates are examples: choose valid future dates within your class period. No deployment is implied. 4.4b requires migration1792022400001 and attendance prerequisites. Staff queue -> candidates -> content confirmation -> placement. Guest access is session-only; target mentor starts/marks/finalizes. Leave/approved intervals and Student schedule/summary remain pending. Never run the collection blindly: switch actor cookies and refetch versions for each next intent."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "classId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "classUnitId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nextSessionVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "replacementSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "startsAt",
+      "value": "2026-11-03T10:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "endsAt",
+      "value": "2026-11-03T11:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "makeupStartsAt",
+      "value": "2026-11-05T10:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "makeupEndsAt",
+      "value": "2026-11-05T11:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "targetSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetSessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "placementId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placementVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nextConflictVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextTargetSessionVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextPlacementVersion",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - Read class timetable and versions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/management/classes/{{classId}}?page=1&pageSize=100",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "classes", "{{classId}}"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Class detail\", () => pm.response.to.have.status(200));",
+              "const rows = pm.response.json().sessions.items;",
+              "const s = rows.find(s => s.sessionId === pm.collectionVariables.get(\"sessionId\"));",
+              "if (s) { pm.collectionVariables.set(\"sessionVersion\", s.version); pm.collectionVariables.set(\"classUnitId\", s.classUnitId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Reschedule scheduled session",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/schedule",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "schedule"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startsAt\": \"{{startsAt}}\",\n  \"endsAt\": \"{{endsAt}}\",\n  \"reason\": \"Change scheduled lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Rescheduled\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) pm.collectionVariables.set(\"nextSessionVersion\", pm.response.json().version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Cancel scheduled or in-progress session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/cancel",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "cancel"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Cannot hold lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Cancelled\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) pm.collectionVariables.set(\"nextSessionVersion\", pm.response.json().version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Create replacement for cancelled source",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/makeups",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "makeups"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"classUnitId\": \"{{classUnitId}}\",\n  \"title\": \"Makeup lesson\",\n  \"startsAt\": \"{{makeupStartsAt}}\",\n  \"endsAt\": \"{{makeupEndsAt}}\",\n  \"reason\": \"Replace cancelled lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Created\", () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) { const v = pm.response.json(); pm.collectionVariables.set(\"nextSessionVersion\", v.originalVersion); pm.collectionVariables.set(\"replacementSessionId\", v.session.sessionId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.4b - Staff makeup queue and reservation",
+      "item": [
+        {
+          "name": "5 - Staff conflict queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts?page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().items.find(x => x.id === pm.collectionVariables.get(\"conflictId\"));",
+                  "if (row) { pm.collectionVariables.set(\"conflictVersion\", row.version); if(row.makeupPlacementId) { pm.collectionVariables.set(\"placementId\", row.makeupPlacementId); pm.collectionVariables.set(\"placementVersion\", row.makeupPlacementVersion); } }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6 - Staff eligible makeup candidates (no reservation)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts/{{conflictId}}/makeup-candidates?page=1&pageSize=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().items.find(x => x.session.sessionId === pm.collectionVariables.get(\"targetSessionId\"));",
+                  "if (row) pm.collectionVariables.set(\"targetSessionVersion\", row.session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7 - Staff assign equivalent lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts/{{conflictId}}/makeup-placement",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetSessionId\": \"{{targetSessionId}}\",\n  \"expectedVersion\": {{conflictVersion}},\n  \"expectedTargetVersion\": {{targetSessionVersion}},\n  \"contentMatchConfirmed\": true,\n  \"reason\": \"Verified equivalent lesson content\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if(pm.response.code === 201) { const r = pm.response.json(); pm.collectionVariables.set(\"placementId\", r.placement.id); pm.collectionVariables.set(\"placementVersion\", r.placement.version); pm.collectionVariables.set(\"nextConflictVersion\", r.conflictVersion); pm.collectionVariables.set(\"nextTargetSessionVersion\", r.targetSessionVersion); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8 - Staff cancel placement (history retained)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/management/makeup-placements/{{placementId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{placementVersion}},\n  \"reason\": \"Reassign to another target\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextPlacementVersion\", pm.response.json().version);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4b - Switch cookies for Student / target Mentor / Staff",
+      "item": [
+        {
+          "name": "9 - Student own placements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/makeup-placements?page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Student exact target context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/context"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Target Mentor roster and current version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/attendance?page=1&pageSize=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"targetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Target Mentor start (same teaching calendar day)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/start",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Target Mentor mark guest",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/attendance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}},\n  \"records\": [],\n  \"guestRecords\": [{\"makeupPlacementId\": \"{{placementId}}\", \"status\": \"PRESENT\"}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Target Mentor finalize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/finalize",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 - Staff guest audit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/class-sessions/{{targetSessionId}}/attendance-audits?makeupPlacementId={{placementId}}&page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

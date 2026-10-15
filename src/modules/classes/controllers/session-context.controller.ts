@@ -22,7 +22,7 @@ import { TeachingReadService } from '../services/teaching-read.service.js';
 @ApiTags('class-session-context')
 @Controller('class-sessions')
 @UseGuards(AccessTokenGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.MENTOR)
+@Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.MENTOR, UserRole.STUDENT)
 @ApiCookieAuth('access_token')
 @ApiErrors(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN, HttpStatus.NOT_FOUND)
 export class SessionContextController {

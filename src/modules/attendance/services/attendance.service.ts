@@ -52,6 +52,8 @@ import {
   AttendanceEnrollmentNotEligibleException,
   AttendanceRecoveryEvidenceInvalidException,
 } from '../exceptions/attendance.exceptions.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { GuestAttendanceService } from './guest-attendance.service.js';
 
 type SessionContext = Awaited<ReturnType<TeachingReadService['loadSession']>>;
 type Operation = 'start' | 'sync' | 'mark' | 'finalize' | 'recover';
@@ -67,6 +69,7 @@ export class AttendanceService {
     private readonly enrollments: EnrollmentsService,
     private readonly users: UsersService,
     private readonly payments: AttendancePaymentEvidenceService,
+    private readonly guests: GuestAttendanceService,
   ) {}
 
   async roster(
@@ -78,36 +81,35 @@ export class AttendanceService {
       const ctx = await this.teaching.loadSession(m, id);
       await this.authorize(m, ctx, actor);
       const now = new Date();
-      const [rows, total] = await m.getRepository(AttendanceRecordEntity).findAndCount({
-        where: { sessionId: id },
-        order: { enrollmentId: 'ASC' },
-        skip: (page.page - 1) * page.pageSize,
-        take: page.pageSize,
-      });
-      const students = await this.enrollments.attendanceStudents(
-        m,
-        rows.map((r) => r.enrollmentId),
+      const allRows: {
+        attendanceId: string;
+        enrollmentId: string;
+        entryType: 'REGULAR' | 'MAKEUP';
+        makeupPlacementId: string | null;
+        studentId: string;
+        displayName: string;
+        status: AttendanceStatus;
+        checkedInAt: Date | null;
+        admittedAt: Date;
+      }[] = await m.query(
+        `SELECT r.id AS "attendanceId",r.enrollment_id AS "enrollmentId",'REGULAR' AS "entryType",NULL::uuid AS "makeupPlacementId",
+          e.student_id AS "studentId",u.display_name AS "displayName",r.status,r.checked_in_at AS "checkedInAt",r.admitted_at AS "admittedAt"
+         FROM attendance_records r JOIN enrollments e ON e.id=r.enrollment_id JOIN users u ON u.id=e.student_id WHERE r.session_id=$1
+         UNION ALL
+         SELECT g.id,g.enrollment_id,'MAKEUP',g.placement_id,g.student_id,u.display_name,g.status,g.checked_in_at,g.admitted_at
+         FROM guest_attendance_records g JOIN users u ON u.id=g.student_id WHERE g.session_id=$1
+         ORDER BY "enrollmentId","entryType","attendanceId" LIMIT $2 OFFSET $3`,
+        [id, page.pageSize, (page.page - 1) * page.pageSize],
       );
-      const names = new Map(
-        (await this.users.findByIds([...students.values()], m)).map((u) => [u.id, u.displayName]),
-      );
+      const totals = await this.totals(m, id);
       return {
         session: await this.view(m, ctx, actor, now),
         totals: await this.totals(m, id),
-        items: rows.map((r) => ({
-          attendanceId: r.id,
-          enrollmentId: r.enrollmentId,
-          entryType: 'REGULAR',
-          makeupPlacementId: null,
-          student: {
-            id: students.get(r.enrollmentId) ?? '',
-            displayName: names.get(students.get(r.enrollmentId) ?? '') ?? null,
-          },
-          status: r.status,
-          checkedInAt: r.checkedInAt,
-          admittedAt: r.admittedAt,
+        items: allRows.map(({ studentId, displayName, ...row }) => ({
+          ...row,
+          student: { id: studentId, displayName },
         })),
-        total,
+        total: totals.eligible,
         page: page.page,
         pageSize: page.pageSize,
         pendingPaymentCount: await this.enrollments.pendingAttendanceCount(
@@ -183,6 +185,15 @@ export class AttendanceService {
             actualStartedAt: 'actualStartedAt' in input ? input.actualStartedAt : null,
             actualEndedAt: 'actualEndedAt' in input ? input.actualEndedAt : null,
             ...('evidenceNote' in input ? { evidenceNote: input.evidenceNote } : {}),
+            ...('guestRecords' in input
+              ? {
+                  guestRecords: input.guestRecords
+                    ? [...input.guestRecords]
+                        .sort((a, b) => a.makeupPlacementId.localeCompare(b.makeupPlacementId))
+                        .map((r) => ({ makeupPlacementId: r.makeupPlacementId, status: r.status }))
+                    : [],
+                }
+              : {}),
             records:
               'records' in input
                 ? [...input.records]
@@ -219,24 +230,38 @@ export class AttendanceService {
       if (this.staff(actor) && !input.reason?.trim())
         throw new UnprocessableEntityException('Staff mutations require a reason');
       let changed: string[];
-      if (op === 'start') changed = await this.open(m, ctx, input as StartSessionDto, actor);
-      else if (op === 'recover')
+      let changedGuests: string[] = [];
+      if (op === 'start') {
+        changed = await this.open(m, ctx, input as StartSessionDto, actor);
+        changedGuests = await this.guests.admit(m, s, actor, input.reason);
+      } else if (op === 'recover')
         changed = await this.recoverRows(m, ctx, input as RecoverAttendanceDto, actor);
       else {
         this.assertWritable(ctx, actor, now, op);
         if (op === 'sync') {
           changed = await this.admit(m, ctx, actor, now, input.reason, 'SYNC', true);
-          if (changed.length) await this.lifecycle.bumpVersion(m, s);
+          changedGuests = await this.guests.admit(m, s, actor, input.reason, s.version + 1);
+          if (changed.length || changedGuests.length) await this.lifecycle.bumpVersion(m, s);
         } else if (op === 'mark') {
           changed = await this.markRows(m, ctx, input as MarkAttendanceDto, actor, now);
-          if (changed.length) await this.lifecycle.bumpVersion(m, s);
-        } else changed = await this.close(m, ctx, input as FinalizeSessionDto, actor, now);
+          changedGuests = await this.guests.mark(
+            m,
+            s,
+            (input as MarkAttendanceDto).guestRecords ?? [],
+            actor,
+            input.reason,
+          );
+          if (changed.length || changedGuests.length) await this.lifecycle.bumpVersion(m, s);
+        } else {
+          changed = await this.close(m, ctx, input as FinalizeSessionDto, actor, now);
+          changedGuests = await this.guests.finalize(m, s, actor, input.reason);
+        }
       }
       const result: AttendanceWriteDto = {
         session: await this.view(m, ctx, actor, new Date()),
         totals: await this.totals(m, id),
         changedEnrollmentIds: changed,
-        changedMakeupPlacementIds: [],
+        changedMakeupPlacementIds: changedGuests,
       };
       await m.query(
         'INSERT INTO attendance_mutation_receipts(actor_id,route,key,payload_hash,outcome) VALUES($1,$2,$3,$4,$5::jsonb)',
@@ -508,6 +533,8 @@ export class AttendanceService {
     now: Date,
   ): Promise<string[]> {
     const ids = input.records.map((r) => r.enrollmentId);
+    if (!ids.length && !input.guestRecords?.length)
+      throw new UnprocessableEntityException('At least one regular or guest record is required');
     if (
       ctx.session.status !== SessionStatus.IN_PROGRESS &&
       input.records.some((r) => r.status === AttendanceStatus.UNMARKED)
@@ -675,7 +702,8 @@ export class AttendanceService {
 
   private async totals(m: EntityManager, id: string): Promise<AttendanceTotalsDto> {
     const rows: { status: AttendanceStatus; count: string }[] = await m.query(
-      'SELECT status,count(*) FROM attendance_records WHERE session_id=$1 GROUP BY status',
+      `SELECT status,count(*) FROM (SELECT status FROM attendance_records WHERE session_id=$1
+        UNION ALL SELECT status FROM guest_attendance_records WHERE session_id=$1) r GROUP BY status`,
       [id],
     );
     const counts = new Map(rows.map((r) => [r.status, Number(r.count)]));

@@ -5,10 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
 import { CatalogModule } from '../catalog/catalog.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
+import { ScheduleReservationsModule } from '../schedule-reservations/schedule-reservations.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AdminClassesController } from './controllers/admin-classes.controller.js';
 import { MentorScheduleController } from './controllers/mentor-schedule.controller.js';
 import { SessionContextController } from './controllers/session-context.controller.js';
+import { SessionOperationsController } from './controllers/session-operations.controller.js';
 import { StudentClassesController } from './controllers/student-classes.controller.js';
 import { TeachingManagementController } from './controllers/teaching-management.controller.js';
 import { ClassEntity } from './entities/class.entity.js';
@@ -21,6 +23,7 @@ import { ClassScheduleService } from './services/class-schedule.service.js';
 import { ClassesService } from './services/classes.service.js';
 import { MentorConflictService } from './services/mentor-conflict.service.js';
 import { SessionLifecycleService } from './services/session-lifecycle.service.js';
+import { SessionOperationsService } from './services/session-operations.service.js';
 import { StudentClassService } from './services/student-class.service.js';
 import { TeachingAssignmentService } from './services/teaching-assignment.service.js';
 import { TeachingReadService } from './services/teaching-read.service.js';
@@ -28,6 +31,7 @@ import { TeachingReadService } from './services/teaching-read.service.js';
 /** Class management: the class aggregate (class, units, sessions) and its lifecycle. */
 @Module({
   imports: [
+    ScheduleReservationsModule,
     ConfigModule,
     AuthModule,
     UsersModule,
@@ -41,9 +45,11 @@ import { TeachingReadService } from './services/teaching-read.service.js';
     TeachingManagementController,
     MentorScheduleController,
     SessionContextController,
+    SessionOperationsController,
   ],
   providers: [
     SessionLifecycleService,
+    SessionOperationsService,
     TeachingReadService,
     TeachingAssignmentService,
     MentorConflictService,

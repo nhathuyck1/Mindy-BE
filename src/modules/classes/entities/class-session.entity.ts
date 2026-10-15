@@ -13,6 +13,12 @@ export class ClassSessionEntity extends TimestampedEntity {
   @Column({ name: 'class_unit_id', type: 'uuid' })
   classUnitId!: string;
 
+  @Column({ name: 'makeup_for_session_id', type: 'uuid', nullable: true })
+  makeupForSessionId!: string | null;
+
+  @Column({ name: 'makeup_root_session_id', type: 'uuid', nullable: true })
+  makeupRootSessionId!: string | null;
+
   @Column({ name: 'mentor_override_id', type: 'uuid', nullable: true })
   mentorOverrideId!: string | null;
 

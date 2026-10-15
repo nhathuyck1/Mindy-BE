@@ -1,5 +1,23 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
+**2026-10-15 — bắt đầu code4.4a:** management Session schedule/cancel/makeups,
+ancestry/audit migration và Class cancellation batch đã có source. Chi tiết ở
+[flow4.4](PHASE_4_4_FLOW.md), [API4.4](PHASE_4_4_flow-api-breakdown.md) và
+[progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md).
+Workflow nghỉ/duyệt, approved intervals, conflict/guest/Student projection vẫn
+chưa triển khai; chưa hoàn tất4.4a–c hoặc deploy4.4/4.5.
+
 **Đối chiếu hai commit ngày 14/10/2026:** `8a1c7e8` chỉ tài liệu;
 `246abf4` thêm 15 endpoint Phase4.1–4.3 và 2 endpoint Admin xem học viên.
 [File tổng hợp API đã có và flow gọi nối tiếp](PHASE_4_API_SUMMARY.md) chỉ rõ
@@ -256,3 +274,15 @@ workflow. [Runbook](../VPS_DEPLOYMENT.md) bổ sung đóng/recover editor, chuy�
 sang backup riêng ngoài checkout, kiểm Git sạch và re-run failed jobs.
 Lượt này chỉ đọc log/source và cập nhật docs; chưa thao tác VPS hoặc xác nhận
 deploy thành công, release4.5 vẫn mở.
+
+## 2026-10-15 — Lưu plan riêng Phase 4.4a–c
+
+Đã lưu [plan 4.4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+cho nghỉ có duyệt/replacement, học bù lớp khác và lịch/history/summary Student.
+User chọn giữ luồng đăng ký/thanh toán khi phát sinh trùng lịch bù sau duyệt;
+ghi conflict để Manager xử lý. Flow dự kiến: nghỉ → duyệt → replacement/gia hạn
+→ conflict queue → placement → guest finalize → credit source một lần.
+Contract planned tại [API breakdown mục 8–12](PHASE_4_flow-api-breakdown.md).
+4.4 chưa implementation; lượt này chỉ Markdown/link/diff checks, không chạy
+runtime tests, migration, FE hoặc deploy. Backlog ngày 15/10 ghi nhận server/
+Postman 4.3 đã hoàn tất theo user; các log deployment phía trên là lịch sử.

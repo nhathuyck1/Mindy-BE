@@ -1,5 +1,29 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
+## 2026-10-15 — Bắt đầu code Phase4.4a
+
+Đã triển khai Session management reschedule/cancel/makeups, migration ancestry/
+schedule audit và Class cancellation batch atomic. [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md)
+ghi source/gates và backlog; [flow](../api_flow/PHASE_4_4_FLOW.md)/
+[API breakdown](../api_flow/PHASE_4_4_flow-api-breakdown.md)/Postman đã đồng bộ.
+Chưa hoàn tất workflow nghỉ có duyệt hoặc4.4b–c; không sửa FE/dev migrations/VPS.
+Local test evidence không đại diện deployment4.4 hoặc thanh toán thật.
+
+Gate cuối lượt: **pnpm check413/413 (41 suites), lint/type-check/build pass;
+pnpm test:http42/42 (6 suites),0 skip**. Chi tiết migration/race/fault assertions
+và phạm vi leave/guest/Student còn mở trong Progress4.4. Migrations chỉ chạy ở DB test.
+
 - 2026-10-13 — Implement ADMIN class roster và student detail:
   GET `/api/v1/admin/classes/:classId/students` (page/pageSize) và
   GET `/api/v1/admin/classes/:classId/students/:studentId`. GET class list/detail
@@ -794,3 +818,15 @@ runs the compiled one-off migration before replacing the API. Manual Compose
 commands must preserve compose.files-production.yaml when .env.minio.production
 exists so Files scratch configuration is retained. This is read-only source
 verification/documentation; no migration, server deploy or runtime test was run.
+
+### 2026-10-15 — Phase 4.4a–c: lưu kế hoạch Markdown
+
+Lưu [plan 4.4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+cho nghỉ có duyệt/lịch bù → cross-class placement/guest attendance → Student
+schedule/history/summary và operational queues. User chọn giữ đăng ký/thanh toán
+khi phát sinh trùng lịch bù sau duyệt; conflict được chuyển Manager xử lý.
+Đã liên kết plan/flow/API breakdown/progress Phase 4; chỉ documentation checks
+(Markdown, relative links, diff), chưa triển khai hoặc chạy runtime gates 4.4.
+Không sửa FE, chạy migrations, deploy hay giao dịch thật. Server/Postman 4.3
+đã hoàn tất theo xác nhận user được ghi trong backlog ngày 15/10; không lặp lại
+việc này là pending, không suy thành evidence 4.4/4.5.

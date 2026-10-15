@@ -1,5 +1,26 @@
 # Phase 4 — Progress
 
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
+## 2026-10-15 — Implementation4.4a: Session operations đầu tiên
+
+Management schedule/cancel/makeups, ancestry/audit migration và hủy Class batch
+đã có source; chi tiết gates/rollback và pending ở [Progress4.4](PHASE_4_4_PROGRESS.md).
+Workflow nghỉ/duyệt và approved leave provider chưa có;4.4b–c/4.5 vẫn mở.
+Flow/API/Postman cập nhật cùng revision, không sửa FE/dev/VPS hoặc giao dịch thật.
+
+Local gates cuối: **check413/413 tests/41 suites,HTTP42/42 tests/6 suites,0 skip**;
+lint/type-check/build pass. Đây là slice đầu, không đánh dấu toàn4.4a đã hoàn tất.
+
 Cập nhật **2026-10-13**. Trạng thái: **core 4.1–4.2 có source/evidence local lịch sử;
 core coverage đã đóng local; dependencies/release còn mở; 4.3 implemented/full local gates verified;4.4–4.5 pending; chưa deploy**.
 
@@ -274,3 +295,17 @@ Deploy lúc20:23 Asia/Bangkok dừng ở clean VPS checkout vì untracked
 Đã đối chiếu guard trong deploy.yml và ghi procedure bảo toàn swap ngoài checkout
 rồi re-run failed jobs ở [runbook](../../VPS_DEPLOYMENT.md). Không thay workflow/
 API, không truy cập VPS hoặc chạy lại tests; deploy success/readiness chưa xác nhận.
+
+## 2026-10-15 — Lưu plan riêng 4.4a–c
+
+- [x] Lưu [plan 4.4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+  dựa trên plan/flow/API Phase 4 và source hiện có; thứ tự a → b → c.
+- [x] Ghi quyết định user: giữ đăng ký/thanh toán khi trùng lịch bù phát sinh
+  sau duyệt, tạo conflict queue cho Manager; không chặn settlement vì trùng lịch.
+- [x] Liên kết plan với flow/API breakdown và tiến độ tổng. Chỉ kiểm tài liệu,
+  relative links và diff; không chạy BE tests/migration hoặc thao tác FE/VPS.
+- [ ] Implementation/migrations/API/tests 4.4a–c và integration 4.5 vẫn pending.
+
+Theo [backlog ngày 15/10](../TASK_SUMMARY_BACKLOG_2026-10-15.md), user xác nhận
+4.3 đã lên server và thử Postman xong. Đây là cập nhật trạng thái theo user;
+không phải lượt lưu plan vừa deploy/test server, và không áp dụng cho 4.4.
