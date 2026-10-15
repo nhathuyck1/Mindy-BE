@@ -1,5 +1,18 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-15: Review PR readiness tại feat/phase-3-3 `2e7e876` so với
+  origin/dev `e0c9174`: ahead22/behind0, source checkout sạch trước review.
+  Node22.20.0/pnpm12.6.0: frozen install, pnpm check **513/513 (48 suites)**,
+  HTTP **60/60 (5 suites)**, actionlint và production image build pass.
+  Compose production tách biệt: backup hợp lệ, compiled migrations22/22,
+  postflight chặn pending/catalog rỗng, rerun không pending, API healthy/ready200.
+  GitHub API: chưa có PR/check cho HEAD; dev chưa protected/required checks.
+  Deploy dev e0c9174 đã success trên runner mindycode ở
+  [run38570656351](https://github.com/nhathuyck1/Mindy-BE/actions/runs/38570656351),
+  không phải evidence deploy branch này. Đủ điều kiện mở PR; chờ PR Check xanh,
+  nên bật required checks trước merge. Không đổi runtime/YAML/API, không push,
+  merge hoặc migrate VPS/development. [Chi tiết](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-15: Bổ sung migration gate riêng trong Check YAML cho clean22,
   Materials16→22 và Phase417→22; thiếu TEST_DATABASE_URL thì fail trước khi test.
   Deploy tiếp tục backup trước migrate toàn bộ compiled catalog, thêm postflight

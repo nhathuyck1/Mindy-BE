@@ -773,3 +773,15 @@ catalog khác rỗng/zero pending. Giữ lịch sử migration và thứ tự ha
 Local: actionlint/YAML parse pass, compatibility3/3 pass; chính postflight từ YAML
 đã pass trên DB test đủ22 và fail đúng trên DB test còn pending. Chưa GitHub Actions
 hoặc VPS acceptance cho thay đổi YAML; xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+
+## Review PR/deploy readiness — 2026-10-15
+
+Contract API giữ nguyên. HEAD2e7e876 đã chứa dev e0c9174; local gates chạy lại:
+check513/513, HTTP60/60, compatibility3/3, actionlint, production image/Compose
+backup→migrate22→postflight→API ready200 pass. Postflight chặn cả pending và
+catalog rỗng; rerun migrations không pending. Không dùng kết quả local để ghi
+API đã deploy: branch chưa có PR/HEAD CI và chưa deploy VPS. GitHub dev hiện chưa
+required checks; khuyến nghị bật trước merge, chờ PR Check xanh. Auto deployment
+chỉ sau push/merge dev và reusable Check pass; storage provisioning vẫn theo
+runbook. Evidence server có sẵn chỉ thuộc dev e0c9174/run38570656351, không thuộc
+release này. [Chi tiết review](../progress/phase%203/PHASE_3_3_PROGRESS.md).

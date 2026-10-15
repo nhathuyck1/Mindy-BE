@@ -284,3 +284,16 @@ Local: actionlint/YAML parse pass, compatibility3/3 pass trên PostgreSQL17 Dock
 script postflight từ YAML xác nhận22 migration và chặn đúng DB test còn pending.
 Chưa chạy workflow GitHub hoặc deploy VPS cho thay đổi này; full gates phía trên
 là evidence lượt tích hợp trước. Xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+
+## Review PR/deploy readiness — 2026-10-15
+
+HEAD2e7e876 đã chứa dev e0c9174; không đổi flow/API. Chạy lại đúng Node22.20.0/
+pnpm12.6.0: check513/513, HTTP60/60, compatibility3/3, actionlint và production
+image build pass. Compose production tách biệt xác minh backup, migrate22,
+postflight chặn pending/catalog rỗng, rerun no-op và API ready200.
+GitHub chưa có PR/check cho HEAD; dev chưa required checks. Đủ để mở PR, cần
+PR Check xanh trước merge và nên bật branch protection. Merge/push dev mới gọi
+Check→backup→migrate→postflight→API; mở PR không tự deploy server.
+Deploy dev e0c9174 đã success trên runner mindycode theo GitHub run38570656351;
+chưa deploy/VPS acceptance cho branch này. Chi tiết/giới hạn tại
+[progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).

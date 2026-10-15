@@ -459,3 +459,42 @@ Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 v�
   cho thay đổi này. Không chạy lại full513/HTTP60 trong lượt YAML; các số đó thuộc
   lượt tích hợp phía trên. Không đổi API/business rule hoặc migration source,
   không migrate database development/production.
+
+### Review PR vào dev và automatic deployment — 2026-10-15
+
+- Reviewed HEAD `2e7e8761887a51fa2570b35e2cb08431806fcd59` trên
+  `feat/phase-3-3`, đã fetch origin; ahead22/behind0 so với dev `e0c9174`.
+  Checkout sạch trước review; các thay đổi của lượt này chỉ ghi evidence vào docs.
+- Đã chạy lại đúng Node22.20.0/pnpm12.6.0: frozen install, lint, type-check,
+  pnpm check **513/513 tests, 48 suites**, build, HTTP **60/60 tests, 5 suites**.
+  PostgreSQL17 trong container riêng, MinIO fixture test với bucket riêng;
+  compatibility **3/3** gồm clean22, Materials16→22 và Phase417→22.
+  Lần check đầu dùng môi trường mặc định Node24/thiếu TEST_DATABASE_URL fail do
+  chưa cấu hình DB test; kết quả pass trên là lượt đã cấu hình đúng, không skip.
+- actionlint cho hai workflow pass. Production Docker image build pass.
+  Dùng bản sao compose.production.yaml, env/keys giả và project/volume riêng:
+  chạy chính preflight/postflight trích từ deploy.yml; backup pg_dump/pg_restore
+  hợp lệ, migrate22 compiled migrations, zero pending, rerun no-op;
+  postflight cố ý thử DB chưa migrate và catalog rỗng đều exit1 đúng.
+  API chạy readonly/non-root theo Compose, healthy và `/api/v1/health/ready`200.
+  Đây là smoke local, không phải workflow/server acceptance của release mới.
+- GitHub API tại thời điểm review: **0 open PR**, HEAD chưa có check run;
+  push feature branch không trigger Check vì push chỉ cấu hình main.
+  Mở PR sẽ chạy Check; push/merge dev gọi lại Check, deploy cần check success,
+  checkout VPS dev sạch/fast-forward đúng SHA, config/Docker/backup/migration/
+  postflight thành công rồi mới thay API. Không tự sync server khi chỉ mở PR.
+- Dev hiện `protected=false`, required status checks enforcement `off`:
+  YAML chặn deploy khi Check fail nhưng GitHub chưa bắt buộc PR Check xanh
+  trước merge. Khuyến nghị bật protection/ruleset require PR + job check của
+  workflow Check và branch up-to-date. Chưa thay setting repository.
+- Evidence server có sẵn: [Deploy run38570656351](https://github.com/nhathuyck1/Mindy-BE/actions/runs/38570656351)
+  success cho dev `e0c9174`, deploy job trên self-hosted Linux runner `mindycode`,
+  gồm checkout, backup/migrate/start success. Không đọc live VPS hoặc xác nhận
+  trạng thái runner/checkout/env hiện tại. Default main chưa chứa workflow nên
+  manual workflow_dispatch qua UI chưa sẵn; auto push dev không phụ thuộc nút này.
+- Kết luận: chưa thấy blocker CI/migration để mở PR; cần PR checks của commit mới
+  xanh trước merge. MinIO vẫn phải đã provision theo runbook; YAML chỉ giữ Files
+  override khi có marker env, không tự provision storage. API failure sau migration
+  cần forward fix/manual diagnosis, không có automatic DB rollback.
+  Không sửa runtime/YAML/migrations/API; không tạo PR/push/merge/deploy VPS,
+  không chạy migration development hoặc payment thật.
