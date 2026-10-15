@@ -436,3 +436,26 @@ Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 v�
 - 14 conflict đã giải quyết; không sửa migration lịch sử, không migrate DB
   development/VPS hoặc FE. Giữ ngày13/10 planning/Phase4,13–14/10 implementation
   Materials,15/10 integration như các mục riêng. Server/browser/user sign-off còn pending.
+
+### Migration gates trong YAML — 2026-10-15
+
+- Check workflow có bước riêng trước MinIO/full tests: chạy
+  `phase33-phase4-migration-compatibility.spec.ts` trên PostgreSQL17 test.
+  Thiếu TEST_DATABASE_URL thì fail ngay, tránh suite bị skip mà workflow vẫn xanh.
+  Bao phủ clean22, Materials16→22, Phase417→22, data/FK indexes, down/up và zero pending.
+- Deploy vốn đã phụ thuộc reusable Check và backup PostgreSQL trước migrate.
+  Giữ chạy toàn bộ compiled catalog, ghi rõ thứ tự hai compatibility bridge
+  1791849599999/1791856799999; không chọn từng migration hoặc sửa lịch sử.
+  Thêm postflight bằng DataSource của image: catalog phải khác rỗng và
+  showMigrations=false trước khi thay API. Không hardcode số22 trong gate deploy
+  để migration tương lai vẫn được kiểm theo catalog của release.
+- Kiểm chứng riêng lượt YAML: actionlint1.7.12 cho cả hai workflow, YAML parse,
+  pnpm lint và thứ tự backup→migrate→postflight→API pass. Bước CI trích từ YAML
+  fail đúng khi thiếu TEST_DATABASE_URL. Compatibility **3/3 pass** trên
+  Node22.20.0/pnpm12.6.0/PostgreSQL17 Docker. Chạy chính script postflight trích từ
+  YAML trên DB test đã migrate: **22 compiled migrations, none pending**; DB test
+  rỗng tạm thời bị chặn đúng lỗi pending/exit1 và được xóa sau kiểm tra.
+- Đây là cấu hình CI/deploy được kiểm local; chưa có kết quả GitHub Actions/VPS
+  cho thay đổi này. Không chạy lại full513/HTTP60 trong lượt YAML; các số đó thuộc
+  lượt tích hợp phía trên. Không đổi API/business rule hoặc migration source,
+  không migrate database development/production.

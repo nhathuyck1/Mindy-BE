@@ -1,5 +1,14 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+- 2026-10-15: Bổ sung migration gate riêng trong Check YAML cho clean22,
+  Materials16→22 và Phase417→22; thiếu TEST_DATABASE_URL thì fail trước khi test.
+  Deploy tiếp tục backup trước migrate toàn bộ compiled catalog, thêm postflight
+  chặn thay API nếu catalog rỗng hoặc còn pending. Local: actionlint/YAML parse
+  pass, compatibility3/3 pass trên PostgreSQL17 Docker; chạy đúng postflight từ
+  YAML trên DB test xác nhận22/22 và kiểm ca pending bị chặn (exit1).
+  Không đổi migration/API; chưa chạy GitHub Actions hoặc deploy VPS trong lượt này.
+  [Chi tiết](phase%203/PHASE_3_3_PROGRESS.md).
+
 - 2026-10-15: Tích hợp dev e0c9174 vào feat/phase-3-3 a363012, xử lý14 conflict
   theo lịch sử planning13/10 → implementation13–14/10 → kế hoạch15/10; giữ
   Materials3.3/3.4 cùng teaching/attendance4.1–4.3. ClassesModule union providers,

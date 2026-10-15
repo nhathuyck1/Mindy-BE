@@ -105,7 +105,20 @@ jobs:
           "${compose[@]}" exec -T postgres pg_restore -l < "$backup_file" > /dev/null
 
           # A failed migration leaves the old API running. Do not roll back the DB.
+          # Run the complete compiled catalog so both compatibility bridges execute
+          # in order; do not select migrations individually or rewrite old history.
           "${compose[@]}" run --rm --no-deps -T migration
+          # Refuse to replace the API if the image has no migrations or any are pending.
+          "${compose[@]}" run --rm --no-deps -T migration node --input-type=module -e \
+            'import dataSource from "./dist/database/data-source.js";
+             await dataSource.initialize();
+             try {
+               if (dataSource.migrations.length === 0) throw new Error("Compiled migration catalog is empty.");
+               if (await dataSource.showMigrations()) throw new Error("Pending migrations remain after rollout.");
+               console.log("Verified " + dataSource.migrations.length + " compiled migrations; none pending.");
+             } finally {
+               await dataSource.destroy();
+             }'
           "${compose[@]}" up -d --no-build --no-deps --wait --wait-timeout 120 api
           "${compose[@]}" exec -T api node -e \
             'fetch("http://127.0.0.1:3000/api/v1/health/ready", {signal: AbortSignal.timeout(5000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))'

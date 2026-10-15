@@ -763,3 +763,13 @@ Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/brow
 Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
 qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
 đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.
+
+## Migration gate CI/deploy — 2026-10-15
+
+Không đổi method/route/DTO hoặc quyền của các API. Check YAML có gate riêng cho
+clean22 và upgrade Materials16→22/Phase417→22; fail nếu thiếu TEST_DATABASE_URL.
+Deploy chỉ thay API sau backup, migrate đầy đủ catalog và postflight xác nhận
+catalog khác rỗng/zero pending. Giữ lịch sử migration và thứ tự hai bridge.
+Local: actionlint/YAML parse pass, compatibility3/3 pass; chính postflight từ YAML
+đã pass trên DB test đủ22 và fail đúng trên DB test còn pending. Chưa GitHub Actions
+hoặc VPS acceptance cho thay đổi YAML; xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).

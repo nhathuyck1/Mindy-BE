@@ -24,7 +24,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     env:
-      # Integration tests migrate this dedicated database from empty on every run.
+      # Integration tests use only this dedicated database and derived *_test databases.
       TEST_DATABASE_URL: postgresql://mindy:mindy@localhost:5432/mindy_center_test
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +43,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm type-check
+      - name: Verify Materials and attendance migration compatibility
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          # Fail instead of silently skipping database tests when the URL is missing.
+          : "${TEST_DATABASE_URL:?A dedicated PostgreSQL test database is required.}"
+          # Full catalog: currently 22 migrations, including compatibility bridges
+          # 1791849599999 (before attendance) and 1791856799999 (before release audit).
+          # Rehearse clean install, Materials 16 -> 22 and Phase 4 17 -> 22 histories,
+          # preserving data/FK indexes and checking down/up plus zero pending migrations.
+          pnpm exec vitest run test/integration/phase33-phase4-migration-compatibility.spec.ts
       - name: Start MinIO for file integration tests
         run: |
           pnpm files:local:up

@@ -273,3 +273,14 @@ Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/brow
 Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
 qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
 đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.
+
+## Migration gate CI/deploy — 2026-10-15
+
+Check YAML kiểm riêng clean22, Materials16→22 và Phase417→22 trước full tests;
+thiếu TEST_DATABASE_URL thì fail, không skip. Deploy dùng lại Check, backup rồi
+chạy toàn bộ compiled migrations; postflight yêu cầu catalog khác rỗng và không
+còn pending trước khi thay API. API/flow nghiệp vụ3.3/3.4 giữ nguyên.
+Local: actionlint/YAML parse pass, compatibility3/3 pass trên PostgreSQL17 Docker;
+script postflight từ YAML xác nhận22 migration và chặn đúng DB test còn pending.
+Chưa chạy workflow GitHub hoặc deploy VPS cho thay đổi này; full gates phía trên
+là evidence lượt tích hợp trước. Xem [progress](../progress/phase%203/PHASE_3_3_PROGRESS.md).
