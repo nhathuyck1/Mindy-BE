@@ -1,6 +1,8 @@
 # Phase 3.4 — Student Material read slice
 
-Cập nhật **2026-10-14**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
+Cập nhật **2026-10-15** (bổ sung plan; evidence implementation gần nhất 2026-10-14).
+[Plan 3.4](../../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md) ·
+[Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
 [API breakdown](../../api_flow/PHASE_3_4_flow-api-breakdown.md) ·
 [FE audit](../../api_flow/PHASE_3_4_FE_API_GAPS.md).
 
@@ -36,7 +38,10 @@ Cập nhật **2026-10-14**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
 - Test databases đều `_test` và bucket fixture riêng; không migrate/reset DB
   development/VPS, không payment live.
 
-## Chưa hoàn thành / evidence chưa có
+## Giới hạn tại thời điểm ba Student GET ban đầu (lịch sử)
+
+Các mục authoring/ARTICLE/assets bên dưới phản ánh thời điểm trước handoff 3.3;
+trạng thái mới hơn ở nhật ký 2026-10-14. VPS/browser/UI vẫn chưa nghiệm thu.
 
 - Chưa deploy/nghiệm thu VPS ba API; chưa smoke UI/browser/CORS/seek thực tế.
 - Manager/Mentor CRUD/review/audit/context/release HTTP3.3 chưa implement.
@@ -87,3 +92,13 @@ Chưa có / giới hạn:
 - Chưa deploy/VPS, chưa browser CORS/Range/seek/refresh thực tế, chưa UI FE.
 - Rate limiting/metrics cho access route chưa có hạ tầng chung (ghi nhận, không tự thêm).
 - Manager inactive catalog picker vẫn planned; progress học (P2) ngoài 3.4.
+
+## 2026-10-15 — Hệ thống hóa kế hoạch slice 3.4
+
+- Thêm [plan 3.4](../../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md)
+  theo cấu trúc plan 3.3: phạm vi/baseline/contract/schema/transactions/API,
+  các bước 3.4.1–3.4.5, test matrix/DoD và quy trình acceptance server/browser.
+- Đối chiếu source hiện có để ghi đúng sáu routes đã implement local; phần còn
+  chờ là release-candidate checks, VPS workflow/storage, browser/FE và sign-off.
+- Chỉ soạn/đồng bộ tài liệu, không thêm API/schema/migration, không chạy lại
+  BE/DB/MinIO tests hoặc deploy. Evidence 411 tests/48 HTTP tests vẫn là ngày 2026-10-14.
