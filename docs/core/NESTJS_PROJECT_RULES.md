@@ -25,7 +25,7 @@
   local, còn chờ user deploy và nghiệm thu live theo [runbook](./PAYOS_PHASE_2_2_DEPLOYMENT.md).
   Kế thừa checkout/hold hiện tại, không tạo lại enrollments hoặc sửa migration đã chạy.
 - Full payment cash/PayOS; amount từ server. Cash pending chỉ preview titles/timetable,
-  assigned mentor xác nhận mới mở full access; chat/DM pending hoãn tới phase chat.
+  manager bất kỳ xác nhận thu tiền mới mở full access (yêu cầu cập nhật 2026-10-16; không cần phân công lớp); chat/DM pending hoãn tới phase chat.
 - PayOS chỉ mở quyền sau verified atomic settlement; activate holds hiện hữu và
   progress từng class unit, ghi mail outbox cùng commit. Redirect không xác nhận tiền.
 - **BẮT BUỘC** giữ idempotency/race-expiry/reconciliation, không gọi provider/SMTP

@@ -734,7 +734,7 @@ start lại bằng key mới khi đã IN_PROGRESS409 SESSION_STATE_CONFLICT.
 
 ### POST `/api/v1/class-sessions/:sessionId/attendance/sync-roster` — 200
 
-Sau cash confirm của **mentor snapshot Order** đã commit, FE gọi
+Sau cash confirm của **manager bất kỳ** đã commit, FE gọi
 `{"expectedVersion":3}`; Staff thêm reason. Mentor chỉ IN_PROGRESS trước deadline hết ngày học kế tiếp;
 Staff IN_PROGRESS hoặc COMPLETED đã có actualStartedAt. Server tìm enrollment
 cùng Class ACTIVE, createdAt<=actualStartedAt chưa có row, đã kích hoạt trước start
@@ -790,7 +790,7 @@ hạn giữ body/key. Cash activation chưa thấy row thì sync/refetch sau com
 
 Happy path: management/candidates/assignment4.1 → mentor context → GET roster →
 start → GET snapshot → mark/unmark → xác nhận totals → finalize. Branch pending:
-cash mentor xác nhận → effective teaching mentor sync → refetch. Overdue:
+manager xác nhận thu tiền → effective teaching mentor sync → refetch. Overdue:
 Manager reason + explicit start clock → finalize có end clock; deadline không
 được cấp lại. Substitute không nhận cash/material-authoring quyền từ attendance.
 Class complete hiện từ chối còn SCHEDULED/IN_PROGRESS409 SESSION_STATE_CONFLICT;

@@ -48,6 +48,14 @@ export class ClassReadService {
     private readonly enrollmentsService: EnrollmentsService,
   ) {}
 
+  managementUnitsQuery(manager: EntityManager): SelectQueryBuilder<ClassUnitEntity> {
+    return manager.getRepository(ClassUnitEntity).createQueryBuilder('unit');
+  }
+
+  managementQuery(manager: EntityManager): SelectQueryBuilder<ClassEntity> {
+    return manager.getRepository(ClassEntity).createQueryBuilder('c');
+  }
+
   timeZone(): string {
     return this.config.getOrThrow<string>('APP_TIME_ZONE');
   }
@@ -138,20 +146,25 @@ export class ClassReadService {
   async getStudentForManagement(
     classId: string,
     studentId: string,
+    manager: EntityManager = this.dataSource.manager,
   ): Promise<AdminClassStudentView> {
-    await this.assertClassExists(classId);
+    await this.assertClassExists(classId, manager);
     const enrollment = await this.enrollmentsService.findEffectiveForClassStudent(
       classId,
       studentId,
+      manager,
     );
     if (enrollment === null) throw new ClassStudentNotFoundException();
-    const [student] = await this.usersService.findByIds([studentId]);
+    const [student] = await this.usersService.findByIds([studentId], manager);
     if (student === undefined) throw new ClassStudentNotFoundException();
     return { enrollment, student };
   }
 
-  private async assertClassExists(classId: string): Promise<void> {
-    if (!(await this.dataSource.getRepository(ClassEntity).existsBy({ id: classId }))) {
+  private async assertClassExists(
+    classId: string,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<void> {
+    if (!(await manager.getRepository(ClassEntity).existsBy({ id: classId }))) {
       throw new ClassNotFoundException();
     }
   }
@@ -211,9 +224,10 @@ export class ClassReadService {
       return [];
     }
 
-    const mentors = await this.usersService.findByIds([
-      ...new Set(classes.map((classEntity) => classEntity.mentorId)),
-    ]);
+    const mentors = await this.usersService.findByIds(
+      [...new Set(classes.map((classEntity) => classEntity.mentorId))],
+      manager,
+    );
     const mentorNames = new Map(mentors.map((mentor) => [mentor.id, mentor.displayName]));
     const occupied = await this.enrollmentsService.countOccupiedSeats(
       classes.map((classEntity) => classEntity.id),

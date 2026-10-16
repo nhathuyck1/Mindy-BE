@@ -71,7 +71,12 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       new Date(Date.now() - 3600000),
       new Date(Date.now() + 3600000),
     ]);
-    if (paid) await f.cash.confirm(order.mentor.id, order.order.id, order.order.totalAmount);
+    if (paid)
+      await f.cash.confirm(
+        (await f.user(UserRole.MANAGER)).id,
+        order.order.id,
+        order.order.totalAmount,
+      );
     const enrollments: { id: string }[] = await db.query(
       'SELECT id FROM enrollments WHERE class_id=$1',
       [classId],
@@ -145,7 +150,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     expect((await attendance.roster(a.sessionId, a.mentorActor, PAGE)).pendingPaymentCount).toBe(1);
     const opened = await start(a);
     expect(opened.totals.eligible).toBe(0);
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     const admitted = await attendance.syncRoster(
       a.sessionId,
       { expectedVersion: opened.session.version },
@@ -169,7 +174,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
   it('never admits an enrollment created after start or a PayOS activation after start', async () => {
     const a = await fixture(false);
     const opened = await start(a);
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     await db.query('UPDATE enrollments SET created_at=$2 WHERE id=$1', [
       a.enrollmentId,
       new Date(Date.now() + 1000),
@@ -436,7 +441,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       a.mentorActor,
       randomUUID(),
     );
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     await expect(
       attendance.syncRoster(
         a.sessionId,
@@ -511,7 +516,11 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       await f.cart.addItem(student.id, a.classId);
       const order = (await f.checkout.checkout(student.id, PaymentType.CASH))[0];
       if (!order) throw new Error('Missing order');
-      await f.cash.confirm(a.mentor.id, order.order.id, order.order.totalAmount);
+      await f.cash.confirm(
+        (await f.user(UserRole.MANAGER)).id,
+        order.order.id,
+        order.order.totalAmount,
+      );
     }
     const opened = await start(a);
     const page1 = await attendance.roster(a.sessionId, a.mentorActor, { page: 1, pageSize: 2 });
@@ -730,7 +739,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     const a = await fixture(false);
     const [opened] = await Promise.all([
       start(a),
-      f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount),
     ]);
     const activation: { enrolled_at: Date }[] = await db.query(
       'SELECT enrolled_at FROM enrollments WHERE id=$1',
@@ -783,7 +792,11 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     } else if (checkout?.status === 'fulfilled') {
       const order = checkout.value[0];
       if (!order) throw new Error('Missing competing order');
-      await f.cash.confirm(a.mentor.id, order.order.id, order.order.totalAmount);
+      await f.cash.confirm(
+        (await f.user(UserRole.MANAGER)).id,
+        order.order.id,
+        order.order.totalAmount,
+      );
       const synced = await attendance.syncRoster(
         a.sessionId,
         { expectedVersion: roster.session.version },
@@ -1007,7 +1020,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     expect(
       await db.query('SELECT 1 FROM session_lifecycle_audits WHERE session_id=$1', [a.sessionId]),
     ).toHaveLength(1);
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     const v = await version(a.sessionId);
     const outcomes = await Promise.allSettled([
       attendance.syncRoster(a.sessionId, { expectedVersion: v }, a.mentorActor, randomUUID()),

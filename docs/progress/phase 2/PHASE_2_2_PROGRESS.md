@@ -1,5 +1,25 @@
 # Phase 2.2 — Tiến độ tích hợp payOS BE và giao dịch thật
 
+## 2026-10-16 — Manager thu tiền mặt ở mọi lớp
+
+Theo yêu cầu user, bỏ quyền mentor xác nhận CASH; manager active bất kỳ được xem
+mọi lớp/payment roster và confirm đủ tổng đơn, không cần assignment. Thêm GET
+/manager/classes và /manager/classes/:classId/students; chuyển GET/POST cash-orders
+sang /manager/cash-orders. Mentor roster giữ đọc, canConfirmCash=false. Student
+checkout/grouping, CASH preview/TTL/hold, full access và PayOS không thay đổi.
+Audit cash-manager lưu người thu; reader/retry/attendance giữ tương thích cash
+mentor cũ. Không đổi schema hoặc migration. Đã cập nhật flow, breakdown, contract,
+Postman và test fixtures liên quan. [Chi tiết API](../../api_flow/PHASE_2_3_flow-api-breakdown.md#thu-tiền-mặt-bởi-manager--2026-10-16).
+Local focused payment/attendance 52/52 pass; focused payment + provenance sau bổ
+sung 34/34 pass. HTTP 72/72 distinct cases pass qua các lượt: 59 ngoài Phase2.2
+pass, Phase2.2 rerun 13/13 pass. Lượt HTTP đầu 71/72 do email manager fixture mới
+trùng test tạo user; đã đổi email test. Full check đầu 600/601 do assertion audit
+CASH mới đặt nhầm vào test PayOS; chuyển đúng case, focused34/34 pass. Full check
+cuối pass: pnpm check (lint/type-check, 601/601 tests trong58 suites, build).
+HTTP72/72 distinct cases đã pass qua các lượt như trên. git diff --check pass.
+Không deploy/VPS, tiền thật hoặc sửa frontend.
+
+
 Cập nhật: 2026-10-06.
 Kế hoạch: [Phase 2.2](../implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md).
 

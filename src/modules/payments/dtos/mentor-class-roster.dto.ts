@@ -84,7 +84,7 @@ export class MentorRosterStudentDto implements MentorRosterRow {
   @ApiProperty({
     type: String,
     format: 'uuid',
-    description: 'Pass to POST /mentor/cash-orders/:orderId/confirm',
+    description: 'Managers pass to POST /manager/cash-orders/:orderId/confirm',
   })
   readonly orderId: string;
   @ApiProperty({ type: String })

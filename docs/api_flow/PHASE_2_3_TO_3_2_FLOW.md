@@ -1,5 +1,10 @@
 # Flow Phase 2.3 → 3.1 → 3.2
 
+2026-10-16 planning: [Phase2.4 Manager HR + kế toán](PHASE_2_4_FLOW.md) bổ sung
+góc nhìn class/course/contact/mentor/student và order/payment toàn trung tâm.
+Kế thừa API manager đã có của2.2/3/4, không mở blanket admin hoặc đổi Student
+flow. [API proposal](PHASE_2_4_flow-api-breakdown.md); chưa implement/test/deploy2.4.
+
 2026-10-16 implementation4.4c: lịch2.3 giữ range/access/envelope, thêm effective
 mentor nullable, own physical/credited attendance và SESSION_MAKEUP union trước
 page. Own terminal history/summary không mở lại nội dung lớp; guest không cấp
@@ -134,7 +139,7 @@ không phải API upload multipart của NestJS.
 | `POST /me/cart/checkout` | Student | Tạo order, hold và enrollment pending | Có, nền tảng Phase 2 |
 | `POST /me/orders/:orderId/payments/payos` | Student | Tạo/tái dùng payment link theo policy hiện hành | Có, nền tảng 2.2 |
 | `POST /payment-callbacks/payos` | Provider callback | Xác minh callback và xử lý settlement; redirect FE không tự cấp quyền | Có, nền tảng 2.2 |
-| `POST /mentor/cash-orders/:orderId/confirm` | Mentor có quyền với order | Xác nhận CASH và kích hoạt enrollment | Có, nền tảng 2.2 |
+| `POST /manager/cash-orders/:orderId/confirm` | Manager bất kỳ, không cần phân công | Xác nhận CASH và kích hoạt enrollment | Có, nền tảng 2.2 |
 | `GET /me/classes/:classId` | Student ACTIVE | Full detail, units/sessions/timetable, meeting URL và context enrollment/FULL | Đã code; context bổ sung 2.3 |
 | `GET /me/classes/:classId/preview` | Student CASH pending còn hạn | Title/timetable/room + context hold/order/CASH_PREVIEW; không meeting URL | Đã code; context bổ sung 2.3 |
 | `GET /me/classes` | Student | Danh sách enrollment, current/history/all, access hints | Đã code 2.3, local DB/HTTP verified |

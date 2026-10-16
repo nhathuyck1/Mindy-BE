@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
-import { DataSource, type EntityManager, In } from 'typeorm';
+import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
 import { isUniqueViolation } from '../../../common/database/postgres-error.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
@@ -30,6 +30,29 @@ export class EnrollmentsService {
     private readonly reservations: ScheduleReservationsService,
   ) {}
 
+  managementQuery(manager: EntityManager): SelectQueryBuilder<EnrollmentEntity> {
+    return manager.getRepository(EnrollmentEntity).createQueryBuilder('e');
+  }
+  async managementCounts(
+    manager: EntityManager,
+    classId: string,
+  ): Promise<Record<EnrollmentStatus, number>> {
+    const rows = await this.managementQuery(manager)
+      .select('e.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('e.classId = :classId', { classId })
+      .groupBy('e.status')
+      .getRawMany<{ status: EnrollmentStatus; count: string }>();
+    const counts: Record<EnrollmentStatus, number> = {
+      PENDING_PAYMENT: 0,
+      ACTIVE: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+    };
+    for (const row of rows) counts[row.status] = Number(row.count);
+    return counts;
+  }
+
   /** Historical metadata ownership; terminal and unpaid registrations do not grant content. */
   async hasOwnHistory(
     manager: EntityManager,
@@ -56,8 +79,9 @@ export class EnrollmentsService {
   async findEffectiveForClassStudent(
     classId: string,
     studentId: string,
+    manager: EntityManager = this.dataSource.manager,
   ): Promise<EnrollmentEntity | null> {
-    return this.dataSource.getRepository(EnrollmentEntity).findOneBy({
+    return manager.getRepository(EnrollmentEntity).findOneBy({
       classId,
       studentId,
       status: In([...EFFECTIVE_ENROLLMENT_STATUSES]),

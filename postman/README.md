@@ -1,5 +1,9 @@
 # Mindy Postman checks
 
+Cập nhật CASH 2026-10-16: collection BE dùng manager_email/manager_password,
+manager/classes → class students → manager/cash-orders/:orderId/confirm.
+Manager không cần gán lớp; mentor không còn quyền thu/xác nhận tiền mặt.
+
 Increment cuối Phase 2 thêm folder CASH và lookup return URL. Link response lưu
 `provider_order_code`; request result dùng mã này, không dùng mã Mindy `MD...`.
 CASH: login student → add class → checkout CASH → preview → login mentor snapshot
@@ -196,3 +200,13 @@ hai collection3.3/3.4. Manager catalogue và Mentor unit detail dùng chung các
 route dev; chỉ một controller cho mỗi release route. Không chạy hai migrations
 local1792108800000/1 vì schema đã có trong catalog dev. Contract/evidence hiện
 hành tại docs/api_flow/PHASE_3_3_flow-api-breakdown.md và Progress.md.
+
+Phase2.4: folder `Phase 2.4 Manager operations` trong Mindy-BE có16 GET
+class/contact/HR/orders/payments; dùng cookie manager và điền UUID/range. Phase33
+thêm folder `Manager plain text authoring`, contentText thay contentHtml cho ARTICLE;
+PDF/MP4/TXT/MP3 tiếp tục upload qua collection Phase32 rồi tạo FILE/VIDEO.
+Chưa xác minh VPS/browser; không gọi provider/reconcile qua các GET manager.
+
+Word DOCX: folder Phase33 `Word DOCX upload and approval` dùng file_id của Word
+READY sau upload Phase32; tạo FILE rồi approve đúng expected_revision. DOCX25MiB,
+MIME Office Word chuẩn, kind DOCUMENT; .doc legacy và Word-to-PDF chưa hỗ trợ.

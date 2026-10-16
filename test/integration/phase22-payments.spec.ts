@@ -23,6 +23,7 @@ import { PaymentTransactionEntity } from '../../src/modules/payments/entities/pa
 import { PaymentWebhookEventEntity } from '../../src/modules/payments/entities/payment-webhook-event.entity.js';
 import { PayosPaymentDetailEntity } from '../../src/modules/payments/entities/payos-payment-detail.entity.js';
 import { PaymentStatus } from '../../src/modules/payments/enums/payment-status.enum.js';
+import { AttendancePaymentEvidenceService } from '../../src/modules/payments/services/attendance-payment-evidence.service.js';
 import { MentorClassRosterService } from '../../src/modules/payments/services/mentor-class-roster.service.js';
 import { PaymentEmailService } from '../../src/modules/payments/services/payment-email.service.js';
 import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
@@ -170,16 +171,33 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     );
   });
 
-  it('confirms full cash atomically and idempotently with mentor audit and initializes all progress', async () => {
+  it('confirms full cash atomically and idempotently across different managers with collector audit and initializes all progress', async () => {
     const o = await f.order({ count: 2, paymentType: PaymentType.CASH });
     expect(await f.cash.preview(o.student.id, o.classIds[0] ?? '')).toBeDefined();
     const confirmations = await Promise.all(
-      Array.from({ length: 3 }, () => f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount)),
+      Array.from({ length: 3 }, async () =>
+        f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount),
+      ),
     );
     expect(confirmations.every((c) => c.order.status === OrderStatus.PAID)).toBe(true);
     expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
       1,
     );
+    const recorded = await db.getRepository(PaymentTransactionEntity).findOneByOrFail({
+      orderId: o.order.id,
+    });
+    expect(recorded.referenceCode).toMatch(/^cash-manager:/);
+    const collectorId = recorded.referenceCode?.split(':')[1] ?? '';
+    expect(await f.users.findActiveByRole(collectorId, UserRole.MANAGER)).not.toBeNull();
+    const evidence = new AttendancePaymentEvidenceService(new OrderSettlementService());
+    expect(
+      (
+        await evidence.read(
+          db.manager,
+          o.details.map((d) => d.id),
+        )
+      ).size,
+    ).toBe(2);
     const payment = await f.links.get(o.student.id, o.order.id);
     expect(payment).toMatchObject({
       status: PaymentStatus.SUCCEEDED,
@@ -201,14 +219,46 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     await expect(f.access.get(o.student.id, o.classIds[0] ?? '')).resolves.toBeDefined();
   });
 
-  it('lists assigned mentor classes and per-class cash students with the full order amount', async () => {
+  it('preserves legacy cash evidence and allows a manager to retry without replacing the collector', async () => {
+    const o = await f.order({ paymentType: PaymentType.CASH });
+    const manager = await f.user(UserRole.MANAGER);
+    await f.cash.confirm(manager.id, o.order.id, o.order.totalAmount);
+    const referenceCode = `cash:${o.mentor.id}:${o.order.id}`;
+    await db
+      .getRepository(PaymentTransactionEntity)
+      .update({ orderId: o.order.id }, { referenceCode });
+    await expect(
+      f.cash.confirm(manager.id, o.order.id, o.order.totalAmount),
+    ).resolves.toMatchObject({
+      order: { status: OrderStatus.PAID },
+    });
+    const evidence = new AttendancePaymentEvidenceService(new OrderSettlementService());
+    expect(
+      (
+        await evidence.read(
+          db.manager,
+          o.details.map((d) => d.id),
+        )
+      ).size,
+    ).toBe(1);
+    expect(
+      await db.getRepository(PaymentTransactionEntity).findOneByOrFail({ orderId: o.order.id }),
+    ).toMatchObject({ referenceCode });
+  });
+
+  it('lets managers collect in every class while mentor rosters remain read-only', async () => {
     const o = await f.order({ count: 2, paymentType: PaymentType.CASH });
     const roster = new MentorClassRosterService(db, f.read);
     const classes = await roster.classes(o.mentor.id, { page: 1, pageSize: 1 });
     expect(classes.total).toBe(2);
     expect(classes.items).toHaveLength(1);
     const classId = o.classIds[0] ?? '';
-    const pending = await roster.students(o.mentor.id, classId, { page: 1, pageSize: 20 });
+    const pending = await roster.students(undefined, classId, { page: 1, pageSize: 20 });
+    const all = await roster.classes(undefined, { page: 1, pageSize: 100 });
+    expect(all.items.map((v) => v.classEntity.id)).toEqual(expect.arrayContaining(o.classIds));
+    expect(
+      (await roster.students(o.mentor.id, classId, { page: 1, pageSize: 20 })).items[0],
+    ).toMatchObject({ canConfirmCash: false });
     expect(pending.total).toBe(1);
     expect(pending.items[0]).toMatchObject({
       studentId: o.student.id,
@@ -236,10 +286,10 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     const otherClassId = o.classIds[1] ?? '';
     await db.getRepository(ClassEntity).update(otherClassId, { status: ClassStatus.CANCELLED });
     expect(
-      (await roster.students(o.mentor.id, classId, { page: 1, pageSize: 20 })).items[0],
+      (await roster.students(undefined, classId, { page: 1, pageSize: 20 })).items[0],
     ).toMatchObject({ canConfirmCash: false });
     await db.getRepository(ClassEntity).update(otherClassId, { status: ClassStatus.OPEN });
-    await f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount);
     const paid = await roster.students(o.mentor.id, classId, {
       page: 1,
       pageSize: 20,
@@ -257,25 +307,43 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
     expect(
       (await roster.students(newMentor.id, reassignedClassId, { page: 1, pageSize: 20 })).items[0],
     ).toMatchObject({ orderId: reassigned.order.id, canConfirmCash: false });
+    expect(
+      (await roster.students(undefined, reassignedClassId, { page: 1, pageSize: 20 })).items[0],
+    ).toMatchObject({ canConfirmCash: true });
+    expect((await f.cash.list({ page: 1, pageSize: 100 })).items.map((v) => v.order.id)).toContain(
+      reassigned.order.id,
+    );
+    await expect(
+      f.cash.confirm(
+        (await f.user(UserRole.MANAGER)).id,
+        reassigned.order.id,
+        reassigned.order.totalAmount,
+      ),
+    ).resolves.toMatchObject({ order: { status: OrderStatus.PAID } });
   });
 
-  it('rejects cash wrong mentor, partial/extra amount, expired and cancelled classes without activation', async () => {
+  it('rejects non-manager cash collection, partial/extra amount, expired and cancelled classes without activation', async () => {
     const o = await f.order({ paymentType: PaymentType.CASH });
-    const other = await f.user(UserRole.MENTOR);
-    await expect(f.cash.confirm(other.id, o.order.id, o.order.totalAmount)).rejects.toMatchObject({
-      status: 403,
-    });
+    for (const role of [UserRole.MENTOR, UserRole.ADMIN, UserRole.STUDENT]) {
+      const other = await f.user(role);
+      await expect(f.cash.confirm(other.id, o.order.id, o.order.totalAmount)).rejects.toMatchObject(
+        { status: 403 },
+      );
+    }
     await expect(
-      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount - 1),
+      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount - 1),
     ).rejects.toMatchObject({ status: 409 });
     await expect(
-      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount + 1),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount + 1),
     ).rejects.toMatchObject({ status: 409 });
     await db
       .getRepository(ClassEntity)
       .update(o.classIds[0] ?? '', { status: ClassStatus.CANCELLED });
     await expect(
-      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount),
     ).rejects.toMatchObject({ status: 409 });
     await expect(f.cash.preview(o.student.id, o.classIds[0] ?? '')).rejects.toMatchObject({
       status: 403,
@@ -286,7 +354,7 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
       expiresAt: new Date(Date.now() - 1000),
     });
     await expect(
-      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount),
     ).rejects.toMatchObject({ status: 409 });
     expect(await paid(o.order.id)).toBe(OrderStatus.PENDING);
     await expect(f.cash.preview(o.student.id, o.classIds[0] ?? '')).rejects.toMatchObject({
@@ -305,9 +373,9 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
         await EnrollmentsService.prototype.activateHolds.apply(f.enrollments, args);
         throw new Error('progress failure');
       });
-    await expect(f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount)).rejects.toThrow(
-      'progress failure',
-    );
+    await expect(
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount),
+    ).rejects.toThrow('progress failure');
     activate.mockRestore();
     expect(await paid(o.order.id)).toBe(OrderStatus.PENDING);
     expect(await db.getRepository(PaymentTransactionEntity).countBy({ orderId: o.order.id })).toBe(
@@ -319,7 +387,7 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
       ),
     ).toBe(true);
     await expect(
-      f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount),
     ).resolves.toBeDefined();
   });
 

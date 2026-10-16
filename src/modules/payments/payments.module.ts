@@ -12,6 +12,7 @@ import {
   CashPaymentsController,
   CashPreviewController,
 } from './controllers/cash-payments.controller.js';
+import { ManagerClassRosterController } from './controllers/manager-class-roster.controller.js';
 import { MentorClassRosterController } from './controllers/mentor-class-roster.controller.js';
 import {
   PaymentCallbacksController,
@@ -25,6 +26,7 @@ import { PaymentWebhookEventEntity } from './entities/payment-webhook-event.enti
 import { PayosPaymentDetailEntity } from './entities/payos-payment-detail.entity.js';
 import { AttendancePaymentEvidenceService } from './services/attendance-payment-evidence.service.js';
 import { CashPaymentsService } from './services/cash-payments.service.js';
+import { ManagerPaymentReadService } from './services/manager-payment-read.service.js';
 import { MentorClassRosterService } from './services/mentor-class-roster.service.js';
 import { PaymentEmailService } from './services/payment-email.service.js';
 import { PaymentEmailWorker } from './services/payment-email.worker.js';
@@ -55,8 +57,10 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
     CashPaymentsController,
     CashPreviewController,
     MentorClassRosterController,
+    ManagerClassRosterController,
   ],
   providers: [
+    ManagerPaymentReadService,
     AttendancePaymentEvidenceService,
     CashPaymentsService,
     MentorClassRosterService,
@@ -68,6 +72,6 @@ import { PaymentSettlementService } from './services/payment-settlement.service.
     PaymentEmailService,
     PaymentEmailWorker,
   ],
-  exports: [AttendancePaymentEvidenceService],
+  exports: [AttendancePaymentEvidenceService, ManagerPaymentReadService],
 })
 export class PaymentsModule {}

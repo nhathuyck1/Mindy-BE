@@ -1,4 +1,4 @@
-/** Phase 2 accepts full payment by PayOS or by cash handed to the class mentor. */
+/** Full payment by PayOS or cash collected and confirmed by a manager. */
 export enum PaymentType {
   PAYOS = 'PAYOS',
   CASH = 'CASH',

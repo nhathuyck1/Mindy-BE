@@ -167,6 +167,44 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
     ).toBe(1);
   });
 
+  it('creates and edits plain text safely, rejects mixed modes and file/text combinations', async () => {
+    const { unit } = await setup();
+    const created = await service.create(principal, unit.courseUnitId, {
+      contentType: MaterialContentType.ARTICLE,
+      title: 'Plain lesson',
+      contentText: '<script>alert(1)</script>\nA & B',
+    });
+    expect(created.contentHtml).toContain('&lt;script&gt;');
+    expect(created.contentHtml).toContain('A &amp; B');
+    const patched = await service.patch(principal, created.id, {
+      expectedRevision: created.revision,
+      contentText: 'New text',
+    });
+    expect(patched.contentHtml).toBe('<p>New text</p>');
+    await expect(
+      service.patch(principal, created.id, {
+        expectedRevision: patched.revision,
+        contentText: 'text',
+        contentHtml: '<p>html</p>',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MATERIAL_CONTENT_INVALID' } });
+    await expect(
+      service.create(principal, unit.courseUnitId, {
+        contentType: MaterialContentType.FILE,
+        title: 'Bad file',
+        fileId: randomUUID(),
+        contentText: 'text',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'MATERIAL_CONTENT_INVALID' } });
+    await expect(
+      service.create(principal, unit.courseUnitId, {
+        contentType: MaterialContentType.ARTICLE,
+        title: 'Empty',
+        contentText: '   ',
+      }),
+    ).rejects.toBeDefined();
+  });
+
   it('supports image-only and one image as both inline and attachment; shared files are allowed', async () => {
     const { unit } = await setup();
     const image = await ready(unit.courseUnitId, 'IMAGE');

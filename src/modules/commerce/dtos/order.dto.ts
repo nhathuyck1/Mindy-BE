@@ -65,7 +65,8 @@ export class OrderDto {
     type: String,
     format: 'uuid',
     nullable: true,
-    description: 'Mentor who collects the cash; null for PayOS orders',
+    description:
+      'Legacy checkout mentor snapshot; does not grant cash collection rights. Null for PayOS.',
   })
   readonly mentorId: string | null;
 

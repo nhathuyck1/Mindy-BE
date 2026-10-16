@@ -1,5 +1,64 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-16 — Phase2.4 A–C và manager Materials text HTML
+
+Đã implement manager class/contact, role-scoped mentor/student directory và
+relationships, global orders/payments safe read. Full CASH manager và Student
+ownership/preview/FULL không đổi; D summary backlog. Không migration/env/dependency
+mới, không sửa FE/deploy. Flow/breakdown/Postman/phase progress đã cập nhật.
+
+User bổ sung màn hình hai nút: ARTICLE nhận contentText hoặc CKEditor contentHtml;
+PDF/TXT/MP3 FILE và MP4 VIDEO qua luồng Files đã có. Bổ sung contract tích hợp BE,
+Word .docx là FILE/DOCUMENT để upload và approve theo yêu cầu làm rõ của user. Không tự publish
+và không coi upload READY là Student entitlement.
+
+Local gate cuối: pnpm check615/615 (61 suites, lint/type/build pass), focused2.4
+9/9 gồm EXPLAIN/re-enrollment. HTTP cuối77/77,8 suites, có full Word DOCX upload/approve/access/withdraw với
+MinIO thật; chi tiết ở progress2.4/3.3. Không dùng
+kết quả này làm evidence VPS/A1/giao dịch thật. Rate-limit/metrics/i18n riêng và
+production-scale index evidence chưa có; không đánh dấu là đã làm.
+
+## 2026-10-16 — Sửa seed roster khi server đã có học viên
+
+User báo JS-101-ON1 full làm rollback cả lượt seed. Đổi mục tiêu theo yêu cầu
+mới thành20 ghế mỗi lớp HTML/JS, tính cả ACTIVE/PENDING_PAYMENT hiện có.
+Dừng bổ sung khi đạt min(20,maxStudents); lớp đã đầy/trên mục tiêu giữ nguyên,
+không xóa ghi danh. Đây là sửa seed, không đổi API/schema/payment runtime.
+Lỗi server là ảnh user cung cấp; chưa chạy bản sửa trên VPS.
+
+## 2026-10-16 — Planning Manager HR + kế toán (Phase2.4)
+
+Theo yêu cầu manager xem lớp/course/mentor/student, đã audit source và lập
+[plan2.4](../implement_phase/phase2/PHASE_2_4_MANAGER_OPERATIONS.md),
+[flow](../api_flow/PHASE_2_4_FLOW.md) và
+[API breakdown dự kiến](../api_flow/PHASE_2_4_flow-api-breakdown.md).
+Thứ tự: A class detail/filter/contact → B HR directory/profile/relationships →
+C orders/payments read; D finance summary là backlog. Manager đã có course GET,
+teaching/attendance/materials và CASH; không triển khai lại hoặc mở toàn admin.
+Giữ Student flow và các quyền ghi manager hiện có. Chỉ cập nhật tài liệu,
+kiểm diff/link; không BE tests/build/migrate/deploy/FE/giao dịch thật lượt này.
+[Progress riêng2.4](phase%202/PHASE_2_4_PROGRESS.md).
+
+## 2026-10-16 — Manager thu tiền mặt ở mọi lớp
+
+Theo yêu cầu user, bỏ quyền mentor xác nhận CASH; manager active bất kỳ được xem
+mọi lớp/payment roster và confirm đủ tổng đơn, không cần assignment. Thêm GET
+/manager/classes và /manager/classes/:classId/students; chuyển GET/POST cash-orders
+sang /manager/cash-orders. Mentor roster giữ đọc, canConfirmCash=false. Student
+checkout/grouping, CASH preview/TTL/hold, full access và PayOS không thay đổi.
+Audit cash-manager lưu người thu; reader/retry/attendance giữ tương thích cash
+mentor cũ. Không đổi schema hoặc migration. Đã cập nhật flow, breakdown, contract,
+Postman và test fixtures liên quan. [Chi tiết API](../api_flow/PHASE_2_3_flow-api-breakdown.md#thu-tiền-mặt-bởi-manager--2026-10-16).
+Local focused payment/attendance 52/52 pass; focused payment + provenance sau bổ
+sung 34/34 pass. HTTP 72/72 distinct cases pass qua các lượt: 59 ngoài Phase2.2
+pass, Phase2.2 rerun 13/13 pass. Lượt HTTP đầu 71/72 do email manager fixture mới
+trùng test tạo user; đã đổi email test. Full check đầu 600/601 do assertion audit
+CASH mới đặt nhầm vào test PayOS; chuyển đúng case, focused34/34 pass. Full check
+cuối pass: pnpm check (lint/type-check, 601/601 tests trong58 suites, build).
+HTTP72/72 distinct cases đã pass qua các lượt như trên. git diff --check pass.
+Không deploy/VPS, tiền thật hoặc sửa frontend.
+
+
 ## 2026-10-16 — Test migration hiện hành và loại compiled migration cũ
 
 Fetch origin xác nhận Feat/Phase4 đã chứa origin/dev, ahead5/behind0; không cần

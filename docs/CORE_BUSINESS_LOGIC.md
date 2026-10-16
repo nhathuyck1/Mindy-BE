@@ -4,7 +4,7 @@ Updated 2026-10-05 against all of `document/Flow.txt`, implemented checkout and
 [Phase 2.2](./implement_phase/phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
 confirmation passed; BE payments are implemented and locally tested; VPS release
 and real settlement remain pending user execution. Full payment and
-online confirmation email are required; pending cash preview and mentor confirmation
+online confirmation email are required; pending cash preview and manager confirmation
 remain required in the later cash increment. Pending group chat/DM belongs to chat.
 
 This document defines the business rules for the first delivery scope: course/class management and the complete order-to-enrollment flow. It intentionally excludes whiteboard, compiler/judge, chat and notification behavior.
@@ -85,7 +85,7 @@ Owns `carts`, `cart_details`, `orders` and `order_details`. Cart data is mutable
 Owns `payment_transactions`, `payos_payment_details`,
 `payment_webhook_events` and `payment_confirmation_emails`. It verifies provider
 callbacks and coordinates settlement via exported Commerce/Enrollments providers.
-Only verified settlement or authorized mentor cash confirmation can make an order PAID.
+Only verified settlement or authorized manager cash confirmation can make an order PAID.
 
 ### Files
 
@@ -222,11 +222,11 @@ cancelled holds are never silently recreated; late/mismatched payments require r
 | Upload/submit own material draft | Assigned `MENTOR`, or `MANAGER` for direct upload (Phase 3 API pending) |
 | Create classes and schedules | `ADMIN` |
 | Read assigned class operations | Assigned `MENTOR`, `ADMIN` |
-| Read class roster and payment status | Currently assigned `MENTOR` for that class; roster includes effective enrollments only |
+| Read class roster and payment status | Any `MANAGER` across all classes; assigned `MENTOR` retains read-only access; effective enrollments only |
 | Manage own cart and checkout | Active `STUDENT` |
 | Read own orders/payments | Order owner |
 | Process payment callback | Verified provider adapter only |
-| Confirm full cash payment | Assigned `MENTOR` from the order snapshot, with audit data |
+| Confirm full cash payment | Any active `MANAGER`, without class/order assignment, with collector audit data |
 | Inspect transactions/reconciliation | `ADMIN`; refund/manual bank-transfer scope is separate |
 
 `MANAGER` is a separate role restored by a new migration on 2026-10-09 for
@@ -239,7 +239,7 @@ Flow.txt's manager assignment wording is implemented by the existing Phase 2
 decision to activate class enrollment/progress automatically after verified PayOS
 settlement. It does not add a manual manager approval step or enroll students into
 course templates. For cash, pending students see only class-unit/session titles and
-timetable until mentor confirmation; full learning content remains blocked.
+timetable until manager confirmation; full learning content remains blocked.
 
 Role checks never replace ownership checks. A student must not access another student's cart, order, payment or enrollment by guessing an ID.
 

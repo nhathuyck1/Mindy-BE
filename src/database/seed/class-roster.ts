@@ -26,7 +26,7 @@ import dataSource from '../data-source.js';
 
 const ROSTERS = [
   { classCode: 'HTML-CSS-101-ON1', emailPrefix: 'demo.html', count: 20 },
-  { classCode: 'JS-101-ON1', emailPrefix: 'demo.js', count: 24 },
+  { classCode: 'JS-101-ON1', emailPrefix: 'demo.js', count: 20 },
 ] as const;
 
 const NAMES = [
@@ -112,7 +112,11 @@ async function seedRoster(
     status: In([...SEAT_HOLDING_ENROLLMENT_STATUSES]),
   });
   let created = 0;
+  // The requested count is the total occupied roster, including existing students/holds.
+  // A smaller capacity or an already-full class must not roll back the other roster.
+  const target = Math.min(seed.count, classEntity.maxStudents);
   for (let index = 0; index < seed.count; index += 1) {
+    if (occupied >= target) break;
     const displayName = names[index];
     if (!displayName) throw new Error('Missing demo student name');
     const number = String(index + 1).padStart(2, '0');
@@ -140,10 +144,6 @@ async function seedRoster(
       status: In([...EFFECTIVE_ENROLLMENT_STATUSES]),
     });
     if (existing) continue;
-    if (occupied >= classEntity.maxStudents) {
-      throw new Error(`${seed.classCode} is full; roster seed rolled back`);
-    }
-
     const now = new Date();
     // Demo fixtures mirror a confirmed CASH purchase; no provider or email is called.
     const orders = manager.getRepository(OrderEntity);

@@ -35,6 +35,6 @@ import { OrdersService } from './services/orders.service.js';
     OrderExpiryWorker,
     OrderSettlementService,
   ],
-  exports: [OrderSettlementService],
+  exports: [OrderSettlementService, OrdersService],
 })
 export class CommerceModule {}

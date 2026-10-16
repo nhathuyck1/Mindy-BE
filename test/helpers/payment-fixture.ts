@@ -304,7 +304,7 @@ export function paymentFixture(db: DataSource) {
     checkout,
     settlement,
     links,
-    cash: new CashPaymentsService(db, orders, offers, read, enrollments),
+    cash: new CashPaymentsService(db, orders, offers, read, enrollments, users),
     user,
     order,
     access: new StudentClassService(enrollments, read),

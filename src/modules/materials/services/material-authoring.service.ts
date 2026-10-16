@@ -14,6 +14,7 @@ import type { FileSummary } from '../../files/files.contracts.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { FilesService } from '../../files/services/files.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import { articleInputHtml } from '../domain/article-input.js';
 import { sanitizeArticle } from '../domain/article-sanitizer.js';
 import { canManageOwnDraft, canPreviewMaterial } from '../domain/material-access.js';
 import type {
@@ -121,13 +122,15 @@ export class MaterialAuthoringService {
     scope?: MentorMaterialScope,
   ): Promise<ManagerMaterialDetailDto> {
     // Sanitize user HTML before opening the transaction; revalidate the typed snapshot under locks.
-    const article = input.contentHtml === undefined ? undefined : this.sanitize(input.contentHtml);
+    const incomingHtml = this.articleInput(input.contentHtml, input.contentText);
+    const article = incomingHtml === undefined ? undefined : this.sanitize(incomingHtml);
     if (Object.keys(input).filter((key) => key !== 'expectedRevision').length === 0) this.invalid();
     return this.transaction(async (manager) => {
       const material = await this.load(id, manager, true);
       const oldRefs = await this.refs(id, manager);
       const prepared = this.prepare(material.contentType, {
         ...input,
+        contentText: undefined,
         contentHtml: article?.contentHtml ?? input.contentHtml ?? material.contentHtml ?? undefined,
         fileId: input.fileId ?? material.fileObjectId ?? undefined,
         attachmentFileIds:
@@ -140,7 +143,10 @@ export class MaterialAuthoringService {
       });
       if (material.contentType === MaterialContentType.ARTICLE && input.fileId !== undefined)
         this.invalid();
-      if (material.contentType !== MaterialContentType.ARTICLE && input.contentHtml !== undefined)
+      if (
+        material.contentType !== MaterialContentType.ARTICLE &&
+        (input.contentHtml !== undefined || input.contentText !== undefined)
+      )
         this.invalid();
       const summaries = await this.resolve(
         principal,
@@ -597,11 +603,12 @@ export class MaterialAuthoringService {
         (input.contentSchemaVersion !== undefined && input.contentSchemaVersion !== 1)
       )
         this.invalid();
-      const canonical = this.sanitize(input.contentHtml);
+      const canonical = this.sanitize(this.articleInput(input.contentHtml, input.contentText));
       return { ...canonical, fileId: null, attachmentFileIds: attachments };
     }
     if (
       input.contentHtml !== undefined ||
+      input.contentText !== undefined ||
       input.contentSchemaVersion !== undefined ||
       !input.fileId
     )
@@ -609,6 +616,15 @@ export class MaterialAuthoringService {
     const fileId = input.fileId.toLowerCase();
     if (attachments.includes(fileId)) this.invalid();
     return { fileId, contentHtml: null, inlineFileIds: [], attachmentFileIds: attachments };
+  }
+
+  private articleInput(html: string | undefined, text: string | undefined): string | undefined {
+    try {
+      return articleInputHtml(html, text);
+    } catch (error) {
+      if (error instanceof MaterialPolicyError) throw new MaterialPolicyException(error.code);
+      throw error;
+    }
   }
 
   private sanitize(html: unknown) {

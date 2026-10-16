@@ -182,7 +182,7 @@ describe.skipIf(!separateTestUrl('phase44c_http'))('Phase 4.4c built-app HTTP', 
     });
     expect(
       (
-        await request(`/mentor/cash-orders/${order.id}/confirm`, mentor, {
+        await request(`/manager/cash-orders/${order.id}/confirm`, manager, {
           receivedAmount: order.totalAmount,
         })
       ).status,

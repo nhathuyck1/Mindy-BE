@@ -864,3 +864,109 @@ khi expectedRevision khác bản hiện tại;422 query sai/field lạ;503 ký/s
 409 refetch detail và yêu cầu xem lại revision;404 dừng render asset;503 cho retry
 có giới hạn. Student GET assets có gate ACTIVE/release riêng trong
 [breakdown3.4](PHASE_3_4_flow-api-breakdown.md#bổ-sung-get-assets-sau-hợp-nhất--2026-10-16).
+
+## Màn hình manager: Soạn nội dung / Upload tài liệu — 2026-10-16
+
+Theo ảnh/yêu cầu user: BE/API trước, **không sửa frontend**. Source hỗ trợ hai
+hành động trên chương đang chọn. Giao diện gọi staff APIs để thấy draft/review,
+không dùng Student published-only API cho manager. Lấy courseUnitId từ
+`GET /api/v1/manager/classes/:classId/units` (2.4) hoặc manager course detail.
+Mỗi Course Unit có nhiều Material, không lưu bài viết vào description của unit.
+
+### 1. Soạn nội dung: văn bản thường hoặc CKEditor HTML
+
+MANAGER active/cookie access_token, `credentials: include`; Origin nằm trong
+CORS_ORIGINS cho mutation. POST `/api/v1/manager/course-units/:courseUnitId/materials`
+trả201 ManagerMaterialDetailDto. Hai lựa chọn input cùng contentType ARTICLE:
+
+```json
+{"contentType":"ARTICLE","title":"JSX, component và props","contentText":"Dòng thứ nhất\nDòng thứ hai"}
+```
+
+```json
+{"contentType":"ARTICLE","title":"JSX, component và props","contentHtml":"<h2>JSX</h2><p>Nội dung từ CKEditor</p>"}
+```
+
+`contentText` **mới implement**, optional string <=49152 ký tự, input/canonical
+HTML <=48KiB UTF-8. Gửi đúng một trong contentText/contentHtml; không gửi field
+không dùng kể cả chuỗi rỗng/null. Text được escape markup/entities rồi chuyển
+xuống dòng thành br và đi qua sanitizer; HTML là nội dung CKEditor getData và
+đi qua sanitizer hiện có. Không upload file HTML, không giữ script/style/base64.
+Text chỉ lưu canonical `contentHtml`, schemaVersion1; không migration hay field
+contentText trong response. Lần mở lại dùng contentHtml trong CKEditor; chuyển
+về text trên FE cần giữ line breaks và hỏi người dùng trước khi làm mất định dạng.
+
+PATCH `/api/v1/manager/materials/:materialId` body
+`{"expectedRevision":1,"contentText":"Nội dung mới"}` hoặc contentHtml;200 detail.
+Các metadata/attachments/revision rules cũ giữ nguyên. Sửa bài đã approve/publish
+vẫn tăng revision, về DRAFT và thu hồi publication theo workflow hiện hành.
+Không tự approve/publish vì vừa nhấn lưu. Input mixed/blank/null/type sai trả422
+MATERIAL_CONTENT_INVALID/validation; canonical quá lớn413 MATERIAL_CONTENT_TOO_LARGE;
+request JSON quá64KiB413. Stale revision409: refetch, giữ nội dung chưa lưu và cho
+user xử lý xung đột; không retry ghi đè.401 login;403 role/Origin;404 unit/material.
+
+### 2. Upload tài liệu: PDF, Word DOCX, video MP4, text TXT hoặc audio MP3
+
+Các định dạng này **đã được Files hỗ trợ**, không tạo uploader thứ hai. PDF
+application/pdf, TXT text/plain, MP3 audio/mpeg và Word DOCX MIME Office chuẩn
+tối đa25MiB mỗi file; MP4 video/mp4
+200MiB. MIME/đuôi file/byte thực được kiểm tra, file giả không thành READY.
+
+1. POST `/api/v1/files/upload-intents` body
+   `{"courseUnitId":"UUID","originalFilename":"bai-hoc.pdf","declaredMimeType":"application/pdf","declaredSizeBytes":12345}`
+   →201 {fileId,uploadUrl,requiredHeaders,uploadUrlExpiresAt,intentExpiresAt}.
+2. PUT byte gốc đến **storage uploadUrl**, đúng requiredHeaders; không gửi API
+   cookies đến storage. Không gửi multipart vào Material API.
+3. POST `/api/v1/files/:fileId/complete` body{} →202 PROCESSING, hoặc200 nếu đã READY.
+   Poll GET `/api/v1/files/:fileId` có backoff, dừng READY/FAILED/DELETED/hết intent/
+   401/403/404. FAILED hiển thị errorCode, không tự tạo Material từ file lỗi.
+4. READY → POST manager Course Unit materials endpoint ở trên, body
+   `{"contentType":"FILE","title":"Giáo trình PDF","fileId":"UUID_READY"}`.
+   PDF/TXT/MP3/DOCX dùng **FILE**; MP4 dùng **VIDEO**.201 detail/file metadata.
+5. Refetch GET `/api/v1/manager/course-units/:courseUnitId/materials?page=1&pageSize=20`;
+   file chưa review/publish vẫn hiện cho manager. Upload READY tự nó chưa là Material.
+
+Nếu chọn nhiều file, thực hiện workflow từng file và tạo từng Material; API upload
+intent hiện nhận một file/request. Không giả định server có endpoint bulk/multipart.
+MP3 được xem qua signed URL cùng scope/revision; TXT là file, không tự nhập thành
+bài viết. PDF/MP4 preview qua GET `/manager/materials/:materialId/preview` hoặc
+POST `/manager/materials/:materialId/files/:fileId/access` theo contract3.4;
+không lưu signed URL vào HTML hay DB. Quyền Student vẫn cần publication + ACTIVE
++ release/time + READY như cũ, không mở quyền vì manager xem được draft.
+
+Loading: disable lưu/upload khi đang ghi; progress PUT do FE; PROCESSING hiển thị
+đang kiểm tra; lỗi giữ text/file selection. Lưu thành công refetch list/detail
+và thay revision.404/thu hồi quyền dừng polling, xóa signed URLs trong memory.
+Upload503 kiểm MinIO/worker,429 chờ Retry-After theo Files; không retry vô hạn.
+
+Swagger manager request DTO đã thêm contentText; Postman Phase33 có hai request
+create/patch plain text, folder upload Phase32 vẫn dùng chung. Local tests và
+hạn chế deployment được ghi progress3.3; UI hai nút chưa sửa trong lượt BE này.
+
+### Word DOCX và duyệt tài liệu theo yêu cầu làm rõ
+
+Word ở đây là **định dạng .docx** để upload/approve, không phải file tài liệu bàn
+giao. `.docx` đã có trong Files allowlist, MIME
+`application/vnd.openxmlformats-officedocument.wordprocessingml.document`, tối đa
+25MiB, file kind DOCUMENT. Sau READY tạo `contentType=FILE` và fileId; không thêm
+contentType WORD, không chuyển thành HTML. File `.doc` cũ chưa trong allowlist.
+
+Có thể manager upload rồi tạo FILE draft và approve bằng
+`POST /api/v1/manager/materials/:materialId/approve` với `{"expectedRevision":1}`;
+hoặc mentor upload→draft→submit để manager duyệt. Cookie/Origin/role/revision và
+file READY/scope được recheck theo contract3.3.3. Approve200 trả APPROVED đúng
+revision và publication theo workflow hiện hành. Chỉnh sửa nội dung đưa về DRAFT.
+
+Student chưa được duyệt/release hoặc không ACTIVE vẫn404. Sau các gate hiện hữu,
+Student được cấp signed GET tới byte DOCX gốc; backend không chuyển Word thành PDF
+và không cung cấp trình đọc Word HTML. Frontend có thể cho tải/mở file bằng ứng dụng
+Word. Muốn preview Word ngay trên web cần luồng viewer/conversion riêng.
+
+Postman Phase33 có mẫu tạo FILE từ fileId DOCX READY và mẫu approve revision. HTTP
+acceptance mới kiểm DOCX upload MinIO thực, READY, reject/edit/approve, gated Student
+signed Range access và withdraw, ngoài binary validator DOCX đã có.
+
+Evidence local cuối16/10: pnpm check615/615; HTTP77/77, Files42/42 gồm DOCX
+full review/release/access/withdraw. Không tạo API/type WORD mới; frontend dùng
+file picker accept .docx, MIME Office Word, contentType FILE, file.kind DOCUMENT.
+Chưa deploy hoặc sửa FE. Không sinh file Word docs/word từ yêu cầu này.

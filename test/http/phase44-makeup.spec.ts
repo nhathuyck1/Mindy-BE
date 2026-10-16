@@ -151,7 +151,7 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
     if (!order) throw new Error('Missing order');
     expect(
       (
-        await request(`/mentor/cash-orders/${order.id}/confirm`, mentor, {
+        await request(`/manager/cash-orders/${order.id}/confirm`, manager, {
           receivedAmount: order.totalAmount,
         })
       ).status,

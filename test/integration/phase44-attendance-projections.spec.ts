@@ -92,7 +92,8 @@ describe.skipIf(!separateTestUrl('phase44c'))(
         detail = await f.read.getDetail(classId),
         s = detail.units[0]?.sessions[0];
       if (!s) throw new Error('Missing Session');
-      if (paid) await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+      if (paid)
+        await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
       const e: { id: string }[] = await db.query(
         'SELECT id FROM enrollments WHERE class_id=$1 AND student_id=$2',
         [classId, a.student.id],
@@ -612,7 +613,7 @@ describe.skipIf(!separateTestUrl('phase44c'))(
       const checked = await f.checkout.checkout(a.student.id, PaymentType.CASH);
       const order = checked[0]?.order;
       if (!order) throw new Error('Missing rebuy');
-      await f.cash.confirm(a.mentor.id, order.id, order.totalAmount);
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, order.id, order.totalAmount);
       expect(await summary(a)).toMatchObject({ present: 1, finalizedEligibleCount: 1 });
       const rows = await reports.classSummary(a.classId, staff, PAGE);
       expect(rows.total).toBe(2);
@@ -782,7 +783,7 @@ describe.skipIf(!separateTestUrl('phase44c'))(
       ]);
       await start(a);
       vi.setSystemTime(new Date(a.s.startsAt.getTime() + 1000));
-      await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
       expect(await summary(a)).toMatchObject({ absent: 0, finalizedEligibleCount: 0 });
       await attendance.syncRoster(
         a.s.id,
@@ -847,7 +848,7 @@ describe.skipIf(!separateTestUrl('phase44c'))(
           const orders = await f.checkout.checkout(student.id, PaymentType.CASH),
             o = orders[0]?.order;
           if (!o) throw new Error('Missing scale order');
-          await f.cash.confirm(a.mentor.id, o.id, o.totalAmount);
+          await f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.id, o.totalAmount);
         }
       }
       const a = fixtures[0];

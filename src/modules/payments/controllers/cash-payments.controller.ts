@@ -31,24 +31,23 @@ import { CashPaymentsService } from '../services/cash-payments.service.js';
 @ApiTags('cash payments')
 @ApiCookieAuth('access_token')
 @UseGuards(AccessTokenGuard, RolesGuard)
-@Roles(UserRole.MENTOR)
+@Roles(UserRole.MANAGER)
 @ApiErrors(
+  HttpStatus.BAD_REQUEST,
   HttpStatus.UNAUTHORIZED,
   HttpStatus.FORBIDDEN,
   HttpStatus.NOT_FOUND,
   HttpStatus.CONFLICT,
   HttpStatus.UNPROCESSABLE_ENTITY,
 )
-@Controller('mentor/cash-orders')
+@Controller('manager/cash-orders')
 export class CashPaymentsController {
   constructor(private readonly cash: CashPaymentsService) {}
   @Get()
+  @ApiOperation({ summary: 'List all cash orders for managers without class assignment' })
   @ApiOkResponse({ type: OrderPageDto })
-  async list(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query() options: PageOptionsDto,
-  ): Promise<OrderPageDto> {
-    const result = await this.cash.list(user.userId, options);
+  async list(@Query() options: PageOptionsDto): Promise<OrderPageDto> {
+    const result = await this.cash.list(options);
     return new OrderPageDto(
       result.items.map((o) => new OrderDto(o)),
       options.page,
@@ -58,7 +57,7 @@ export class CashPaymentsController {
   }
   @Post(':orderId/confirm')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Assigned cash mentor confirms full amount; retries are idempotent' })
+  @ApiOperation({ summary: 'Any manager confirms full cash amount; retries are idempotent' })
   @ApiOkResponse({ type: OrderDto })
   async confirm(
     @CurrentUser() user: AuthenticatedUser,

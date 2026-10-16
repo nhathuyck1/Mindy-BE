@@ -133,19 +133,21 @@ Use `pnpm seed:course-images` to fill images only, without seeding accounts/clas
 Rerunning preserves a current demo cohort of each course until its end date, avoiding overlapping
 copies for the same mentor. Once it finishes, a new cohort gets a new date suffix.
 The three original students still need checkout/enrollment to see their personal calendar.
-The roster seed additionally creates 44 distinct demo students with ACTIVE enrollments:
-`HTML-CSS-101-ON1` gets 20/25 seats and `JS-101-ON1` gets 24/25 seats.
+The roster seed tops up `HTML-CSS-101-ON1` and `JS-101-ON1` to 20 occupied seats each,
+counting existing ACTIVE and PENDING_PAYMENT enrollments. Empty classes get up to
+40 distinct demo students with ACTIVE enrollments in total.
 Emails are `demo.html.01@example.com` through `demo.html.20@example.com` and
-`demo.js.01@example.com` through `demo.js.24@example.com`. New accounts use
+`demo.js.01@example.com` through `demo.js.20@example.com`. New accounts use
 `SEED_ACCOUNT_PASSWORD`; existing accounts and effective enrollments are preserved.
 Each enrollment includes a demo PAID cash order, matching SUCCEEDED transaction,
 and NOT_STARTED progress for every class unit. These are fixtures, not real payments;
 the seed does not call payOS or send email. Their existing class timetables appear
 in the students' calendars. After accounts/classes exist, run only
 `pnpm seed:class-roster` to fill these two rosters. Both rosters commit atomically;
-insufficient capacity or incompatible accounts cause a rollback, and reruns create
+incompatible accounts cause a rollback, and reruns create
 no duplicate accounts, orders, enrollments or progress. Other enrollments are retained,
-so existing real students count toward the 25-seat capacity.
+so existing real students count toward the target. Full classes and classes already
+at/above 20 are skipped; a lower capacity caps the target. No existing students are removed.
 The image seed stores fixed Unsplash CDN URLs; it does not fetch images at runtime.
 
 For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`

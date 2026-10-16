@@ -50,11 +50,10 @@ export class OrderSettlementService {
 
   async listCash(
     manager: EntityManager,
-    mentorId: string,
     options: PageOptionsDto,
   ): Promise<{ items: OrderWithDetails[]; total: number }> {
     const [orders, total] = await manager.getRepository(OrderEntity).findAndCount({
-      where: { cashMentorId: mentorId, paymentType: PaymentType.CASH },
+      where: { paymentType: PaymentType.CASH },
       order: { createdAt: 'DESC', id: 'ASC' },
       skip: (options.page - 1) * options.pageSize,
       take: options.pageSize,

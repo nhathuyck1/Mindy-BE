@@ -38,8 +38,8 @@ export class OrderEntity extends TimestampedEntity {
   paymentType!: PaymentType;
 
   /**
-   * Mentor of every class in a cash order at checkout time; the only user allowed to confirm
-   * the cash later. Always null for PayOS orders.
+   * Legacy mentor snapshot used to group cash orders at checkout, not collection authority.
+   * Any active manager can confirm collection. Always null for PayOS orders.
    */
   @Column({ name: 'cash_mentor_id', type: 'uuid', nullable: true })
   cashMentorId!: string | null;

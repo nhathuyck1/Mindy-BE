@@ -61,7 +61,7 @@ export class MentorClassRosterController {
   @ApiOperation({
     summary: 'List effective enrollments and payment status for an assigned class',
     description:
-      'Cash confirmation still uses the full order total. A single cash order can cover multiple classes.',
+      'Payment status is read-only for mentors. Managers confirm cash using the full order total.',
   })
   @ApiOkResponse({ type: MentorRosterPageDto })
   async students(
