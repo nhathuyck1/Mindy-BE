@@ -29,7 +29,8 @@ export class MyScheduleController {
     summary: 'Sessions of every class the student can view, overlapping [from, to)',
     description:
       'Range at most 31 days; timestamps need Z or an offset. Sorted by startsAt then sessionId; ' +
-      'fetch every page of the range. No meeting URLs: open the class detail to join.',
+      'fetch every page of the range. Effective Session mentor and own attendance only. ' +
+      'No meeting URLs: FULL opens detail, CASH_PREVIEW opens preview, SESSION_MAKEUP opens only target context.',
   })
   @ApiOkResponse({ type: MySchedulePageDto })
   async list(

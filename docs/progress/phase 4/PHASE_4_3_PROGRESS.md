@@ -1,5 +1,19 @@
 # Phase 4.3 — Progress và đối chiếu plan với code
 
+2026-10-16 implementation4.4c: Student history/summary consume persisted regular/
+recovery/guest evidence; partial legacy no-data không thành ABSENT. Source credit
+reader giữ terminal metadata/correction và count-once root/owner; source/tests/
+gates tại [Progress4.4](PHASE_4_4_PROGRESS.md). Đây là local evidence4.4c mới,
+không thay xác nhận server/Postman4.3 ngày15/10 hoặc nghiệm thu browser4.5.
+
+2026-10-16 — Đồng bộ dependencies: server và thử Postman4.3 đã xong theo xác
+nhận trực tiếp user15/10 (ghi tại backlog tổng15/10); các dòng deployment
+pending bên dưới là trạng thái lịch sử. User nay xác nhận4.4b đã xong;
+cancel/replacement/guest có source. Own Student projections/summary/backlog
+đang [planning4.4c](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành).
+Recovery partial4.3 phải được reader4.4c giữ no-data cho rows không có evidence.
+Không chạy lại test/deploy4.3 trong lượt cập nhật tài liệu này.
+
 Cập nhật **2026-10-13**. **Implementation4.3.1–4.3.5 đã có; local gates
 pass. Full check397/397 và HTTP39/39,0 skip. Chưa deploy/VPS/browser hoặc giao dịch thật.**
 [Plan](../../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md) ·

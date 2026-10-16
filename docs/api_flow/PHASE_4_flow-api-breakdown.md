@@ -1,11 +1,25 @@
 # Phase 4 — API breakdown cho frontend
 
+**Implementation2026-10-16:** schedule projection và Student history/summary,
+management summary/incomplete4.4c đã có source/Swagger/Postman/focused PG20/
+compiled HTTP3; [contract hiện hành mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).
+Các mô tả4.4c PLANNED trong log trước là lịch sử; leave/approved intervals
+vẫn source gap riêng. Full gates ở Progress4.4, không suy local thành FE/deploy.
+
+**2026-10-16:** user xác nhận4.4b đã xong;4.4c đang PLANNING với22 AC/20
+scenarios/C1–C5. Contract hiện hành4.4b ở [API4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md#6-quy-ước-chung-của-44b);
+contract **dự kiến4.4c** đầy đủ ở [API4.4 mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).
+Phần lịch/history/summary mục8–9 dưới là thiết kế baseline, được chi tiết hóa
+bởi revision16/10: physical-vs-credit, root/range, null mentor, excluded semantics,
+deadlineExpired nullable và auth/ownership. Không ghi extension/4 GET mới là
+implemented. Leave/approved intervals vẫn gap source riêng; log cũ giữ lịch sử.
+
 **2026-10-15 — slice đầu4.4a có source:** ba route management Session ở mục10
 (schedule/cancel/makeups), Class cancellation batch và SessionView ancestry.
 Contract implemented hiện hành ở [API4.4](PHASE_4_4_flow-api-breakdown.md),
 evidence ở [progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md).
-Mục11–12 và Student projections/history/summary/queues vẫn **PLANNED**;
-không suy từ slice Session operations thành approved leave/guest đã có.
+Tại lượt slice đầu này, mục11–12 và Student projections/history/summary/queues
+còn PLANNED; core4.4b đã có sau đó, xem revision hiện hành phía trên.
 
 **2026-10-14 — API4.1–4.3 đã implement; API4.4–4.5 vẫn PLANNED; chưa xác nhận deploy.**
 [Bảng toàn bộ 17 API mới và flow gọi nối tiếp của hai commit](PHASE_4_API_SUMMARY.md).
@@ -341,7 +355,7 @@ không thay bằng defaults contract chung nếu baseline khác. API/field hiệ
 `attendanceApplicability:ELIGIBLE|NOT_STARTED|NOT_ELIGIBLE|PAYMENT_PENDING|LEGACY_NO_DATA|MAKEUP_PENDING|MAKEUP_CREDITED`,
 `attendanceExcluded:boolean`, `assignmentType`, mentor theo buổi (legacy nullable).
 Ví dụ chưa start `{sessionStatus:"SCHEDULED",attendanceStatus:null,
-attendanceApplicability:"NOT_STARTED",attendanceExcluded:false}`.
+attendanceApplicability:"NOT_STARTED",attendanceExcluded:true}`.
 Không attendance của người khác; CASH_PREVIEW chỉ PAYMENT_PENDING/null;
 canceled ưu tiên nhãn Đã hủy. Read-only, không URL/roster. Sau edit refresh
 lịch khi Student mở lại; errors/empty theo Phase2.3, không mở quyền enrollment cũ.

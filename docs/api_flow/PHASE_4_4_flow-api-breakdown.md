@@ -1,10 +1,18 @@
 # Phase 4.4 — API integration breakdown
 
-Ngày cập nhật: **2026-10-15**, Session operations 4.4a và học bù lớp khác 4.4b có source.
+Ngày cập nhật: **2026-10-16**, 4.4b hoàn tất theo user; 4.4c CLOSED LOCAL/check456/HTTP48,0 skip.
 [Flow](PHASE_4_4_FLOW.md) · [Progress](../progress/phase%204/PHASE_4_4_PROGRESS.md) ·
 [Contract dự kiến toàn phase](PHASE_4_flow-api-breakdown.md#10-reschedule-cancel-và-makeup--slice-44a).
-Leave/approved intervals và Student schedule/history/summary 4.4c vẫn **PLANNED**.
+Leave/approved intervals vẫn thiếu source; schedule/history/summary/backlog4.4c đã có.
 Contract thực tế 4.4b nằm tại mục 6–12 dưới đây; không suy ra workflow leave đã có.
+Contract **implemented 4.4c** nằm tại mục13–18, đối chiếu controllers/DTO/services
+và compiled HTTP/PG tests. Gates cuối ở Progress4.4; không suy thành đã deploy/FE.
+
+Handoff readiness16/10: deploy để nghiệm thu server có thể trước4.5;4.5 là gate
+integration/release,không thêm nhóm endpoint4.4c mới. Không env/migration4.4c mới,
+cần schema4.4b đến1792022400001 và đưa đầy đủ file mới vào commit/image deploy.
+FE phải xử lý mentor/rate/deadline nullable và SESSION_MAKEUP. Chưa có server
+evidence mới trong lượt giải thích này; Swagger/Postman contract giữ nguyên.
 
 ## 1. Điều kiện dùng chung và ID handoff
 
@@ -76,7 +84,7 @@ COMPLETED (cho phép dọn Session còn mở trong Class đã CANCELLED). Body:
 200 SessionView status=CANCELLED/version+1. Giữ attendance, actual clocks,
 teaching mentor và editableUntil; không tự chốt/ABSENT. Giải phóng interval lịch
 mentor; Session này có thể làm source buổi bù khi Class còn OPEN/IN_PROGRESS.
-Hiệu ứng loại mẫu số Student sẽ có khi triển khai summary4.4c, chưa có API rate.
+Summary4.4c đã loại buổi hủy khỏi denominator; xem contract implemented mục13–18.
 
 ## 4. POST `/api/v1/management/class-sessions/:sessionId/makeups`
 
@@ -243,7 +251,7 @@ Body `{expectedVersion,reason}` như mutation chung, không query. Ví dụ
 200 PlacementView status CANCELLED/version+1, creditStatus REVOKED; guest snapshot
 và audit giữ nguyên. Trước start giải phóng reservation, target Session.version
 tăng một, conflict OPEN/version+1. Sau start cũng không đổi clocks/deadline.
-Kết quả source sẽ do projection 4.4c sử dụng lại; chưa có summary API trong 4.4b.
+Projection4.4c sử dụng lại source với credit policy mục13–18; không sửa physical history.
 
 Target Session cancel hoặc Class cancel tự chuyển incoming ASSIGNED/COMPLETED
 placements sang NEEDS_REASSIGNMENT, conflict OPEN và ghi audit trong cùng transaction,
@@ -330,3 +338,194 @@ own context → target start/mark/finalize → own FINALIZED. Kiểm thêm pendi
 wrong Unit/IDs/role, stale/key replay, suất cuối/checkout/start/cancel races,
 no eligible snapshot, mixed-batch rollback, deadline/mentor changes và reassign.
 Postman đã bổ sung cùng collection Phase44; gate và rollout xem Progress4.4.
+
+## 13. 4.4c — Quy ước và contract chung
+
+Implemented2026-10-16 theo [plan4.4 mục4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành).
+Source: AttendanceReportsController/Service, AttendanceProjectionService,
+attendance-credit SQL policy và MySchedule DTO/service.20 focused PG cases và3
+compiled HTTP cases4.4c pass; guest journey HTTP4.4b được mở rộng để kiểm source
+và receiving summaries. Full regression/evidence xem Progress4.4. Không có
+schema/config mới; cần migrations4.2–4.4b hiện có trước khi chạy app mới;
+không phụ thuộc leave approval để đọc các buổi/placements đã persist.
+
+- Cookie access_token hiện hữu, AccessTokenGuard + RolesGuard và current active
+  principal. Student routes chỉ STUDENT self, không nhận studentId/enrollmentId
+  query để đổi chủ thể. Management routes chỉ ADMIN/MANAGER; MENTOR dùng roster
+  hiện có, không được đọc báo cáo lớp qua routes này.
+- Tất cả GET200, read-only, `Cache-Control: private, no-store`; không body,
+  expectedVersion, Idempotency-Key hoặc side effect/audit. Một transaction READ
+  ONLY/REPEATABLE READ và một asOf cho count/items/summary trong mỗi response.
+- Lịch giữ query baseline2.3. Bốn GET mới: optional from/to phải cùng có hoặc
+  cùng bỏ, ISO8601 có Z/offset, from<to, tối đa93 ngày. Overlap `[from,to)`;
+  không gửi range là toàn history/Class hoặc toàn incomplete backlog. Không
+  mặc định tuần hiện tại. Timestamps trả ISO8601, timeZone=APP_TIME_ZONE.
+- Lists mới page integer>=1 default1, pageSize1–100 default20; count sau
+  ownership/filter/normalization, trước page. Summary Student không có page.
+  Không chấp nhận unknown fields/null/invalid enums. Path UUID sai400; query sai422.
+- History Item: `{sessionId,enrollmentId,rootSessionId,title,startsAt,
+  endsAt,sessionStatus,attendanceStatus,attendanceApplicability,excluded,
+  effectiveMentor,assignmentType,makeupForSessionId,makeupRootSessionId,
+  makeupPlacementId,creditSessionId,creditedAttendanceStatus}`. Nullable: mentor,
+  physical status, placement/ancestry/credit IDs và credited status khi chưa có.
+  effectiveMentor là `{id,displayName}` hoặc null; assignmentType PRIMARY/SUBSTITUTE
+  theo metadata hiện có, không dùng enum này để bịa người dạy legacy.
+- attendanceStatus là **physical** UNMARKED/PRESENT/ABSENT|null; credited status
+  chỉ PRESENT/ABSENT|null. ELIGIBLE chưa chắc đã finalized. MAKEUP_CREDITED
+  có credit ở source nghĩa vụ nhưng giữ physical source; MAKEUP_PENDING loại
+  denominator. Canceled ưu tiên hiển thị Đã hủy/excluded=true. NOT_STARTED,
+  NOT_ELIGIBLE, PAYMENT_PENDING, LEGACY_NO_DATA không được hiển thị Vắng.
+- Summary fields chung: present, absent, unmarked, excluded, makeupPending,
+  finalizedEligibleCount, rate. present/absent chỉ credited finalized;
+  denominator=present+absent; rate round2 chữ số hoặc null khi denominator0.
+  Các nhóm count theo nghĩa vụ đã normalize, không theo physical history rows.
+  Quy tắc root/credit-owner/range và partial recovery xem plan4.4 mục4.2.
+- Khi có nhiều enrollment histories, một owner mỗi student/root: finalized
+  evidence → pending obligation → physical snapshot → enrolled trước cutoff →
+  current ACTIVE/COMPLETED → history còn lại; tie createdAt DESC,id DESC.
+  Non-owner không cộng count; history vẫn giữ physical/excluded=true/credit=null.
+  Placement COMPLETED thiếu valid target/snapshot giữ pending, không fallback
+  credit từ source. Hai summaries aggregate trong SQL trước pagination.
+
+## 14. GET `/api/v1/me/schedule` — extension implemented4.4c
+
+Màn lịch lấy classId từ My Classes hoặc target Class trong own placements;
+gọi lại khi đổi range/filter hoặc mở lại màn sau khi lịch/điểm danh thay đổi.
+Giữ nguyên from/to **bắt buộc** <=31 ngày, page default1/pageSize default100 max100,
+includeCancelled defaulttrue, classId optional UUIDv4. Overlap theo physical
+Session; sort startsAt ASC,sessionId ASC. Response envelope items/total/page/
+pageSize/from/to/asOf/timeZone và các local dayOfWeek/startTime/endTime giữ nguyên.
+
+Ví dụ request: `GET /api/v1/me/schedule?from=2026-10-18T17:00:00Z&to=2026-10-25T17:00:00Z&page=1&pageSize=100&includeCancelled=true`.
+Trên mỗi event giữ session/class/course/unit/enrollment/delivery/room fields;
+mentor đổi thành effective mentor nullable theo Session, thêm assignmentType,
+attendanceStatus, attendanceApplicability, attendanceExcluded,
+creditedAttendanceStatus, makeupForSessionId, makeupRootSessionId,
+sourceClassId, sourceSessionId, makeupPlacementId (các link không áp dụng=null).
+Đổi mentor thành nullable cần FE null handling; mở enum accessMode là additive
+nhưng FE phải thêm nhánh trước khi dùng extension.
+
+Ví dụ phần fields mới của hai event (response vẫn có toàn bộ fields baseline):
+
+```json
+[
+  {"accessMode":"FULL","mentor":null,"assignmentType":"PRIMARY","attendanceStatus":null,"attendanceApplicability":"LEGACY_NO_DATA","attendanceExcluded":true,"creditedAttendanceStatus":null,"makeupForSessionId":null,"makeupRootSessionId":null,"sourceClassId":null,"sourceSessionId":null,"makeupPlacementId":null},
+  {"accessMode":"SESSION_MAKEUP","mentor":{"id":"22222222-2222-4222-8222-222222222222","displayName":"Mentor B"},"assignmentType":"SUBSTITUTE","attendanceStatus":"UNMARKED","attendanceApplicability":"MAKEUP_PENDING","attendanceExcluded":true,"creditedAttendanceStatus":null,"makeupForSessionId":null,"makeupRootSessionId":null,"sourceClassId":"44444444-4444-4444-8444-444444444444","sourceSessionId":"55555555-5555-4555-8555-555555555555","makeupPlacementId":"66666666-6666-4666-8666-666666666666"}
+]
+```
+
+FULL/CASH_PREVIEW giữ entitlement baseline. CASH_PREVIEW luôn physical/credit
+null, PAYMENT_PENDING; PayOS pending/expired hold không vào timetable. Guest
+ASSIGNED/COMPLETED chỉ vào current timetable khi có current entitlement như
+4.4b context; placement cancel/needs-reassignment hoặc source/target không còn
+đủ điều kiện thì bỏ event guest. includeCancelled giữ nghĩa regular baseline,
+không khôi phục guest entitlement đã thu hồi. Own placement history vẫn ở API11.
+
+Guest event classId/classUnitId/course/unit/room theo physical target, enrollmentId
+theo source; không trả meeting URL. classId filter theo lớp event, cho phép
+guest-only Class có own guest hợp lệ; không đòi enrollment ở lớp nhận. Union
+regular/guest rồi dedup physical session (regular hợp lệ ưu tiên), filter/count/page.
+FULL mở detail; CASH_PREVIEW mở preview; SESSION_MAKEUP dùng sessionId gọi đúng
+context API11, không mở receiving Class detail/materials/roster/CASH.
+
+401/403 login hoặc dừng quyền; classId không current access trả403
+`SCHEDULE_CLASS_ACCESS_DENIED` như baseline; validation422 sửa query, không retry
+mù. Empty=không có sự kiện đủ quyền trong khoảng đã chọn. Loading giữ range;
+không poll bắt buộc, không cache meeting URL; context403 thu hồi màn buổi.
+
+## 15. GET `/api/v1/me/classes/:classId/attendance` — implemented4.4c
+
+Student mở tab Điểm danh từ own Class hoặc Class ID lịch sử đã lưu; phải từng
+có own enrollment đúng lớp, kể cả COMPLETED/CANCELLED. Guest-only receiving
+Class không được cấp Class history. Không yêu cầu current full entitlement.
+Query page/pageSize và optional from/to theo mục13; không có includeCancelled,
+history luôn giữ buổi hủy. Ví dụ:
+`GET /api/v1/me/classes/44444444-4444-4444-8444-444444444444/attendance?page=1&pageSize=20`.
+
+200 `{classId,items:HistoryItem[],total,page,pageSize,asOf,timeZone}`. Sort
+startsAt DESC,sessionId DESC,enrollmentId ASC để ổn định khi có nhiều enrollment
+histories. HistoryItem theo mục13; regular physical source/replacements của own
+Class, creditSessionId trỏ target khi guest credited; không chèn thêm target như
+nghĩa vụ thứ hai. Filter ngày history theo physical row, summary theo source
+nghĩa vụ nên không cộng các dòng history trên trang để tính rate.
+
+Không trả meeting URL/materials/classmates/contact/payment IDs/evidenceNote
+hoặc audit của người khác. Own physical lịch sử không đổi khi credit bị revoke.
+Chọn placement link → own placements, không gọi receiving Class detail.
+Loading/empty biểu thị chưa có buổi trong scope, không suy ra absent. Refresh
+khi đổi tab hoặc sau known correction; không polling mặc định. 401/403 dừng;
+404 `ATTENDANCE_HISTORY_NOT_FOUND` cho class không tồn tại/không own,
+không tiết lộ lớp người khác; 400 path sai/422 query sai. GET lặp không ghi DB.
+
+## 16. GET `/api/v1/me/classes/:classId/attendance-summary` — implemented4.4c
+
+Gọi cùng tab Điểm danh với cùng Class/range của báo cáo, độc lập history page.
+Ownership/metadata-only giống API15. Query chỉ optional from/to như mục13;
+không nhận page/pageSize. Ví dụ request suffix `/attendance-summary` không query.
+
+200 ví dụ đầy đủ:
+
+```json
+{"classId":"44444444-4444-4444-8444-444444444444","present":3,"absent":1,"unmarked":1,"excluded":2,"makeupPending":1,"finalizedEligibleCount":4,"rate":75,"asOf":"2026-10-16T03:00:00Z","timeZone":"Asia/Ho_Chi_Minh"}
+```
+
+Buổi chưa chốt/canceled không successor/legacy no-data/chờ makeup không vào
+denominator. Guest COMPLETED hợp lệ thay source đúng một lần; receiving Class
+không có guest count. Resolve chain toàn bộ trước range; range theo source
+hiệu lực, không theo target guest. Own nhiều enrollment histories phải áp dụng
+credit-owner rule cùng management reader; không sum các row history bị trùng.
+Correction/revoke có hiệu lực lần GET sau, không sửa physical rows.
+
+Empty scope trả các count0/rate=null; UI ghi Chưa có buổi đã chốt, không hiển thị
+0% thay null. Loading không dùng dữ liệu của Class cũ, error không dùng summary
+cũ như số liệu mới. Errors/refetch giống API15. Không cache/poll bắt buộc.
+
+## 17. GET `/api/v1/management/classes/:classId/attendance-summary` — implemented4.4c
+
+ADMIN/MANAGER mở báo cáo từ management Class list/detail, lấy classId tại đó.
+Query page/pageSize và optional from/to theo mục13, sort student.displayName ASC,
+enrollmentId ASC. 200 `{classId,items:[{enrollmentId,student:{id,displayName},
+present,absent,unmarked,excluded,makeupPending,finalizedEligibleCount,rate}],
+total,page,pageSize,asOf,timeZone}`. Mỗi item theo enrollment thuộc Class,
+kể cả enrollment CANCELLED có history; không thêm guest incoming như enrollment.
+Các count mỗi item tính toàn scope trước page, dùng cùng credit reader/reducer
+với API16. Class chưa có enrollment/history trả items[]/total0.
+
+Ví dụ: `GET /api/v1/management/classes/44444444-4444-4444-8444-444444444444/attendance-summary?page=1&pageSize=20`.
+Chọn enrollment/Session → roster/audit Staff hiện có để xem evidence, không sửa
+count tại UI. Refresh report sau finalize/correct/recover/cancel/reassign;
+không poll mặc định. Loading giữ filter, không dùng count page làm toàn Class.
+401/403 dừng;404 `CLASS_NOT_FOUND` theo Classes;400/422 sửa path/query.
+GET không ghi DB; không suy từ có report sang quyền admin CRUD.
+
+## 18. GET `/api/v1/management/class-sessions/incomplete` — implemented4.4c
+
+ADMIN/MANAGER mở hàng chờ vận hành. Static route phải được kiểm tra tránh bị
+dynamic `:sessionId` bắt nhầm. Query page/pageSize, classId optional UUIDv4,
+issue optional OVERDUE_NOT_STARTED/STARTED_NOT_FINALIZED và optional from/to
+theo mục13. Không gửi range/issue => **toàn backlog cả hai issue**, không chỉ tuần.
+Ví dụ: `GET /api/v1/management/class-sessions/incomplete?page=1&pageSize=20&issue=OVERDUE_NOT_STARTED`.
+
+Điều kiện: Class OPEN/IN_PROGRESS; Session endsAt<=asOf và status SCHEDULED =>
+OVERDUE_NOT_STARTED, IN_PROGRESS => STARTED_NOT_FINALIZED. Loại DRAFT/terminal
+Class và COMPLETED/CANCELLED Session. Explicit range overlap physical Session;
+filter classId không tồn tại trả empty như filter list, không mở thêm detail.
+Sort endsAt ASC,sessionId ASC;200 `{items:[{session:SessionView,issue,
+deadlineExpired}],total,page,pageSize,asOf,timeZone}`. SessionView dùng safe
+metadata4.1 không meeting URL; mọi item dùng cùng response asOf/timeZone.
+deadlineExpired = editableUntil<=asOf nếu có; null nếu chưa có stored deadline.
+Không suy permission/canStart từ deadlineExpired hoặc endsAt; lấy roster
+permissions hiện hành trước mutation. Không tự ABSENT/start/finalize/expire.
+
+FE chọn Session → GET roster → recovery có evidence4.3/finalize/cancel hoặc
+assignment theo quyền/state hiện hành. Chưa start ngoài ngày học cần Staff
+recovery, không gọi start thường để bỏ qua guard. Sau mutation refetch queue/
+roster/reports. Empty=không có issue trong filter, loading giữ bộ lọc;
+401/403 login/dừng,400/422 sửa ID/range/issue; không polling bắt buộc.
+
+Happy path4.4c: lịch own→history→summary source; Staff summary đối chiếu
+credit→incomplete→roster/recovery/finalize→refetch. Phải kiểm riêng pending CASH,
+guest target ngoài range, chain nhiều tầng, no-data, partial recovery, terminal
+enrollment, query snapshot và role/ownership theo T44C-01–20. Swagger/Postman
+Phase44 có5 GET reads (16–20); source/PG/HTTP evidence tại Progress4.4.
+FE/VPS acceptance ở4.5, không dùng local tests thay deployment.

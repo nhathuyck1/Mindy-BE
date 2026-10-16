@@ -1,4 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  ATTENDANCE_APPLICABILITIES,
+  type AttendanceApplicability,
+  type CreditedStatus,
+} from '../../attendance/domain/attendance-credit.js';
+import { AttendanceStatus } from '../../attendance/enums/attendance-status.enum.js';
 
 import { ClassMentorDto } from '../../classes/dtos/class.dto.js';
 import { ClassStatus } from '../../classes/enums/class-status.enum.js';
@@ -65,16 +71,45 @@ export class ScheduleEventDto {
   readonly unitTitle: string;
   @ApiProperty({ type: String, enum: DeliveryMode })
   readonly deliveryMode: DeliveryMode;
-  @ApiProperty({ type: () => ClassMentorDto })
-  readonly mentor: ClassMentorDto;
+  @ApiProperty({ type: () => ClassMentorDto, nullable: true })
+  readonly mentor: ClassMentorDto | null;
+  @ApiProperty({ enum: ['PRIMARY', 'SUBSTITUTE'] }) readonly assignmentType:
+    | 'PRIMARY'
+    | 'SUBSTITUTE';
+  @ApiProperty({ enum: AttendanceStatus, nullable: true })
+  readonly attendanceStatus: AttendanceStatus | null;
+  @ApiProperty({ enum: ATTENDANCE_APPLICABILITIES })
+  readonly attendanceApplicability: AttendanceApplicability;
+  @ApiProperty({ type: Boolean }) readonly attendanceExcluded: boolean;
+  @ApiProperty({ enum: ['PRESENT', 'ABSENT'], nullable: true })
+  readonly creditedAttendanceStatus: CreditedStatus | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly makeupForSessionId:
+    | string
+    | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly makeupRootSessionId:
+    | string
+    | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly sourceClassId:
+    | string
+    | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly sourceSessionId:
+    | string
+    | null;
+  @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly makeupPlacementId:
+    | string
+    | null;
   @ApiProperty({ type: String, format: 'uuid' })
   readonly enrollmentId: string;
   @ApiProperty({
     type: String,
-    enum: [LearningAccessMode.FULL, LearningAccessMode.CASH_PREVIEW],
-    description: 'Which class endpoint to open: detail (FULL) or preview (CASH_PREVIEW)',
+    enum: [
+      LearningAccessMode.FULL,
+      LearningAccessMode.CASH_PREVIEW,
+      LearningAccessMode.SESSION_MAKEUP,
+    ],
+    description: 'Open class detail, CASH preview, or exactly one makeup Session context',
   })
-  readonly accessMode: LearningAccessMode;
+  readonly accessMode: ScheduleEvent['accessMode'];
 
   constructor(event: ScheduleEvent, timeZone: string) {
     this.sessionId = event.sessionId;
@@ -104,7 +139,17 @@ export class ScheduleEventDto {
     this.classUnitId = event.classUnitId;
     this.unitTitle = event.unitTitle;
     this.deliveryMode = event.deliveryMode;
-    this.mentor = new ClassMentorDto(event.mentorId, event.mentorName);
+    this.mentor = event.mentorId ? new ClassMentorDto(event.mentorId, event.mentorName) : null;
+    this.assignmentType = event.assignmentType;
+    this.attendanceStatus = event.attendanceStatus;
+    this.attendanceApplicability = event.attendanceApplicability;
+    this.attendanceExcluded = event.attendanceExcluded;
+    this.creditedAttendanceStatus = event.creditedAttendanceStatus;
+    this.makeupForSessionId = event.makeupForSessionId;
+    this.makeupRootSessionId = event.makeupRootSessionId;
+    this.sourceClassId = event.sourceClassId;
+    this.sourceSessionId = event.sourceSessionId;
+    this.makeupPlacementId = event.makeupPlacementId;
     this.enrollmentId = event.enrollmentId;
     this.accessMode = event.accessMode;
   }

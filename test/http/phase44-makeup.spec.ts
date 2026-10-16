@@ -312,6 +312,26 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
       [targetId],
     );
     const prefix = `/class-sessions/${targetId}`;
+    const timetable = await request(
+      `/me/schedule?from=${encodeURIComponent(new Date(Date.now() - 86400000).toISOString())}&to=${encodeURIComponent(new Date(Date.now() + 86400000).toISOString())}&classId=${targetClassId}`,
+      student,
+    );
+    expect(timetable.status).toBe(200);
+    expect(await timetable.json()).toMatchObject({
+      total: 1,
+      items: [
+        {
+          sessionId: targetId,
+          accessMode: 'SESSION_MAKEUP',
+          sourceClassId: classId,
+          makeupPlacementId: placementId,
+        },
+      ],
+    });
+    expect((await request(`/me/classes/${targetClassId}/attendance`, student)).status).toBe(404);
+    expect(
+      await (await request(`/me/classes/${classId}/attendance-summary`, student)).json(),
+    ).toMatchObject({ makeupPending: 1, finalizedEligibleCount: 0, rate: null });
     const opened = await request(
       `${prefix}/start`,
       targetMentor,
@@ -348,6 +368,19 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
       randomUUID(),
     );
     expect(finalized.status).toBe(200);
+    expect(
+      await (await request(`/me/classes/${classId}/attendance-summary`, student)).json(),
+    ).toMatchObject({ present: 1, makeupPending: 0, finalizedEligibleCount: 1, rate: 100 });
+    expect(
+      await (await request(`/management/classes/${classId}/attendance-summary`, manager)).json(),
+    ).toMatchObject({
+      items: expect.arrayContaining([expect.objectContaining({ present: 1, rate: 100 })]),
+    });
+    expect(
+      await (
+        await request(`/management/classes/${targetClassId}/attendance-summary`, manager)
+      ).json(),
+    ).toMatchObject({ total: 0 });
     const own = (await (await request('/me/makeup-placements', student)).json()) as {
       items: { version: number }[];
     };
@@ -376,6 +409,9 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
     );
     expect(cancelled.status).toBe(200);
     expect(await cancelled.json()).toMatchObject({ status: 'CANCELLED', creditStatus: 'REVOKED' });
+    expect(
+      await (await request(`/me/classes/${classId}/attendance-summary`, student)).json(),
+    ).toMatchObject({ present: 0, absent: 0, makeupPending: 1, rate: null });
     expect((await request(`${prefix}/context`, student)).status).toBe(403);
     expect(
       await db.query('SELECT 1 FROM guest_attendance_records WHERE placement_id=$1', [placementId]),

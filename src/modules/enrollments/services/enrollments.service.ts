@@ -30,6 +30,15 @@ export class EnrollmentsService {
     private readonly reservations: ScheduleReservationsService,
   ) {}
 
+  /** Historical metadata ownership; terminal and unpaid registrations do not grant content. */
+  async hasOwnHistory(
+    manager: EntityManager,
+    classId: string,
+    studentId: string,
+  ): Promise<boolean> {
+    return manager.getRepository(EnrollmentEntity).existsBy({ classId, studentId });
+  }
+
   /** Current roster includes pending, active and completed registrations, not cancelled history. */
   async listForClass(
     classId: string,

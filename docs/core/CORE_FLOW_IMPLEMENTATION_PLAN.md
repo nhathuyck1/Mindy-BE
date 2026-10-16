@@ -1,5 +1,22 @@
 # Core flow implementation plan
 
+2026-10-16 implementation:4.4c now has shared set-based credit projection,
+effective-mentor/own-attendance/guest timetable, own history/summary and Staff
+summary/incomplete backlog.20 focused PG/3 built HTTP4.4c/13 timetable regression
+cases pass; final full gates at [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md).
+Swagger/Postman and [implemented contract](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+are synchronized. No new migration/config/dependency/FE/deployment; leave/approved
+intervals and release4.5 remain separate. Planning logs below are historical.
+
+2026-10-16: user confirms4.4b complete. Detailed4.4c planning now lives in
+[Phase4.4 §4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành):
+22 acceptance criteria,20 scenarios,C1–C5 for shared credit, additive timetable,
+own history/summary and management summary/incomplete backlog. All4.4c extensions
+and new routes remain PLANNED; leave/approved intervals are a separate source
+gap. Docs/source review only; historical local gates436/45 were recorded15/10,
+no new runtime/migration/FE/deployment evidence. Server/Postman4.3 completion
+was user-confirmed15/10; older deployment-pending entries are historical.
+
 Current Phase 2 continuation (2026-10-05): standalone VPS webhook verification and
 payOS sample confirmation passed; BE payment is implemented/tested locally, while
 VPS release and real settlement remain pending user execution.

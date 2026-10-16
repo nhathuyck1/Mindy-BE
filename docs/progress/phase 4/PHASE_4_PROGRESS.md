@@ -1,5 +1,29 @@
 # Phase 4 — Progress
 
+## 2026-10-16 — Implementation 4.4c
+
+C1–C4 có source: credit CTE chung/owner student-root, schedule mentor/attendance/
+guest, own history/summary và Staff summary/incomplete toàn backlog.
+20 focused PG/3 compiled HTTP4.4c/13 timetable regression pass; full gates cuối
+**check456/456 tests/45 suites,HTTP48/48 tests/8 suites,0 skip;lint/type-check/build pass**
+ở [Progress4.4](PHASE_4_4_PROGRESS.md). [API mục13–18](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+đã implemented/Swagger/Postman cùng revision. GAP41-01/GAP42-05 đóng phần local
+Student projection. Không migration/schema/env/FE/payment thật/deploy mới;
+leave/approved intervals và release/browser4.5 còn riêng. Log planning phía
+dưới là lịch sử trước implementation trong cùng ngày.
+
+## 2026-10-16 — 4.4b hoàn tất; planning 4.4c
+
+User xác nhận4.4b đã xong. Đã đối chiếu progress/source và chi tiết hóa
+[plan4.4 mục4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành):
+22 AC/20 scenarios/5 bước C1–C5, shared credit reader/reducer, schedule
+effective mentor/guest, own history/summary, Staff summary/incomplete toàn backlog.
+[Contract dự kiến](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và [progress4.4](PHASE_4_4_PROGRESS.md) cùng revision. Chưa code4.4c; gate436/45
+ở15/10 là evidence lịch sử. Leave/approved intervals còn gap source riêng.
+Chỉ tài liệu/source review, không BE tests/migrations/FE/deploy mới. User xác
+nhận server/Postman4.3 ngày15/10 là evidence riêng, không suy thành deploy4.4b.
+
 ## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
 
 Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
@@ -82,14 +106,14 @@ bên dưới là lịch sử. Lượt tách plan không chạy lại BE gates ho
 | Hạng mục | Trạng thái |
 |---|---|
 | 4.1 Mentor availability/substitution | Current local gates pass; GAP41-04–06 đóng; GAP41-01–03/07 dependencies/release mở |
-| 4.2 Session lifecycle/attendance roster | Current calendar deadline/local gates pass; GAP42-07–09 đóng; GAP42-01–03 chuyển sang4.3 implementation; GAP42-04–06/10 mở |
-| 4.3 Correction/audit/evidence recovery/history | Implemented correction/audit/evidence recovery; focused PG/migration/HTTP pass; full gates xem Progress4.3 |
-| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Chưa implementation |
-| 4.4b Student conflicts/học bù lớp khác/guest attendance | Chưa implementation |
-| 4.4c Student projections/summary/backlog | Chưa implementation |
+| 4.2 Session lifecycle/attendance roster | Core/correction/cancel/guest/Student có source/local gates; Student GAP42-05 đóng local,release GAP42-10 còn mở |
+| 4.3 Correction/audit/evidence recovery/history | Implemented/local gates; server/Postman hoàn tất theo user15/10, xem Progress4.3 |
+| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Session operations/replacement/cancel có source/local gates; leave/approved intervals còn thiếu |
+| 4.4b Student conflicts/học bù lớp khác/guest attendance | Hoàn tất theo user16/10; local gates15/10 tại Progress4.4; không tự suy deploy |
+| 4.4c Student projections/summary/backlog | CLOSED LOCAL16/10; check456/456,HTTP48/48,0 skip; full evidence tại Progress4.4 |
 | 4.5 Integration/release | Chưa implementation |
-| Migration local / database tests / pnpm check / HTTP gate | 4.3:check397/397,HTTP39/39,0 skip; migration mới chỉ test DB |
-| Staging/VPS / browser smoke | Chưa deploy/nghiệm thu |
+| Migration local / database tests / pnpm check / HTTP gate | Latest4.4c16/10:check456/456,HTTP48/48,0 skip; không migration4.4c mới |
+| Staging/VPS / browser smoke | Server/Postman4.3 xong theo user15/10; chưa có evidence deploy4.4/FE browser4.5 |
 
 2026-10-13: chỉ thay tài liệu; kiểm diff/relative links/coverage endpoint và
 đối chiếu contract với source baseline. Không coi test lịch/payment cũ là test

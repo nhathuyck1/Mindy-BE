@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager, type SelectQueryBuilder } from 'typeorm';
-
+import { inReadSnapshot } from '../../../common/database/read-snapshot.js';
 import { CourseEntity } from '../../catalog/entities/course.entity.js';
 import { ClassEntity } from '../../classes/entities/class.entity.js';
 import type { ClassStatus } from '../../classes/enums/class-status.enum.js';
@@ -18,7 +18,6 @@ import { UserEntity } from '../../users/user.entity.js';
 import { evaluateLearningAccess, type LearningAccess } from '../domain/learning-access.js';
 import type { MyClassPageOptionsDto } from '../dtos/my-class-page-options.dto.js';
 import { MyClassView } from '../enums/my-class-view.enum.js';
-import { inReadSnapshot } from './read-snapshot.js';
 
 export interface MyClassOrderSummary {
   readonly orderId: string;

@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Mindy Phase 4.4 - Session Operations and Cross-class Makeup",
+    "name": "Mindy Phase 4.4 - Session Operations, Makeup and Attendance Reports",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Initial 4.4a slice only. Requires migration1792022400000. Login using existing auth collection/cookie jar as ACTIVE ADMIN/MANAGER. Leave/approval/guest/Student summaries are pending. Read Class detail; set sessionId,classUnitId,sessionVersion. Each new mutation intent needs a UUIDv4 idempotencyKey. Retries KEEP original body/version/key. Mutations store nextSessionVersion; copy it only for the next intent and use a new key. Source must be latest cancelled leaf for makeup; class OPEN/IN_PROGRESS; same Unit/duration/future. Makeup extends endDate atomically. Default dates are examples: choose valid future dates within your class period. No deployment is implied. 4.4b requires migration1792022400001 and attendance prerequisites. Staff queue -> candidates -> content confirmation -> placement. Guest access is session-only; target mentor starts/marks/finalizes. Leave/approved intervals and Student schedule/summary remain pending. Never run the collection blindly: switch actor cookies and refetch versions for each next intent."
+    "description": "4.4a Session operations, 4.4b placements/guest and 4.4c timetable/history/reports are implemented locally. Requires compiled migrations through1792022400001 and all attendance prerequisites. Leave approval/approved intervals remain a separate source gap. Use the existing login cookie jar; switch ACTIVE ADMIN/MANAGER, STUDENT and assigned target MENTOR cookies explicitly. Mutations require current versions and a UUIDv4 Idempotency-Key: retry identical intent with the same key/body; use a new key for new intent. Do not run the entire mutation collection blindly. 4.4c reads never mutate; Student history/summary are own metadata only, including terminal enrollments. Schedule requires paired from/to<=31 days; report optional paired ranges<=93 days, omitted report range is full history/backlog. Guest context is session-only, no receiving Class/material/CASH entitlement. Source credit counts once, nullable rate means no finalized eligible obligations. No deployment or live payment evidence is implied."
   },
   "variable": [
     {
@@ -108,6 +108,16 @@
     {
       "key": "nextPlacementVersion",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheduleFrom",
+      "value": "2026-10-31T17:00:00Z",
+      "type": "string"
+    },
+    {
+      "key": "scheduleTo",
+      "value": "2026-11-07T17:00:00Z",
       "type": "string"
     }
   ],
@@ -581,6 +591,126 @@
               "script": {
                 "type": "text/javascript",
                 "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4c - Switch to Student cookies: schedule and own attendance",
+      "item": [
+        {
+          "name": "16 - Student schedule with effective mentor and own makeup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/schedule?from={{scheduleFrom}}&to={{scheduleTo}}&page=1&pageSize=100&includeCancelled=true",
+            "description": "STUDENT. Set paired range<=31 days with timezone. FULL opens Class detail, CASH_PREVIEW opens preview, SESSION_MAKEUP opens exact Session context. Optional physical classId can select a guest-only receiving Class. No meeting URLs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 - Student own Class physical attendance history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/classes/{{classId}}/attendance?page=1&pageSize=20",
+            "description": "STUDENT. classId is own SOURCE Class, including terminal enrollment. Physical source rows and ancestry are retained; credited result is separate. Guest-only receiving Class is404. No meeting/material/contact/payment data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 - Student own Class finalized attendance summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/classes/{{classId}}/attendance-summary",
+            "description": "STUDENT. Full source history by default. Optional paired from/to<=93 days filters effective source obligation after resolving replacement chain. Do not sum physical history pages. Pending/canceled/no-data do not enter denominator."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Source credit invariant',()=>{pm.expect(body.finalizedEligibleCount).to.eql(body.present+body.absent);if(body.finalizedEligibleCount===0)pm.expect(body.rate).to.eql(null);else pm.expect(body.rate).to.be.within(0,100);});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4c - Switch to Staff cookies: summaries and whole backlog",
+      "item": [
+        {
+          "name": "19 - Staff Class per-enrollment attendance summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/classes/{{classId}}/attendance-summary?page=1&pageSize=20",
+            "description": "ACTIVE ADMIN/MANAGER. Same credit formula as Student. Includes historical canceled enrollment; one credit owner per student/root. Incoming guests do not add receiving enrollment totals."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20 - Staff incomplete Session whole backlog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/class-sessions/incomplete?page=1&pageSize=20",
+            "description": "ACTIVE ADMIN/MANAGER. No implicit weekly window. Optional classId, issue OVERDUE_NOT_STARTED/STARTED_NOT_FINALIZED, or paired from/to<=93 days. Only overdue scheduled/in-progress Sessions of open/in-progress Classes. deadlineExpired can be null, is not a mutation permission. Open roster and check current permissions before recovery/finalize/cancel; refetch after writes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
               }
             }
           ]

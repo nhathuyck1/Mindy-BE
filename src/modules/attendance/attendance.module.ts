@@ -8,6 +8,10 @@ import { ScheduleReservationsModule } from '../schedule-reservations/schedule-re
 import { UsersModule } from '../users/users.module.js';
 import { AttendanceController } from './controllers/attendance.controller.js';
 import { AttendanceManagementController } from './controllers/attendance-management.controller.js';
+import {
+  ManagementAttendanceReportsController,
+  StudentAttendanceReportsController,
+} from './controllers/attendance-reports.controller.js';
 import { MakeupManagementController } from './controllers/makeup-management.controller.js';
 import { StudentMakeupController } from './controllers/student-makeup.controller.js';
 import { AttendanceRecordEntity } from './entities/attendance-record.entity.js';
@@ -15,6 +19,8 @@ import { AttendanceRecoveryAuditEntity } from './entities/attendance-recovery-au
 import { AttendanceRecoveryAuditItemEntity } from './entities/attendance-recovery-audit-item.entity.js';
 import { AttendanceService } from './services/attendance.service.js';
 import { AttendanceAuditService } from './services/attendance-audit.service.js';
+import { AttendanceProjectionService } from './services/attendance-projection.service.js';
+import { AttendanceReportsService } from './services/attendance-reports.service.js';
 import { GuestAttendanceService } from './services/guest-attendance.service.js';
 import { MakeupPlacementService } from './services/makeup-placement.service.js';
 
@@ -37,13 +43,17 @@ import { MakeupPlacementService } from './services/makeup-placement.service.js';
     AttendanceManagementController,
     MakeupManagementController,
     StudentMakeupController,
+    StudentAttendanceReportsController,
+    ManagementAttendanceReportsController,
   ],
   providers: [
     AttendanceService,
     AttendanceAuditService,
     MakeupPlacementService,
     GuestAttendanceService,
+    AttendanceProjectionService,
+    AttendanceReportsService,
   ],
-  exports: [AttendanceService],
+  exports: [AttendanceService, AttendanceProjectionService],
 })
 export class AttendanceModule {}

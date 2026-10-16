@@ -1,5 +1,17 @@
 # Tổng hợp công việc và việc để làm sau — 15/10/2026
 
+> Cập nhật liên quan16/10/2026: user xác nhận4.4b đã xong. Session operations/
+> cancel/replacement và guest placements/attendance đã có source;4.4c đang
+> [planning22 AC/20 scenarios/C1–C5](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành).
+> Workflow leave/approved intervals vẫn gap source riêng. Bảng và checkbox bên
+> dưới là snapshot15/10, không còn dùng để báo4.4b chưa bắt đầu. Lượt này không
+> chỉnh Google Sheet, phân công người làm hay tự gán evidence deploy4.4b.
+
+> Implementation tiếp16/10:4.4c schedule/history/summary/backlog đã có source,
+> focused PG20/HTTP3 và regression lịch13 pass; full gates tại
+> [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md). Snapshot task15/10 bên dưới
+> không đại diện current implementation. Không cập nhật Google Sheet/FE/deploy.
+
 Đã đối chiếu mã nguồn, tác giả commit, lịch sử gộp nhánh và tài liệu tiến độ của BE/FE sau `git fetch --all --prune`.
 
 ## Người thực hiện

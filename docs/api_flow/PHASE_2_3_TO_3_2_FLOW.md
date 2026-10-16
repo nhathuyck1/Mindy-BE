@@ -1,5 +1,22 @@
 # Flow Phase 2.3 → 3.1 → 3.2
 
+2026-10-16 implementation4.4c: lịch2.3 giữ range/access/envelope, thêm effective
+mentor nullable, own physical/credited attendance và SESSION_MAKEUP union trước
+page. Own terminal history/summary không mở lại nội dung lớp; guest không cấp
+materials/CASH lớp nhận. Shared SQL credit/source owner dùng cả Student/Staff.
+[API implemented4.4c](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md) ghi local evidence;
+planning note bên dưới là trước implementation. Không sửa FE/deploy/Phase3 access.
+
+2026-10-16 — Quan hệ mới với Phase4:4.4b hoàn tất theo user; lịch2.3 vẫn là
+baseline current entitlement/CASH preview. Extension mentor/attendance/guest
+và own history/summary **đang planning4.4c**, xem
+[flow4.4](PHASE_4_4_FLOW.md) / [API dự kiến mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).
+Giữ range31 ngày/envelope2.3, không mở lại materials khi chỉ đọc historical
+attendance. Guest chỉ đúng Session context, không nhận quyền tài liệu/CASH
+của lớp nhận. Lượt này chỉ tài liệu, không API runtime/FE/deploy mới. Baseline
+và log ngày cũ bên dưới không đại diện trạng thái triển khai4.4 hiện hành.
+
 Đối chiếu source và progress; cập nhật plan/baseline ngày 2026-10-13.
 “Đã code” bên dưới chỉ nói về repo; không khẳng định đã deploy hoặc bật trên VPS.
 

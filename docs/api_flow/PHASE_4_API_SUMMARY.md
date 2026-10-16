@@ -1,5 +1,30 @@
 # Phase 4 — Tổng hợp API và flow liên kết
 
+## 2026-10-16 — Implementation4.4c
+
+Schedule extension và4 GET mới đã có source/DTO/Swagger/Postman,20 focused PG
+và3 compiled HTTP4.4c pass; guest HTTP4.4b thêm source/receiving summary assertions.
+Contract hiện hành tại [API4.4 mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung),
+full gates tại Progress4.4. Chưa deploy/FE/browser4.5; chỉ leave/approved
+intervals giữ source gap riêng. Ghi chú planning/baseline dưới đây là lịch sử.
+
+| Method | Route mới4.4c | Actor | Mục đích |
+|---|---|---|---|
+| GET | `/api/v1/me/classes/:classId/attendance` | STUDENT own | Physical history/ancestry/source credit link, terminal metadata |
+| GET | `/api/v1/me/classes/:classId/attendance-summary` | STUDENT own | Credit chung một lần, denominator/rate nullable, optional range93 ngày |
+| GET | `/api/v1/management/classes/:classId/attendance-summary` | ADMIN/MANAGER | Paginated enrollment history, cùng credit policy |
+| GET | `/api/v1/management/class-sessions/incomplete` | ADMIN/MANAGER | Hai overdue issues, toàn backlog mặc định, deadlineExpired nullable |
+
+## 2026-10-16 — Trạng thái hiện hành4.4b và plan4.4c
+
+User xác nhận4.4b hoàn tất. Lịch Student hiện chỉ có baseline2.3; projection
+mentor/attendance/guest4.4c và4 GET mới (own history, own summary, management
+summary, incomplete) vẫn PLANNED. Xem [contract dự kiến mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và [plan22 AC/20 scenarios/C1–C5](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành).
+Local436/45 là gates15/10, chưa chạy lại; lượt này chỉ tài liệu/source review.
+Workflow leave/approved intervals vẫn gap riêng; server/Postman4.3 xong theo
+user15/10, không suy deploy4.4/FE acceptance4.5. Log/baseline phía dưới giữ ngày gốc.
+
 ## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
 
 Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
@@ -108,7 +133,7 @@ Các route này tồn tại trước hai commit; không tính vào 17 endpoint m
 | GET | `/api/v1/me/classes` | STUDENT | Lớp của mình; dùng `accessMode` để chọn FULL hoặc CASH_PREVIEW. |
 | GET | `/api/v1/me/classes/:classId` | STUDENT có enrollment ACTIVE | Chi tiết lớp/full access; không dùng để cấp toàn lớp cho substitute. |
 | GET | `/api/v1/me/classes/:classId/preview` | STUDENT sở hữu CASH pending hợp lệ | Preview lịch/title/phòng; chưa có full access hoặc attendance chính thức. |
-| GET | `/api/v1/me/schedule` | STUDENT | Lịch học Phase 2.3 đã có; `from`/`to` bắt buộc, range tối đa 31 ngày. Chưa có projection attendance hoặc effective mentor theo buổi của Phase 4.4c. |
+| GET | `/api/v1/me/schedule` | STUDENT | Range31 ngày/envelope2.3 giữ nguyên;4.4c thêm effective mentor nullable, own physical/credited attendance và SESSION_MAKEUP guest; union/dedup trước count/page. |
 
 ## 3. Quy tắc request và dữ liệu nối API
 
@@ -239,7 +264,9 @@ Sau khi mọi buổi được giải quyết, POST `/admin/classes/:classId/comp
 
 GET `/me/classes` → đọc `accessMode` → FULL gọi `/me/classes/:classId`, CASH_PREVIEW gọi `/me/classes/:classId/preview`; GET `/me/schedule` xem lịch. Thanh toán mở quyền theo Phase 2, không dựa vào attendance.
 
-Hiện chưa nối finalize/correction với lịch sử/tỷ lệ chuyên cần trên UI Student qua API mới: phần projection attendance/effective mentor của Student còn Phase 4.4c. Student cũng không gọi context/roster/audits của Staff/Mentor.
+API4.4c đã nối finalize/correction/guest credit vào own history/summary/schedule.
+UI Student/FE acceptance còn4.5. Student không gọi roster/audits Staff/Mentor;
+guest chỉ own exact Session context, không full receiving Class entitlement.
 
 ## 5. Nhánh lỗi và refetch
 
@@ -263,7 +290,10 @@ UI cần loading/empty/error/success; disable action đang gửi. Có thể poll
 
 ## 6. Phần còn kế hoạch và điều kiện dùng trên môi trường
 
-**Chưa có source endpoint cho:** Student attendance history/summary và projection trên schedule; management incomplete queue; mentor leave request/approve. Student conflict/makeup placement/guest roster đã có core4.4b theo contract riêng. Chỉ các route còn thiếu tương ứng là **PLANNED**; xem [contract4.4b](PHASE_4_4_flow-api-breakdown.md). Ba route Session reschedule/cancel/makeup đã có ở slice đầu4.4a ngày15/10, được liệt kê riêng ở đầu file, ngoài 17 API baseline hai commit.
+**Chưa có source endpoint cho:** mentor leave request/approve và approved intervals.
+Student history/summary/schedule projection, management summary/incomplete đã
+implement4.4c; placements/guest4.4b có source. Contract4.4 mục6–18 là hiện hành.
+Ba route Session operations4.4a có từ15/10, ngoài17 API baseline hai commit.
 
 Các migrations Phase 4 có trong commit `246abf4`, cần chạy theo thứ tự sau prerequisites của dự án trước khi bật API trên môi trường:
 

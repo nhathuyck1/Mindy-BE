@@ -1,5 +1,17 @@
 # Phase 4.1 — Progress và đối chiếu plan với code
 
+2026-10-16 implementation4.4c: GAP41-01 đóng local bằng public Attendance
+projection trên timetable, effective Session mentor (terminal legacy nullable),
+current access/CASH masking/guest scope.20 PG/3 HTTP4.4c và13 regression lịch
+pass; full gates tại [Progress4.4](PHASE_4_4_PROGRESS.md). Leave-aware availability
+và release/browser dependencies vẫn riêng. Ghi chú planning bên dưới là lịch sử.
+
+2026-10-16: GAP41-01 Student effective mentor đã có kế hoạch chi tiết tại
+[plan4.4 mục4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành),
+AC44C-01–07/C2; vẫn OPEN tới khi implementation/tests pass. User xác nhận4.4b
+hoàn tất; approved leave provider vẫn gap source riêng. Lượt này chỉ planning,
+không runtime4.1 mới; evidence/log dưới đây giữ ngày gốc.
+
 Cập nhật **2026-10-13**. **Core BE và coverage T41-10–12 đã sửa/kiểm local;
 dependencies Student/Materials/leave và release còn mở.**
 Lượt planning ban đầu chỉ Markdown; evidence sửa code và tests mới tại mục8.
@@ -54,7 +66,7 @@ cho Phase4. Không suy ra production đang có các API mới.
 
 | ID | Phát hiện và bằng chứng | Việc phải làm / slice | Trạng thái |
 |---|---|---|---|
-| GAP41-01 | MyScheduleService select/join `class.mentorId`; chưa dùng Session override/teaching snapshot | 4.4c thêm mentor hiệu lực và ownership-safe Student projection; giữ CASH_PREVIEW | Chưa implementation tích hợp; yêu cầu hiển thị mentor Student còn mở |
+| GAP41-01 | MyScheduleService compose public AttendanceProjectionService, Session effective mentor | 4.4c giữ CASH_PREVIEW/guest scope, legacy nullable | CLOSED LOCAL16/10; PG/HTTP/regression tại Progress4.4; FE/browser4.5 riêng |
 | GAP41-02 | Context4.1 chỉ room/meeting/session; không material context; policy authoring giữ Class baseline | Phối hợp Phase3 public read provider cho substitute, scoped đúng buổi | Chưa nghiệm thu material handoff |
 | GAP41-03 | Candidates/conflict checker chưa có approved leave provider | 4.4a tích hợp vào cả read và mọi writer; keep availabilityBasis đúng trước đó | Dependency planned |
 | GAP41-04 | Trước review thiếu mixed-writer races | Thêm4 PostgreSQL assignment vs add/bulk/open/Class assignment races, assert one commit/409/rollback | Đã đóng local T41-10 |

@@ -1,5 +1,20 @@
 # Phase 4 — Attendance, nghỉ dạy, học bù và mentor dạy thay
 
+**Implementation2026-10-16:**4.4c schedule/effective mentor/attendance/guest,
+own history/summary, Staff summary/incomplete đã có. Shared credit SQL policy
+count một lần source root/student owner;20 focused PG/3 compiled HTTP4.4c và13
+regression lịch pass. [Progress4.4](../../progress/phase%204/PHASE_4_4_PROGRESS.md)
+ghi full gates; [contract implemented](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+cùng Swagger/Postman. Không schema/env/FE/deploy mới; leave và4.5 còn riêng.
+
+**2026-10-16:**4.4b hoàn tất theo user. Đã chi tiết hóa
+[plan4.4 mục4](PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+cho4.4c:22 AC/20 scenarios/C1–C5, shared credit, schedule mentor/guest,
+own history/summary và management summary/incomplete toàn backlog.
+[Contract4.4c dự kiến](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+chưa implementation; leave/approved intervals giữ gap source riêng. Chỉ planning,
+không code/tests/migrations/deploy mới; gates436/45 là evidence15/10.
+
 **Cập nhật2026-10-15:** bắt đầu4.4a bằng Session management schedule/cancel/
 makeups và Class cancellation batch. [Progress4.4](../../progress/phase%204/PHASE_4_4_PROGRESS.md)
 core4.4b có source/local checks; leave approval/approved intervals/4.4c còn pending.

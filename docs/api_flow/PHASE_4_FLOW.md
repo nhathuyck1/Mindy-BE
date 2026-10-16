@@ -1,5 +1,27 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+## 2026-10-16 — Implementation4.4c
+
+Đã có lịch Student mentor thực tế/own attendance/guest → own history/summary và
+Staff summary/incomplete toàn backlog, dùng chung SQL credit policy/root/owner.
+Physical history giữ nguyên, pending/no-data/canceled không vào denominator;
+own terminal metadata không mở lại content. [Flow4.4](PHASE_4_4_FLOW.md) /
+[API implemented](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và Swagger/Postman đồng bộ.20 focused PG/3 compiled HTTP4.4c/13 regression lịch
+pass; full gates cuối ở Progress4.4. Không migration/FE/deploy mới; leave và4.5
+còn riêng. Log planning bên dưới là trước implementation trong cùng ngày.
+
+## 2026-10-16 — 4.4b hoàn tất; planning Student/operations4.4c
+
+User xác nhận4.4b đã xong. Đã đối chiếu progress/source, lưu22 AC/20 scenarios/
+5 bước C1–C5 tại [plan4.4 mục4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành).
+[Flow4.4](PHASE_4_4_FLOW.md) và [API4.4 mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+mô tả schedule additive → own history/summary → Staff summary/incomplete toàn
+backlog, cùng credit formula/source root. Chưa code/test4.4c; local gates436/45
+là evidence15/10. Leave/approved intervals còn gap source riêng. Chỉ tài liệu,
+không source/FE/migrations/deploy; server/Postman4.3 đã xong theo user15/10,
+không suy thành deployment4.4 hoặc browser4.5. Các log dưới giữ ngày gốc.
+
 ## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
 
 Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,

@@ -59,6 +59,44 @@ export class TeachingReadService {
     return this.config.getOrThrow<string>('APP_TIME_ZONE');
   }
 
+  /** Read participant for the operations backlog; no implicit calendar window or writer locks. */
+  async incompleteSessions(
+    m: EntityManager,
+    query: {
+      page: number;
+      pageSize: number;
+      from?: Date;
+      to?: Date;
+      classId?: string;
+      issue?: 'OVERDUE_NOT_STARTED' | 'STARTED_NOT_FINALIZED';
+    },
+    now: Date,
+  ): Promise<{ items: TeachingSessionDto[]; total: number }> {
+    const q = this.sessionQuery(m)
+      .where('c.status IN (:...classes)', { classes: [ClassStatus.OPEN, ClassStatus.IN_PROGRESS] })
+      .andWhere('s.status IN (:...states)', {
+        states:
+          query.issue === undefined
+            ? [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS]
+            : [
+                query.issue === 'OVERDUE_NOT_STARTED'
+                  ? SessionStatus.SCHEDULED
+                  : SessionStatus.IN_PROGRESS,
+              ],
+      })
+      .andWhere('s.endsAt <= :now', { now });
+    if (query.classId !== undefined) q.andWhere('c.id=:classId', { classId: query.classId });
+    if (query.from !== undefined)
+      q.andWhere('s.startsAt<:to AND s.endsAt>:from', { from: query.from, to: query.to });
+    const [sessions, total] = await q
+      .orderBy('s.endsAt', 'ASC')
+      .addOrderBy('s.id', 'ASC')
+      .skip((query.page - 1) * query.pageSize)
+      .take(query.pageSize)
+      .getManyAndCount();
+    return { items: await this.sessionViews(m, sessions, now), total };
+  }
+
   async listClasses(options: ManagementClassesQueryDto): Promise<TeachingClassPageDto> {
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const q = m

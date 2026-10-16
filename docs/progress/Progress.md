@@ -1,5 +1,37 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-16 — Hoàn tất backend4.4c và full local gates
+
+Readiness/handoff: có thể deploy4.4c để nghiệm thu server trước4.5; cần commit/
+push đủ file mới và schema4.4b đã áp dụng.4.5 là server integration,FE/browser
+và release/rollback acceptance; chưa deploy hoặc tạo evidence mới trong lượt hỏi đáp.
+
+Schedule thêm effective mentor nullable/own attendance/guest union/dedup;
+own history/summary, Staff per-enrollment summary và incomplete toàn backlog
+đã có source. Shared SQL credit policy tính một lần mỗi student/root, giữ
+physical history/terminal metadata và loại pending/no-data/canceled khỏi rate.
+20/20 focused PG,3/3 compiled HTTP4.4c,13/13 regression lịch pass. **Full pnpm
+check456/456 tests/45 suites,lint/type-check/build;HTTP48/48 tests/8 suites,
+0 skip**. Chi tiết ở [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md).
+[Contract implemented](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và Swagger/Postman có5 GET reads cùng revision. Không migration/env/dependency/
+FE/worker mới; chỉ dùng DB *_test/fake PayOS/local MinIO. Leave/approved
+intervals vẫn gap riêng; release/VPS/browser4.5 chưa nghiệm thu.
+
+## 2026-10-16 — 4.4b đã xong, lập kế hoạch 4.4c
+
+User xác nhận4.4b hoàn tất. Đã rà progress/source, sửa bảng tổng còn ghi4.4b
+chưa triển khai và mở rộng [plan4.4 mục4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+với22 AC/20 scenarios/5 bước: shared credit → lịch → own history/summary →
+management summary/backlog → kiểm thử/bàn giao. [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md)
+và [API dự kiến4.4c](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+đã đồng bộ. Giữ source/guest count một lần, physical-vs-credit và terminal
+ownership rõ; workflow leave/approved intervals vẫn gap riêng. Chưa code4.4c.
+Chỉ Markdown/source review và kiểm tra tài liệu; không BE runtime tests,
+migration/FE/deploy/payment mới. Local gates4.4b436/45 là evidence15/10;
+xác nhận4.4b không tự suy thành VPS/browser evidence. Server/Postman4.3 đã xong
+theo user15/10, không liệt kê lại là việc chưa thực hiện.
+
 ## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
 
 Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,

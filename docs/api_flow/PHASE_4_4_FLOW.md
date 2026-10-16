@@ -1,9 +1,92 @@
 # Phase 4.4 — Flow triển khai
 
-Ngày cập nhật: **2026-10-15**. **IN PROGRESS**, chưa hoàn tất 4.4a–c.
+Ngày cập nhật: **2026-10-16**. **4.4b hoàn tất theo user; 4.4c CLOSED LOCAL/check456/HTTP48**, chưa hoàn tất toàn4.4.
 [Plan](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md) ·
 [API breakdown](PHASE_4_4_flow-api-breakdown.md) ·
 [Progress](../progress/phase%204/PHASE_4_4_PROGRESS.md) · [Flow tổng](PHASE_4_FLOW.md).
+
+## 2026-10-16 — Implementation4.4c
+
+Handoff16/10: deploy backend4.4c để test server không phải chờ đóng4.5. Schema
+cần đến1792022400001; không env/migration mới.4.5 nghiệm thu flow nhiều role trên
+server và FE/browser, health/backup/rollback; leave gap vẫn cần implementation
+riêng. Working tree chưa commit/push đầy đủ; lượt giải thích không deploy/test mới.
+
+Schedule effective mentor/physical attendance/source credit + own guest events,
+own history/summary, management summary và incomplete toàn backlog đã có source.
+AttendanceProjectionService sở hữu scoped SQL read models; shared credit CTE
+resolve leaf/root/owner trước summary range. READ ONLY REPEATABLE READ cho mỗi
+response; StudentLearning compose qua public provider, không tạo vòng module.
+Own historical metadata không cấp lại Class/material/context entitlement.
+
+```mermaid
+flowchart TD
+  A[Start, mark, finalize hoặc correction hiện có] --> B[Physical regular và guest records]
+  B --> C[Shared credit policy: leaf, evidence, pending và owner]
+  C --> D[Student source summary]
+  C --> E[Staff per-enrollment summary]
+  B --> F[Own physical history: ancestry và credit link]
+  C --> G[Current timetable: regular và own guest, dedup trước page]
+  H[Staff incomplete toàn backlog] --> I[GET roster, kiểm quyền hiện hành]
+  I --> A
+  J[Placement cancel hoặc target cancel] --> C
+```
+
+Guest COMPLETED valid snapshot count một lần ở source, không tăng lớp nhận.
+Cancel/reassign/no snapshot giữ pending, không tạo ABSENT; physical correction
+sau cancel không khôi phục credit. Re-enroll chọn một owner student/root theo
+evidence, không cộng đôi. Legacy/null mentor/partial recovery giữ unknown/no-data.
+History theo physical range; summary theo effective source leaf, guest ở ngày
+khác vẫn credit đúng source. Canceled ancestors luôn excluded.
+
+20/20 focused PG,3/3 compiled HTTP4.4c và13/13 regression lịch2.3/time pass;
+guest HTTP4.4b thêm kiểm schedule/source/receiving summary/revoke. Full gates
+**check456/456 tests/45 suites,HTTP48/48 tests/8 suites,0 skip;lint/type-check/build pass**.
+Kết quả cuối tại Progress4.4. Query fixture960 obligations:8 queries
+summary không tăng theo pageSize; EXPLAIN recorded, không migration/index mới.
+Swagger/Postman/contract mục13–18 cùng revision. Không FE/leave/config/dependency/
+worker/payment/VPS changes; release4.5 và baseline metrics/rate-limit/i18n còn riêng.
+
+## 2026-10-16 — Planning4.4c sau xác nhận hoàn tất4.4b
+
+Đã đọc progress và đối chiếu source StudentLearning/Classes/Attendance/guest/
+recovery/Enrollment/payment evidence. User xác nhận4.4b đã xong; giữ gates15/10
+436/45 là evidence lịch sử, chưa có test/deploy4.4c. Các log dưới đây ghi các
+lượt implementation trước. Workflow leave/approved intervals vẫn gap source
+riêng, không ngăn lập read projections từ lịch/placements đã có.
+
+[Plan mục4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+đã có baseline/gaps,22 AC/20 scenarios/5 bước C1–C5. Contract extension schedule
+và4 GET mới ở [API mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung),
+đều PLANNED; không thay contract implemented4.4b ở mục6–12.
+
+```mermaid
+flowchart TD
+  A[Dữ liệu buổi học và điểm danh 4.2-4.4b] --> B[C1 Reader và phép tính credit chung]
+  B --> C[C2 Lịch Student: mentor buổi và guest]
+  B --> D[C3 Own history và summary]
+  B --> E[C4 Staff summary và incomplete backlog]
+  C --> F[C5 PG và compiled HTTP, full gates, tài liệu bàn giao]
+  D --> F
+  E --> F
+  E --> G[Staff mở roster và kiểm quyền hiện hành]
+  G --> H[Recovery, finalize hoặc cancel bằng API đã có]
+  H --> E
+  F --> I[4.5 FE, server và browser acceptance riêng]
+```
+
+Student lịch→FULL detail/CASH preview/SESSION_MAKEUP context đúng một buổi.
+Own history giữ metadata khi enrollment terminal; không mở lại materials/meeting.
+Summary resolve replacement chain và pending conflict trước khi tính denominator;
+guest finalize ghi credit một lần ở source, không tăng tỷ lệ lớp nhận. Phân biệt
+physical result và credited result; legacy/partial recovery không tự ABSENT.
+Incomplete mặc định toàn backlog; endsAt chỉ xác định issue, không tự cấp quyền
+start/finalize. Range/credit-owner re-enroll là thiết kế đề xuất phải khóa ở C1.
+
+Lượt này chỉ planning/Markdown/source review; không source/FE/config/migration/
+Postman requests mới, không BE runtime tests hoặc deployment. Kiểm tra tĩnh
+PASS17 Markdown files/32 links và anchors mới/14 JSON blocks/22 AC/20 scenarios/
+C1–C5/diff check; chi tiết ở Progress4.4, không thay bằng chứng runtime.
 
 ## 1. Phần đã code trong lượt bắt đầu
 
@@ -33,7 +116,7 @@ flowchart TD
   G --> L[Target cancel: NEEDS_REASSIGNMENT và queue OPEN]
   L --> M[Staff cancel placement cũ có reason]
   M --> E
-  K --> N[4.4c: summary source credit một lần, chưa triển khai]
+  K --> N[4.4c: shared source credit, Student và Staff summary]
 ```
 
 Attendance sở hữu placements/guest qua application services và SQL schema có FK/
@@ -54,7 +137,7 @@ audit và version rollback cùng reservation; GET không giữ chỗ.
 Placement không cấp quyền classmates/materials/CASH ở lớp nhận. Target cancel
 không tự ABSENT; source completion chặn unresolved placement. Staff physical
 correction không phục hồi credit của placement hủy. Lịch Student/summary/tỷ lệ
-và leave approval còn thiếu; local/server evidence theo Progress, không suy ra VPS.
+đã có ở4.4c; leave approval còn thiếu. Local/server evidence theo Progress, không suy ra VPS.
 
 ```mermaid
 flowchart TD
@@ -103,8 +186,9 @@ Các rehearsal migration cũ chọn đúng migration cần thử thay vì giả 
 migration mới nhất; riêng rollback 4.1 tháo/reapply migration 4.4 phụ thuộc enum.
 
 **Chưa triển khai:** workflow preview/slot/request/approve/reject/withdraw/expire,
-approved leave provider và tích hợp mọi schedule writer/approval; 4.4c Student
-projections/history/summary/queues/credit. Không có worker/mail/notification mới.
+approved leave provider và tích hợp mọi schedule writer/approval.4.4c Student
+projections/history/summary/queues/credit đã có theo revision16/10 phía trên.
+Không có worker/mail/notification mới.
 Không sửa FE, không migrate dev/VPS, chưa có deployment hoặc nghiệm thu 4.4/4.5.
 
 ### Gate cuối của lượt4.4b

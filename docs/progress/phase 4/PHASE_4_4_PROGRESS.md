@@ -1,8 +1,110 @@
 # Phase 4.4 — Progress
 
-Ngày bắt đầu code: **2026-10-15**. **IN PROGRESS — Session operations đầu4.4a và core4.4b có source; leave/approved intervals và4.4c còn thiếu**.
+Ngày bắt đầu code: **2026-10-15**. Cập nhật **2026-10-16**:
+**4.4b hoàn tất theo xác nhận user; 4.4c hoàn tất backend/local gates — check456/456,HTTP48/48,0 skip**.
 [Plan](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md) ·
 [Flow](../../api_flow/PHASE_4_4_FLOW.md) · [API](../../api_flow/PHASE_4_4_flow-api-breakdown.md).
+
+## 2026-10-16 — Implementation 4.4c theo yêu cầu user
+
+Handoff triển khai16/10:4.4c có thể đưa lên server để nghiệm thu độc lập trước
+khi đóng4.5. Không migration/env mới; server cần schema đến1792022400001 của4.4b.
+Working tree hiện chưa commit/push đầy đủ, gồm các file mới; chưa có deployment
+evidence4.4c.4.5 kiểm integration server/Postman,FE/browser theo role và release/
+backup/rollback. Leave/approved intervals còn thiếu không tự được đóng bởi4.5.
+Lượt giải thích readiness chỉ đọc source/docs và kiểm diff, không chạy lại tests.
+
+- Đã code shared SQL credit policy + typed projection provider; own physical
+  history/summary, Staff Class summary và incomplete toàn backlog; schedule
+  effective mentor nullable/guest union/dedup/page/current access/CASH masking.
+  Physical attendance, source credit và Class/material entitlement tách rõ.
+- Root leaf resolve trước range; guest finalized count một lần về source;
+  OPEN conflict/ASSIGNED/reassignment/no eligible snapshot giữ pending, hủy
+  placement thu hồi credit, correction vật lý không phục hồi credit hủy.
+  Source/receiving Class summaries không dùng physical roster totals để tính rate.
+- C1 chốt owner student/root qua fixture canceled→re-enroll; evidence finalized
+  ưu tiên, tie enrollment.createdAt DESC/id DESC, non-owner không cộng count.
+  CTE là quyết định set-based thay pure JS per-row reducer để aggregate trong PG;
+  shared pure denominator/rate function, chi tiết Plan4.4 mục4.7.
+- Current role/status kiểm trong snapshot; history cho own terminal enrollment,
+  không nhận studentId, không URL/materials/contact/payment/evidenceNote.
+  GET private,no-store + READ ONLY REPEATABLE READ; query helper chuyển common.
+  Không migration/env/dependency/worker, không sửa FE hoặc leave workflow còn thiếu.
+- Postman Phase44 thêm5 GET reads (16–20), variables range và20 scripts. Cookie
+  actor/versions vẫn phải chọn theo flow; GET không có side effect. Swagger DTO
+  enum/nullability cho mentor/rate/deadline và SESSION_MAKEUP đã có compiled tests.
+
+| Gate 4.4c | Evidence local hiện hành |
+|---|---|
+| Focused PG projection/report | **20/20 pass,0 skip**; root/credit/own/guest/terminal/re-enroll/no-data/late CASH/backlog/snapshot |
+| Focused compiled HTTP4.4c | **3/3 pass,0 skip**; real login/cookies/roles/DTO/Swagger/own history/summary/CASH/terminal |
+| Regression timetable2.3 + session time updates | **13/13 pass** |
+| Query evidence |3 Classes/24 enrollments/120 Sessions/960 obligations;8 queries per Class summary, pageSize1/100 bằng nhau; EXPLAIN10.371ms ở full gate cuối,không là production SLO |
+| Full pnpm check | **PASS456/456 tests/45 suites,0 skip; lint/type-check + production build**; lượt cuối gồm assertions hai physical results/re-enroll,PayOS range và exact deadline |
+| Full pnpm test:http | **PASS48/48 tests/8 suites,0 skip**; compiled Nest/cookies/PG/private MinIO/fake PayOS, gồm guest source/receiving/revoke assertions |
+| Docs/Postman/diff | **PASS17 Markdown/52 links+anchors mới/14 JSON examples; Postman20 requests/20 parsed scripts/8 JSON bodies; diff check** |
+
+| AC coverage4.4c | Source / evidence thực tế |
+|---|---|
+| AC01–04 | AttendanceProjection timetable + MySchedule DTO; PG scheduled/unmarked/physical/finalized,override/legacy,CASH/PayOS masking; regression2.3/time và HTTP4.4c journey |
+| AC05–09 | SQL regular/guest union+dedup,Class access provider,history ownership/mapping; PG guest-only/filter/page/revoke/terminal,HTTP44b guest history404/source-safe metadata |
+| AC10–12 | Shared credit CTE/attendanceSummary; PG rate33.33/zero,null,chain resolve-before-range,history page independent; Student/management HTTP parity |
+| AC13–16 | CTE placement/conflict/guest/physical precedence; PG pending/cancel/reassign/no-snapshot,correction,revoke,partial legacy,actual late CASH admission; HTTP44b guest finalize/revoke |
+| AC17–18 | student/root rank and SQL aggregate/page; PG re-enroll including two contradictory physical results,one credit owner; Class fixture960 obligations/8 queries/pageSize invariant |
+| AC19–21 | TeachingRead incomplete + Reports auth/read snapshot; PG whole backlog/end/deadline/null/filter/terminal,actual finalize-vs-GET snapshot,no GET audits; HTTP roles/DTO/private headers/Swagger |
+| AC22 | Focused PG20/HTTP3,full check/HTTP gates và Docs/Postman ở trên; không có VPS/browser acceptance claim |
+
+PostgreSQL localhost5433 dùng dedicated mindy_center*_test; local private/versioned
+MinIO19000 cho regression Phase3. Fake PayOS; không merchant/SMTP/payment thật,
+không migrate dev/VPS. Các lượt đầu focused fail do fixture clock start=end,
+expiry/cash-mentor constraints và constructor/payment DTO assertions đã sửa;
+không sửa lifecycle guards/SQL migrations cũ để ép pass. Các kết quả pass bên trên
+là lượt sau sửa. Leave/approved intervals và release/browser4.5 còn riêng;
+baseline metrics/rate-limit/i18n chưa xây dựng vẫn backlog chung.
+
+**C1–C5 CLOSED LOCAL.** Backend4.4c đủ scope bàn giao, chưa deploy/FE acceptance.
+Runtime rollback app-only vì4.4c không thêm schema. App vẫn cần migrations đến
+1792022400001 của4.4b; không undo schema có guest/attendance history để rollback
+reader. FE cần handle mentor/rate/deadline nullable và SESSION_MAKEUP trước tích hợp.
+
+## 2026-10-16 — Đóng trạng thái 4.4b và planning 4.4c
+
+- User xác nhận trực tiếp **4.4b đã xong**. Source có placements/guest/context/
+  capacity; giữ local evidence15/10 bên dưới (check436/436, HTTP45/45,0 skip)
+  là kết quả lịch sử, không phải chạy lại trong lượt planning này. User không
+  nêu môi trường deploy nên không tự gán xác nhận này thành VPS/browser evidence.
+- Đã đọc progress tổng/Phase4/4.1–4.4, backlog15/10 và đối chiếu source
+  StudentLearning, Classes effective mentor, Attendance/guest/recovery,
+  Enrollment/payment evidence và tests hiện có. Các bảng cũ ghi4.4b chưa
+  implementation đã được cập nhật; log ngày cũ giữ làm lịch sử.
+- Mở rộng [plan mục4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+  thành baseline/gaps, physical-vs-credit/range/root policy, boundary/query,
+  **22 AC,20 test scenarios,5 bước C1–C5**. Lựa chọn normalization chi tiết là
+  thiết kế đề xuất; C1 phải khóa re-enroll credit owner/partial recovery bằng
+  fixtures trước khi code các API phụ thuộc.
+- [API mục13–18](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+  mô tả schedule extension và4 GET mới: own history/summary, management summary,
+  incomplete toàn backlog. Toàn bộ extension/route mới vẫn **PLANNED**.
+- Thứ tự: C1 shared credit reader/reducer → C2 schedule → C3 own history/summary
+  → C4 management/backlog → C5 PG/HTTP/full gates/Swagger/Postman/handoff.
+  GAP41-01/GAP42-05 được gắn vào plan, chưa đóng vì chưa code/test4.4c.
+- Workflow leave/approved intervals chưa thấy trong source vẫn ghi riêng;
+  4.4c đọc dữ liệu đã persist nên có thể tiếp tục theo yêu cầu user. Không
+  tự đổi candidates thành leave-aware hoặc tuyên bố toàn4.4 hoàn tất.
+- Lượt này chỉ source/doc review và kiểm tra tĩnh tài liệu; không sửa source,
+  FE, Postman executable requests, migrations/config/dependencies, không chạy
+  BE runtime tests/DB migrations, không deploy hoặc giao dịch thật.
+- Kiểm chứng tĩnh16/10: **PASS17 Markdown files trong docs,32 liên kết local/
+  anchors mới,14 JSON blocks,đủ22 AC/20 scenarios/C1–C5 và git diff --check**.
+  Không thay source/config/Postman; không có runtime evidence mới cho4.4c.
+
+| Work item4.4c | Trạng thái khi planning (trước implementation) | Evidence cần để đóng |
+|---|---|---|
+| C1 Credit foundation | PLANNED | T44C-07–14, shared reader/reducer, credit-owner/range truth table |
+| C2 Schedule | PLANNED | T44C-01–05, regression2.3, nullable mentor/guest/filter/dedup |
+| C3 Own history/summary | PLANNED | T44C-06–15, ownership terminal/no-data/source credit |
+| C4 Management/backlog | PLANNED | T44C-15–19, all-backlog/queries/snapshot/role |
+| C5 Handoff | PLANNED | T44C-20, full local gates/Swagger/Postman; release4.5 riêng |
 
 ## Tiếp4.4b theo yêu cầu user ngày15/10
 
@@ -111,8 +213,8 @@ business guards để ép test; các gate cuối ở trên đã chạy lại và
    đã có trong4.4b; producer từ leave approval và approved interval checks chưa có.
 3. Core4.4b đã triển khai như trên; approved-leave availability còn phụ thuộc
    provider/workflow4.4a chưa thấy trong source. Không suy ra toàn4.4 đã hoàn tất.
-4. 4.4c own schedule/history/summary, management summary/backlog, common credit
-   formula không đếm đôi replacement/guest. Các API tương ứng vẫn PLANNED.
+4. 4.4c own schedule/history/summary, management summary/backlog và shared credit
+   đã implement16/10; current gates và source mapping ở revision đầu file.
 5. Server/FE/browser acceptance ở4.5; xác nhận server4.3 theo user không phải evidence4.4.
 
 ## Rollout/rollback

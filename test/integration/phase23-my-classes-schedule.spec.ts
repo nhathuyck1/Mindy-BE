@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AttendanceProjectionService } from '../../src/modules/attendance/services/attendance-projection.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
@@ -35,7 +36,7 @@ describe.skipIf(!separateTestUrl('learning'))(
       db = await paymentDatabase('learning');
       f = paymentFixture(db);
       myClasses = new MyClassesService(db);
-      schedule = new MyScheduleService(db, f.config);
+      schedule = new MyScheduleService(db, f.config, new AttendanceProjectionService(), f.users);
     }, 30000);
     afterAll(async () => {
       if (db?.isInitialized) await db.destroy();
