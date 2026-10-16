@@ -34,9 +34,9 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 7. [Phase 3 — File + Materials](./phase%203/PHASE_3_FILES_MATERIALS.md)
 8. [Phase 3.1 — Policy + Contract, D1–D6 đã code và test local](./phase%203/PHASE_3_1_POLICY_CONTRACT.md)
 9. [Phase 3.2 — Upload private và xác minh file, đã chốt local/VPS](./phase%203/PHASE_3_2_SAFE_UPLOAD.md)
-10. [Phase 3.3 — Material management/review và Class Unit release, đã lập plan](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
-11. [Phase 3.4 — Material access/staff preview, plan phối hợp 3.3](./phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md)
-12. [Phase 4 — Attendance, nghỉ dạy, học bù và mentor dạy thay, 4.1–4.2 verified local](./phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
+10. [Phase 3.3 — Material management/review và Class Unit release, Manager/Mentor authoring, review/publication và Class Unit release đã có local](./phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md)
+11. [Phase 3.4 — Student ARTICLE/FILE/VIDEO access và staff preview, implemented local](./phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md)
+12. [Phase 4 — Attendance, nghỉ dạy, học bù và mentor dạy thay, 4.1–4.3 implemented local](./phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md)
 13. [Phase 4.1 — Mentor availability/substitution, plan chi tiết và review code](./phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
 14. [Phase 4.2 — Session lifecycle/attendance, plan chi tiết và review code](./phase%204/PHASE_4_2_SESSION_ATTENDANCE.md)
 15. [Phase 4.3 — Correction, evidence recovery và audit history, implemented local](./phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md)
@@ -79,18 +79,11 @@ Theo dõi [progress 3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md),
 [flow](../api_flow/PHASE_3_3_FLOW.md) và
 [API breakdown dự kiến](../api_flow/PHASE_3_3_flow-api-breakdown.md).
 Mỗi slice có local gate và server acceptance riêng; estimate BE provisional7–10 ngày.
-Student access/binary preview/video playback ở3.4. Authoring/review/release/
-ARTICLE3.3 chỉ planning; ba Student FILE/VIDEO GET và read migration đã có local
-ở3.4. Không có runtime tests hoặc deploy3.3 trong lượt lập plan.
+Student ARTICLE/assets/binary preview/video playback ở3.4. Ngày2026-10-13 đã implement
+Manager typed CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 local;
+migrations additive3.3.1/3.3.3, tests và Swagger/Postman đã có. Release3.3.4 đã implement local; chưa deploy3.3. Ngày2026-10-14 Student ARTICLE/assets và staff preview3.4 đã implement local ([flow3.4](../api_flow/PHASE_3_4_FLOW.md)); chưa deploy/VPS.
 
-Ngày2026-10-13 lập [plan3.4 phối hợp3.3](./phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md):
-3.3.1 chốt typed schema/refs/policy → staff primary preview sau draft persistence,
-Mentor sau context3.3.2; staff preview/assets nghiệm thu cùng review3.3.3.
-Student typed reader/assets code sau contract3.3.1, server journey sau approve/
-release3.3.3/3.3.4. Ba Student FILE/VIDEO GET đã có local verified; ARTICLE/staff
-preview/assets vẫn planned. Một chủ schema/migration, user nhận SHA/migration/
-config/checks/Postman/smoke/rollback khi bên triển khai bàn giao; không đợi3.6
-mới deploy slice. Lượt này chỉ tài liệu BE, không source/FE/migration/runtime tests/deploy.
+Lịch sử điều phối2026-10-13: [plan phối hợp3.3/3.4](./phase%203/PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) phân công schema/consumer, staff preview cùng review và user deploy/nhóm FE tích hợp. Đó là planning trước implementation14/10; GET preview/assets đề xuất đã được thay bởi POST files/access hiện hành.
 
 3.1 policy/contract đã hoàn tất và full local gates pass (171 tests/16 suites,
 HTTP 5/5). 3.2 hoàn tất local: full check 217 tests, focused Files 42,
@@ -98,7 +91,8 @@ HTTP 19 pass; upload policy theo chiều Materials → Files giữ contract/erro
 Theo dõi tại [PHASE_3_2_PROGRESS.md](../progress/phase%203/PHASE_3_2_PROGRESS.md) và
 [runbook](../PHASE_3_2_FILES_RUNBOOK.md). Ngày 2026-10-12 user xác nhận nghiệm thu
 VPS xong và chốt 3.2; ảnh PDF/MP4 READY/private final objects đã ghi trong progress.
-Bước tiếp theo là triển khai 3.3 CRUD/review nội dung theo plan đã có.
+Sau implementation3.3/3.4, các gate tiếp theo là tích hợp nhánh, server/browser
+acceptance và phần3.5/3.6 theo progress; không tạo lại CRUD/review đã có.
 
 Phase 3 đã chốt D1–D6 ngày 2026-10-09: Course Unit 1–N Material, tài liệu chính
 shared giữa các lớp; Manager quản lý/sửa/duyệt, Mentor upload chờ duyệt;
@@ -131,7 +125,8 @@ theo APP_TIME_ZONE (thứ Ba→00:00 thứ Năm). Chưa chốt không kéo
 dài interval chiếm lịch. GET trống lịch hiện tính primary/substitute; nghỉ APPROVED
 chỉ nối vào candidates/checker khi4.4a triển khai,
 PATCH/approval kiểm concurrency; giữ cash Order snapshot và Materials policy.
-Notification/email tự động còn hoãn. Các slice sau4.2 vẫn planned. Xem
+Notification/email tự động còn hoãn. 4.3 correction/recovery/audit đã implement local;
+4.4a/b/c và4.5 vẫn planned. Xem
 [flow](../api_flow/PHASE_4_FLOW.md),
 [API dự kiến](../api_flow/PHASE_4_flow-api-breakdown.md) và
 [progress](../progress/phase%204/PHASE_4_PROGRESS.md). Shared Classes/StudentLearning
@@ -150,6 +145,8 @@ và migration sequence cần phối hợp người làm Phase3 trước merge.
 - Đọc toàn bộ `document/Flow.txt` trước khi chốt rule nghiệp vụ; ghi rõ diễn giải
   triển khai và yêu cầu được hoãn, không bỏ cash preview/mentor confirmation/mail.
 
+
+2026-10-14: Phase3.3.5 local acceptance/handoff đã chuẩn bị; full checks và server evidence theo progress3.3. VPS/sign-off còn pending; không thêm API/schema.
 
 2026-10-13: Phase4.1 đã implement/test local (check310/310, HTTP29/29).
 4.2–4.5 giữ planned; xem Progress và contract4.1. Chưa deploy migration4.1.
@@ -172,3 +169,12 @@ không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postm
 User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
 không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
 không migrate dev/VPS hoặc giao dịch thật. Gate hiện hành xem Progress4.4.
+## Tích hợp hai nhánh — 2026-10-15
+
+Materials3.3/3.4 và dev/Phase4.1–4.3 được hợp nhất trên feat/phase-3-3.
+Planning13/10 và implementation13–14/10 được giữ đúng mốc; các plan GET preview/
+assets13/10 là lịch sử, contract hiện hành POST files/access đã có14/10.
+Hai migration bridge mới xử lý constraint trùng, không sửa migration đã chạy;
+catalog22, clean/upgrades/data/FK/down-up3/3 pass. Full check513/513 (48 suites),
+HTTP60/60 (5 suites), lint/type-check/build pass local. Xem [progress tích hợp](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi các gate server/browser/FE chưa nghiệm thu thành done.

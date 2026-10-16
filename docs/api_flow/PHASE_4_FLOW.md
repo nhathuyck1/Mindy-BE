@@ -308,3 +308,16 @@ Contract planned tại [API breakdown mục 8–12](PHASE_4_flow-api-breakdown.m
 4.4 chưa implementation; lượt này chỉ Markdown/link/diff checks, không chạy
 runtime tests, migration, FE hoặc deploy. Backlog ngày 15/10 ghi nhận server/
 Postman 4.3 đã hoàn tất theo user; các log deployment phía trên là lịch sử.
+## Tích hợp Materials3.3/3.4 — 2026-10-15
+
+ClassesModule giữ teaching/lifecycle/attendance4.1–4.3 cùng context/release3.3;
+không cấp quyền Materials/CASH cho substitute từ teaching assignment. Guard hoàn
+thành Class vẫn đòi Sessions terminal; test release3.3.4 đã cập nhật prerequisite.
+Hai migration compatibility giải quyết unique constraint trùng mà không sửa
+migration lịch sử; source22, clean/upgrades/data/FK/down-up3/3 pass local.
+[Quyết định tích hợp](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+Không đổi contract Phase4, không migrate development/VPS hoặc nghiệm thu FE.
+
+Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
+qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
+đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.

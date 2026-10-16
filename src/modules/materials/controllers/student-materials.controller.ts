@@ -2,9 +2,11 @@ import {
   Controller,
   Get,
   Header,
+  HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -18,11 +20,14 @@ import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import {
+  StudentMaterialDetailDto,
   StudentMaterialDownloadDto,
   StudentMaterialDto,
   StudentMaterialPageDto,
 } from '../dtos/student-material.dto.js';
+import { MaterialOriginGuard } from '../guards/material-origin.guard.js';
 // biome-ignore lint/style/useImportType: Nest DI needs runtime constructor tokens.
 import { StudentMaterialsService } from '../services/student-materials.service.js';
 
@@ -46,7 +51,7 @@ export class StudentMaterialsController {
   @ApiOperation({
     summary: 'List approved, released materials for an ACTIVE student',
     description:
-      'Only visible FILE/VIDEO materials count toward pagination. Locked/future units return an empty page. Sort: sortOrder ASC, id ASC.',
+      'Only visible ARTICLE/FILE/VIDEO materials count toward pagination; items never include ARTICLE HTML. Locked/future units return an empty page. Sort: sortOrder ASC, id ASC.',
   })
   @ApiOkResponse({ type: StudentMaterialPageDto })
   async list(
@@ -70,15 +75,15 @@ export class StudentMaterialsController {
   @ApiOperation({
     summary: 'Read a visible material through the enrolled class',
     description:
-      'Re-checks approval/release/file readiness; hidden or foreign materials return MATERIAL_NOT_FOUND. Does not issue a signed URL.',
+      'Re-checks approval/release/file readiness; hidden or foreign materials return MATERIAL_NOT_FOUND. ARTICLE returns sanitized contentHtml; inline images/attachments are metadata only. Does not issue a signed URL.',
   })
-  @ApiOkResponse({ type: StudentMaterialDto })
+  @ApiOkResponse({ type: StudentMaterialDetailDto })
   async detail(
     @CurrentUser() user: AuthenticatedUser,
     @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
     @Param('materialId', new ParseUUIDPipe({ version: '4' })) materialId: string,
-  ): Promise<StudentMaterialDto> {
-    return new StudentMaterialDto(await this.materials.detail(user, classId, materialId));
+  ): Promise<StudentMaterialDetailDto> {
+    return new StudentMaterialDetailDto(await this.materials.detail(user, classId, materialId));
   }
 
   @Get('materials/:materialId/download')
@@ -86,7 +91,7 @@ export class StudentMaterialsController {
   @ApiOperation({
     summary: 'Authorize and issue a short-lived signed file URL',
     description:
-      'JSON response, no redirect. Signs the verified immutable object version for at most 60 seconds. Re-check access on every refresh; issued URLs may remain usable until expiry.',
+      'Primary FILE/VIDEO only (ARTICLE returns MATERIAL_NOT_FOUND). JSON response, no redirect. Signs the verified immutable object version for at most 60 seconds. Re-check access on every refresh; issued URLs may remain usable until expiry.',
   })
   @ApiOkResponse({ type: StudentMaterialDownloadDto })
   @ApiErrors(HttpStatus.CONFLICT, HttpStatus.SERVICE_UNAVAILABLE)
@@ -96,5 +101,25 @@ export class StudentMaterialsController {
     @Param('materialId', new ParseUUIDPipe({ version: '4' })) materialId: string,
   ): Promise<StudentMaterialDownloadDto> {
     return this.materials.download(user, classId, materialId);
+  }
+
+  @Post('materials/:materialId/files/:fileId/access')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(MaterialOriginGuard)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary: 'Issue a short-lived signed URL for a file referenced by a visible material',
+    description:
+      'fileId must be the primary file, an ARTICLE inline image or an attachment of this material; otherwise MATERIAL_NOT_FOUND. No request body. Attachments are signed with attachment disposition, others inline. Re-checks access after signing.',
+  })
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(HttpStatus.CONFLICT, HttpStatus.SERVICE_UNAVAILABLE)
+  async access(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) materialId: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.access(user, classId, materialId, fileId);
   }
 }

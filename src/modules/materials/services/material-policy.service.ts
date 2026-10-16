@@ -130,7 +130,7 @@ export class MaterialPolicyService {
     classId?: string,
     manager?: EntityManager,
   ): Promise<boolean> {
-    const actor = await this.actor(principal);
+    const actor = await this.actor(principal, manager);
     if (!isMaterialManager(actor) && actor.role !== UserRole.MENTOR) return false;
     const context =
       classId === undefined
@@ -148,7 +148,7 @@ export class MaterialPolicyService {
     now: Date,
     manager?: EntityManager,
   ): Promise<MaterialTransition> {
-    const actor = await this.actor(principal);
+    const actor = await this.actor(principal, manager);
     if (!isMaterialManager(actor) && actor.role !== UserRole.MENTOR) this.deny();
     const courseUnit = await this.courses.getUnitContext(scope.courseUnitId, manager);
     if (courseUnit === null) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
@@ -177,7 +177,7 @@ export class MaterialPolicyService {
     classId?: string,
     manager?: EntityManager,
   ): Promise<MaterialTransition> {
-    const actor = await this.actor(principal);
+    const actor = await this.actor(principal, manager);
     if (!isMaterialManager(actor) && actor.role !== UserRole.MENTOR) this.deny();
     const sessionId =
       command.action === 'EDIT' && command.changes.sessionId !== undefined
@@ -217,11 +217,12 @@ export class MaterialPolicyService {
     }
   }
 
-  private async actor(
+  async actor(
     principal: AuthenticatedUser,
     manager?: EntityManager,
+    lock = false,
   ): Promise<MaterialActor> {
-    const user = await this.users.findActiveByRole(principal.userId, principal.role, manager);
+    const user = await this.users.findActiveByRole(principal.userId, principal.role, manager, lock);
     if (user === null) this.deny();
     return { userId: user.id, role: user.role, active: true };
   }

@@ -6,13 +6,17 @@ import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrivateFileUploads1791504000001 } from '../../src/database/migrations/1791504000001-private-file-uploads.js';
 import { StudentMaterialReads1791763200000 } from '../../src/database/migrations/1791763200000-student-material-reads.js';
+import { TypedManagerMaterials1791849600000 } from '../../src/database/migrations/1791849600000-typed-manager-materials.js';
+import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
+import { ClassUnitReleaseAuditEntity } from '../../src/modules/classes/entities/class-unit-release-audit.entity.js';
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../src/modules/classes/enums/class-unit-status.enum.js';
 import { ClassContentContextService } from '../../src/modules/classes/services/class-content-context.service.js';
+import { ClassUnitReleaseService } from '../../src/modules/classes/services/class-unit-release.service.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
 import { FileMetadataEntity } from '../../src/modules/files/entities/file-metadata.entity.js';
@@ -22,18 +26,26 @@ import { FileProcessingService } from '../../src/modules/files/services/file-pro
 import { FileUploadPolicyService } from '../../src/modules/files/services/file-upload-policy.service.js';
 import { FilesService } from '../../src/modules/files/services/files.service.js';
 import { validateBinary } from '../../src/modules/files/validation/binary-validation.js';
+import { sanitizeArticle } from '../../src/modules/materials/domain/article-sanitizer.js';
 import { MaterialReviewStatus } from '../../src/modules/materials/domain/material-contract.js';
-import { StudentMaterialDto } from '../../src/modules/materials/dtos/student-material.dto.js';
+import {
+  StudentMaterialDetailDto,
+  StudentMaterialDto,
+} from '../../src/modules/materials/dtos/student-material.dto.js';
 import {
   MaterialContentType,
   MaterialEntity,
 } from '../../src/modules/materials/entities/material.entity.js';
+import {
+  MaterialFileReferenceEntity,
+  MaterialReferenceRole,
+} from '../../src/modules/materials/entities/material-file-reference.entity.js';
 import { MaterialPolicyService } from '../../src/modules/materials/services/material-policy.service.js';
 import { StudentMaterialsService } from '../../src/modules/materials/services/student-materials.service.js';
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
-import { fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
+import { binaryFixtures, fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
@@ -49,8 +61,20 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     if (!process.env.TEST_DATABASE_URL)
       throw new Error('Student material tests require dedicated TEST_DATABASE_URL + local MinIO');
     db = await paymentDatabase('student_materials', {
-      entities: [FileObjectEntity, FileMetadataEntity, FileProcessingJobEntity, MaterialEntity],
-      migrations: [PrivateFileUploads1791504000001, StudentMaterialReads1791763200000],
+      entities: [
+        FileObjectEntity,
+        FileMetadataEntity,
+        FileProcessingJobEntity,
+        MaterialEntity,
+        MaterialFileReferenceEntity,
+        ClassUnitReleaseAuditEntity,
+      ],
+      migrations: [
+        PrivateFileUploads1791504000001,
+        StudentMaterialReads1791763200000,
+        TypedManagerMaterials1791849600000,
+        ClassUnitReleaseAudit1791856800000,
+      ],
     });
     // Migration up/down/up is safe only on this isolated empty test database.
     await db.undoLastMigration();
@@ -135,8 +159,84 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
           );
       await db.getRepository(ClassUnitEntity).update(unit.id, { status: ClassUnitStatus.OPEN });
     };
-    return { order, classId, unit, material, principal, activate };
+    return {
+      order,
+      classId,
+      unit,
+      material: { ...material, fileObjectId: intent.fileId },
+      principal,
+      activate,
+    };
   }
+
+  it('release commands independently gate shared Student content without altering material/enrollment/progress', async () => {
+    const s = await setup(2);
+    const actor = { userId: s.order.mentor.id, role: UserRole.MENTOR, sessionId: randomUUID() };
+    const release = new ClassUnitReleaseService(db, fixture.users, new CoursesService(db));
+    const secondClass = s.order.classIds[1];
+    if (!secondClass) throw new Error('Missing second class');
+    const second = await db
+      .getRepository(ClassUnitEntity)
+      .findOneByOrFail({ classId: secondClass, position: 1 });
+    const beforePending = await db.query(
+      'SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id',
+      [s.principal.userId],
+    );
+    await release.update(actor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
+    await expect(reads.detail(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(
+      await db.query('SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id', [
+        s.principal.userId,
+      ]),
+    ).toEqual(beforePending);
+    await s.activate();
+    const materialBefore = await db
+      .getRepository(MaterialEntity)
+      .findOneByOrFail({ id: s.material.id });
+    const enrollmentsBefore = await db.query(
+      'SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id',
+      [s.principal.userId],
+    );
+    const progressBefore = await db.query('SELECT * FROM class_unit_progress ORDER BY id');
+    await release.update(actor, secondClass, second.id, {
+      status: ClassUnitStatus.OPEN,
+      unlockAt: new Date(Date.now() + 60000).toISOString(),
+    });
+    expect((await reads.detail(s.principal, s.classId, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await expect(reads.detail(s.principal, secondClass, s.material.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await release.update(actor, secondClass, second.id, {
+      status: ClassUnitStatus.OPEN,
+      unlockAt: new Date(Date.now() - 1).toISOString(),
+    });
+    expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await release.update(actor, s.classId, s.unit.id, {
+      status: ClassUnitStatus.LOCKED,
+      unlockAt: new Date(Date.now() - 1).toISOString(),
+    });
+    await expect(reads.download(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    expect(await db.getRepository(MaterialEntity).findOneByOrFail({ id: s.material.id })).toEqual(
+      materialBefore,
+    );
+    expect(
+      await db.query('SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id', [
+        s.principal.userId,
+      ]),
+    ).toEqual(enrollmentsBefore);
+    expect(await db.query('SELECT * FROM class_unit_progress ORDER BY id')).toEqual(progressBefore);
+  });
 
   it('filters hidden rows before count/page and maps only student-safe fields', async () => {
     const s = await setup();
@@ -296,23 +396,36 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
         .getRepository(MaterialEntity)
         .update(s.material.id, { availableAt: new Date(Date.now() + 60000) });
     if (gate === 'file-failed')
-      await db
-        .getRepository(FileObjectEntity)
-        .update(s.material.fileObjectId, { status: 'FAILED' });
+      await expect(
+        db.getRepository(FileObjectEntity).update(s.material.fileObjectId, { status: 'FAILED' }),
+      ).rejects.toMatchObject({ code: '23514' });
     if (gate === 'file-deleted')
-      await db
-        .getRepository(FileObjectEntity)
-        .update(s.material.fileObjectId, { deletedAt: new Date() });
+      await expect(
+        db
+          .getRepository(FileObjectEntity)
+          .update(s.material.fileObjectId, { deletedAt: new Date() }),
+      ).rejects.toMatchObject({ code: '23514' });
     if (gate === 'wrong-file-scope') {
       const other = await setup();
-      await db
-        .getRepository(MaterialEntity)
-        .update(s.material.id, { fileObjectId: other.material.fileObjectId });
+      await expect(
+        db
+          .getRepository(MaterialEntity)
+          .update(s.material.id, { fileObjectId: other.material.fileObjectId }),
+      ).rejects.toMatchObject({ code: '23514' });
     }
     if (gate === 'wrong-kind')
-      await db
-        .getRepository(MaterialEntity)
-        .update(s.material.id, { contentType: MaterialContentType.VIDEO });
+      await expect(
+        db
+          .getRepository(MaterialEntity)
+          .update(s.material.id, { contentType: MaterialContentType.VIDEO }),
+      ).rejects.toMatchObject({ code: '23514' });
+    // Typed migration prevents these corrupt states. Unpublish still revokes valid reads.
+    if (['file-failed', 'file-deleted', 'wrong-file-scope', 'wrong-kind'].includes(gate)) {
+      expect((await reads.detail(s.principal, s.classId, s.material.id)).file?.status).toBe(
+        'READY',
+      );
+      await db.getRepository(MaterialEntity).update(s.material.id, { publishedAt: null });
+    }
     expect(
       (await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 })).total,
     ).toBe(0);
@@ -330,7 +443,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     await db
       .getRepository(FileMetadataEntity)
       .update(s.material.fileObjectId, { processingStatus: 'FAILED' });
-    expect((await reads.detail(s.principal, s.classId, s.material.id)).file.status).toBe('READY');
+    expect((await reads.detail(s.principal, s.classId, s.material.id)).file?.status).toBe('READY');
     config.set('MINIO_ENABLED', false);
     try {
       expect(
@@ -405,6 +518,138 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       status: 404,
     });
   });
+
+  async function readyFile(courseUnitId: string, filename: string, mimeType: string, data: Buffer) {
+    const intent = await files.createIntent(manager, {
+      courseUnitId,
+      originalFilename: filename,
+      declaredMimeType: mimeType,
+      declaredSizeBytes: data.length,
+    });
+    await upload(intent.uploadUrl, mimeType, data);
+    await files.complete(manager, intent.fileId);
+    const worker = new FileProcessingService(db, config, remote.storage, {
+      validate: validateBinary,
+    });
+    const claim = await worker.claim();
+    if (!claim) throw new Error('Missing validation claim');
+    await worker.process(claim);
+    expect((await files.detail(manager, intent.fileId)).status).toBe('READY');
+    return intent.fileId;
+  }
+
+  async function article(s: Awaited<ReturnType<typeof setup>>) {
+    const png = (await binaryFixtures()).find((item) => item.filename === 'image.png');
+    if (!png) throw new Error('Missing PNG fixture');
+    const imageId = await readyFile(s.unit.courseUnitId, png.filename, png.mimeType, png.bytes);
+    const approvedAt = new Date(Date.now() - 1000);
+    const saved = await db.getRepository(MaterialEntity).save(
+      db.getRepository(MaterialEntity).create({
+        ...s.material,
+        id: undefined,
+        fileObjectId: null,
+        contentType: MaterialContentType.ARTICLE,
+        contentHtml: sanitizeArticle(`<p>Read</p><img data-file-id="${imageId}" alt="diagram">`)
+          .contentHtml,
+        contentSchemaVersion: 1,
+        title: 'Article lesson',
+        sortOrder: 1,
+        reviewedAt: approvedAt,
+        firstApprovedAt: approvedAt,
+        publishedAt: approvedAt,
+      }),
+    );
+    await db.getRepository(MaterialFileReferenceEntity).insert([
+      { materialId: saved.id, fileId: imageId, role: MaterialReferenceRole.INLINE_IMAGE },
+      {
+        materialId: saved.id,
+        fileId: s.material.fileObjectId,
+        role: MaterialReferenceRole.ATTACHMENT,
+      },
+    ]);
+    return { id: saved.id, imageId, attachmentId: s.material.fileObjectId };
+  }
+
+  it('ARTICLE detail exposes sanitized HTML and signs only its own inline/attachment files', async () => {
+    const s = await setup();
+    await s.activate();
+    const a = await article(s);
+    const page = await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 });
+    expect(page.total).toBe(2);
+    const item = page.items.find((entry) => entry.material.id === a.id);
+    if (!item) throw new Error('Missing article item');
+    const summary = new StudentMaterialDto(item);
+    expect(summary).toMatchObject({ contentType: 'ARTICLE', file: null, attachmentCount: 1 });
+    expect(summary).not.toHaveProperty('contentHtml');
+    const detail = new StudentMaterialDetailDto(await reads.detail(s.principal, s.classId, a.id));
+    expect(detail).toMatchObject({
+      contentSchemaVersion: 1,
+      inlineImages: [{ id: a.imageId, kind: 'IMAGE' }],
+      attachments: [{ id: a.attachmentId }],
+    });
+    expect(detail.contentHtml).toContain(`data-file-id="${a.imageId}"`);
+    expect(detail.contentHtml).not.toContain('src=');
+
+    const inline = await reads.access(s.principal, s.classId, a.id, a.imageId);
+    expect(inline).toMatchObject({ role: 'INLINE_IMAGE', revision: 1 });
+    const image = await fetch(inline.url);
+    expect(image.status).toBe(200);
+    expect(image.headers.get('content-type')).toBe('image/png');
+    expect(image.headers.get('content-disposition')).toMatch(/^inline;/);
+    const attachment = await reads.access(s.principal, s.classId, a.id, a.attachmentId);
+    expect(attachment.role).toBe('ATTACHMENT');
+    expect((await fetch(attachment.url)).headers.get('content-disposition')).toMatch(
+      /^attachment;/,
+    );
+    // The same file is the primary of another visible material, but not of this ARTICLE.
+    await expect(reads.download(s.principal, s.classId, a.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      reads.access(s.principal, s.classId, s.material.id, a.imageId),
+    ).rejects.toMatchObject({ status: 404 });
+    expect((await reads.access(s.principal, s.classId, s.material.id, a.attachmentId)).role).toBe(
+      'PRIMARY',
+    );
+
+    const sign = files.signReadReference.bind(files);
+    const spy = vi.spyOn(files, 'signReadReference').mockImplementation(async (...args) => {
+      const signed = await sign(...args);
+      await db
+        .getRepository(MaterialFileReferenceEntity)
+        .delete({ materialId: a.id, role: MaterialReferenceRole.ATTACHMENT });
+      return signed;
+    });
+    try {
+      await expect(
+        reads.access(s.principal, s.classId, a.id, a.attachmentId),
+      ).rejects.toMatchObject({ status: 404 });
+    } finally {
+      spy.mockRestore();
+    }
+  }, 30000);
+
+  it('hides ARTICLE with a broken reference before total/page and denies its assets', async () => {
+    const s = await setup();
+    await s.activate();
+    const a = await article(s);
+    // DB triggers normally protect referenced files; bypass only in this isolated test DB.
+    await db.query('ALTER TABLE file_objects DISABLE TRIGGER trg_referenced_file');
+    try {
+      await db.query("UPDATE file_objects SET status='FAILED' WHERE id=$1", [a.imageId]);
+    } finally {
+      await db.query('ALTER TABLE file_objects ENABLE TRIGGER trg_referenced_file');
+    }
+    const page = await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 1 });
+    expect(page.total).toBe(1);
+    expect(page.items.map((item) => item.material.id)).toEqual([s.material.id]);
+    await expect(reads.detail(s.principal, s.classId, a.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(reads.access(s.principal, s.classId, a.id, a.attachmentId)).rejects.toMatchObject({
+      status: 404,
+    });
+  }, 30000);
 
   it('enforces revision approval and soft-delete constraints', async () => {
     const s = await setup();

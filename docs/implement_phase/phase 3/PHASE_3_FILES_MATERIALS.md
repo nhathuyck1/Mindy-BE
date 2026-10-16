@@ -1,19 +1,25 @@
 # Phase 3 — File + Materials
 
-Cập nhật: **2026-10-13**. 3.1 D1–D6 đã code policy/contract/providers và role
+Cập nhật: **2026-10-15**. 3.1 D1–D6 đã code policy/contract/providers và role
 MANAGER, kiểm tra local pass; 3.2 hoàn tất local và nghiệm thu VPS theo user.
-Material persistence/review và Student download tiếp tục ở 3.3/3.4.
+3.3 authoring/review/release và 3.4 Student ARTICLE/FILE/VIDEO read/access/staff
+preview đã implement local; VPS/user sign-off và browser/FE integration còn pending.
 Contract chi tiết: [Phase 3.1](./PHASE_3_1_POLICY_CONTRACT.md).
 Plan upload: [Phase 3.2](./PHASE_3_2_SAFE_UPLOAD.md), đã rà soát theo
 baseline 3.1; đã nghiệm thu Files/storage local/VPS, chi tiết trong progress riêng.
-Plan quản lý tiếp theo: [Phase 3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md),
-đã lập kế hoạch Manager CRUD/review, Mentor draft/submit/context và Class Unit
-release; chưa implement. [Flow 3.3](../../api_flow/PHASE_3_3_FLOW.md) và
-[breakdown dự kiến](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Plan quản lý: [Phase 3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md),
+Manager CRUD/review, Mentor draft/submit/context và Class Unit release đã có local;
+3.3.5 đã chuẩn bị acceptance/handoff. [Flow 3.3](../../api_flow/PHASE_3_3_FLOW.md)
+và [API breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md).
+Plan đọc/truy cập: [Phase 3.4](./PHASE_3_4_STUDENT_MATERIAL_ACCESS.md),
+hệ thống hóa typed Student read/file access, staff preview và gate API/storage/
+browser còn chờ; [flow 3.4](../../api_flow/PHASE_3_4_FLOW.md) và
+[API breakdown](../../api_flow/PHASE_3_4_flow-api-breakdown.md).
 Tiến độ: [Phase 3](../../progress/phase%203/PHASE_3_PROGRESS.md),
 [Phase 3.1](../../progress/phase%203/PHASE_3_1_PROGRESS.md),
 [Phase 3.2](../../progress/phase%203/PHASE_3_2_PROGRESS.md),
-[Phase 3.3](../../progress/phase%203/PHASE_3_3_PROGRESS.md).
+[Phase 3.3](../../progress/phase%203/PHASE_3_3_PROGRESS.md),
+[Phase 3.4](../../progress/phase%203/PHASE_3_4_PROGRESS.md).
 
 ## 1. Mục tiêu và phạm vi đã chốt
 
@@ -61,8 +67,9 @@ Nguồn: [Flow.txt](../../../document/Flow.txt),
 
 Code có Catalog/Classes/Enrollments/Commerce/Payments và MaterialsModule export
 policy facade/domain transitions. Files upload/storage/validation đã có ở 3.2;
-Material FILE/VIDEO read persistence và ba Student GET đã có local ở3.4;
-typed authoring/review/release/ARTICLE3.3 và staff preview/assets3.4 còn planned.
+Material typed persistence/authoring/review/release 3.3 và Student read/access/
+staff preview 3.4 đã có local. Chi tiết evidence theo progress từng slice,
+không dùng local pass thay nghiệm thu VPS/browser.
 Class Unit có status/unlockAt, EnrollmentsService có hasActiveAccess() ACTIVE.
 MinIO/Redis env không chứng minh storage/worker hoạt động. CASH preview/confirm và
 mentor roster đã có; evidence roster deploy không chứng minh PayOS tiền thật đã pass.
@@ -157,8 +164,8 @@ Session navigation resolve Course Unit để hiện tài liệu chính, không t
 |---|---|---|
 | 3.1 | D1–D6, Manager role, domain policy, context providers và contract | Hoàn tất local: 171 tests/16 suites + build, HTTP 5/5; upload và review persistence/API chưa triển khai. |
 | [3.2](./PHASE_3_2_SAFE_UPLOAD.md) | Files migration/adapter/private MinIO, intent/complete/detail, validation jobs; plan đã rà soát sau 3.1 pass, giữ policy/errors và chiều Materials → Files | Manager/Mentor đúng scope upload thật → READY/FAILED; overwrite/retry/restart tests. |
-| [3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md) | Đã lập plan: Course Unit Materials, Manager CRUD/review, Mentor context/draft/submit, release API | Chưa implement; READY không bypass review; revision race/assignment/approval/soft-delete/audit tests. |
-| [3.4](PHASE_3_4_MATERIAL_ACCESS_PREVIEW.md) | FILE/VIDEO Student GET đã có; planned staff preview/assets cùng review3.3.3, ARTICLE reader sau typed contract3.3.1 | ACTIVE/release/approval/time và ref membership/revision; staff canPreview riêng; handoff deploy user/contract nhóm FE |
+| [3.3](./PHASE_3_3_MATERIAL_MANAGEMENT.md) | Typed Course Unit Materials, Manager CRUD/review, Mentor context/draft/submit, release API; acceptance/handoff đã chuẩn bị local | Local verified; READY không bypass review; revision race/assignment/approval/soft-delete/audit tests. VPS/user sign-off pending. |
+| [3.4](./PHASE_3_4_STUDENT_MATERIAL_ACCESS.md) | ACTIVE Unit list/detail/download ARTICLE/FILE/VIDEO, scoped assets/staff preview, Swagger/Postman/FE contract đã có local | Pending/locked/draft/rejected/foreign bị chặn; shared đọc theo quyền mỗi lớp; pinned-version/TTL/recheck local verified. VPS/browser CORS/seek/refresh và UI FE pending. |
 | 3.5 | Metadata extraction/retry, cleanup/retention/purge/audit | Metadata fail giữ READY; không purge file có ref hoặc job live. |
 | 3.6 | Full gates, migration/storage runbook, staging + 2.3 integration | Evidence local/staging/VPS/payment live ghi riêng; không skip critical test. |
 

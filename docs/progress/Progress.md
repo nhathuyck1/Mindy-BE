@@ -55,6 +55,101 @@ Local test evidence không đại diện deployment4.4 hoặc thanh toán thật
 Gate cuối lượt: **pnpm check413/413 (41 suites), lint/type-check/build pass;
 pnpm test:http42/42 (6 suites),0 skip**. Chi tiết migration/race/fault assertions
 và phạm vi leave/guest/Student còn mở trong Progress4.4. Migrations chỉ chạy ở DB test.
+- 2026-10-15: Review PR readiness tại feat/phase-3-3 `2e7e876` so với
+  origin/dev `e0c9174`: ahead22/behind0, source checkout sạch trước review.
+  Node22.20.0/pnpm12.6.0: frozen install, pnpm check **513/513 (48 suites)**,
+  HTTP **60/60 (5 suites)**, actionlint và production image build pass.
+  Compose production tách biệt: backup hợp lệ, compiled migrations22/22,
+  postflight chặn pending/catalog rỗng, rerun không pending, API healthy/ready200.
+  GitHub API: chưa có PR/check cho HEAD; dev chưa protected/required checks.
+  Deploy dev e0c9174 đã success trên runner mindycode ở
+  [run38570656351](https://github.com/nhathuyck1/Mindy-BE/actions/runs/38570656351),
+  không phải evidence deploy branch này. Đủ điều kiện mở PR; chờ PR Check xanh,
+  nên bật required checks trước merge. Không đổi runtime/YAML/API, không push,
+  merge hoặc migrate VPS/development. [Chi tiết](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-15: Bổ sung migration gate riêng trong Check YAML cho clean22,
+  Materials16→22 và Phase417→22; thiếu TEST_DATABASE_URL thì fail trước khi test.
+  Deploy tiếp tục backup trước migrate toàn bộ compiled catalog, thêm postflight
+  chặn thay API nếu catalog rỗng hoặc còn pending. Local: actionlint/YAML parse
+  pass, compatibility3/3 pass trên PostgreSQL17 Docker; chạy đúng postflight từ
+  YAML trên DB test xác nhận22/22 và kiểm ca pending bị chặn (exit1).
+  Không đổi migration/API; chưa chạy GitHub Actions hoặc deploy VPS trong lượt này.
+  [Chi tiết](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-15: Tích hợp dev e0c9174 vào feat/phase-3-3 a363012, xử lý14 conflict
+  theo lịch sử planning13/10 → implementation13–14/10 → kế hoạch15/10; giữ
+  Materials3.3/3.4 cùng teaching/attendance4.1–4.3. ClassesModule union providers,
+  giữ actor locks và Class completion guard. Cập nhật fixture release theo Session
+  terminal. Full check đầu510 cases phát hiện1 fixture không còn hợp lệ; sau sửa
+  check510/510 pass, HTTP startup phát hiện unique constraint trùng giữa hai nhánh.
+  Thêm hai migration bridge, giữ nguyên migration đã chạy; clean22/upgrade16→22/
+  17→22/data/FK/down-up3/3 pass local. Full gates cuối: pnpm check513/513 (48 suites), HTTP60/60 (5 suites),
+  lint/type-check/build pass; focused compatibility3/3 sau chỉnh tên DB fixture.
+  Chi tiết ở progress3.3/3.4;
+  không migrate development/VPS, không sửa FE hoặc nghiệm thu server/browser.
+  [Quyết định tích hợp](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-14: Triển khai phần còn lại Phase 3.4 local: Student list/detail ARTICLE
+  (sanitized HTML, inline images, attachments), POST file access theo role
+  PRIMARY/INLINE_IMAGE/ATTACHMENT và staff preview Manager/Mentor theo canPreview;
+  ký version đã verify ngoài transaction, recheck sau ký, attachment disposition.
+  Không migration/env mới. pnpm check 411/411 (35 suites), HTTP 48/48 (2 suites),
+  lint/type-check/build pass trên `_test` DB + MinIO local. Chưa commit/deploy/VPS/
+  browser FE. Chi tiết [progress3.4](phase%203/PHASE_3_4_PROGRESS.md).
+
+- 2026-10-14: Triển khai3.3.5 local acceptance/handoff:4 HTTP cases mới gồm16
+  source migrations/34 Postman routes đối chiếu Swagger và ARTICLE PNG/PDF,
+  FILE PDF, VIDEO MP4 từ upload MinIO thật→submit/reject/edit/resubmit/approve
+  →release/withdraw/publish/edit revoke. Node22.20.0/pnpm12.6.0: pnpm check406/406
+  (34 suites), HTTP48/48 (2 suites), Files42/42 (1 suite),0 skip/unhandled errors;
+  lint/type-check/build pass. Runbook/evidence PENDING/providers/fixtures3.4 và
+  flow/API/plan/progress/FE gap audit đồng bộ; không API/schema/migration mới.
+  Chưa commit/merge/push/deploy/VPS acceptance/user sign-off; toàn3.3 chưa complete.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-14: Theo yêu cầu user, chạy migration cho development local
+  mindy_center tại localhost:5433 bằng Node22.20.0/pnpm12.6.0. Hai migration
+  MaterialPublicationWithdrawal1791853200000 và ClassUnitReleaseAudit1791856800000
+  đã execute thành công cùng transaction COMMIT. migration:show xác nhận16/16
+  source migrations đã áp dụng, không pending; query schema xác nhận audit table,
+  6 constraints/4 indexes và2 Material content triggers. Không deploy/VPS hoặc
+  chạy server acceptance; không dùng thao tác migrate làm evidence API/full tests.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-13: Triển khai3.3.4 Class Unit release cho Admin/assigned Mentor:
+  LOCKED/OPEN + omitted/null/timezone unlockAt; actor/Class/Unit locks, audit atomic,
+  no-op giữ timestamps, completed/cancelled409 và assignment/role revoke403.
+  Migration additive1791856800000 + composite ancestry FK/index/DBML, common Origin
+  guard tái dùng. Node22.20.0/pnpm12.6.0: pnpm check406/406 (34 suites),
+  HTTP44/44 (2 suites), 0 skip; lint/type-check/build pass. 16 release integration,
+  24 DTO, 4 HTTP mới và Student read regression trên PostgreSQL *_test/MinIO riêng.
+  Swagger/Postman34 requests, flow/API/plan/progress cập nhật. Chưa migrate dev/VPS,
+  merge/push/deploy/nghiệm thu server;3.3.5 và binary preview/ARTICLE assets3.4 còn pending.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-13: Triển khai3.3.3 Manager review/publication (queue filters, approve/reject/
+  publish/unpublish), strict revision/reason, no-op audit/timestamps, atomic locks và
+  firstApprovedAt/canEdit. Migration additive1791853200000 cho withdrawal/soft-delete
+  với refs unavailable, giữ content/identity/review và Student READY gates.
+  Node22.20.0: pnpm check365/365 (32 suites), HTTP40/40 (2 suites), 0 skip;
+  lint/type-check/build pass. Swagger/Postman27 requests, flow/API/plan/progress cập nhật.
+  Chưa migrate dev/VPS, merge/push/deploy hoặc server acceptance; release3.3.4 còn planned.
+  Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-13: Triển khai3.3.2 Mentor Unit/session context + typed own draft
+  create/list/detail/EDIT/delete/submit; current assignment/actor/ancestry dưới locks,
+  visibility trước count/page, pending retry no-op/audit, Origin/no-store.
+  Node22.20.0: `pnpm check`348/348 (31 suites), HTTP36/36 (2 suites), Files42/42
+  (1 suite), 0 skip; lint/type-check/build pass, upload Mentor PDF/MP4 thật trên MinIO.
+  Swagger/Postman22 requests/flow/API/plan/progress cập nhật; không migration mới3.3.2,
+  chưa merge/push/deploy/nghiệm thu VPS. Chi tiết [progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+- 2026-10-13: Triển khai3.3.1 Manager typed draft CRUD (ARTICLE/FILE/VIDEO),
+  sanitizer/refs/audit/additive migration + batch locks/current actor/Origin;
+  Swagger/Postman/DBML/flow/API cập nhật. `pnpm check`332/332 (30 suites),
+  HTTP32/32 (2 suites), Files42/42 (1 suite), 0 skip; lint/type-check/build pass. Chi tiết xem
+  [progress3.3](phase%203/PHASE_3_3_PROGRESS.md); chưa deploy/VPS acceptance.
 
 - 2026-10-13 — Implement ADMIN class roster và student detail:
   GET `/api/v1/admin/classes/:classId/students` (page/pageSize) và

@@ -333,3 +333,29 @@ API, không truy cập VPS hoặc chạy lại tests; deploy success/readiness c
 Theo [backlog ngày 15/10](../TASK_SUMMARY_BACKLOG_2026-10-15.md), user xác nhận
 4.3 đã lên server và thử Postman xong. Đây là cập nhật trạng thái theo user;
 không phải lượt lưu plan vừa deploy/test server, và không áp dụng cho 4.4.
+## Tích hợp Materials3.3/3.4 — 2026-10-15
+
+Giữ source/contract4.1–4.3 từ dev e0c9174 và mọi nhật ký planning/implementation
+ngày13/10. ClassesModule exports teaching/lifecycle/conflict providers cùng
+Materials context/release. Không nới Class completion, attendance deadline,
+substitute entitlement, payment lineage hay historical recovery.
+Hai migration bridge giải quyết constraint trùng với3.3.4; không sửa migration
+đã chạy, source22. Clean22/16→22/17→22/data/FK/down-up3/3 pass trên dedicated DB.
+Chi tiết và full gates sau tích hợp tại [progress3.3](../phase%203/PHASE_3_3_PROGRESS.md).
+Development/VPS/FE và các slice4.4–4.5 giữ trạng thái pending theo evidence riêng.
+
+### Kết quả kiểm chứng cuối sau tích hợp — 2026-10-15
+
+- Node22.20.0/pnpm12.6.0, dedicated PostgreSQL17 test tại localhost:15433 và MinIO
+  test local: **pnpm check513/513,48 suites; lint/type-check/build pass**.
+- **pnpm test:http60/60,5 suites**, dùng cấu hình mặc định đã nhận từ dev
+  (fileParallelism:false), built Nest runtime/cookies/guards và migrations đầy đủ22.
+  Không critical skip hoặc unhandled errors trong hai lượt cuối.
+- Sau khi rút gọn suffix DB fixture để không bị PostgreSQL truncate mất _test,
+  chạy lại lint/type-check và focused migration compatibility: **3/3 pass**.
+  Thay đổi cuối này chỉ ở tên/guard DB test, không đổi production code/migrations.
+- Lượt trước bridge có HTTP startup fail vì constraint trùng; kết quả60/60 ở trên
+  là lượt chạy sau sửa, không dùng skip ở lượt thất bại làm evidence pass.
+- 14 conflict đã giải quyết; không sửa migration lịch sử, không migrate DB
+  development/VPS hoặc FE. Giữ ngày13/10 planning/Phase4,13–14/10 implementation
+  Materials,15/10 integration như các mục riêng. Server/browser/user sign-off còn pending.

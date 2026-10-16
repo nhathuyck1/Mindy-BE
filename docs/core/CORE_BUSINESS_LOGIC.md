@@ -1,7 +1,7 @@
 # Core business logic
 
 Updated 2026-10-05 against all of `document/Flow.txt`, implemented checkout and
-[Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
+[Phase 2.2](../implement_phase/phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
 confirmation passed; BE payments are implemented and locally tested; VPS release
 and real settlement remain pending user execution. Full payment and
 online confirmation email are required; pending cash preview and mentor confirmation

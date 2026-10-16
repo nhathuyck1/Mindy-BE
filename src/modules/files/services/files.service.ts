@@ -13,7 +13,12 @@ import { FileMetadataEntity } from '../entities/file-metadata.entity.js';
 import { FileObjectEntity } from '../entities/file-object.entity.js';
 import { FileProcessingJobEntity } from '../entities/file-processing-job.entity.js';
 import { FileException } from '../exceptions/file.exceptions.js';
-import { FILE_STORAGE, type FileStorage, type FileSummary } from '../files.contracts.js';
+import {
+  type ContentDisposition,
+  FILE_STORAGE,
+  type FileStorage,
+  type FileSummary,
+} from '../files.contracts.js';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
 import { FileUploadPolicyService } from './file-upload-policy.service.js';
 
@@ -49,15 +54,16 @@ export class FilesService {
   async readSummaries(
     ids: readonly string[],
     manager: EntityManager,
+    includeUnavailable = false,
   ): Promise<Map<string, FileSummary>> {
     if (ids.length === 0) return new Map();
     const files = await manager
       .getRepository(FileObjectEntity)
-      .findBy({ id: In([...ids]), status: 'READY' });
+      .findBy({ id: In([...ids]), ...(includeUnavailable ? {} : { status: 'READY' as const }) });
     return new Map(
       files.flatMap((file): [string, FileSummary][] => {
         if (
-          file.deletedAt !== null ||
+          (!includeUnavailable && file.deletedAt !== null) ||
           file.mimeType === null ||
           file.sizeBytes === null ||
           file.kind === null
@@ -70,7 +76,7 @@ export class FilesService {
               id: file.id,
               ownerUserId: file.ownerUserId,
               courseUnitId: file.courseUnitId,
-              status: 'READY',
+              status: file.deletedAt === null ? file.status : 'DELETED',
               originalFilename: file.originalName,
               mimeType: file.mimeType,
               sizeBytes: Number(file.sizeBytes),
@@ -86,6 +92,7 @@ export class FilesService {
   async signReadReference(
     id: string,
     courseUnitId: string,
+    disposition: ContentDisposition = 'inline',
   ): Promise<{
     readonly url: string;
     readonly expiresAt: Date;
@@ -107,6 +114,7 @@ export class FilesService {
         { bucket: file.bucket, key: file.objectKey, versionId: file.objectVersionId },
         file.originalName,
         ttl,
+        disposition,
       );
       return { url, expiresAt: new Date(issuedAt.getTime() + ttl * 1000) };
     } catch {
@@ -264,6 +272,73 @@ export class FilesService {
       sizeBytes: Number(file.sizeBytes),
       kind: file.kind,
     };
+  }
+  /** Lock the union of old/new references before authorizing any Class context. */
+  async assertReadyReferences(
+    principal: AuthenticatedUser,
+    ids: readonly string[],
+    courseUnitId: string,
+    manager: EntityManager,
+    previousIds: readonly string[] = [],
+    contextClassIds: readonly string[] = [],
+  ): Promise<Map<string, FileSummary>> {
+    if (!manager.queryRunner?.isTransactionActive)
+      throw new Error('File references require an active transaction');
+    const union = [...new Set([...ids, ...previousIds])].sort();
+    const rows =
+      union.length === 0
+        ? []
+        : await manager
+            .getRepository(FileObjectEntity)
+            .createQueryBuilder('file')
+            .where('file.id IN (:...ids)', { ids: union })
+            .orderBy('file.id', 'ASC')
+            .setLock('pessimistic_write')
+            .getMany();
+    // authorize() may lock Classes. Every file row is already locked at this point.
+    const selected = new Map(rows.map((row) => [row.id, row]));
+    await this.policy.lockReferenceContext(
+      principal,
+      [
+        ...contextClassIds,
+        ...rows.flatMap((row) => (row.intentClassId ? [row.intentClassId] : [])),
+      ],
+      manager,
+    );
+    const result = new Map<string, FileSummary>();
+    const ordered = [...new Set(ids)].sort((a, b) => {
+      const left = selected.get(a)?.intentClassId ?? '';
+      const right = selected.get(b)?.intentClassId ?? '';
+      return left.localeCompare(right) || a.localeCompare(b);
+    });
+    for (const id of ordered) {
+      const file = selected.get(id);
+      if (!file) throw new FileException('FILE_NOT_FOUND', HttpStatus.NOT_FOUND);
+      await this.authorize(principal, file, manager);
+      if (file.courseUnitId !== courseUnitId)
+        throw new FileException('MATERIAL_SCOPE_MISMATCH', HttpStatus.UNPROCESSABLE_ENTITY);
+      if (
+        file.status !== 'READY' ||
+        file.deletedAt !== null ||
+        !file.mimeType ||
+        !file.kind ||
+        !file.sizeBytes ||
+        !file.objectKey ||
+        !file.objectVersionId
+      )
+        throw new FileException('FILE_NOT_READY');
+      result.set(id, {
+        id,
+        ownerUserId: file.ownerUserId,
+        courseUnitId,
+        status: 'READY',
+        originalFilename: file.originalName,
+        mimeType: file.mimeType,
+        sizeBytes: Number(file.sizeBytes),
+        kind: file.kind,
+      });
+    }
+    return result;
   }
   private async authorize(
     principal: AuthenticatedUser,

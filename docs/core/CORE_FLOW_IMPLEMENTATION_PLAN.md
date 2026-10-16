@@ -20,7 +20,7 @@ was user-confirmed15/10; older deployment-pending entries are historical.
 Current Phase 2 continuation (2026-10-05): standalone VPS webhook verification and
 payOS sample confirmation passed; BE payment is implemented/tested locally, while
 VPS release and real settlement remain pending user execution.
-Follow [Phase 2.2](./implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md) for the
+Follow [Phase 2.2](../implement_phase/phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md) for the
 current execution order/contracts. It carries forward Flow.txt full payment,
 online confirmation email, pending cash preview and assigned-mentor cash confirmation.
 PayOS integration comes before the remaining cash increment; chat/DM is deferred.

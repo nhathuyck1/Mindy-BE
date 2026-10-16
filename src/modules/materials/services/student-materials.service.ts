@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI needs runtime constructor tokens.
-import { DataSource, type EntityManager, type SelectQueryBuilder } from 'typeorm';
+import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
 import type { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import type { ClassContentContext } from '../../classes/domain/class-content-context.js';
@@ -12,9 +12,15 @@ import { ClassContentContextService } from '../../classes/services/class-content
 import { FilesService } from '../../files/services/files.service.js';
 import { canReadMaterial, isMaterialUnitReleased } from '../domain/material-access.js';
 import type { MaterialReadContext } from '../domain/material-contract.js';
+import { findMaterialFileRole, materialFileDisposition } from '../domain/material-file-access.js';
+import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import type { StudentMaterialView } from '../dtos/student-material.dto.js';
 import { StudentMaterialDownloadDto } from '../dtos/student-material.dto.js';
 import { MaterialEntity } from '../entities/material.entity.js';
+import {
+  MaterialFileReferenceEntity,
+  MaterialReferenceRole,
+} from '../entities/material-file-reference.entity.js';
 import { MaterialPolicyException } from '../exceptions/material.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest DI needs runtime constructor tokens.
 import { MaterialPolicyService } from './material-policy.service.js';
@@ -87,26 +93,80 @@ export class StudentMaterialsService {
     });
   }
 
+  /** Primary FILE/VIDEO only; ARTICLE has no primary binary and returns MATERIAL_NOT_FOUND. */
   async download(
     principal: AuthenticatedUser,
     classId: string,
     materialId: string,
   ): Promise<StudentMaterialDownloadDto> {
     const view = await this.detail(principal, classId, materialId);
+    if (view.file === null) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+    const access = await this.sign(principal, classId, view, view.file.id);
+    return new StudentMaterialDownloadDto(materialId, access.fileId, access.url, access.expiresAt);
+  }
+
+  /** Signs a primary, inline image or attachment that belongs to the visible Material. */
+  async access(
+    principal: AuthenticatedUser,
+    classId: string,
+    materialId: string,
+    fileId: string,
+  ): Promise<MaterialFileAccessDto> {
+    return this.sign(principal, classId, await this.detail(principal, classId, materialId), fileId);
+  }
+
+  private async sign(
+    principal: AuthenticatedUser,
+    classId: string,
+    view: StudentMaterialView,
+    fileId: string,
+  ): Promise<MaterialFileAccessDto> {
+    const { material } = view;
+    const role = findMaterialFileRole(view, fileId);
+    if (role === null) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
     // Signing is outside the read transaction. Never sign staging/latest versions or arbitrary fileIds.
-    const signed = await this.files.signReadReference(view.file.id, view.material.courseUnitId);
-    const current = await this.detail(principal, classId, materialId);
-    if (current.material.revision !== view.material.revision || current.file.id !== view.file.id)
+    const signed = await this.files.signReadReference(
+      fileId,
+      material.courseUnitId,
+      materialFileDisposition(role),
+    );
+    const current = await this.detail(principal, classId, material.id);
+    if (
+      current.material.revision !== material.revision ||
+      findMaterialFileRole(current, fileId) !== role
+    )
       throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
-    return new StudentMaterialDownloadDto(materialId, view.file.id, signed.url, signed.expiresAt);
+    return new MaterialFileAccessDto(
+      material.id,
+      fileId,
+      role,
+      material.revision,
+      signed.url,
+      signed.expiresAt,
+    );
   }
 
   private visibleQuery(manager: EntityManager, now: Date): SelectQueryBuilder<MaterialEntity> {
     const files = this.files.readyReadProjection(manager);
+    // Every reference must still be READY in the same Course Unit (inline refs must be IMAGE)
+    // before the row counts toward total/page; the typed predicate re-checks in memory.
+    const brokenReference = manager
+      .getRepository(MaterialFileReferenceEntity)
+      .createQueryBuilder('ref')
+      .select('1')
+      .leftJoin(
+        `(${files.query})`,
+        'ref_file',
+        'ref_file.id = ref.file_id AND ref_file.course_unit_id = material.course_unit_id',
+      )
+      .where('ref.material_id = material.id')
+      .andWhere(
+        "(ref_file.id IS NULL OR (ref.role = 'INLINE_IMAGE' AND ref_file.kind <> 'IMAGE'))",
+      );
     return manager
       .getRepository(MaterialEntity)
       .createQueryBuilder('material')
-      .innerJoin(
+      .leftJoin(
         `(${files.query})`,
         'ready_file',
         'ready_file.id = material.fileObjectId AND ready_file.course_unit_id = material.courseUnitId',
@@ -124,8 +184,12 @@ export class StudentMaterialsService {
         '(material.availableAt IS NULL OR (isfinite(material.availableAt) AND material.availableAt <= :now))',
       )
       .andWhere(
-        "((material.contentType = 'VIDEO' AND ready_file.kind = 'VIDEO') OR (material.contentType = 'FILE' AND ready_file.kind <> 'VIDEO'))",
-      );
+        `((material.contentType = 'ARTICLE' AND material.fileObjectId IS NULL
+          AND material.contentSchemaVersion = 1 AND length(material.contentHtml) > 0)
+        OR (material.contentType = 'VIDEO' AND ready_file.kind = 'VIDEO')
+        OR (material.contentType = 'FILE' AND ready_file.kind <> 'VIDEO'))`,
+      )
+      .andWhere(`NOT EXISTS (${brokenReference.getQuery()})`);
   }
 
   private async views(
@@ -133,17 +197,41 @@ export class StudentMaterialsService {
     read: MaterialReadContext,
     manager: EntityManager,
   ): Promise<StudentMaterialView[]> {
+    const refs =
+      materials.length === 0
+        ? []
+        : await manager.getRepository(MaterialFileReferenceEntity).find({
+            where: { materialId: In(materials.map((material) => material.id)) },
+            order: { fileId: 'ASC', role: 'ASC' },
+          });
     const summaries = await this.files.readSummaries(
-      materials.map((material) => material.fileObjectId),
+      [
+        ...materials.flatMap((material) => (material.fileObjectId ? [material.fileObjectId] : [])),
+        ...refs.map((ref) => ref.fileId),
+      ],
       manager,
     );
     return materials.flatMap((material) => {
-      const file = summaries.get(material.fileObjectId);
-      if (!file || !canReadMaterial({ ...material, file }, read)) return [];
+      const file = material.fileObjectId ? summaries.get(material.fileObjectId) : undefined;
+      const own = refs.filter((ref) => ref.materialId === material.id);
+      const resolve = (role: MaterialReferenceRole) =>
+        own.filter((ref) => ref.role === role).map((ref) => summaries.get(ref.fileId));
+      const inlineImages = resolve(MaterialReferenceRole.INLINE_IMAGE);
+      const attachments = resolve(MaterialReferenceRole.ATTACHMENT);
+      if (
+        (material.fileObjectId !== null && !file) ||
+        !isPresent(inlineImages) ||
+        !isPresent(attachments)
+      )
+        return [];
+      const content = { ...material, file: file ?? null, inlineImages, attachments };
+      if (!canReadMaterial(content, read)) return [];
       return [
         {
           material,
-          file,
+          file: content.file,
+          inlineImages,
+          attachments,
           classId: read.classContext.classId,
           classUnitId: read.classContext.classUnitId,
         },
@@ -157,4 +245,8 @@ export class StudentMaterialsService {
       return work(manager);
     });
   }
+}
+
+function isPresent<T>(items: readonly (T | undefined)[]): items is readonly T[] {
+  return items.every((item) => item !== undefined);
 }
