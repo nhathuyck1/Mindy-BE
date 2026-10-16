@@ -1,5 +1,29 @@
 # Phase 3.3 — Flow Material management và release
 
+## 2026-10-16 — Kiểm chứng migration sau đồng bộ dev
+
+Đã fetch origin; Feat/Phase4 chứa toàn bộ origin/dev (ahead5/behind0), không cần
+merge thêm. Bộ migration hiện hành24 gồm lõi3.3 từ dev và Phase4.4; hai migration
+local1792108800000/1 đã loại khỏi source, không đưa lại vào DB.
+Focused migration suites39/39; compatibility mở rộng5/5 gồm empty24, dev22→24,
+giữ nguyên ARTICLE HTML và unique/FK indexes, no pending và down/up Phase4.4.
+Chạy production compiled DataSource trên DB test riêng phát hiện dist giữ
+migration cũ. Sửa pnpm build dọn dist trước compile; chạy lại source24=compiled24,
+applied24, pending=false, rerun0. Build/lint/type-check pass.
+Không đổi API/DTO/flow FE; không merge/commit/push/deploy hoặc migrate DB
+development/production. [API breakdown](PHASE_3_3_flow-api-breakdown.md).
+
+## 2026-10-16 — Hợp nhất stash với dev
+
+Giữ lõi Materials/review/release và hai constraint bridges của dev. Ghép Manager
+catalogue + Admin/Manager sửa metadata Course Unit, Mentor unit detail và các GET
+preview/assets có expectedRevision từ local. POST files/access hiện có vẫn hoạt
+động; mọi GET mới dùng chung kiểm quyền, READY refs, disposition và signing recheck.
+Không đăng ký lại các route unit/release đã có. Hai migration local1792108800000/1
+tạo lại schema đã được lưu ở tmp/conflict-backup-20261016 và loại khỏi catalog;
+không sửa migration đã deploy. Stash gốc còn nguyên; kiểm chứng tích hợp mới ở
+[Progress](../progress/Progress.md). API chi tiết ở [breakdown](PHASE_3_3_flow-api-breakdown.md#bổ-sung-local-sau-hợp-nhất-stash--2026-10-16).
+
 ## 2026-10-16 — Sửa CI sau merge Phase4
 
 Flow/API giữ nguyên. Fixture release chạy đủ compatibility bridges để hai

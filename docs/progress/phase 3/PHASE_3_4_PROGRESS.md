@@ -1,8 +1,33 @@
 # Phase 3.4 — Material access và staff preview
 
+## 2026-10-16 — Hợp nhất Student assets
+
+Giữ DTO/list/detail/download và POST access từ dev, thêm GET assets expectedRevision
+đi chung policy/signing/disposition. Không tạo thêm schema. Các số test/migration
+trong nhật ký stash dưới đây mô tả phiên bản trước tích hợp;
+[evidence mới](../Progress.md#2026-10-16--hợp-nhất-stash-api-local-sau-cập-nhật-feat4).
+
 Cập nhật **2026-10-15** (bổ sung plan; evidence implementation gần nhất 2026-10-14).
 [Plan 3.4](../../implement_phase/phase%203/PHASE_3_4_STUDENT_MATERIAL_ACCESS.md) ·
 [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
+
+### Nhật ký local trước tích hợp (giữ từ stash)
+
+## Implementation update — 2026-10-16
+
+Student ARTICLE list/detail, verified inline/attachment signed access và
+Manager/Mentor primary preview/scoped assets đã implement cùng authoring3.3.
+Giữ ACTIVE/class release/current approval/publication/time gates; detail trả
+canonical HTML, list không body HTML. Binary sign đúng version, recheck quyền/
+revision/membership trước trả URL<=60s, MP4 Range; không persist URL vào HTML.
+Hai migrations additive3.3 phải chạy trước rollout. Local full backend468/468,
+targeted domain63/63 sau thêm2 cases, full HTTP51/51 (8 suites), trong đó
+Files/material19/19; lint/type-check/build pass. Chưa migrate DB development/
+production, deploy/VPS hoặc sửa/tích hợp FE.
+[Contract hiện hành](../../api_flow/PHASE_3_4_flow-api-breakdown.md).
+Các mục dưới là lịch sử trước implementation ngày2026-10-16.
+
+Cập nhật **2026-10-13**. [Flow](../../api_flow/PHASE_3_4_FLOW.md) ·
 [API breakdown](../../api_flow/PHASE_3_4_flow-api-breakdown.md) ·
 [FE audit](../../api_flow/PHASE_3_4_FE_API_GAPS.md).
 

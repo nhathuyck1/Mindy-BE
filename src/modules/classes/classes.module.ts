@@ -32,6 +32,7 @@ import { SessionOperationsService } from './services/session-operations.service.
 import { StudentClassService } from './services/student-class.service.js';
 import { TeachingAssignmentService } from './services/teaching-assignment.service.js';
 import { TeachingReadService } from './services/teaching-read.service.js';
+import { UnitContentService } from './services/unit-content.service.js';
 
 /** Class management: the class aggregate (class, units, sessions) and its lifecycle. */
 @Module({
@@ -60,6 +61,7 @@ import { TeachingReadService } from './services/teaching-read.service.js';
     SessionOperationsController,
   ],
   providers: [
+    UnitContentService,
     SessionLifecycleService,
     SessionOperationsService,
     TeachingReadService,

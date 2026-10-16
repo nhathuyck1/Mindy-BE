@@ -5,6 +5,11 @@ Ngày cập nhật: **2026-10-16**. **4.4b hoàn tất theo user; 4.4c CLOSED LO
 [API breakdown](PHASE_4_4_flow-api-breakdown.md) ·
 [Progress](../progress/phase%204/PHASE_4_4_PROGRESS.md) · [Flow tổng](PHASE_4_FLOW.md).
 
+Review PR15 ngày16/10: đã fetch và mô phỏng merge6bd851e với dev0b7aefc;
+6 Markdown blocks conflict là logs Phase4.4 và Materials/CI cần giữ cả hai.
+ClassesModule tự gộp; chưa merge checkout hoặc chạy integration gates sau gộp.
+Lượt này không đổi flow/API/runtime,không commit/push/deploy.
+
 ## 2026-10-16 — Implementation4.4c
 
 Handoff16/10: deploy backend4.4c để test server không phải chờ đóng4.5. Schema

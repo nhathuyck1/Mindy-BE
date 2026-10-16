@@ -7,6 +7,12 @@ chứng minh môi trường FE đang gọi đã có release tương ứng.
 
 ## 1. Contract chung
 
+Dữ liệu demo local bổ sung ngày 2026-10-16: `pnpm seed:class-roster` tạo 20 ACTIVE
+students cho HTML-CSS-101-ON1 và 24 cho JS-101-ON1, kèm CASH PAID fixture và unit
+progress. Tài khoản, mật khẩu, kiểm chứng và giới hạn xem
+[ghi chú roster trong flow](PHASE_2_3_FLOW.md#dữ-liệu-mẫu-roster--2026-10-16).
+Không có endpoint mới hoặc thay đổi request/response/auth của các API dưới đây.
+
 - Prefix BE `/api/v1`; bốn GET dùng role STUDENT, hai PATCH §5.1 dùng ADMIN;
   user/session active, cookie `access_token`.
   Browser gọi với `credentials: 'include'` hoặc Axios `withCredentials: true`.

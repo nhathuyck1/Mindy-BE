@@ -14,6 +14,10 @@ cần schema4.4b đến1792022400001 và đưa đầy đủ file mới vào comm
 FE phải xử lý mentor/rate/deadline nullable và SESSION_MAKEUP. Chưa có server
 evidence mới trong lượt giải thích này; Swagger/Postman contract giữ nguyên.
 
+Review PR15 ngày16/10 sau fetch: merge-tree xác nhận6 conflict Markdown giữa
+logs Phase4.4 và Materials/CI của dev. Không đổi endpoint/DTO/Swagger/Postman
+trong lượt kiểm tra; chưa merge checkout,push hoặc có runtime evidence tích hợp.
+
 ## 1. Điều kiện dùng chung và ID handoff
 
 ADMIN hoặc MANAGER ACTIVE; cookie `access_token` từ login hiện hữu. Service

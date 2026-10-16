@@ -115,6 +115,21 @@ export class StudentMaterialsService {
     return this.sign(principal, classId, await this.detail(principal, classId, materialId), fileId);
   }
 
+  async accessAtRevision(
+    principal: AuthenticatedUser,
+    classId: string,
+    materialId: string,
+    fileId: string,
+    expectedRevision: number,
+  ): Promise<MaterialFileAccessDto> {
+    const view = await this.detail(principal, classId, materialId);
+    if (view.material.revision !== expectedRevision)
+      throw new MaterialPolicyException('MATERIAL_REVIEW_CONFLICT');
+    if (![...view.inlineImages, ...view.attachments].some((file) => file.id === fileId))
+      throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+    return this.sign(principal, classId, view, fileId);
+  }
+
   private async sign(
     principal: AuthenticatedUser,
     classId: string,

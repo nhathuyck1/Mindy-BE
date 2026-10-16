@@ -39,6 +39,7 @@ function assertContent(
     (content.description !== null && content.description.length > 5000) ||
     !Number.isSafeInteger(content.sortOrder) ||
     content.sortOrder < 0 ||
+    content.sortOrder > 2147483647 ||
     (content.availableAt !== null && !Number.isFinite(content.availableAt.getTime()))
   ) {
     throw new MaterialPolicyError('MATERIAL_CONTENT_INVALID');

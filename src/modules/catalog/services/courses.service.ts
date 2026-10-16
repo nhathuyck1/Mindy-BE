@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager, In } from 'typeorm';
-
 import { isUniqueViolation } from '../../../common/database/postgres-error.js';
+import { AppHttpException } from '../../../common/http/app-http.exception.js';
 import { normalizeCode, normalizeOptionalText } from '../../../common/text/normalize-text.js';
 import type { AddCourseUnitDto } from '../dtos/add-course-unit.dto.js';
 import type { AdminCoursePageOptionsDto } from '../dtos/course-page-options.dto.js';
 import type { CreateCourseDto } from '../dtos/create-course.dto.js';
 import type { UpdateCourseDto } from '../dtos/update-course.dto.js';
+import type { UpdateCourseUnitDto } from '../dtos/update-course-unit.dto.js';
 import { CourseEntity } from '../entities/course.entity.js';
 import { CourseCategoryEntity } from '../entities/course-category.entity.js';
 import { CourseUnitEntity } from '../entities/course-unit.entity.js';
@@ -140,6 +141,37 @@ export class CoursesService {
         [unitIds, courseId],
       );
       return this.loadDetail(manager, course);
+    });
+  }
+
+  async updateUnit(
+    courseId: string,
+    unitId: string,
+    input: UpdateCourseUnitDto,
+  ): Promise<CourseUnitEntity> {
+    if (
+      input.title === undefined &&
+      input.description === undefined &&
+      input.requiredScorePercent === undefined
+    )
+      throw new AppHttpException(
+        422,
+        'COURSE_UNIT_CONTENT_INVALID',
+        'Provide at least one unit field',
+      );
+    return this.dataSource.transaction(async (manager) => {
+      await this.lockCourse(manager, courseId);
+      const unit = await manager
+        .getRepository(CourseUnitEntity)
+        .findOneBy({ id: unitId, courseId });
+      if (!unit)
+        throw new AppHttpException(404, 'COURSE_UNIT_NOT_FOUND', 'The course unit was not found');
+      if (input.title !== undefined) unit.title = input.title.trim();
+      if (input.description !== undefined)
+        unit.description = normalizeOptionalText(input.description);
+      if (input.requiredScorePercent !== undefined)
+        unit.requiredScorePercent = input.requiredScorePercent;
+      return manager.getRepository(CourseUnitEntity).save(unit);
     });
   }
 

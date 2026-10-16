@@ -37,6 +37,8 @@ import {
   PatchManagerMaterialDto,
   RejectMaterialDto,
 } from '../dtos/manager-material-input.dto.js';
+// biome-ignore lint/style/useImportType: Runtime query validation metadata.
+import { MaterialRevisionQueryDto } from '../dtos/material-authoring.dto.js';
 import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import { MaterialOriginGuard } from '../guards/material-origin.guard.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
@@ -167,6 +169,33 @@ export class ManagerMaterialsController {
     @Body() input: MaterialRevisionDto,
   ): Promise<ManagerMaterialDetailDto> {
     return this.materials.review(principal, id, { action: 'UNPUBLISH', ...input });
+  }
+
+  @Get('materials/:materialId/preview')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({ summary: 'Preview the primary binary at the expected revision' })
+  previewPrimary(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Query() input: MaterialRevisionQueryDto,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.accessAtRevision(principal, id, input.expectedRevision);
+  }
+
+  @Get('materials/:materialId/assets/:fileId/access')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({ summary: 'Preview a referenced binary at the expected revision' })
+  assetAccess(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+    @Query() input: MaterialRevisionQueryDto,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.accessAtRevision(principal, id, input.expectedRevision, fileId);
   }
 
   @Post('materials/:materialId/files/:fileId/access')

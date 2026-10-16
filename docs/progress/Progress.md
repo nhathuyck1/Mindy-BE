@@ -1,5 +1,38 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-16 — Test migration hiện hành và loại compiled migration cũ
+
+Fetch origin xác nhận Feat/Phase4 đã chứa origin/dev, ahead5/behind0; không cần
+merge thêm. Focused39/39 tests/6 suites pass; mở rộng compatibility từ3 lên5 ca,
+5/5 pass gồm full catalog24 từ trống/down-up Phase4.4, upgrade dev22→24 bảo toàn
+ARTICLE HTML/unique indexes, các history Materials/Phase4 cũ và không pending.
+Chạy production DataSource từ dist phát hiện2 migration local1792108800000/1 còn
+compiled dù source đã loại sau merge; lỗi enum42883 khi chạy trùng typed migration.
+Sửa build chạy tools/build.mjs dọn dist trước tsc; không sửa migration lịch sử.
+Build lại source24/compiled24 khớp; DB test riêng applied24, pending=false,
+rerun applied0. Build/lint/type-check pass. Chưa migrate development/production,
+merge/commit/push/deploy; API/FE contract giữ nguyên.
+[Flow/evidence](../api_flow/PHASE_3_3_FLOW.md#2026-10-16--kiểm-chứng-migration-sau-đồng-bộ-dev).
+
+## 2026-10-16 — Hợp nhất stash API local sau cập nhật feat4
+
+Bản sửa constraint đã cherry-pick thành85cb913. Conflict do stash apply lên
+36db5a6/85cb913, không phải cherry-pick thất bại. Theo lựa chọn user: giữ lõi
+Materials từ dev, ghép API catalogue/unit metadata/unit detail và GET preview/
+assets từ local; tránh duplicate route/service và hai migration tạo lại schema.
+Đã sao lưu working files/stash-untracked tại tmp/conflict-backup-20261016; stash
+gốc giữ nguyên. Các nhật ký local cũ dưới đây là evidence trước tích hợp.
+Focused Materials26/26 pass sau tích hợp; full pnpm check pass:587/587 tests,
+56 suites,0 skip; lint/type-check/build pass. HTTP lượt đầu phát hiện8 compiled
+artifacts của hai migration local cũ còn trong dist; đã chuyển vào backup và
+đối chiếu catalog24 source/24 compiled khớp. HTTP rerun:7 suites khác32/32 pass;
+Files/Materials còn2 local cases phụ thuộc Unit bị LOCKED từ test dev trước đó.
+Đã thiết lập release OPEN qua API ngay trong từng journey; chạy lại trọn suite
+Files/Materials40/40 pass,0 skip. Tổng72 HTTP cases đã pass qua các lượt kiểm.
+25 conflict paths đã resolved, stash gốc vẫn giữ; phần API giữ ở working tree/
+index để user tiếp tục. Không commit/push,
+deploy hoặc migrate DB development/VPS trong lượt giải quyết conflict này.
+
 ## 2026-10-16 — Sửa CI constraint sau merge Phase4/Materials
 
 Tái hiện log merge trên36db5a6: fixture release thiếu hai compatibility bridges
@@ -17,6 +50,49 @@ toàn bộ catalog migration trên DB test. Node22.20.0/pnpm12.6.0, base36db5a6;
 bản sửa ở branch `codex/fix-phase4-constraint` trong worktree riêng, giữ nguyên
 các thay đổi đang dở ở checkout ban đầu. Chưa push/deploy, migrate
 development/VPS hoặc thực hiện payment thật.
+
+### Nhật ký local trước tích hợp (giữ từ stash)
+
+## 2026-10-16 — Hoàn thiện upload → review → student và CKEditor ARTICLE
+
+Đã implement Manager/Mentor material CRUD/submit/review/publication, ARTICLE HTML
+sanitize + verified inline/attachment refs, audit/revision locks, staff preview,
+Student ARTICLE detail/asset access, mentor unit/session context, Admin/Mentor
+unit release, Manager catalogue và Admin/Manager PATCH metadata unit.
+CKEditor lưu bài học vào ARTICLE.contentHtml; description unit giữ overview.
+Hai migrations additive:1792108800000-material-authoring và1792108800001-unit-release;
+chỉ up/down/up trên DB test riêng, chưa migrate development/production hoặc deploy.
+
+Local: full backend468/468 (47 suites); thêm2 domain cases sau đó và targeted63/63;
+full built-app HTTP51/51 (8 suites), trong đó Files/material19/19; lint/type-check/
+build pass. Có binary upload thật vào MinIO, PDF/MP4 Range, staff preview, mentor
+reject/edit/resubmit/approve, Student HTML/inline/attachment, decision race/retry,
+assignment revoke, Origin/DTO/body limit, unit editing/release. Bổ sung Swagger/
+Postman/flow/API breakdown. Chưa UI FE, VPS hoặc production acceptance.
+[Flow](../api_flow/PHASE_3_3_FLOW.md) ·
+[API FE](../api_flow/PHASE_3_3_flow-api-breakdown.md) ·
+[Progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+## 2026-10-16 — Seed hai roster demo 20/25 và 24/25
+
+Thêm `seed:class-roster`, tích hợp cuối `seed:data`; 44 STUDENT demo riêng với
+ACTIVE enrollment, CASH PAID order, SUCCEEDED transaction và progress từng unit.
+Đã chạy PostgreSQL local `mindy_center`: HTML-CSS-101-ON1 =20/25,
+JS-101-ON1 =24/25; chạy lại tạo0 enrollment. Giữ dữ liệu hiện có, khóa class,
+kiểm sức chứa, rollback cả hai roster nếu lỗi. Mật khẩu tài khoản mới dùng
+SEED_ACCOUNT_PASSWORD, không reset tài khoản cũ. Không đổi API/schema/runtime
+checkout/payment, không gọi provider/email, không migrate DB hoặc deploy/VPS.
+[Flow và evidence](../api_flow/PHASE_2_3_FLOW.md#dữ-liệu-mẫu-roster--2026-10-16).
+Đối chiếu DB:44 PAID orders/44 SUCCEEDED cash transactions/244 unit progress
+(HTML100,JS144), đủ44 ACTIVE enrollments. Lint/type-check/build pass;
+full check chưa pass vì thiếu TEST_DATABASE_URL/MinIO riêng cho integration suites.
+
+## 2026-10-16 — Kiểm tra PR15 Feat/Phase4 vào dev
+
+Fetch xong: head6bd851e/base0b7aefc. Merge-tree xác nhận6 conflict Markdown,
+đều cần giữ cả log Phase4.4 và log Materials/CI của dev. Source không có conflict
+theo Git,không đồng nghĩa runtime đã verified sau tích hợp. Chỉ kiểm tra và ghi
+nhật ký; chưa merge/commit/push/test tích hợp. Chi tiết tại Progress4.4.
 
 ## 2026-10-16 — Hoàn tất backend4.4c và full local gates
 

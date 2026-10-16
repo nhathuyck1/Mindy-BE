@@ -1,5 +1,14 @@
 # Phase 3.4 — Student Material access và staff preview
 
+## 2026-10-16 — Hợp nhất stash với dev
+
+Student giữ list/detail/download và POST files/access của dev; thêm GET assets
+có expectedRevision từ local. Dùng materialId/fileId/revision từ detail, lấy URL
+trước khi hiển thị ảnh/tải attachment. Quyền ACTIVE/release/approval/READY và
+kiểm tra lại sau ký giữ chung với POST. Metadata không lưu URL; 409 refetch detail,
+404 dừng render asset bị thu hồi, URL hết hạn thì xin lại. Chưa deploy/VPS;
+kiểm chứng lượt tích hợp ghi tại [Progress](../progress/Progress.md).
+
 Cập nhật **2026-10-15**. Student list/detail/download + file access (ARTICLE/FILE/VIDEO,
 inline images, attachments) và staff preview Manager/Mentor đã implement, local verified.
 Chưa deploy/nghiệm thu VPS; chưa tích hợp UI/browser FE.

@@ -25,6 +25,16 @@ Contract: [Phase 2.3 FE contract](../docs/PHASE_2_3_FE_CONTRACT.md).
 
 ## Import
 
+Phase3.3 (2026-10-16): import `Mindy-Materials-Phase33.postman_collection.json`.
+Đổi actor login trước mỗi nhóm thao tác; chọn unit/session từ context, upload READY
+bằng collection Files3.2, tạo ARTICLE/FILE/VIDEO, mentor submit, manager xem
+detail/preview đúng revision rồi reject/approve; mentor/admin release unit,
+student đọc HTML/tải primary hoặc attachment. Body expectedRevision mẫu là1:
+đổi theo revision đã thực sự xem, không auto approve sau409. Đặt Origin trùng
+CORS_ORIGINS. Không chạy toàn bộ alternatives như một runner liên tục.
+Đã kiểm backend local; chưa deploy/VPS/FE. Contract đầy đủ:
+[breakdown3.3](../docs/api_flow/PHASE_3_3_flow-api-breakdown.md).
+
 Phase3.4: import `Mindy-Materials-Phase34.postman_collection.json`, login STUDENT,
 choose FULL class from My Classes and `units[].id` from class detail, then call
 list/detail/download. ARTICLE inline images/attachments use
@@ -178,3 +188,11 @@ placementVersion hiện hành từ queue; sau target cancel phải cancel placem
 có reason trước reassign. Trước start guest context không cấp class/material access.
 Student own FINALIZED là placement metadata; schedule/summary4.4c và leave/approved
 intervals vẫn pending. Xem [contract4.4](../docs/api_flow/PHASE_4_4_flow-api-breakdown.md).
+
+### Hợp nhất stash — 2026-10-16
+
+Giữ POST files/access và thêm GET preview/assets có expectedRevision trong cả
+hai collection3.3/3.4. Manager catalogue và Mentor unit detail dùng chung các
+route dev; chỉ một controller cho mỗi release route. Không chạy hai migrations
+local1792108800000/1 vì schema đã có trong catalog dev. Contract/evidence hiện
+hành tại docs/api_flow/PHASE_3_3_flow-api-breakdown.md và Progress.md.

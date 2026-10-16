@@ -49,9 +49,9 @@ jobs:
           set -euo pipefail
           # Fail instead of silently skipping database tests when the URL is missing.
           : "${TEST_DATABASE_URL:?A dedicated PostgreSQL test database is required.}"
-          # Full catalog: currently 22 migrations, including compatibility bridges
+          # Current catalog: 24 migrations, including compatibility bridges
           # 1791849599999 (before attendance) and 1791856799999 (before release audit).
-          # Rehearse clean install, Materials 16 -> 22 and Phase 4 17 -> 22 histories,
+          # Rehearse clean install, dev 22 -> 24, Materials 16 -> 22 and Phase 4 17 -> 22 histories,
           # preserving data/FK indexes and checking down/up plus zero pending migrations.
           pnpm exec vitest run test/integration/phase33-phase4-migration-compatibility.spec.ts
       - name: Start MinIO for file integration tests

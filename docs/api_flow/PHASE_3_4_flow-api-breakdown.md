@@ -317,3 +317,27 @@ Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/brow
 Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
 qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
 đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.
+
+## Bổ sung GET assets sau hợp nhất — 2026-10-16
+
+POST files/access và list/detail/download phía trên giữ nguyên. Thêm:
+GET /api/v1/me/classes/:classId/materials/:materialId/assets/:fileId/access
+?expectedRevision=1. Cookie access_token, role STUDENT active với enrollment ACTIVE
+đúng Class, Class/Unit released và Material approved/published/time/READY hợp lệ.
+Path IDs UUIDv4; expectedRevision bắt buộc integer1..2147483647; không body.
+Lấy materialId/revision/inlineImages[].id/attachments[].id từ detail. Route này
+chỉ inline images/attachments; primary FILE/VIDEO vẫn GET download hoặc POST
+files/access. Không cấp thêm quyền CASH pending hoặc outsider.
+
+200 MaterialFileAccessDto: materialId,fileId,role(INLINE_IMAGE/ATTACHMENT),revision,
+url,expiresAt ISO8601 UTC. Cache-Control private, no-store. URL ký đúng immutable
+version, TTL<=60s; inline image dùng inline disposition, attachment dùng attachment.
+Kiểm membership/revision/quyền trước và sau signing, không đổi dữ liệu. FE render
+ảnh bằng URL tạm; không persist URL trong HTML, không gửi API cookie tới storage.
+401 login;403 MATERIAL_ACCESS_DENIED khi không có quyền Class;400 UUID sai;
+404 MATERIAL_NOT_FOUND khi Material/ref bị ẩn hoặc không thuộc nhau;409
+MATERIAL_REVIEW_CONFLICT khi revision cũ;422 query sai/field lạ;503 ký URL lỗi.
+Loading/error riêng từng asset;409 refetch detail,404 dừng render/tải,503 retry có
+giới hạn; URL hết hạn xin lại nếu detail còn visible. Invalidate sau edit/review/
+unpublish/release; không polling Material. [Flow](PHASE_3_4_FLOW.md) và
+[evidence mới](../progress/Progress.md#2026-10-16--hợp-nhất-stash-api-local-sau-cập-nhật-feat4).

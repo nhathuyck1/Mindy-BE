@@ -473,7 +473,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     await s.activate();
     const file = await db
       .getRepository(FileObjectEntity)
-      .findOneByOrFail({ id: s.material.fileObjectId });
+      .findOneByOrFail({ id: s.material.fileObjectId ?? '' });
     await remote.client.send(
       new PutObjectCommand({
         Bucket: file.bucket,
@@ -602,6 +602,20 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     expect((await fetch(attachment.url)).headers.get('content-disposition')).toMatch(
       /^attachment;/,
     );
+    const revisionAccess = await reads.accessAtRevision(
+      s.principal,
+      s.classId,
+      a.id,
+      a.attachmentId,
+      1,
+    );
+    expect(revisionAccess).toMatchObject({ role: 'ATTACHMENT', revision: 1 });
+    await expect(
+      reads.accessAtRevision(s.principal, s.classId, a.id, a.attachmentId, 2),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      reads.accessAtRevision(s.principal, s.classId, a.id, randomUUID(), 1),
+    ).rejects.toMatchObject({ status: 404 });
     // The same file is the primary of another visible material, but not of this ARTICLE.
     await expect(reads.download(s.principal, s.classId, a.id)).rejects.toMatchObject({
       status: 404,

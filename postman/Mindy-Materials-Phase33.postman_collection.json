@@ -72,6 +72,14 @@
     {
       "key": "preview_file_id",
       "value": ""
+    },
+    {
+      "key": "revision",
+      "value": "1"
+    },
+    {
+      "key": "course_id",
+      "value": ""
     }
   ],
   "item": [
@@ -1190,6 +1198,112 @@
           }
         }
       }
+    },
+    {
+      "name": "Local API additions after stash integration",
+      "item": [
+        {
+          "name": "Manager catalog",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/manager/courses"
+          }
+        },
+        {
+          "name": "Manager course detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/manager/courses/{{course_id}}"
+          }
+        },
+        {
+          "name": "Manager primary preview",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}/preview?expectedRevision={{revision}}"
+          }
+        },
+        {
+          "name": "Manager referenced asset",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}/assets/{{preview_file_id}}/access?expectedRevision={{revision}}"
+          }
+        },
+        {
+          "name": "Mentor unit detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/units/{{class_unit_id}}"
+          }
+        },
+        {
+          "name": "Mentor primary preview",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}/preview?expectedRevision={{revision}}"
+          }
+        },
+        {
+          "name": "Mentor referenced asset",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}/assets/{{preview_file_id}}/access?expectedRevision={{revision}}"
+          }
+        },
+        {
+          "name": "manager update Course Unit metadata",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/manager/courses/{{course_id}}/units/{{course_unit_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"HTML cơ bản\",\n  \"description\": \"Mục tiêu chương học\",\n  \"requiredScorePercent\": 70\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "admin update Course Unit metadata",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/admin/courses/{{course_id}}/units/{{course_unit_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"HTML cơ bản\",\n  \"description\": \"Mục tiêu chương học\",\n  \"requiredScorePercent\": 70\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -115,7 +115,7 @@ pnpm seed:data
 
 Configure `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_DISPLAY_NAME`
 and `SEED_ACCOUNT_PASSWORD` in `.env` first. `seed:data` runs admin → accounts →
-course/class → course images, stopping if a step fails. It creates one admin,
+course/class → course images → class rosters, stopping if a step fails. It creates one admin,
 two mentors, three students, three categories, six courses with Unsplash images,
 27 course units, seven standard classes with 47 sessions, plus three current
 demo classes with ten upcoming Tuesday/Saturday sessions each (Vietnam time):
@@ -132,7 +132,20 @@ data and existing images are preserved; missing demo course images are filled.
 Use `pnpm seed:course-images` to fill images only, without seeding accounts/classes.
 Rerunning preserves a current demo cohort of each course until its end date, avoiding overlapping
 copies for the same mentor. Once it finishes, a new cohort gets a new date suffix.
-Students still need checkout/enrollment to see their personal calendar.
+The three original students still need checkout/enrollment to see their personal calendar.
+The roster seed additionally creates 44 distinct demo students with ACTIVE enrollments:
+`HTML-CSS-101-ON1` gets 20/25 seats and `JS-101-ON1` gets 24/25 seats.
+Emails are `demo.html.01@example.com` through `demo.html.20@example.com` and
+`demo.js.01@example.com` through `demo.js.24@example.com`. New accounts use
+`SEED_ACCOUNT_PASSWORD`; existing accounts and effective enrollments are preserved.
+Each enrollment includes a demo PAID cash order, matching SUCCEEDED transaction,
+and NOT_STARTED progress for every class unit. These are fixtures, not real payments;
+the seed does not call payOS or send email. Their existing class timetables appear
+in the students' calendars. After accounts/classes exist, run only
+`pnpm seed:class-roster` to fill these two rosters. Both rosters commit atomically;
+insufficient capacity or incompatible accounts cause a rollback, and reruns create
+no duplicate accounts, orders, enrollments or progress. Other enrollments are retained,
+so existing real students count toward the 25-seat capacity.
 The image seed stores fixed Unsplash CDN URLs; it does not fetch images at runtime.
 
 For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`
