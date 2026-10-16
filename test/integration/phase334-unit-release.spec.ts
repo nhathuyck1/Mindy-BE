@@ -16,6 +16,7 @@ import { ClassUnitReleaseService } from '../../src/modules/classes/services/clas
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Phase 3.3.4 Class Unit release + PostgreSQL', () => {
@@ -41,8 +42,8 @@ describe('Phase 3.3.4 Class Unit release + PostgreSQL', () => {
     courses = new CoursesService(db);
     service = new ClassUnitReleaseService(db, fixture.users, courses);
     admin = principal(await fixture.user(UserRole.ADMIN));
-    await db.undoLastMigration();
-    expect(await db.runMigrations()).toHaveLength(1);
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'down');
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'up');
   }, 60000);
   afterAll(async () => {
     if (db?.isInitialized) await db.destroy();
@@ -58,6 +59,30 @@ describe('Phase 3.3.4 Class Unit release + PostgreSQL', () => {
     db
       .getRepository(ClassUnitReleaseAuditEntity)
       .find({ where: { classUnitId: unitId }, order: { occurredAt: 'ASC', id: 'ASC' } });
+
+  it('keeps attendance and release constraints together after named release down/up', async () => {
+    const constraints: { conname: string }[] = await db.query(
+      `SELECT conname FROM pg_constraint WHERE conrelid = 'class_units'::regclass
+       AND conname IN ('uq_class_units_attendance_context', 'uq_class_units_id_class')
+       AND contype = 'u' ORDER BY conname`,
+    );
+    expect(constraints.map((row) => row.conname)).toEqual([
+      'uq_class_units_attendance_context',
+      'uq_class_units_id_class',
+    ]);
+    const refs: { conname: string; index_name: string }[] = await db.query(
+      `SELECT fk.conname, idx.relname AS index_name FROM pg_constraint fk
+       JOIN pg_class idx ON idx.oid = fk.conindid
+       WHERE fk.conname IN ('fk_class_sessions_unit_class', 'fk_class_unit_release_audit_unit')
+       ORDER BY fk.conname`,
+    );
+    expect(refs.map((row) => row.conname)).toEqual([
+      'fk_class_sessions_unit_class',
+      'fk_class_unit_release_audit_unit',
+    ]);
+    expect(refs[0]?.index_name).toBe('uq_class_units_attendance_context');
+    expect(await db.showMigrations()).toBe(false);
+  });
 
   it('opens/locks and records actor plus before/after with safe context', async () => {
     const s = await setup();
@@ -335,10 +360,10 @@ describe('Phase 3.3.4 Class Unit release + PostgreSQL', () => {
     });
     const units = await db.query('SELECT * FROM class_units ORDER BY id');
     const enrollments = await db.query('SELECT * FROM enrollments ORDER BY id');
-    await db.undoLastMigration();
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'down');
     expect(await db.query('SELECT * FROM class_units ORDER BY id')).toEqual(units);
     expect(await db.query('SELECT * FROM enrollments ORDER BY id')).toEqual(enrollments);
-    expect(await db.runMigrations()).toHaveLength(1);
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'up');
     expect(await db.query('SELECT * FROM class_units ORDER BY id')).toEqual(units);
     expect(
       (await service.update(admin, s.classId, s.unit.id, { status: LOCKED })).unlockAt,

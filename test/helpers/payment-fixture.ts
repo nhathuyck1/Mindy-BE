@@ -12,10 +12,13 @@ import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/17
 import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
 import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
 import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
+import { PrepareReleaseUnitConstraint1791849599999 } from '../../src/database/migrations/1791849599999-prepare-release-unit-constraint.js';
 import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
 import { SessionAttendance1791849600001 } from '../../src/database/migrations/1791849600001-session-attendance.js';
 import { CalendarAttendanceDeadline1791849600002 } from '../../src/database/migrations/1791849600002-calendar-attendance-deadline.js';
 import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
+import { IsolateAttendanceUnitConstraint1791856799999 } from '../../src/database/migrations/1791856799999-isolate-attendance-unit-constraint.js';
+import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
@@ -139,6 +142,13 @@ export async function paymentDatabase(
         CalendarAttendanceDeadline1791849600002,
         AttendanceRecoveryEvidence1791849600003,
         CrossClassMakeup1792022400001,
+        // Release and attendance must use the same compatibility bridges as the CLI catalog.
+        ...(extra.migrations?.includes(ClassUnitReleaseAudit1791856800000)
+          ? [
+              PrepareReleaseUnitConstraint1791849599999,
+              IsolateAttendanceUnitConstraint1791856799999,
+            ]
+          : []),
         ...(extra.migrations ?? []),
       ]),
     ],

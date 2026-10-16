@@ -1,5 +1,9 @@
 # Phase 3.3 — API breakdown cho FE
 
+**Sửa CI16/10/2026:** bổ sung compatibility bridges cho fixture release và nhắm
+đúng migration trong test rollback. Contract/route/payload/quyền FE giữ nguyên;
+[evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 Cập nhật: **2026-10-15**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
 release3.3.4 ở §9 đã implement local. Chưa deploy/nghiệm thu VPS3.3.1–3.3.4.**
 Shapes Manager/Mentor/decision/release đã đối chiếu Swagger/source.

@@ -1,5 +1,12 @@
 # Phase 4 — Progress
 
+## 2026-10-16 — Sửa CI constraint với Materials
+
+Fixture có unit release dùng đủ hai compatibility bridges như CLI, bảo toàn
+constraint/FK attendance. Tests Materials rehearse migration đích thay vì rollback
+migration Phase4 mới hơn. Không đổi migration lịch sử/API/flow attendance;
+[evidence local và giới hạn](../Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 ## 2026-10-16 — Implementation 4.4c
 
 C1–C4 có source: credit CTE chung/owner student-root, schedule mentor/attendance/

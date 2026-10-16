@@ -1,5 +1,23 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-16 — Sửa CI constraint sau merge Phase4/Materials
+
+Tái hiện log merge trên36db5a6: fixture release thiếu hai compatibility bridges
+1791849599999/1791856799999 nên tạo trùng `uq_class_units_id_class`; rollback
+Materials dùng `undoLastMigration()` lại nhắm migration Phase4 mới hơn.
+Fixture dùng release nay tự thêm cả hai bridge như CLI catalog; test3.3.1,
+3.3.4 và Student materials rehearse đúng migration theo tên, trong transaction.
+Thêm regression xác nhận hai unique constraints và FK attendance/release cùng
+tồn tại sau release down/up; không sửa migration lịch sử hoặc bỏ tính năng.
+Kiểm chứng local: focused52/52 tests (4 suites),0 skip trên PostgreSQL/MinIO
+riêng cho test; gồm clean install, upgrade từ Materials/Phase4 và named down/up.
+Full `pnpm check` pass: lint/type-check/build,573/573 tests/54 suites,0 skip.
+Compiled `pnpm test:http` pass:69/69 tests/8 suites,0 skip; compiled app chạy
+toàn bộ catalog migration trên DB test. Node22.20.0/pnpm12.6.0, base36db5a6;
+bản sửa ở branch `codex/fix-phase4-constraint` trong worktree riêng, giữ nguyên
+các thay đổi đang dở ở checkout ban đầu. Chưa push/deploy, migrate
+development/VPS hoặc thực hiện payment thật.
+
 ## 2026-10-16 — Hoàn tất backend4.4c và full local gates
 
 Readiness/handoff: có thể deploy4.4c để nghiệm thu server trước4.5; cần commit/

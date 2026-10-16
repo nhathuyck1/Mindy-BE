@@ -46,6 +46,7 @@ import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
 import { binaryFixtures, fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
@@ -77,8 +78,8 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       ],
     });
     // Migration up/down/up is safe only on this isolated empty test database.
-    await db.undoLastMigration();
-    await db.runMigrations();
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'down');
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'up');
     fixture = paymentFixture(db);
     config = fileConfig({ FILE_GET_TTL_SECONDS: 2 });
     remote = await storageFixture(config);

@@ -1,5 +1,9 @@
 # Phase 4 — API breakdown cho frontend
 
+**Sửa CI16/10/2026:** fixture release bổ sung compatibility bridges, test rollback
+nhắm migration đích; không thay đổi endpoint, payload, quyền hoặc tích hợp FE.
+[Evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 **Implementation2026-10-16:** schedule projection và Student history/summary,
 management summary/incomplete4.4c đã có source/Swagger/Postman/focused PG20/
 compiled HTTP3; [contract hiện hành mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).

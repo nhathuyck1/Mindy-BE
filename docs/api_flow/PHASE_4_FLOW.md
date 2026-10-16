@@ -1,5 +1,12 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+## 2026-10-16 — Constraint compatibility trong CI
+
+Fixture release dùng đủ hai bridge hiện có; regression xác nhận constraint/FK
+attendance còn nguyên sau release down/up. Flow/API attendance không đổi;
+[evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+Không sửa migration lịch sử hoặc migrate development/VPS.
+
 ## 2026-10-16 — Implementation4.4c
 
 Đã có lịch Student mentor thực tế/own attendance/guest → own history/summary và

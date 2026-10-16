@@ -1,5 +1,12 @@
 # Phase 3.3 — Tiến độ Material management
 
+## 2026-10-16 — Sửa fixture CI khi merge Phase4
+
+Release fixture bổ sung hai compatibility bridges hiện có, giữ cả attendance
+và release constraints/FKs. Rehearsal3.3.1/3.3.4 và Student materials nhắm đúng
+migration thay vì migration cuối cùng của Phase4. Thêm regression coexistence;
+không đổi SQL lịch sử/API/flow nghiệp vụ. [Evidence và giới hạn](../Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 Cập nhật: **2026-10-15**.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).

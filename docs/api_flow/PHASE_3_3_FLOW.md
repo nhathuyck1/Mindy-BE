@@ -1,5 +1,12 @@
 # Phase 3.3 — Flow Material management và release
 
+## 2026-10-16 — Sửa CI sau merge Phase4
+
+Flow/API giữ nguyên. Fixture release chạy đủ compatibility bridges để hai
+constraint attendance/release cùng tồn tại; test rollback3.3.1/3.3.4 nhắm đúng
+migration theo tên. [Evidence local](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials);
+không sửa migration lịch sử hoặc chạy migration development/VPS.
+
 Cập nhật: **2026-10-15**. **Manager CRUD3.3.1, Mentor context/submission3.3.2 và review/publication3.3.3 và Class Unit release3.3.4 đã implement local; chưa deploy.**
 Plan: [3.3](../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 API chi tiết: [breakdown](PHASE_3_3_flow-api-breakdown.md).
