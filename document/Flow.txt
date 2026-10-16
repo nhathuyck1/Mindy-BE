@@ -26,7 +26,7 @@ Student
 + Browse course list -> register class and choose onl/off -> add to cart -> process order(full payment): can choose payment type(cash/PayOS)*add confirmation to mail for online transaction
 -> be added to the course unit(by manager)
 - Cash case: Cash pending(still got add automatic to class. Only see class unit title, class session title with timetable then go to offline classroon)
- -> Mentor confirm order stt -> Can see the whole course
+ -> Manager thu tiền mặt tại bất kỳ lớp nào (không cần phân công), confirm order PAID -> Can see the whole course
 - Cash pending will be added to class group chat/mentor DM
 + View schedule (Fap calendar)
 + Browse class unit,session, attendance, homework, ...

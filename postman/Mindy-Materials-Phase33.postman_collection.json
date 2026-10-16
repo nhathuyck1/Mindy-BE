@@ -1304,6 +1304,184 @@
           }
         }
       ]
+    },
+    {
+      "name": "Manager plain text authoring",
+      "description": "Alternative to contentHtml, send only one. Patch expectedRevision must match current detail. Backend stores sanitized canonical contentHtml. Manager cookie + trusted Origin required.",
+      "item": [
+        {
+          "name": "Create ARTICLE plain text",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contentType\": \"ARTICLE\",\n  \"title\": \"Bài học văn bản\",\n  \"contentText\": \"Dòng một\\nDòng hai <hiển thị như văn bản>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authoring succeeds', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('material_id', data.id);",
+                  "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit ARTICLE plain text",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedRevision\": {{expected_revision}},\n  \"contentText\": \"Nội dung đã sửa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authoring succeeds', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('material_id', data.id);",
+                  "  pm.collectionVariables.set('expected_revision', String(data.revision));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Word DOCX upload and approval",
+      "description": "Upload .docx through Files Phase32 first; MIME application/vnd.openxmlformats-officedocument.wordprocessingml.document, max25MiB. Set file_id to the READY Word file. Create FILE then approve expected revision. No Word-to-PDF conversion.",
+      "item": [
+        {
+          "name": "Create Word DOCX FILE draft",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/manager/course-units/{{course_unit_id}}/materials",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n \"contentType\": \"FILE\",\n \"title\": \"Tài liệu Word\",\n \"fileId\": \"{{file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  " const data = pm.response.json();",
+                  " pm.collectionVariables.set('material_id', data.id);",
+                  " pm.collectionVariables.set('expected_revision', String(data.revision));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Word FILE current revision",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/manager/materials/{{material_id}}/approve",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n \"expectedRevision\": {{expected_revision}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  " const data = pm.response.json();",
+                  " pm.collectionVariables.set('material_id', data.id);",
+                  " pm.collectionVariables.set('expected_revision', String(data.revision));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

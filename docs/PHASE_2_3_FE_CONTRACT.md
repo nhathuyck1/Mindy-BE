@@ -20,7 +20,7 @@ checkout → GET /me/classes (refetch) → chọn dòng theo accessMode
 lịch tuần/tháng → GET /me/schedule?from&to (lấy đủ các trang) → click event → mở lớp theo accessMode
 ```
 
-Sau PayOS PAID hoặc mentor xác nhận CASH: refetch My Classes/lịch rồi mở detail FULL.
+Sau PayOS PAID hoặc manager xác nhận thu CASH: refetch My Classes/lịch rồi mở detail FULL.
 Preview cũ trả 403 sau khi đã thanh toán — đó là chuyển trạng thái, không phải mất lớp.
 `accessMode/accessReason/canView*` là gợi ý tại thời điểm `asOf`; detail/preview luôn
 kiểm tra lại quyền.

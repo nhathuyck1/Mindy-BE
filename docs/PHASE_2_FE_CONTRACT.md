@@ -63,42 +63,27 @@ lịch và rollback bulk nếu lỗi. Contract Student lịch bổ sung dayOfWee
 Xem [contract 2.3](PHASE_2_3_FE_CONTRACT.md) và
 [API breakdown](api_flow/PHASE_2_3_flow-api-breakdown.md#51-admin-sửa-giờ-một-buổi-và-bulk).
 
-### Màn hình Mentor: lớp → học viên → thu tiền
+### Màn hình Manager: lớp → học viên → thu tiền (2026-10-16)
 
-| API | Quyền | Contract |
-|---|---|---|
-| `GET /api/v1/mentor/classes?page=1&pageSize=20&status=OPEN` | MENTOR đang được gán cho Class | Danh sách lớp phân trang, chỉ lớp của chính mentor; gồm trạng thái Class. `status` tùy chọn. |
-| `GET /api/v1/mentor/classes/:classId/students?page=1&pageSize=20&paymentType=CASH&orderStatus=PENDING` | MENTOR đang được gán cho Class | Danh sách enrollment còn hiệu lực của lớp; `paymentType`/`orderStatus` tùy chọn. Lớp không thuộc mentor trả 404. |
+Thay người thu/xác nhận từ MENTOR sang MANAGER. Mọi manager active xem được mọi
+lớp, không cần phân công. Mentor giữ roster read-only, canConfirmCash=false.
 
-Mỗi dòng học viên có `studentId`, `studentName`, `enrollmentId/status`,
-`paymentType`, `orderId`, `orderCode`, `orderStatus`, `classAmount`,
-`orderTotalAmount`, `orderClassCount`, `expiresAt`, `paidAt` và `canConfirmCash`.
-`canConfirmCash` chỉ là gợi ý cho UI tại thời điểm đọc; endpoint confirm vẫn kiểm
-tra lại quyền, hạn, amount, trạng thái và giữ chỗ trong transaction. Không trả
-email/số điện thoại hoặc meeting URL trong roster. Nếu một order CASH gồm nhiều
-lớp của cùng mentor, **thu và confirm toàn bộ `orderTotalAmount` một lần bằng
-`orderId`**, không thu `classAmount` riêng cho mỗi dòng/lớp. Khi Admin đổi mentor
-của Class, mentor mới thấy roster nhưng không được confirm cash order đã chụp
-mentor cũ; mentor cũ vẫn thấy order trong `GET /mentor/cash-orders` để xử lý.
+| API | Quyền / contract |
+|---|---|
+| GET /api/v1/manager/classes?page=1&pageSize=20&status=OPEN | MANAGER; tất cả lớp, status tùy chọn |
+| GET /api/v1/manager/classes/:classId/students?paymentType=CASH&orderStatus=PENDING | MANAGER; roster học viên theo lớp, có phân trang và filter tùy chọn |
+| GET /api/v1/manager/cash-orders?page=1&pageSize=20 | MANAGER; toàn bộ CASH orders/lịch sử |
+| POST /api/v1/manager/cash-orders/:orderId/confirm | MANAGER; {receivedAmount} bằng orderTotalAmount; 200 OrderDto PAID |
 
-| API | Quyền | Contract |
-|---|---|---|
-| `GET /api/v1/mentor/cash-orders?page=1&pageSize=20` | MENTOR snapshot của order | `{items: OrderDto[], page, pageSize, total}`, mới nhất trước; gồm lịch sử các trạng thái |
-| `POST /api/v1/mentor/cash-orders/:orderId/confirm` | MENTOR snapshot của order | Body `{receivedAmount: 5000}`, đúng tổng VND nguyên; HTTP 200 `OrderDto` |
-| `GET /api/v1/me/classes/:classId/preview` | STUDENT có hold CASH pending còn hạn | `ClassDetailDto`: summary, unit/session titles, timetable/room; không có meeting URL |
-| `GET /api/v1/me/classes/:classId` | STUDENT ACTIVE | Full class DTO hiện có |
-
-Confirm kiểm tra ownership, method, amount, deadline, class chưa CANCELLED và
-holds hiện hữu. Transaction giữ lock class theo ID → order → activation holds;
-payment SUCCEEDED + order PAID + enrollment ACTIVE + progress được commit cùng
-nhau. Request lặp/song song đúng amount trả order đã PAID, không nhân bản dữ liệu.
-Sai amount/trạng thái/hold: 409; sai mentor hoặc role (kể cả ADMIN): 403.
-PayOS tắt không ảnh hưởng CASH. CASH không tạo PayOS detail hoặc email outbox.
-
-Audit hiện dùng payment `reference_code = cash:<mentorId>:<orderId>` cùng amount,
-paidAt và order mentor snapshot; không cần sửa schema/migration đã deploy.
-`GET /me/orders/:id` đọc được payment CASH đã xác nhận với checkoutUrl/qrCode null.
-Preview sau khi thanh toán trả 403; FE chuyển sang endpoint full class.
+Một order nhiều lớp phải thu đủ tổng một lần. Confirm commit payment SUCCEEDED,
+order PAID, holds ACTIVE và progress nguyên tử; retry/concurrent từ manager khác
+không tạo trùng. Sai method/amount/hold/deadline/lớp hủy trả409; sai role403.
+Route mentor/cash-orders cũ bỏ (404). OrderDto.mentorId giữ snapshot checkout cho
+tương thích Student, không dùng chỉ người thu. Audit mới cash-manager:<managerId>:<orderId>;
+legacy cash:<mentorId>:<orderId> vẫn hợp lệ. Không thay schema/migrations.
+Student checkout/preview/full access/PayOS giữ nguyên. Chi tiết fields, validation,
+lỗi và UI/refetch: [API breakdown](api_flow/PHASE_2_3_flow-api-breakdown.md#thu-tiền-mặt-bởi-manager--2026-10-16).
+Chưa deploy/VPS; kết quả local ghi tại Progress.md.
 
 ## Backlog ngoài increment Phase 2 này
 

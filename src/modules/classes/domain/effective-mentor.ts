@@ -17,3 +17,6 @@ export const EFFECTIVE_MENTOR_SQL =
 /** IN_PROGRESS support is activated by the lifecycle migration in slice 4.2. */
 export const OCCUPIED_SESSION_SQL =
   "(s.status::text = 'IN_PROGRESS' OR (s.status::text = 'SCHEDULED' AND c.status::text IN ('OPEN', 'IN_PROGRESS')))";
+
+/** Support calendar only: cancellation before start retains current allocation, never teaching credit. */
+export const MANAGEMENT_MENTOR_SQL = `COALESCE(${EFFECTIVE_MENTOR_SQL}, CASE WHEN s.status = 'CANCELLED' THEN COALESCE(s.mentor_override_id, c.mentor_id) ELSE NULL END)`;

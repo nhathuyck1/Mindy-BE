@@ -1,3 +1,4 @@
+import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -125,7 +126,7 @@ describe.skipIf(!separateTestUrl('learning'))(
       });
       expect(JSON.stringify(previewEvents)).not.toContain('meet.example.test');
 
-      await f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount);
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount);
       const active = (await myClasses.list(o.student.id, options())).items[0];
       expect(active).toMatchObject({
         enrollmentId: pending?.enrollmentId,
@@ -235,7 +236,7 @@ describe.skipIf(!separateTestUrl('learning'))(
 
     it('keeps a cancelled class and a completed enrollment as summaries without calendar events', async () => {
       const o = await f.order({ paymentType: PaymentType.CASH, count: 2 });
-      await f.cash.confirm(o.mentor.id, o.order.id, o.order.totalAmount);
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, o.order.id, o.order.totalAmount);
       const [cancelledId = '', completedId = ''] = o.classIds;
       await db.getRepository(ClassEntity).update(cancelledId, { status: ClassStatus.CANCELLED });
       await db

@@ -13,6 +13,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
   let studentCookie: string;
   let otherCookie: string;
   let adminCookie: string;
+  let managerCookie: string;
   let mentorCookie: string;
   let cashCookie: string;
   let learnerCookie: string;
@@ -88,6 +89,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     studentCookie = await login('student@http.test');
     otherCookie = await login('other@http.test');
     adminCookie = await login('admin@http.test');
+    managerCookie = await login('manager@http.test');
     mentorCookie = await login('mentor@http.test');
     cashCookie = await login('cash@http.test');
     learnerCookie = await login('learner@http.test');
@@ -118,6 +120,104 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   }
+
+  it('protects every Phase 2.4 manager read with role/session guards and no inherited admin mutations', async () => {
+    const id = randomUUID();
+    const paths = [
+      '/manager/classes',
+      `/manager/classes/${id}`,
+      `/manager/classes/${id}/units`,
+      `/manager/classes/${id}/students`,
+      `/manager/classes/${id}/students/${id}`,
+      '/manager/mentors',
+      `/manager/mentors/${id}`,
+      `/manager/mentors/${id}/classes`,
+      `/manager/mentors/${id}/schedule?from=2026-10-01T00:00:00Z&to=2026-10-02T00:00:00Z`,
+      '/manager/students',
+      `/manager/students/${id}`,
+      `/manager/students/${id}/classes`,
+      '/manager/orders',
+      `/manager/orders/${id}`,
+      '/manager/payments',
+      `/manager/payments/${id}`,
+    ];
+    for (const path of paths) {
+      expect((await request(path)).status, path).toBe(401);
+      for (const cookie of [studentCookie, mentorCookie, adminCookie])
+        expect((await request(path, cookie)).status, path).toBe(403);
+      const response = await request(path, managerCookie);
+      expect([200, 404], path).toContain(response.status);
+    }
+    for (const path of ['/admin/users', '/admin/classes', `/admin/payments/${id}/reconcile`])
+      expect((await request(path, managerCookie, {})).status).toBe(403);
+  });
+  it('serves manager class/HR projections, rejects wrong-role targets, unknown fields and malformed ranges', async () => {
+    const people = await request('/manager/mentors', managerCookie);
+    expect(people.status).toBe(200);
+    expect(people.headers.get('cache-control')).toBe('private, no-store');
+    const directory = (await people.json()) as { items: { id: string; role: string }[] };
+    expect(directory.items.every((p) => p.role === 'MENTOR')).toBe(true);
+    expect(JSON.stringify(directory)).not.toMatch(/passwordHash|refreshToken|googleSubject/);
+    const detail = await request(`/manager/classes/${classId}`, managerCookie);
+    expect(detail.status).toBe(200);
+    expect(await detail.json()).toMatchObject({ id: classId, unitCount: 1, sessionCount: 1 });
+    const admins: { id: string }[] = await db.query(
+      "SELECT id FROM users WHERE email='admin@http.test'",
+    );
+    for (const target of [
+      `/manager/mentors/${admins[0]?.id}`,
+      `/manager/students/${admins[0]?.id}`,
+      `/manager/students/${admins[0]?.id}/classes`,
+      `/manager/mentors/${admins[0]?.id}/classes`,
+    ])
+      expect((await request(target, managerCookie)).status).toBe(404);
+    for (const path of [
+      '/manager/classes?q=%20',
+      '/manager/classes?courseId=bad',
+      '/manager/students?role=ADMIN',
+      '/manager/students?status=PENDING_VERIFICATION',
+      '/manager/mentors?pageSize=101',
+      '/manager/orders?from=2026-10-01T00:00:00Z',
+      '/manager/payments?dateField=WRONG',
+      '/manager/orders?from=2026-10-02T00:00:00Z&to=2026-10-01T00:00:00Z',
+      '/manager/orders?from=2026-10-01&to=2026-10-02',
+    ])
+      expect((await request(path, managerCookie)).status, path).toBe(422);
+    expect((await request('/manager/classes/not-a-uuid', managerCookie)).status).toBe(400);
+    const students = await request(
+      `/manager/classes/${classId}/students/${randomUUID()}`,
+      managerCookie,
+    );
+    expect(students.status).toBe(404);
+    const mentor = directory.items[0];
+    if (!mentor) throw new Error('Missing mentor');
+    expect((await request(`/manager/mentors/${mentor.id}/schedule`, managerCookie)).status).toBe(
+      422,
+    );
+    expect(
+      (
+        await request(
+          `/manager/mentors/${mentor.id}/schedule?from=2026-10-01T00:00:00Z&to=2026-12-01T00:00:00Z`,
+          managerCookie,
+        )
+      ).status,
+    ).toBe(422);
+  });
+  it('rechecks suspended and demoted manager on the next request', async () => {
+    const rows: { id: string }[] = await db.query(
+      "SELECT id FROM users WHERE email='manager@http.test'",
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error('Missing manager');
+    try {
+      await db.query("UPDATE users SET status='SUSPENDED' WHERE id=$1", [id]);
+      expect((await request('/manager/orders', managerCookie)).status).toBe(401);
+      await db.query("UPDATE users SET status='ACTIVE', role='STUDENT' WHERE id=$1", [id]);
+      expect((await request('/manager/students', managerCookie)).status).toBe(401);
+    } finally {
+      await db.query("UPDATE users SET status='ACTIVE', role='MANAGER' WHERE id=$1", [id]);
+    }
+  });
 
   it('protects admin class student reads, validates input and exposes their Swagger contracts', async () => {
     const roster = `/admin/classes/${classId}/students`;
@@ -266,7 +366,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
 
   it('lets admins create managers who can authenticate without inheriting other role permissions', async () => {
     const input = {
-      email: 'manager@http.test',
+      email: 'new-manager@http.test',
       password: '123456',
       displayName: 'Material Manager',
       role: 'MANAGER',
@@ -438,7 +538,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     expect(publicText).not.toContain('paid-class');
   });
 
-  it('cash preview hides private URLs; only mentor confirms full amount and retries preserve one payment', async () => {
+  it('cash preview hides private URLs; only managers confirm full amount and retries preserve one payment', async () => {
     await request('/me/cart/items', cashCookie, { classId });
     const checkout = await request('/me/cart/checkout', cashCookie, { paymentType: 'CASH' });
     expect(checkout.status).toBe(201);
@@ -454,18 +554,57 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     expect(content).not.toContain('meetingUrl');
     expect(content).not.toContain('paid-session');
     expect((await request(`/me/classes/${classId}`, cashCookie)).status).toBe(403);
-    const path = `/mentor/cash-orders/${order.id}/confirm`;
+    const path = `/manager/cash-orders/${order.id}/confirm`;
     const body = { receivedAmount: order.totalAmount };
+    expect((await request(path, undefined, body)).status).toBe(401);
+    expect((await request(path, mentorCookie, body)).status).toBe(403);
+    expect((await request('/manager/classes', mentorCookie)).status).toBe(403);
+    expect((await request('/manager/cash-orders', studentCookie)).status).toBe(403);
+    expect((await request('/manager/classes?page=0', managerCookie)).status).toBe(422);
+    expect((await request('/manager/classes/invalid/students', managerCookie)).status).toBe(400);
+    expect((await request(`/manager/classes/${randomUUID()}/students`, managerCookie)).status).toBe(
+      404,
+    );
+    const classes = await request('/manager/classes', managerCookie);
+    expect(classes.status).toBe(200);
+    expect(await classes.json()).toMatchObject({
+      items: expect.arrayContaining([expect.objectContaining({ id: classId })]),
+    });
+    const rosterPath = `/manager/classes/${classId}/students?paymentType=CASH&orderStatus=PENDING`;
+    expect(await (await request(rosterPath, managerCookie)).json()).toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({ orderId: order.id, canConfirmCash: true }),
+      ]),
+    });
+    expect(
+      await (await request(`/mentor/classes/${classId}/students`, mentorCookie)).json(),
+    ).toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({ orderId: order.id, canConfirmCash: false }),
+      ]),
+    });
+    expect(
+      (await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, body)).status,
+    ).toBe(404);
     expect((await request(path, cashCookie, body)).status).toBe(403);
     expect((await request(path, adminCookie, body)).status).toBe(403);
-    expect((await request(path, mentorCookie, { ...body, status: 'PAID' })).status).toBe(422);
+    expect((await request(path, managerCookie, { ...body, status: 'PAID' })).status).toBe(422);
     expect(
-      (await request(path, mentorCookie, { receivedAmount: order.totalAmount - 1 })).status,
+      (await request(path, managerCookie, { receivedAmount: order.totalAmount - 1 })).status,
     ).toBe(409);
-    const list = await request('/mentor/cash-orders', mentorCookie);
+    const list = await request('/manager/cash-orders', managerCookie);
     expect(list.status).toBe(200);
     expect(await list.json()).toMatchObject({ items: [{ id: order.id }] });
-    for (let n = 0; n < 2; n++) expect((await request(path, mentorCookie, body)).status).toBe(200);
+    for (let n = 0; n < 2; n++) expect((await request(path, managerCookie, body)).status).toBe(200);
+    const login = await request('/auth/login', undefined, {
+      email: 'manager2@http.test',
+      password: 'Http-test-password1!',
+    });
+    const secondManager = login.headers
+      .getSetCookie()
+      .map((c) => c.split(';')[0])
+      .join('; ');
+    expect((await request(path, secondManager, body)).status).toBe(200);
     expect((await request(`/me/classes/${classId}`, cashCookie)).status).toBe(200);
     const own = await request(`/me/orders/${order.id}`, cashCookie);
     expect(own.status).toBe(200);
@@ -643,7 +782,7 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
       expect((await request(`/me/classes?${query}`, learnerCookie)).status).toBe(422);
     expect((await request('/me/classes?classStatus=CANCELLED', learnerCookie)).status).toBe(200);
 
-    const confirm = await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, {
+    const confirm = await request(`/manager/cash-orders/${order.id}/confirm`, managerCookie, {
       receivedAmount: order.totalAmount,
     });
     expect(confirm.status).toBe(200);

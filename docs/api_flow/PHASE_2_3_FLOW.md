@@ -1,5 +1,25 @@
 # Phase 2.3 — Flow Student: My Classes và lịch cá nhân
 
+Kiểm chứng local 2026-10-16: pnpm check601/601 tests,58 suites; HTTP72/72 distinct cases qua các lượt (Phase2.2 cuối13/13). Lint/type-check/build pass; chưa deploy hoặc thanh toán thật.
+
+## Thu tiền mặt chuyển sang Manager — 2026-10-16
+
+Theo yêu cầu mới, thay Mentor bằng MANAGER: manager xem tất cả lớp → chọn lớp →
+lọc học viên CASH/PENDING → thu đủ orderTotalAmount → xác nhận order PAID.
+Không cần gán manager vào lớp, mentor hay order. Mentor chỉ xem payment roster,
+canConfirmCash luôn false. Route mentor/cash-orders đã bỏ; FE chuyển sang
+manager/cash-orders. Student checkout, cách tách CASH order, preview pending,
+TTL/holds, PayOS và quyền học giữ nguyên; PAID kích hoạt hold/progress như trước.
+Không thêm trạng thái APPROVED: xác nhận thu tiền chuyển PENDING → PAID.
+
+Giữ cash_mentor_id/OrderDto.mentorId làm snapshot checkout tương thích Student,
+không dùng cấp quyền thu tiền. Audit mới cash-manager:<managerId>:<orderId>;
+chấp nhận evidence cash:<mentorId>:<orderId> cũ cho điểm danh và retry. Mọi manager
+được retry đơn đã thanh toán; không đổi người thu đã ghi hoặc tạo payment trùng.
+Không sửa schema/migration đã deploy. Chưa deploy/VPS hoặc nghiệm thu tiền thật.
+Contract đầy đủ tại [API breakdown — thu tiền](PHASE_2_3_flow-api-breakdown.md#thu-tiền-mặt-bởi-manager--2026-10-16).
+
+
 Cập nhật: **2026-10-13**. Đã đối chiếu controller, DTO, service và test trong checkout.
 Các API đã implement; evidence local nằm trong progress. Chưa xác minh release/VPS
 trong lượt tài liệu này.
@@ -10,6 +30,12 @@ Contract: [FE Phase 2.3](../PHASE_2_3_FE_CONTRACT.md).
 Tiến độ: [Progress 2.3](../progress/phase%202/PHASE_2_3_PROGRESS.md).
 
 ## Dữ liệu mẫu roster — 2026-10-16
+
+Cập nhật theo lỗi capacity trên server và yêu cầu mới: seed chỉ bổ sung đến20
+ghế mỗi lớp HTML/JS, tính cả ACTIVE/PENDING_PAYMENT hiện có; mục tiêu giới hạn
+bởi maxStudents. Lớp đạt/vượt mục tiêu giữ nguyên, không xóa học viên. Thay thế
+mục tiêu thêm20/24 tài khoản độc lập mô tả trong evidence lịch sử bên dưới.
+Không đổi API; bản sửa chưa được chạy trên VPS.
 
 Đã thêm `pnpm seed:class-roster` (cũng nằm cuối `pnpm seed:data`): 44 tài khoản
 STUDENT riêng, ghi danh ACTIVE vào HTML-CSS-101-ON1 (20/25) và JS-101-ON1 (24/25).

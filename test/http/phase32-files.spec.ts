@@ -513,7 +513,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       ).toBe(403);
     expect(
       (
-        await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, {
+        await request(`/manager/cash-orders/${order.id}/confirm`, managerCookie, {
           receivedAmount: order.totalAmount,
         })
       ).status,
@@ -1027,9 +1027,14 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       visit(collection.item);
       expect(requests).toBeGreaterThanOrEqual(34);
     });
-    it.each(['ARTICLE', 'FILE', 'VIDEO'] as const)(
-      '%s follows real upload → submit → reject/edit → approve → release → withdraw',
-      async (contentType) => {
+    it.each([
+      { label: 'ARTICLE', contentType: 'ARTICLE', extension: 'pdf' },
+      { label: 'FILE', contentType: 'FILE', extension: 'pdf' },
+      { label: 'VIDEO', contentType: 'VIDEO', extension: 'mp4' },
+      { label: 'Word DOCX', contentType: 'FILE', extension: 'docx' },
+    ] as const)(
+      '$label follows real upload, submit, reject, approve, release and withdraw',
+      async ({ contentType, extension }) => {
         async function readyFile(extension: string): Promise<string> {
           const binary = binaries.find((item) => item.filename.endsWith(`.${extension}`));
           if (!binary) throw new Error(`Missing ${extension} fixture`);
@@ -1051,7 +1056,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
           ).toMatchObject({ status: 'READY' });
           return intent.fileId;
         }
-        const fileId = await readyFile(contentType === 'VIDEO' ? 'mp4' : 'pdf');
+        const fileId = await readyFile(extension);
         const imageId = contentType === 'ARTICLE' ? await readyFile('png') : undefined;
         const createdResponse = await request(
           `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/materials`,
@@ -1150,6 +1155,14 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
             attachments: [{ id: fileId }],
           });
         else expect(approved).toMatchObject({ file: { id: fileId }, contentHtml: null });
+        if (extension === 'docx')
+          expect(approved).toMatchObject({
+            file: {
+              id: fileId,
+              kind: 'DOCUMENT',
+              mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            },
+          });
         const refs = await db.query(
           'SELECT * FROM material_file_references WHERE material_id=$1 ORDER BY file_id, role',
           [created.id],
@@ -1816,5 +1829,31 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     expect(
       (await request(`/me/classes/${scope.classId}/materials/${article.id}`, studentCookie)).status,
     ).toBe(200);
+  });
+  it('accepts plain text or CKEditor HTML for Manager articles and rejects conflicting inputs', async () => {
+    const path = `/manager/course-units/${scope.courseUnitId}/materials`;
+    const created = await request(path, managerCookie, {
+      contentType: 'ARTICLE',
+      title: 'Plain manager lesson',
+      contentText: '<b>literal</b>\nLine two',
+    });
+    expect(created.status).toBe(201);
+    const article = (await created.json()) as { id: string; revision: number; contentHtml: string };
+    expect(article.contentHtml).toContain('&lt;b&gt;literal&lt;/b&gt;');
+    const edited = await request(
+      `/manager/materials/${article.id}`,
+      managerCookie,
+      { expectedRevision: article.revision, contentText: 'Changed text' },
+      'PATCH',
+    );
+    expect(edited.status).toBe(200);
+    expect(await edited.json()).toMatchObject({ contentHtml: '<p>Changed text</p>' });
+    for (const body of [
+      { contentType: 'ARTICLE', title: 'Mixed', contentText: 'text', contentHtml: '<p>html</p>' },
+      { contentType: 'ARTICLE', title: 'Empty', contentText: '   ' },
+      { contentType: 'ARTICLE', title: 'Null', contentText: null },
+      { contentType: 'FILE', title: 'Invalid', fileId: scope.courseUnitId, contentText: 'text' },
+    ])
+      expect((await request(path, managerCookie, body)).status).toBe(422);
   });
 });

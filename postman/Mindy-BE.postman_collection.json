@@ -39,11 +39,11 @@
       "value": ""
     },
     {
-      "key": "mentor_email",
+      "key": "manager_email",
       "value": ""
     },
     {
-      "key": "mentor_password",
+      "key": "manager_password",
       "value": ""
     },
     {
@@ -57,6 +57,18 @@
     {
       "key": "schedule_to",
       "value": "2026-10-18T17:00:00Z"
+    },
+    {
+      "key": "course_id",
+      "value": ""
+    },
+    {
+      "key": "mentor_id",
+      "value": ""
+    },
+    {
+      "key": "student_id",
+      "value": ""
     }
   ],
   "item": [
@@ -584,7 +596,7 @@
       ]
     },
     {
-      "name": "04 — Phase 2 CASH confirmation and preview",
+      "name": "Manager cash collection",
       "item": [
         {
           "name": "Login student",
@@ -672,7 +684,7 @@
           }
         },
         {
-          "name": "Login assigned mentor",
+          "name": "Login manager",
           "request": {
             "method": "POST",
             "header": [
@@ -684,7 +696,7 @@
             "url": "{{base_url}}/api/v1/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{mentor_email}}\",\n  \"password\": \"{{mentor_password}}\"\n}",
+              "raw": "{\n  \"email\": \"{{manager_email}}\",\n  \"password\": \"{{manager_password}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -694,11 +706,11 @@
           }
         },
         {
-          "name": "List my assigned classes",
+          "name": "List all classes for collection",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/api/v1/mentor/classes?page=1&pageSize=20"
+            "url": "{{base_url}}/api/v1/manager/classes?page=1&pageSize=20"
           }
         },
         {
@@ -706,15 +718,15 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/students?page=1&pageSize=20&paymentType=CASH&orderStatus=PENDING"
+            "url": "{{base_url}}/api/v1/manager/classes/{{class_id}}/students?page=1&pageSize=20&paymentType=CASH&orderStatus=PENDING"
           }
         },
         {
-          "name": "List my CASH orders",
+          "name": "List all CASH orders",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/api/v1/mentor/cash-orders?page=1&pageSize=20"
+            "url": "{{base_url}}/api/v1/manager/cash-orders?page=1&pageSize=20"
           }
         },
         {
@@ -727,7 +739,7 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{base_url}}/api/v1/mentor/cash-orders/{{order_id}}/confirm",
+            "url": "{{base_url}}/api/v1/manager/cash-orders/{{order_id}}/confirm",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"receivedAmount\": {{received_amount}}\n}",
@@ -848,6 +860,332 @@
             "header": [],
             "url": "{{base_url}}/api/v1/me/schedule?from={{schedule_from}}&to={{schedule_to}}&classId={{class_id}}&includeCancelled=false"
           }
+        }
+      ]
+    },
+    {
+      "name": "Phase 2.4 Manager operations",
+      "description": "MANAGER login cookie jar. A-C implemented source; no assignment required. Required variables must be UUIDv4; fill schedule range <=31 days. Remove optional query filters if unset. D finance summary backlog; no provider calls from GET. Full contract docs/api_flow/PHASE_2_4_flow-api-breakdown.md.",
+      "item": [
+        {
+          "name": "Manager GET classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/classes?courseId={{course_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET classes/{{class_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/classes/{{class_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET classes/{{class_id}}/units",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/classes/{{class_id}}/units"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET classes/{{class_id}}/students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/classes/{{class_id}}/students"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET classes/{{class_id}}/students/{{student_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/classes/{{class_id}}/students/{{student_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET mentors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/mentors"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET mentors/{{mentor_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/mentors/{{mentor_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET mentors/{{mentor_id}}/classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/mentors/{{mentor_id}}/classes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET mentors/{{mentor_id}}/schedule",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/mentors/{{mentor_id}}/schedule?from={{schedule_from}}&to={{schedule_to}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/students"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET students/{{student_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/students/{{student_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET students/{{student_id}}/classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/students/{{student_id}}/classes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/orders?studentId={{student_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET orders/{{order_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/orders/{{order_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/payments?orderId={{order_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Manager GET payments/{{payment_id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/manager/payments/{{payment_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Manager read returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Private projection', () => pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store')); "
+                ]
+              }
+            }
+          ]
         }
       ]
     }

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
-import { DataSource, In } from 'typeorm';
+import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
 import type { OrderPageOptionsDto } from '../dtos/order-page-options.dto.js';
 import { OrderEntity } from '../entities/order.entity.js';
 import { OrderDetailEntity } from '../entities/order-detail.entity.js';
+import type { PaymentType } from '../enums/payment-type.enum.js';
 import {
   OrderAccessDeniedException,
   OrderNotFoundException,
@@ -13,6 +14,46 @@ import type { OrderWithDetails } from './checkout.service.js';
 @Injectable()
 export class OrdersService {
   constructor(private readonly dataSource: DataSource) {}
+
+  managementQuery(
+    manager: EntityManager,
+    filters: {
+      studentId?: string;
+      paymentType?: PaymentType;
+      classId?: string;
+      orderDetailIds?: readonly string[];
+    } = {},
+  ): SelectQueryBuilder<OrderEntity> {
+    const query = manager.getRepository(OrderEntity).createQueryBuilder('purchase');
+    if (filters.studentId !== undefined)
+      query.andWhere('purchase.studentId = :studentId', { studentId: filters.studentId });
+    if (filters.paymentType !== undefined)
+      query.andWhere('purchase.paymentType = :paymentType', { paymentType: filters.paymentType });
+    if (filters.classId !== undefined)
+      query.andWhere(
+        'EXISTS (SELECT 1 FROM order_details d WHERE d.order_id = purchase.id AND d.class_id = :classId)',
+        { classId: filters.classId },
+      );
+    if (filters.orderDetailIds !== undefined) {
+      if (!filters.orderDetailIds.length) query.andWhere('FALSE');
+      else
+        query.andWhere(
+          'EXISTS (SELECT 1 FROM order_details d WHERE d.order_id = purchase.id AND d.id IN (:...detailIds))',
+          { detailIds: [...filters.orderDetailIds] },
+        );
+    }
+    return query;
+  }
+  async managementDetails(
+    manager: EntityManager,
+    orderIds: readonly string[],
+  ): Promise<OrderDetailEntity[]> {
+    return orderIds.length
+      ? manager
+          .getRepository(OrderDetailEntity)
+          .find({ where: { orderId: In([...orderIds]) }, order: { classId: 'ASC' } })
+      : [];
+  }
 
   async listForStudent(
     studentId: string,

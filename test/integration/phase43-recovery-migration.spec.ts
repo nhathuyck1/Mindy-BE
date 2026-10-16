@@ -1,3 +1,4 @@
+import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import 'reflect-metadata';
 import type { DataSource } from 'typeorm';
@@ -57,7 +58,7 @@ describe.skipIf(!separateTestUrl('phase43_migration'))(
     it('enforces exact session/attendance/enrollment/line/payment lineage and RESTRICT; refuses history rollback; paginated history uses index on 20k rows', async () => {
       const f = paymentFixture(db),
         a = await f.order({ paymentType: PaymentType.CASH });
-      await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
       const classId = a.classIds[0],
         s = (await f.read.getDetail(classId ?? '')).units[0]?.sessions[0];
       const enrollments: { id: string; order_detail_id: string }[] = await db.query(

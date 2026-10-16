@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI requires a runtime constructor.
-import { DataSource, In } from 'typeorm';
+import { DataSource, type EntityManager, In } from 'typeorm';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
 import { ClassEntity } from '../../classes/entities/class.entity.js';
 import { ClassStatus } from '../../classes/enums/class-status.enum.js';
@@ -16,6 +16,7 @@ import {
 } from '../../enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../enrollments/enums/enrollment-status.enum.js';
 import { UserEntity } from '../../users/user.entity.js';
+import type { UserStatus } from '../../users/user-status.enum.js';
 import type {
   MentorClassPageOptionsDto,
   MentorRosterPageOptionsDto,
@@ -29,13 +30,14 @@ export class MentorClassRosterService {
     private readonly classRead: ClassReadService,
   ) {}
 
-  async classes(mentorId: string, options: MentorClassPageOptionsDto) {
+  /** Manager-only routes pass undefined; mentor routes always scope to their principal ID. */
+  async classes(mentorId: string | undefined, options: MentorClassPageOptionsDto) {
     const query = this.db
       .getRepository(ClassEntity)
       .createQueryBuilder('class')
-      .where('class.mentorId = :mentorId', { mentorId })
       .orderBy('class.createdAt', 'DESC')
       .addOrderBy('class.id', 'ASC');
+    if (mentorId !== undefined) query.andWhere('class.mentorId = :mentorId', { mentorId });
     if (options.status !== undefined)
       query.andWhere('class.status = :status', { status: options.status });
     const [classes, total] = await query
@@ -46,17 +48,21 @@ export class MentorClassRosterService {
   }
 
   async students(
-    mentorId: string,
+    mentorId: string | undefined,
     classId: string,
     options: MentorRosterPageOptionsDto,
-  ): Promise<{ items: MentorRosterRow[]; total: number }> {
-    const classEntity = await this.db
+    manager: EntityManager = this.db.manager,
+  ): Promise<{
+    items: (MentorRosterRow & { email: string; phone: string | null; studentStatus: UserStatus })[];
+    total: number;
+  }> {
+    const classEntity = await manager
       .getRepository(ClassEntity)
-      .findOneBy({ id: classId, mentorId });
+      .findOneBy(mentorId === undefined ? { id: classId } : { id: classId, mentorId });
     if (!classEntity)
       throw new AppHttpException(HttpStatus.NOT_FOUND, 'CLASS_NOT_FOUND', 'Class not found');
 
-    const query = this.db
+    const query = manager
       .getRepository(EnrollmentEntity)
       .createQueryBuilder('enrollment')
       .innerJoin(OrderDetailEntity, 'detail', 'detail.id = enrollment.orderDetailId')
@@ -80,24 +86,24 @@ export class MentorClassRosterService {
       .getManyAndCount();
     if (enrollments.length === 0) return { items: [], total };
 
-    const details = await this.db.getRepository(OrderDetailEntity).find({
+    const details = await manager.getRepository(OrderDetailEntity).find({
       where: { id: In(enrollments.map((e) => e.orderDetailId)) },
     });
     const detailById = new Map(details.map((d) => [d.id, d]));
     const orderIds = [...new Set(details.map((d) => d.orderId))];
     const [orders, students, allOrderDetails] = await Promise.all([
-      this.db.getRepository(OrderEntity).find({ where: { id: In(orderIds) } }),
-      this.db.getRepository(UserEntity).find({
+      manager.getRepository(OrderEntity).find({ where: { id: In(orderIds) } }),
+      manager.getRepository(UserEntity).find({
         where: { id: In(enrollments.map((e) => e.studentId)) },
       }),
-      this.db.getRepository(OrderDetailEntity).find({ where: { orderId: In(orderIds) } }),
+      manager.getRepository(OrderDetailEntity).find({ where: { orderId: In(orderIds) } }),
     ]);
     const orderById = new Map(orders.map((o) => [o.id, o]));
     const studentById = new Map(students.map((s) => [s.id, s]));
     const countByOrder = new Map<string, number>();
     for (const detail of allOrderDetails)
       countByOrder.set(detail.orderId, (countByOrder.get(detail.orderId) ?? 0) + 1);
-    const orderClasses = await this.db.getRepository(ClassEntity).find({
+    const orderClasses = await manager.getRepository(ClassEntity).find({
       where: { id: In([...new Set(allOrderDetails.map((d) => d.classId))]) },
     });
     const classById = new Map(orderClasses.map((c) => [c.id, c]));
@@ -118,6 +124,9 @@ export class MentorClassRosterService {
         enrollmentStatus: enrollment.status,
         studentId: enrollment.studentId,
         studentName: student.displayName,
+        email: student.email,
+        phone: student.phone,
+        studentStatus: student.status,
         orderId: order.id,
         orderCode: order.orderCode,
         orderStatus: order.status,
@@ -129,7 +138,7 @@ export class MentorClassRosterService {
         paidAt: order.paidAt,
         canConfirmCash:
           order.paymentType === PaymentType.CASH &&
-          order.cashMentorId === mentorId &&
+          mentorId === undefined &&
           order.status === OrderStatus.PENDING &&
           order.expiresAt > now &&
           enrollment.status === EnrollmentStatus.PENDING_PAYMENT &&

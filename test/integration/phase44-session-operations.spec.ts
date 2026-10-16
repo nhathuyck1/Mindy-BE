@@ -221,7 +221,7 @@ describe.skipIf(!separateTestUrl('phase44a'))('Phase 4.4a session operations (Po
 
   it('cancels an in-progress session without changing attendance, clocks, teacher or deadline; cannot cancel completed', async () => {
     const a = await fixture();
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(a.s.startsAt);
     const teacher = actor(a.mentor.id, UserRole.MENTOR);
@@ -544,7 +544,7 @@ describe.skipIf(!separateTestUrl('phase44a'))('Phase 4.4a session operations (Po
 
   it('serializes start with class cancellation and never turns a retained snapshot into absent', async () => {
     const a = await fixture();
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(a.s.startsAt);
     const results = await Promise.allSettled([

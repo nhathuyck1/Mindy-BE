@@ -1,5 +1,7 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+> 2026-10-16: CASH chuyển sang manager bất kỳ, không cần assignment. Mentor chỉ đọc payment roster rồi sync attendance sau PAID. [Flow/contract thu tiền](PHASE_2_3_FLOW.md#thu-tiền-mặt-chuyển-sang-manager--2026-10-16). Tương thích evidence mentor cũ được giữ; Student flow không đổi.
+
 ## 2026-10-16 — Constraint compatibility trong CI
 
 Fixture release dùng đủ hai bridge hiện có; regression xác nhận constraint/FK
@@ -131,8 +133,7 @@ Phase 3 materials chạy song song và không là prerequisite của attendance.
    APP_TIME_ZONE; không overnight. Ngoài ngày chỉ Manager/Admin recovery.
 3. PUT attendance batch gửi các checkbox thay đổi, không thay toàn bộ roster
    ngầm. Bỏ tick trước chốt = UNMARKED; sau chốt chọn PRESENT/ABSENT rõ ràng.
-4. CASH còn pending chỉ ở phần chờ xác nhận; mentor snapshot của cash Order
-   confirm qua API Phase 2.2 hiện hữu. Mentor thay không được kế thừa quyền tiền.
+4. CASH còn pending chỉ ở phần chờ xác nhận; manager bất kỳ confirm qua API /manager/cash-orders; không cần gán lớp. Mentor không thu tiền.
    Sync-roster sau activation chỉ admit hold có trước start và ACTIVE hợp lệ.
 5. FE preview tổng rồi finalize theo version; server atomically chuyển các
    UNMARKED thành ABSENT, set COMPLETED và actualEndedAt.

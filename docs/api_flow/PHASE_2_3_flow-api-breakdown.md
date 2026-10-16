@@ -1,5 +1,65 @@
 # Phase 2.3 — API breakdown cho FE: My Classes và lịch
 
+Seed roster cập nhật2026-10-16: bổ sung HTML-CSS-101-ON1 và JS-101-ON1 đến20
+ghế mỗi lớp (tính ACTIVE/PENDING_PAYMENT đang có, giới hạn capacity). Lớp đủ
+người được giữ nguyên. Không đổi API/auth/request/response; xem flow roster.
+
+Kiểm chứng local 2026-10-16: pnpm check601/601 tests,58 suites; HTTP72/72 distinct cases qua các lượt (Phase2.2 cuối13/13). Lint/type-check/build pass; chưa deploy hoặc thanh toán thật.
+
+## Thu tiền mặt bởi Manager — 2026-10-16
+
+Đã implement source; kiểm chứng local ghi tại Progress.md. Chưa deploy/VPS.
+[Flow](PHASE_2_3_FLOW.md#thu-tiền-mặt-chuyển-sang-manager--2026-10-16).
+Các route dưới đây dùng prefix /api/v1, cookie access_token, credentials: include,
+role MANAGER active. Không cần class assignment; ADMIN/MENTOR/STUDENT trả 403,
+chưa đăng nhập 401. Các GET không có body; confirm không cần Idempotency-Key.
+Success trả DTO trực tiếp. Timestamps ISO UTC; tiền là VND nguyên.
+
+| API | Request và thời điểm FE gọi | Response 200 |
+|---|---|---|
+| GET /api/v1/manager/classes | Mở trang thu tiền; page ≥1 default1, pageSize 1–100 default20; status tùy chọn DRAFT/OPEN/IN_PROGRESS/COMPLETED/CANCELLED | {items: ClassDto có status[], page, pageSize, total}; mọi lớp, mới nhất trước; lấy items[].id làm classId |
+| GET /api/v1/manager/classes/:classId/students | classId UUID từ list; page/pageSize như trên; paymentType CASH/PAYOS và orderStatus PENDING/PAID/EXPIRED/CANCELLED tùy chọn. Trang cần thu dùng ?paymentType=CASH&orderStatus=PENDING | {items, page, pageSize, total}; enrollment PENDING_PAYMENT/ACTIVE/COMPLETED, không CANCELLED |
+| GET /api/v1/manager/cash-orders | Danh sách toàn bộ CASH order/lịch sử; chỉ page/pageSize như trên, mới nhất trước | {items: OrderDto[], page, pageSize, total}; không lọc mentor/manager |
+| POST /api/v1/manager/cash-orders/:orderId/confirm | orderId UUID từ roster hoặc cash-orders; body {"receivedAmount":10000}, bắt buộc number nguyên 1–Number.MAX_SAFE_INTEGER bằng toàn bộ orderTotalAmount | OrderDto status PAID, paidAt; không dùng trạng thái APPROVED |
+
+Roster item: studentId/studentName, enrollmentId/enrollmentStatus, orderId/orderCode,
+orderStatus/paymentType, classAmount (phần của lớp), orderTotalAmount (phải thu đủ),
+orderClassCount, expiresAt, paidAt nullable, canConfirmCash. Ví dụ:
+{"studentId":"11111111-1111-4111-8111-111111111111","studentName":"Học viên",
+"orderId":"22222222-2222-4222-8222-222222222222","paymentType":"CASH",
+"orderStatus":"PENDING","classAmount":5000,"orderTotalAmount":10000,
+"orderClassCount":2,"canConfirmCash":true} (trích fields).
+Không có email/phone/meeting URL trong roster. Một đơn nhiều lớp phải xác nhận
+một lần bằng tổng đơn; không thu lặp theo từng lớp. canConfirmCash chỉ là hint:
+CASH, PENDING còn hạn, hold PENDING_PAYMENT, mọi lớp trong đơn chưa CANCELLED.
+Mentor GET /mentor/classes và /mentor/classes/:classId/students giữ quyền assigned,
+nhưng canConfirmCash luôn false. Mentor cash-orders routes cũ trả 404.
+
+Confirm kiểm role hiện tại, CASH/full amount, deadline, lớp và holds trong
+transaction, khóa lớp theo ID rồi order; commit payment SUCCEEDED + order PAID +
+enrollment ACTIVE + progress nguyên tử. Concurrent/retry từ manager khác trả cùng
+order PAID, không ghi trùng hoặc đổi audit người thu đầu tiên. Audit manager mới
+và legacy mentor đều được attendance evidence nhận diện. Không PayOS/SMTP call,
+không CASH email outbox. OrderDto.mentorId chỉ là legacy snapshot, không phải
+người thu. Checkout/grouping CASH theo snapshot giữ nguyên cho Student.
+
+Lỗi: UUID sai 400; query/body sai hoặc field lạ 422; class/order không tồn tại
+404 CLASS_NOT_FOUND/ORDER_NOT_FOUND; non-manager 403 (guard hoặc ORDER_ACCESS_DENIED).
+409 CASH_CONFIRMATION_INVALID: sai method/amount hoặc payment evidence không khớp;
+CASH_ORDER_CLOSED: hết hạn, đóng hoặc có lớp hủy; CASH_HOLD_INVALID: hold không thể
+activate. FE không retry mù 409; refetch đơn/roster, hiển thị lý do và chặn xác nhận.
+401 đăng nhập lại, 403 dừng thao tác, 404 quay lại danh sách, 422 sửa input.
+
+FE có loading/empty/error/retry cho GET; chỉ bật confirm khi canConfirmCash true,
+chống double click và hiển thị tổng cả đơn. Sau confirm refetch roster, cash-orders
+và student order/class; pending preview → full class sau PAID. Student flow và
+các gate Materials/Attendance giữ nguyên. Không cần polling manager; lỗi mạng
+confirm có thể retry cùng orderId/amount rồi refetch. Hết hạn thì dừng thu theo đơn
+đó. Điều kiện môi trường: release API mới và tài khoản MANAGER active; CASH không
+phụ thuộc flag PayOS. Migration không thay đổi. Rollback code cũ không hiểu audit
+cash-manager mới; phải giữ reader tương thích nếu rollback sau khi thu tiền.
+
+
 Cập nhật: **2026-10-12**. Bốn GET Student và hai PATCH Admin dưới đây đã implement trong checkout.
 [Flow Student](PHASE_2_3_FLOW.md) · [Contract FE](../PHASE_2_3_FE_CONTRACT.md).
 Deployment/VPS chưa được xác minh trong lượt này; API tồn tại trong source không

@@ -78,7 +78,8 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
       detail = await f.read.getDetail(sourceClassId),
       original = detail.units[0]?.sessions[0];
     if (!original) throw new Error('Missing source');
-    if (paid) await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    if (paid)
+      await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     await operations.cancel(
       original.id,
       { expectedVersion: original.version, reason: 'Replacement required' },
@@ -248,7 +249,7 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
   it('requires active source payment, explicit content confirmation, matching Course Unit and a different class', async () => {
     const a = await fixture(2, false);
     await expect(assign(a)).rejects.toMatchObject({ response: { code: 'MAKEUP_NOT_ELIGIBLE' } });
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     await expect(
       makeup.create(
         a.conflict.id,
@@ -606,7 +607,11 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
     await f.cart.addItem(student.id, a.sourceClassId);
     const [order] = await f.checkout.checkout(student.id, PaymentType.CASH);
     if (!order) throw new Error('Missing source payment');
-    await f.cash.confirm(a.mentor.id, order.order.id, order.order.totalAmount);
+    await f.cash.confirm(
+      (await f.user(UserRole.MANAGER)).id,
+      order.order.id,
+      order.order.totalAmount,
+    );
     await f.cart.addItem(student.id, a.clash.c.id);
     await f.checkout.checkout(student.id, PaymentType.CASH);
     const conflicts = (await makeup.conflicts(staff, { ...PAGE, classId: a.sourceClassId })).items;
@@ -683,7 +688,11 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
     await f.cart.addItem(regular.id, a.target.c.id);
     const [order] = await f.checkout.checkout(regular.id, PaymentType.CASH);
     if (!order) throw new Error('Missing payment');
-    await f.cash.confirm(a.target.mentor.id, order.order.id, order.order.totalAmount);
+    await f.cash.confirm(
+      (await f.user(UserRole.MANAGER)).id,
+      order.order.id,
+      order.order.totalAmount,
+    );
     const p = await assign(a),
       opened = await start(a);
     const first = await attendance.roster(a.target.t.id, staff, { page: 1, pageSize: 1 }),

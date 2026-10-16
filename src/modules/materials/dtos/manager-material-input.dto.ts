@@ -54,6 +54,16 @@ export class CreateManagerMaterialDto {
   @ValidateIf((_o, value) => value !== undefined)
   @IsString()
   readonly contentHtml?: string;
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 49152,
+    description:
+      'ARTICLE only. Plain text alternative to contentHtml; exactly one content input. Stored as escaped canonical HTML.',
+  })
+  @ValidateIf((_o, value) => value !== undefined)
+  @IsString()
+  @MaxLength(49152)
+  readonly contentText?: string;
   @ApiPropertyOptional({ enum: [1], default: 1 })
   @ValidateIf((_o, value) => value !== undefined)
   @IsInt()

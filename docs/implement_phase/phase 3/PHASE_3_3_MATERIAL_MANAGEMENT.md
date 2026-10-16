@@ -452,3 +452,16 @@ mới hơn để ghi đè implementation hoặc đánh dấu VPS/browser đã ng
 
 Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 và Progress chung;
 3/3 ca migration compatibility đã pass trên PostgreSQL test riêng.
+
+## Bổ sung manager text/HTML + upload — 2026-10-16
+
+Theo yêu cầu user và ảnh, thực hiện BE/API trước: thêm contentText thay thế
+contentHtml cho ARTICLE create/patch, lưu chung canonical sanitized HTML,
+không migration. PDF/MP4/TXT/MP3 đã có Files validation + typed Material;
+flow hai nút và tích hợp editor/upload ghi mục cuối API breakdown3.3.
+Không sửa FE; server acceptance còn pending. Evidence cuối lượt ở progress3.3.
+
+Làm rõ yêu cầu Word ngày2026-10-16: bổ sung file .docx vào danh sách UI/API upload
+để approve, không tạo tài liệu Word bàn giao. Backend đã có DOCX25MiB/kind DOCUMENT,
+Material FILE; thêm HTTP real upload→submit→review→approve→Student signed access→
+withdraw. Không thêm enum/migration/conversion Word. .doc cũ chưa hỗ trợ.

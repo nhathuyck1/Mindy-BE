@@ -106,7 +106,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
     ]);
     if (paid) {
       if (paymentType === PaymentType.CASH)
-        await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+        await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
       else {
         const link = await f.links.create(a.student.id, a.order.id);
         await f.settlement.settle(
@@ -159,7 +159,12 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
       id,
       new Date(START.getTime() - 3600000),
     ]);
-    if (paid) await f.cash.confirm(a.mentor.id, order.order.id, order.order.totalAmount);
+    if (paid)
+      await f.cash.confirm(
+        (await f.user(UserRole.MANAGER)).id,
+        order.order.id,
+        order.order.totalAmount,
+      );
     vi.setSystemTime(NOW);
     return { id, order };
   }
@@ -214,7 +219,11 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
     const a = await fixture(),
       b = await extraHold(a, false),
       c = await closed(a);
-    await f.cash.confirm(a.mentor.id, b.order.order.id, b.order.order.totalAmount);
+    await f.cash.confirm(
+      (await f.user(UserRole.MANAGER)).id,
+      b.order.order.id,
+      b.order.order.totalAmount,
+    );
     const outcomes = await Promise.allSettled([
       mark(a, c.session.version, Status.PRESENT, staff),
       attendance.syncRoster(
@@ -283,7 +292,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
     };
     const results = await Promise.allSettled([
       attendance.recover(a.sessionId, body, staff, key),
-      f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount),
+      f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount),
     ]);
     expect(results[1]?.status).toBe('fulfilled');
     if (results[0]?.status === 'rejected')
@@ -749,7 +758,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
       a.order.id,
       new Date(NOW.getTime() + 3600000),
     ]);
-    await f.cash.confirm(a.mentor.id, a.order.id, a.order.totalAmount);
+    await f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount);
     await expect(
       attendance.recover(a.sessionId, recovery(a), staff, randomUUID()),
     ).rejects.toMatchObject({ status: 422 });

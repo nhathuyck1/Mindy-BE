@@ -10,6 +10,7 @@ describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E'
   let url: string;
   let classId: string;
   let adminCookie: string;
+  let managerCookie: string;
   beforeAll(async () => {
     const dbUrl = separateTestUrl('phase43_http');
     const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -73,6 +74,7 @@ describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E'
         .join('; ');
     };
     adminCookie = await login('admin@http.test');
+    managerCookie = await login('manager@http.test');
   }, 30000);
   afterAll(async () => {
     if (db?.isInitialized) await db.destroy();
@@ -187,7 +189,7 @@ describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E'
       end = new Date(`${day}T13:00:00+07:00`);
     expect(
       (
-        await request(`/mentor/cash-orders/${a.order.id}/confirm`, a.mentor.cookie, {
+        await request(`/manager/cash-orders/${a.order.id}/confirm`, managerCookie, {
           receivedAmount: a.order.totalAmount,
         })
       ).status,

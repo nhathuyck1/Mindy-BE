@@ -328,3 +328,24 @@ Check→backup→migrate→postflight→API; mở PR không tự deploy server.
 Deploy dev e0c9174 đã success trên runner mindycode theo GitHub run38570656351;
 chưa deploy/VPS acceptance cho branch này. Chi tiết/giới hạn tại
 [progress3.3](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+
+## Bổ sung theo màn hình manager — 2026-10-16
+
+User chọn BE/API trước: màn hình chương có Soạn nội dung (text hoặc CKEditor HTML)
+và Upload tài liệu. Thêm contentText cho create/patch ARTICLE, escape markup/line
+break rồi sanitize và lưu canonical contentHtml; giữ contentHtml API cũ. Không
+nhận cả hai, không nhận text cho FILE/VIDEO. TXT/PDF/MP3 dùng FILE; MP4 VIDEO qua
+upload intent → storage PUT → complete → READY → create Material đã có.
+CourseUnitId lấy từ manager class units2.4; không dùng Student reader để quản lý
+draft. Không đổi schema/approval/release/entitlement. Chi tiết input/errors/UI
+handoff tại mục cuối breakdown3.3. Chưa sửa frontend/deploy.
+
+Làm rõ yêu cầu Word ngày2026-10-16: bổ sung file .docx vào danh sách UI/API upload
+để approve, không tạo tài liệu Word bàn giao. Backend đã có DOCX25MiB/kind DOCUMENT,
+Material FILE; thêm HTTP real upload→submit→review→approve→Student signed access→
+withdraw. Không thêm enum/migration/conversion Word. .doc cũ chưa hỗ trợ.
+
+Kiểm chứng cuối16/10: pnpm check615/615 tests (61 suites), lint/type/build pass;
+HTTP77/77 (8 suites), gồm Word DOCX real MinIO full review/access/withdraw pass.
+Source/API local verified; chưa sửa FE hoặc deploy. Không có file Word bàn giao:
+Word .docx là định dạng tài liệu FILE/DOCUMENT theo yêu cầu user đã làm rõ.

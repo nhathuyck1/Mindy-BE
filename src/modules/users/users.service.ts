@@ -28,6 +28,25 @@ export class UsersService {
     private readonly users: Repository<UserEntity>,
   ) {}
 
+  async findManagerPerson(
+    id: string,
+    role: UserRole.MENTOR | UserRole.STUDENT,
+    manager: EntityManager,
+  ): Promise<UserEntity> {
+    const user = await manager.getRepository(UserEntity).findOneBy({ id, role });
+    if (!user) throw new UserNotFoundException();
+    return user;
+  }
+  managerPeopleQuery(
+    manager: EntityManager,
+    role: UserRole.MENTOR | UserRole.STUDENT,
+  ): SelectQueryBuilder<UserEntity> {
+    return manager
+      .getRepository(UserEntity)
+      .createQueryBuilder('person')
+      .where('person.role = :personRole', { personRole: role });
+  }
+
   async findAuthenticationIdentity(email: string): Promise<UserEntity | null> {
     return this.users
       .createQueryBuilder('user')

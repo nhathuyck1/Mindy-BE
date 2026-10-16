@@ -22,8 +22,7 @@ deployment and real transactions remain pending and will be performed by the use
 docs/implement_phase/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md for the current payment plan,
 docs/progress/PHASE_2_2_PROGRESS.md for evidence and docs/PAYOS_PHASE_2_2_DEPLOYMENT.md
 for the deployment runbook.
-Preserve full payment, online confirmation email, cash pending preview and assigned
-mentor cash confirmation from Flow.txt; pending group chat/DM is deferred to chat.
+Preserve full payment, online confirmation email, cash pending preview and manager cash confirmation without class assignment (updated 2026-10-16) from Flow.txt; pending group chat/DM is deferred to chat.
 Activate existing checkout holds after verified settlement; do not recreate enrollment
 tables or edit deployed migrations. Keep the remaining Phase 2.1 A1 checks explicit.
 

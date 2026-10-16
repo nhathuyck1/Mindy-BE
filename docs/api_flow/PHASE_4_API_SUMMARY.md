@@ -127,9 +127,11 @@ Các route này tồn tại trước hai commit; không tính vào 17 endpoint m
 | Method | Endpoint | Quyền | Vai trò trong flow |
 |---|---|---|---|
 | GET | `/api/v1/mentor/classes` | MENTOR | Xem lớp mentor phụ trách theo quyền cấp lớp; dạy thay một buổi không tự mở toàn bộ quyền lớp. |
-| GET | `/api/v1/mentor/classes/:classId/students` | MENTOR được giao lớp | Roster enrollment/payment; lấy `orderId` theo response payment để xử lý CASH. Khác roster attendance. |
-| GET | `/api/v1/mentor/cash-orders` | MENTOR theo snapshot Order | Tìm đơn CASH chờ thu; lấy order ID và tổng tiền. |
-| POST | `/api/v1/mentor/cash-orders/:orderId/confirm` | Mentor snapshot của Order | Body `{receivedAmount}` phải bằng toàn bộ tổng đơn. Commit PAID/ACTIVE trước khi teaching mentor gọi sync-roster. Route cũ không yêu cầu Idempotency-Key như mutations Phase 4. |
+| GET | `/api/v1/mentor/classes/:classId/students` | MENTOR được giao lớp | Roster enrollment/payment chỉ đọc; mentor không có quyền confirm CASH. Khác roster attendance. |
+| GET | `/api/v1/manager/classes` | MANAGER | Mọi lớp để chọn lớp thu tiền, không cần assignment. |
+| GET | `/api/v1/manager/classes/:classId/students` | MANAGER | Roster payment, lọc CASH/PENDING; lấy orderId/orderTotalAmount để thu đủ. |
+| GET | `/api/v1/manager/cash-orders` | MANAGER không cần phân công | Tìm đơn CASH chờ thu; lấy order ID và tổng tiền. |
+| POST | `/api/v1/manager/cash-orders/:orderId/confirm` | MANAGER không cần phân công | Body `{receivedAmount}` phải bằng toàn bộ tổng đơn. Commit PAID/ACTIVE trước khi teaching mentor gọi sync-roster. Route cũ không yêu cầu Idempotency-Key như mutations Phase 4. |
 | GET | `/api/v1/me/classes` | STUDENT | Lớp của mình; dùng `accessMode` để chọn FULL hoặc CASH_PREVIEW. |
 | GET | `/api/v1/me/classes/:classId` | STUDENT có enrollment ACTIVE | Chi tiết lớp/full access; không dùng để cấp toàn lớp cho substitute. |
 | GET | `/api/v1/me/classes/:classId/preview` | STUDENT sở hữu CASH pending hợp lệ | Preview lịch/title/phòng; chưa có full access hoặc attendance chính thức. |
@@ -179,7 +181,7 @@ flowchart TD
     L --> M["COMPLETED: UNMARKED thành ABSENT"]
     M --> N["PUT attendance: correction nếu còn quyền"]
     N --> O["Staff: GET attendance-audits"]
-    I --> P["Mentor snapshot Order: POST CASH confirm"]
+    I --> P["Manager: POST CASH confirm"]
     P --> Q["Teaching mentor / Staff: POST attendance/sync-roster"]
     Q --> I
     B --> R["Staff: POST attendance/recover cho record thiếu, có evidence"]
@@ -218,7 +220,7 @@ Ví dụ body dùng cho PATCH dạy thay (mentorId minh họa):
 ### 4.4. CASH chưa thanh toán → xác nhận → thêm roster
 
 1. GET attendance có `pendingPaymentCount`; đây chỉ là số lượng, không trả orderId hoặc thông tin thu tiền.
-2. Mentor có quyền **snapshot Order** lấy đơn qua GET cash-orders hoặc payment roster → POST `/mentor/cash-orders/:orderId/confirm` với `receivedAmount` bằng tổng đơn. Một đơn có thể chứa nhiều lớp.
+2. Manager bất kỳ lấy đơn qua GET cash-orders hoặc payment roster → POST `/manager/cash-orders/:orderId/confirm` với `receivedAmount` bằng tổng đơn. Một đơn có thể chứa nhiều lớp.
 3. Chờ confirm commit PAID/enrollment ACTIVE; **teaching mentor hiệu lực của buổi** lấy version mới → POST sync-roster. Hai actor có thể là hai người khác nhau.
 4. Sync chỉ nhận enrollment ACTIVE cùng lớp có hold tạo trước/đúng start, activation trước start hoặc CASH đã trả sau start. Enrollment tạo sau start hoặc PayOS kích hoạt sau start không được thêm qua sync.
 5. GET roster → mark → finalize. Mentor sync khi IN_PROGRESS trong hạn; Staff có thể sync cả COMPLETED đã start với reason, record mới thành ABSENT rồi sửa sang PRESENT bằng PUT nếu cần.

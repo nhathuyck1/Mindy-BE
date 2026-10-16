@@ -12,15 +12,15 @@ const ORDER_CODE_RANDOM_LENGTH = 12;
 const ORDER_CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 export interface PlannedOrder {
-  /** Mentor who must confirm the cash; null for PayOS. */
+  /** Legacy mentor grouping snapshot; cash collection is handled by any manager. Null for PayOS. */
   readonly cashMentorId: string | null;
   readonly totalAmount: number;
   readonly offers: readonly ClassOffer[];
 }
 
 /**
- * Splits a cart into orders. PayOS pays the whole cart with one order. Cash is handed to a
- * mentor, so cash checkout creates one order per mentor. Output order is deterministic.
+ * Splits a cart into orders. PayOS pays the whole cart with one order. Preserve the Student
+ * cash grouping by mentor snapshot; any manager can collect these orders. Output is deterministic.
  */
 export function planOrders(
   paymentType: PaymentType,

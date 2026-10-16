@@ -556,3 +556,43 @@ Kết quả full local gates sau tích hợp được ghi ở progress3.3/3.4 v�
   cần forward fix/manual diagnosis, không có automatic DB rollback.
   Không sửa runtime/YAML/migrations/API; không tạo PR/push/merge/deploy VPS,
   không chạy migration development hoặc payment thật.
+
+## 2026-10-16 — Manager text hoặc HTML và upload handoff
+
+User gửi ảnh và chốt làm BE/API trước; không sửa FE. Thêm optional contentText vào
+CreateManagerMaterialDto/PatchManagerMaterialDto (Mentor kế thừa), ARTICLE-only,
+mutually exclusive với contentHtml, escape text + normalize newline + sanitizer,
+lưu canonical contentHtml/schemaVersion1. PATCH giữ revision/review/audit/refs cũ;
+file payload không được nhận text. Không migration/entity/env/dependency mới.
+PDF/TXT/MP3 FILE và MP4 VIDEO đã có trong Files allowlist/validation; dùng lại
+upload-intent→storage PUT→complete→READY→create Material. Không thêm type giả hoặc
+bulk upload, không tự publish hay bỏ Student entitlement/release.
+
+API breakdown3.3 mục cuối mô tả hai nút, input, typed creation, trạng thái upload,
+errors/retry/refetch và mapping courseUnitId từ Phase2.4 units. Swagger thêm field,
+Postman Phase33 thêm create/patch plain text. User làm rõ Word là định dạng .docx để upload/approve. Dùng allowlist DOCX
+application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+kind DOCUMENT, Material FILE,25MiB. Bổ sung HTTP real DOCX upload→READY→draft→
+submit→reject/edit→approve→Student access→withdraw; giữ workflow/revision/release.
+File Word bàn giao tạo do hiểu nhầm đã được bỏ, không là deliverable của yêu cầu.
+
+
+Local: pnpm check614/614 (61 suites) + lint/type/build; article-input2 unit cases;
+Phase3.3.1 integration15/15 có thêm plaintext create/patch/mixed/file/blank case;
+HTTP76/76 có Files41/41 với plaintext cookie+Origin+validation và upload bytes thực
+PDF/MP4/MP3. Gate cuối sau annotation/UUID contract ghi ở progress2.4 cuối lượt.
+Không deploy/server/browser acceptance, không sửa FE hay chạy giao dịch thật.
+
+Gate tuần tự cuối: `pnpm check` PASS —615/615 tests,61 suites, lint/type-check/build
+đều exit0, không skip. Nguồn Commerce filter đã cố định và9 focused2.4 đã pass;
+lượt chạy lẫn nguồn trước đó không được dùng làm evidence pass. Sau làm rõ Word,
+thêm1 HTTP acceptance DOCX và chạy lại toàn HTTP; kết quả ghi ngay dưới khi xong.
+Không còn deliverable docs/word: user yêu cầu loại file .docx để approve.
+
+Kết quả cuối đã xác minh: **pnpm check615/615 (61 suites) PASS**, **pnpm test:http
+77/77 (8 suites) PASS**,0 skip. Files HTTP42/42 gồm ca Word DOCX upload byte thực,
+validate READY, FILE draft→submit→reject/edit→approve→Student detail/signed Range
+access→withdraw; response kind DOCUMENT/MIME Office Word được kiểm. Final lint
+434 files và type-check đều pass. Không FE/VPS/browser/live transaction mới.
+Postman có Word FILE create/approve và plaintext revision chaining, API docs cập
+nhật cùng source. Yêu cầu định dạng Word .docx đã được xác nhận end-to-end local.

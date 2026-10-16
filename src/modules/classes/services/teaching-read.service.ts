@@ -385,7 +385,7 @@ export class TeachingReadService {
     });
   }
 
-  private sessionQuery(m: EntityManager): SelectQueryBuilder<ClassSessionEntity> {
+  sessionQuery(m: EntityManager): SelectQueryBuilder<ClassSessionEntity> {
     return m
       .getRepository(ClassSessionEntity)
       .createQueryBuilder('s')

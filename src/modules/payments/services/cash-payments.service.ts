@@ -16,6 +16,10 @@ import type { OrderWithDetails } from '../../commerce/services/checkout.service.
 import { OrderSettlementService } from '../../commerce/services/order-settlement.service.js';
 // biome-ignore lint/style/useImportType: Exported enrollment provider.
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
+import { UserRole } from '../../users/user-role.enum.js';
+// biome-ignore lint/style/useImportType: Nest DI requires runtime constructor.
+import { UsersService } from '../../users/users.service.js';
+import { isCashConfirmation } from '../domain/cash-confirmation.js';
 import type { CashPreviewView } from '../dtos/student-class-preview.dto.js';
 import { PaymentTransactionEntity } from '../entities/payment-transaction.entity.js';
 import { PaymentStatus } from '../enums/payment-status.enum.js';
@@ -28,13 +32,11 @@ export class CashPaymentsService {
     private readonly classes: ClassOffersService,
     private readonly read: ClassReadService,
     private readonly enrollments: EnrollmentsService,
+    private readonly users: UsersService,
   ) {}
 
-  async list(
-    mentorId: string,
-    options: PageOptionsDto,
-  ): Promise<{ items: OrderWithDetails[]; total: number }> {
-    return this.orders.listCash(this.db.manager, mentorId, options);
+  async list(options: PageOptionsDto): Promise<{ items: OrderWithDetails[]; total: number }> {
+    return this.orders.listCash(this.db.manager, options);
   }
 
   async preview(studentId: string, classId: string): Promise<CashPreviewView> {
@@ -62,19 +64,19 @@ export class CashPaymentsService {
   }
 
   async confirm(
-    mentorId: string,
+    managerId: string,
     orderId: string,
     receivedAmount: number,
   ): Promise<OrderWithDetails> {
     return this.db.transaction(async (manager) => {
+      if (!(await this.users.findActiveByRole(managerId, UserRole.MANAGER, manager)))
+        throw new OrderAccessDeniedException();
       const snapshot = await this.orders.read(manager, orderId);
-      if (snapshot.order.cashMentorId !== mentorId) throw new OrderAccessDeniedException();
       const offers = await this.classes.lockOffers(
         manager,
         snapshot.details.map((d) => d.classId),
       );
       const order = await this.orders.lock(manager, orderId);
-      if (order.cashMentorId !== mentorId) throw new OrderAccessDeniedException();
       if (order.paymentType !== PaymentType.CASH || receivedAmount !== order.totalAmount)
         throw new AppHttpException(
           HttpStatus.CONFLICT,
@@ -86,7 +88,7 @@ export class CashPaymentsService {
         const payment = await payments.findOneBy({ orderId });
         if (
           payment?.status !== PaymentStatus.SUCCEEDED ||
-          payment.referenceCode !== `cash:${mentorId}:${orderId}`
+          !isCashConfirmation(payment.referenceCode, orderId, order.cashMentorId)
         )
           throw new AppHttpException(
             HttpStatus.CONFLICT,
@@ -126,7 +128,7 @@ export class CashPaymentsService {
         amount: receivedAmount,
         status: PaymentStatus.SUCCEEDED,
         paidAt: now,
-        referenceCode: `cash:${mentorId}:${orderId}`,
+        referenceCode: `cash-manager:${managerId}:${orderId}`,
       });
       await this.enrollments.activateHolds(manager, order.studentId, holds, now);
       await this.orders.markPaid(manager, orderId, now);

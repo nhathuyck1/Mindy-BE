@@ -76,6 +76,8 @@ for (const [email, role] of [
   ['cash@http.test', 'STUDENT'],
   ['learner@http.test', 'STUDENT'],
   ['admin@http.test', 'ADMIN'],
+  ['manager@http.test', 'MANAGER'],
+  ['manager2@http.test', 'MANAGER'],
   ['mentor@http.test', 'MENTOR'],
 ])
   await users.createUser(

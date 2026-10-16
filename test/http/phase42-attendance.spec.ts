@@ -11,6 +11,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
   let classId: string;
   let studentCookie: string;
   let adminCookie: string;
+  let managerCookie: string;
   let mentorCookie: string;
   beforeAll(async () => {
     const dbUrl = separateTestUrl('phase42_http');
@@ -76,6 +77,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     };
     studentCookie = await login('student@http.test');
     adminCookie = await login('admin@http.test');
+    managerCookie = await login('manager@http.test');
     mentorCookie = await login('mentor@http.test');
   }, 30000);
   afterAll(async () => {
@@ -221,7 +223,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     const orders = (await checkout.json()) as { orders: { id: string; totalAmount: number }[] };
     const order = orders.orders[0];
     if (!order) throw new Error('Missing cash order');
-    const confirmed = await request(`/mentor/cash-orders/${order.id}/confirm`, mentorCookie, {
+    const confirmed = await request(`/manager/cash-orders/${order.id}/confirm`, managerCookie, {
       receivedAmount: order.totalAmount,
     });
     expect(confirmed.status).toBe(200);
@@ -387,7 +389,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     expect(opening.totals.eligible).toBe(0);
     expect(
       (
-        await request(`/mentor/cash-orders/${a.order.id}/confirm`, a.mentor.cookie, {
+        await request(`/manager/cash-orders/${a.order.id}/confirm`, managerCookie, {
           receivedAmount: a.order.totalAmount,
         })
       ).status,
@@ -515,7 +517,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     expect(close.totals.eligible).toBe(0);
     expect(
       (
-        await request(`/mentor/cash-orders/${a.order.id}/confirm`, a.mentor.cookie, {
+        await request(`/manager/cash-orders/${a.order.id}/confirm`, managerCookie, {
           receivedAmount: a.order.totalAmount,
         })
       ).status,

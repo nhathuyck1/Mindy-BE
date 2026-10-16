@@ -3,6 +3,7 @@ import { type EntityManager, In } from 'typeorm';
 import { PaymentType } from '../../commerce/enums/payment-type.enum.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { OrderSettlementService } from '../../commerce/services/order-settlement.service.js';
+import { isCashConfirmation } from '../domain/cash-confirmation.js';
 import { PaymentTransactionEntity } from '../entities/payment-transaction.entity.js';
 import { PaymentWebhookEventEntity } from '../entities/payment-webhook-event.entity.js';
 import { PaymentStatus } from '../enums/payment-status.enum.js';
@@ -52,7 +53,7 @@ export class AttendancePaymentEvidenceService {
         continue;
       if (
         line.paymentType === PaymentType.CASH &&
-        (!line.cashMentorId || p.referenceCode !== `cash:${line.cashMentorId}:${line.orderId}`)
+        !isCashConfirmation(p.referenceCode, line.orderId, line.cashMentorId)
       )
         continue;
       if (

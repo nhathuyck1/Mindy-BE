@@ -1,5 +1,16 @@
 # Implementation phases
 
+2026-10-16 — Phase2.4 A–C đã implement source: manager class/contact, HR directory/relationships, order/payment read. D summary backlog; local gates xem progress2.4; chưa deploy. Các đoạn planning dưới giữ lịch sử theo thời điểm.
+
+2026-10-16 — **Planning Phase2.4 Manager HR + kế toán**: rà soát quyền đã có,
+bổ sung kế hoạch class/contact → mentor/student directory/history → global
+order/payment read. Không mở blanket admin; giữ manager mutations hiện có và
+Student/CASH/PayOS flow. [Plan2.4](phase2/PHASE_2_4_MANAGER_OPERATIONS.md),
+[flow](../api_flow/PHASE_2_4_FLOW.md),
+[API proposal](../api_flow/PHASE_2_4_flow-api-breakdown.md),
+[progress](../progress/phase%202/PHASE_2_4_PROGRESS.md).
+Chưa triển khai/runtime tests/deploy2.4; finance summary là backlog đề xuất.
+
 2026-10-16 implementation:4.4c đã có source schedule/own attendance/Staff
 reports/backlog,20 focused PG/3 compiled HTTP4.4c/13 timetable regression pass.
 Full gates tại [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md);

@@ -1,5 +1,7 @@
 # Phase 2.2 — Tích hợp payOS vào BE và nghiệm thu giao dịch thật
 
+> Cập nhật yêu cầu 2026-10-16: MANAGER bất kỳ thu tiền mặt và confirm, không cần assignment; thay policy mentor snapshot cũ bên dưới. Student flow giữ nguyên. [Contract mới](../../api_flow/PHASE_2_3_flow-api-breakdown.md#thu-tiền-mặt-bởi-manager--2026-10-16).
+
 Cập nhật: 2026-10-05. Trạng thái: **BE đã implement/test local; chờ user deploy và live smoke**.
 Theo dõi thực hiện tại [Phase 2.2 progress](../progress/PHASE_2_2_PROGRESS.md).
 

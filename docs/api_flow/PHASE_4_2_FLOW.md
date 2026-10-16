@@ -22,7 +22,7 @@
 
 ## Nhánh CASH và recovery hiện có
 
-CASH pending → mentor snapshot Order confirm commit → effective teaching mentor
+CASH pending → manager confirm commit → effective teaching mentor
 sync → admit ACTIVE hold trước start. Late PayOS/new enrollment không admit.
 Staff sync sau COMPLETED đã start tạo ABSENT có reason/audit; chưa correction
 sau chốt ở4.2. Student không được GET cả roster.
