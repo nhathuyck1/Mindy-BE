@@ -27,6 +27,7 @@ import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
 import { fileConfig } from '../helpers/files-fixture.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 function unexpectedStorage(): never {
@@ -54,8 +55,8 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
         TypedManagerMaterials1791849600000,
       ],
     });
-    await db.undoLastMigration();
-    await db.runMigrations();
+    await rehearseMigration(db, new TypedManagerMaterials1791849600000(), 'down');
+    await rehearseMigration(db, new TypedManagerMaterials1791849600000(), 'up');
     fixture = paymentFixture(db);
     const user = await fixture.user(UserRole.MANAGER);
     principal = { userId: user.id, role: user.role, sessionId: randomUUID() };
@@ -130,8 +131,8 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
       title: 'legacy',
       createdBy: principal.userId,
     });
-    await db.undoLastMigration();
-    await db.runMigrations();
+    await rehearseMigration(db, new TypedManagerMaterials1791849600000(), 'down');
+    await rehearseMigration(db, new TypedManagerMaterials1791849600000(), 'up');
     expect(
       (await db.getRepository(MaterialEntity).findOneByOrFail({ id: material.id })).fileObjectId,
     ).toBe(file.id);
@@ -487,7 +488,9 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
   });
 
   it('refuses a lossy down migration after typed/audit data and preserves the schema', async () => {
-    await expect(db.undoLastMigration()).rejects.toThrow('Typed data exists; roll back app only');
+    await expect(
+      rehearseMigration(db, new TypedManagerMaterials1791849600000(), 'down'),
+    ).rejects.toThrow('Typed data exists; roll back app only');
     expect(await db.getRepository(MaterialAuditEventEntity).count()).toBeGreaterThan(0);
     expect(await db.showMigrations()).toBe(false);
   });

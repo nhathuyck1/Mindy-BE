@@ -287,6 +287,25 @@ export class MaterialAuthoringService {
     );
   }
 
+  /** Revision-aware GET preview; all reference, disposition and assignment checks stay shared. */
+  async accessAtRevision(
+    principal: AuthenticatedUser,
+    id: string,
+    expectedRevision: number,
+    fileId?: string,
+    scope?: MentorMaterialScope,
+  ): Promise<MaterialFileAccessDto> {
+    const material = await this.detail(principal, id, scope);
+    if (material.revision !== expectedRevision)
+      throw new MaterialPolicyException('MATERIAL_REVIEW_CONFLICT');
+    const target = fileId ?? material.file?.id;
+    if (!target) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+    const signed = await this.preview(principal, id, target, scope);
+    if (signed.revision !== expectedRevision)
+      throw new MaterialPolicyException('MATERIAL_REVIEW_CONFLICT');
+    return signed;
+  }
+
   async list(
     principal: AuthenticatedUser,
     options: ManagerMaterialQueryDto,

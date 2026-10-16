@@ -12,7 +12,15 @@ import { RemoveManagerRole1790900000004 } from '../../src/database/migrations/17
 import { AddCourseImgUrl1791072000000 } from '../../src/database/migrations/1791072000000-add-course-img-url.js';
 import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
 import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
+import { PrepareReleaseUnitConstraint1791849599999 } from '../../src/database/migrations/1791849599999-prepare-release-unit-constraint.js';
 import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
+import { SessionAttendance1791849600001 } from '../../src/database/migrations/1791849600001-session-attendance.js';
+import { CalendarAttendanceDeadline1791849600002 } from '../../src/database/migrations/1791849600002-calendar-attendance-deadline.js';
+import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
+import { IsolateAttendanceUnitConstraint1791856799999 } from '../../src/database/migrations/1791856799999-isolate-attendance-unit-constraint.js';
+import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
+import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
+import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -57,6 +65,7 @@ import { CashPaymentsService } from '../../src/modules/payments/services/cash-pa
 import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
 import { PaymentReconciliationService } from '../../src/modules/payments/services/payment-reconciliation.service.js';
 import { PaymentSettlementService } from '../../src/modules/payments/services/payment-settlement.service.js';
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UsersService } from '../../src/modules/users/users.service.js';
@@ -115,19 +124,33 @@ export async function paymentDatabase(
       ...(extra.entities ?? []),
     ],
     migrations: [
-      IdentityFoundation1790640000000,
-      AddUserUpdatedAt1790640000001,
-      RegistrationAndGoogleIdentity1790760000000,
-      CourseCatalog1790900000000,
-      ClassOperations1790900000001,
-      CommerceOrders1790900000002,
-      EnrollmentSeatHolds1790900000003,
-      RemoveManagerRole1790900000004,
-      AddCourseImgUrl1791072000000,
-      PayosPayments1791158400000,
-      RestoreManagerRole1791504000000,
-      SessionMentorAssignment1791849600000,
-      ...(extra.migrations ?? []),
+      ...new Set([
+        IdentityFoundation1790640000000,
+        AddUserUpdatedAt1790640000001,
+        RegistrationAndGoogleIdentity1790760000000,
+        CourseCatalog1790900000000,
+        ClassOperations1790900000001,
+        CommerceOrders1790900000002,
+        EnrollmentSeatHolds1790900000003,
+        RemoveManagerRole1790900000004,
+        AddCourseImgUrl1791072000000,
+        PayosPayments1791158400000,
+        RestoreManagerRole1791504000000,
+        SessionMentorAssignment1791849600000,
+        SessionScheduleOperations1792022400000,
+        SessionAttendance1791849600001,
+        CalendarAttendanceDeadline1791849600002,
+        AttendanceRecoveryEvidence1791849600003,
+        CrossClassMakeup1792022400001,
+        // Release and attendance must use the same compatibility bridges as the CLI catalog.
+        ...(extra.migrations?.includes(ClassUnitReleaseAudit1791856800000)
+          ? [
+              PrepareReleaseUnitConstraint1791849599999,
+              IsolateAttendanceUnitConstraint1791856799999,
+            ]
+          : []),
+        ...(extra.migrations ?? []),
+      ]),
     ],
     synchronize: false,
   });
@@ -183,11 +206,23 @@ export function paymentFixture(db: DataSource) {
   const config = { getOrThrow: <T>(key: string): T => values[key] as T } as ConfigService;
   const provider = new FakePayos();
   const users = new UsersService(db.getRepository(UserEntity));
-  const enrollments = new EnrollmentsService(db);
+  const enrollments = new EnrollmentsService(db, new ScheduleReservationsService());
   const courses = new CoursesService(db);
   const read = new ClassReadService(db, config, courses, users, enrollments);
-  const offers = new ClassOffersService(db, courses, enrollments, read);
-  const classes = new ClassesService(db, courses, users, new ClassScheduleService(config), read);
+  const offers = new ClassOffersService(
+    db,
+    courses,
+    enrollments,
+    read,
+    new ScheduleReservationsService(),
+  );
+  const classes = new ClassesService(
+    db,
+    courses,
+    users,
+    new ClassScheduleService(config, new ScheduleReservationsService()),
+    read,
+  );
   const expiry = new OrderExpiryService(db, enrollments);
   const cart = new CartService(db, offers);
   const checkout = new CheckoutService(db, config, offers, enrollments, expiry);

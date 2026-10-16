@@ -36,6 +36,10 @@
     {
       "key": "file_id",
       "value": ""
+    },
+    {
+      "key": "revision",
+      "value": "1"
     }
   ],
   "item": [
@@ -115,6 +119,13 @@
             }
           }
         }
+      }
+    },
+    {
+      "name": "Inline image/attachment GET access at expected revision",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/me/classes/{{class_id}}/materials/{{material_id}}/assets/{{file_id}}/access?expectedRevision={{revision}}"
       }
     }
   ]

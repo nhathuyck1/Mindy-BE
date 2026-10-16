@@ -4,6 +4,8 @@ export enum LearningAccessMode {
   FULL = 'FULL',
   /** Unexpired pending CASH hold: titles, timetable and room only; no meeting URL. */
   CASH_PREVIEW = 'CASH_PREVIEW',
+  /** Own cross-class placement: context of exactly one target Session. */
+  SESSION_MAKEUP = 'SESSION_MAKEUP',
   /** Summary/history only: no private class detail and no schedule events. */
   NONE = 'NONE',
 }

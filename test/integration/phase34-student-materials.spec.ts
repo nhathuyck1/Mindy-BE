@@ -46,6 +46,7 @@ import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
 import { binaryFixtures, fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
@@ -77,8 +78,8 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       ],
     });
     // Migration up/down/up is safe only on this isolated empty test database.
-    await db.undoLastMigration();
-    await db.runMigrations();
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'down');
+    await rehearseMigration(db, new ClassUnitReleaseAudit1791856800000(), 'up');
     fixture = paymentFixture(db);
     config = fileConfig({ FILE_GET_TTL_SECONDS: 2 });
     remote = await storageFixture(config);
@@ -472,7 +473,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     await s.activate();
     const file = await db
       .getRepository(FileObjectEntity)
-      .findOneByOrFail({ id: s.material.fileObjectId });
+      .findOneByOrFail({ id: s.material.fileObjectId ?? '' });
     await remote.client.send(
       new PutObjectCommand({
         Bucket: file.bucket,
@@ -601,6 +602,20 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     expect((await fetch(attachment.url)).headers.get('content-disposition')).toMatch(
       /^attachment;/,
     );
+    const revisionAccess = await reads.accessAtRevision(
+      s.principal,
+      s.classId,
+      a.id,
+      a.attachmentId,
+      1,
+    );
+    expect(revisionAccess).toMatchObject({ role: 'ATTACHMENT', revision: 1 });
+    await expect(
+      reads.accessAtRevision(s.principal, s.classId, a.id, a.attachmentId, 2),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      reads.accessAtRevision(s.principal, s.classId, a.id, randomUUID(), 1),
+    ).rejects.toMatchObject({ status: 404 });
     // The same file is the primary of another visible material, but not of this ARTICLE.
     await expect(reads.download(s.principal, s.classId, a.id)).rejects.toMatchObject({
       status: 404,

@@ -1,5 +1,16 @@
 # Phase 3.3 — API breakdown cho FE
 
+**Migration verification16/10/2026:** source catalog24 kiểm chứng từ database test
+trống và nâng dev22→24, giữ ARTICLE cũ và FK/unique indexes, down/up và zero pending.
+pnpm build nay dọn dist để không nạp migration đã xóa sau merge. Production compiled
+DataSource local applied24, rerun0, pending=false; build/lint/type-check pass.
+Không đổi method/route/payload/quyền FE, chưa migrate development/VPS hoặc deploy.
+[Evidence và luồng](PHASE_3_3_FLOW.md#2026-10-16--kiểm-chứng-migration-sau-đồng-bộ-dev).
+
+**Sửa CI16/10/2026:** bổ sung compatibility bridges cho fixture release và nhắm
+đúng migration trong test rollback. Contract/route/payload/quyền FE giữ nguyên;
+[evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 Cập nhật: **2026-10-15**. **Manager CRUD ở §3/4, Mentor context/submission ở §6/7/8 và review/publication ở §5 đã implement local3.3.1–3.3.3;
 release3.3.4 ở §9 đã implement local. Chưa deploy/nghiệm thu VPS3.3.1–3.3.4.**
 Shapes Manager/Mentor/decision/release đã đối chiếu Swagger/source.
@@ -785,3 +796,71 @@ required checks; khuyến nghị bật trước merge, chờ PR Check xanh. Auto
 chỉ sau push/merge dev và reusable Check pass; storage provisioning vẫn theo
 runbook. Evidence server có sẵn chỉ thuộc dev e0c9174/run38570656351, không thuộc
 release này. [Chi tiết review](../progress/phase%203/PHASE_3_3_PROGRESS.md).
+
+## Bổ sung local sau hợp nhất stash — 2026-10-16
+
+**Đã ghép source; evidence tích hợp tại [Progress](../progress/Progress.md).**
+Giữ toàn bộ contract dev phía trên. Không chạy migrations local1792108800000/1
+vì schema typed Materials/release đã có trong catalog dev cùng hai bridge.
+
+### Catalogue và metadata Course Unit
+
+Cookie access_token; MANAGER dùng prefix /api/v1/manager, ADMIN sửa unit qua
+/api/v1/admin. UUID path phải v4. Manager chọn Course → units[].id rồi dùng
+courseUnitId đó để tạo Material. Unit.description là overview; bài học CKEditor
+lưu trong Material ARTICLE.contentHtml, không ghi HTML bài học vào description.
+
+| Method + route | Request | 200 response / FE sử dụng |
+|---|---|---|
+| GET /api/v1/manager/courses | page=1,pageSize=20 (1..100), categoryId UUIDv4?, isActive=true/false? | CourseManagementPageDto: items/page/pageSize/total; items[].id là courseId; loading/empty không tự chọn course đầu tiên |
+| GET /api/v1/manager/courses/:courseId | Không body | CourseManagementDetailDto như Admin catalogue: course metadata + units; units[].id/title/description/position/requiredScorePercent dùng cho picker/editor |
+| PATCH /api/v1/manager/courses/:courseId/units/:unitId | Origin trong CORS_ORIGINS; JSON ít nhất một field | CourseUnitDto sau lưu; refetch course detail, unit picker và class title projection |
+| PATCH /api/v1/admin/courses/:courseId/units/:unitId | Như Manager, role ADMIN | Như trên |
+| GET /api/v1/mentor/classes/:classId/units/:unitId | Mentor active đúng current assignment; không body | ClassUnitManagementDto: id/courseUnitId/position/title/status/unlockAt/sessions. sessions chứa context buổi học của unit; không cho student/Manager gọi |
+
+PATCH fields: title string1..250 có ký tự khác whitespace, tùy chọn; description
+string<=10000 hoặc null để xóa, tùy chọn; requiredScorePercent number0..100, tối đa
+2 chữ số thập phân, tùy chọn. Field omitted giữ giá trị; title trim; description
+normalize. Không cho sửa courseId/position hoặc field lạ. Ví dụ body hợp lệ:
+
+```json
+{"title":"HTML cơ bản","description":"Mục tiêu chương học","requiredScorePercent":70}
+```
+
+Thao tác sync trong transaction với khóa Course; không đổi Material/review/enrollment
+hoặc phát hành Class Unit. Không có worker/polling. Lỗi chung401 login,403 dừng
+thao tác do role/session,400 UUID sai,422 VALIDATION_ERROR hoặc
+COURSE_UNIT_CONTENT_INVALID (body rỗng),404 COURSE_NOT_FOUND/COURSE_UNIT_NOT_FOUND
+(bao gồm sai course ancestry). FE giữ form khi lỗi, refetch khi404, không retry
+validation tự động. GET không side effect; PATCH cùng giá trị không sinh content
+revision/audit Material. Các route release từ dev vẫn yêu cầu status LOCKED/OPEN;
+không đăng ký controller local thứ hai cho cùng route.
+
+### GET preview/assets theo revision
+
+Giữ POST .../files/:fileId/access của dev; thêm các GET dưới đây để tương thích
+phần local. Dùng cookie access_token, không body, Cache-Control private, no-store.
+Path IDs UUIDv4; query bắt buộc expectedRevision integer1..2147483647, ví dụ
+?expectedRevision=2. Lấy revision và file IDs từ detail hiện hành, không từ URL
+ngoài hoặc storage key. Manager xem mọi Material live; Mentor chỉ published
+content hoặc own unapproved draft dưới current class assignment, cùng policy dev.
+
+| GET route | Actor | Binary đích |
+|---|---|---|
+| /api/v1/manager/materials/:materialId/preview | MANAGER | Primary FILE/VIDEO; ARTICLE không có primary trả404 |
+| /api/v1/manager/materials/:materialId/assets/:fileId/access | MANAGER | Primary/inline image/attachment thuộc Material |
+| /api/v1/mentor/classes/:classId/materials/:materialId/preview | MENTOR | Primary theo scope lớp |
+| /api/v1/mentor/classes/:classId/materials/:materialId/assets/:fileId/access | MENTOR | Ref của Material theo scope lớp |
+
+200 trả MaterialFileAccessDto: materialId,fileId,role (PRIMARY/INLINE_IMAGE/ATTACHMENT),
+revision,url,expiresAt (ISO8601 UTC). url là signed immutable version GET, TTL<=60s;
+PRIMARY/INLINE_IMAGE disposition inline, ATTACHMENT disposition attachment; MP4
+hỗ trợ Range. FE chỉ giữ URL trong memory, không lưu vào HTML/database; không gửi
+API cookies tới storage. Hết hạn thì xin URL mới nếu detail/quyền còn hợp lệ.
+Quyền/READY/scope/ref membership được kiểm tra lại sau signing; không tạo content
+hoặc thay approval.401 login;403 quyền hiện tại;404 MATERIAL_NOT_FOUND cho
+material/ref không visible hoặc ARTICLE không primary;409 MATERIAL_REVIEW_CONFLICT
+khi expectedRevision khác bản hiện tại;422 query sai/field lạ;503 ký/storage lỗi.
+409 refetch detail và yêu cầu xem lại revision;404 dừng render asset;503 cho retry
+có giới hạn. Student GET assets có gate ACTIVE/release riêng trong
+[breakdown3.4](PHASE_3_4_flow-api-breakdown.md#bổ-sung-get-assets-sau-hợp-nhất--2026-10-16).

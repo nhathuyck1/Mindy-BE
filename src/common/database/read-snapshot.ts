@@ -1,9 +1,6 @@
 import type { DataSource, EntityManager } from 'typeorm';
 
-/**
- * Runs several reads (count + page) against one consistent snapshot. GET handlers never lock
- * or write; settlement/expiry may commit right after the response and detail endpoints re-check.
- */
+/** Count, page and evidence are read from one snapshot without acquiring writer locks. */
 export async function inReadSnapshot<T>(
   dataSource: DataSource,
   work: (manager: EntityManager) => Promise<T>,

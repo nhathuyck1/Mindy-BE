@@ -1514,4 +1514,307 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
         ).toBe(404);
     });
   });
+  it('validates authoring DTOs, role boundaries, Origin and documents the added contracts', async () => {
+    const path = `/manager/course-units/${scope.courseUnitId}/materials`;
+    const article = {
+      contentType: 'ARTICLE',
+      title: 'HTTP lesson',
+      contentHtml: '<p>Kiến thức</p>',
+    };
+    expect((await request(path, undefined, article)).status).toBe(401);
+    for (const cookie of [studentCookie, mentorCookie, adminCookie])
+      expect((await request(path, cookie, article)).status).toBe(403);
+    for (const invalid of [
+      { ...article, createdBy: scope.classId },
+      { ...article, title: null },
+      { ...article, contentHtml: null },
+      { ...article, fileId: scope.classId },
+      { ...article, attachmentFileIds: null },
+      { ...article, attachmentFileIds: [scope.classId, scope.classId] },
+      { ...article, sortOrder: null },
+      { ...article, availableAt: '2026-10-16T10:00:00' },
+      { ...article, contentSchemaVersion: 2 },
+      { ...article, contentHtml: '<script>alert(1)</script>' },
+      { contentType: 'FILE', title: 'No file' },
+    ])
+      expect((await request(path, managerCookie, invalid)).status).toBe(422);
+    for (const origin of [undefined, 'https://untrusted.test']) {
+      const response = await fetch(`${url}${path}`, {
+        method: 'POST',
+        headers: {
+          cookie: managerCookie,
+          'content-type': 'application/json',
+          ...(origin ? { origin } : {}),
+        },
+        body: JSON.stringify(article),
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
+    }
+    const tooLarge = await request(path, managerCookie, {
+      ...article,
+      contentHtml: 'x'.repeat(70000),
+    });
+    expect(tooLarge.status).toBe(413);
+    const doc = (await (await fetch(url.replace('/api/v1', '/docs-json'))).json()) as {
+      paths: Record<string, unknown>;
+    };
+    for (const route of [
+      '/api/v1/manager/materials/{materialId}/approve',
+      '/api/v1/mentor/classes/{classId}/materials/{materialId}/submit',
+      '/api/v1/manager/materials/{materialId}/preview',
+      '/api/v1/me/classes/{classId}/materials/{materialId}/assets/{fileId}/access',
+      '/api/v1/mentor/classes/{classId}/units/{unitId}/release',
+      '/api/v1/manager/courses/{courseId}/units/{unitId}',
+    ])
+      expect(doc.paths).toHaveProperty(route);
+  });
+
+  it('delivers mentor upload → draft → reject → edit → resubmit → approve → student attachment over HTTP', async () => {
+    // Earlier release journeys deliberately leave the unit locked; establish this journey's gate.
+    expect(
+      (
+        await request(
+          `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`,
+          mentorCookie,
+          { status: 'OPEN', unlockAt: null },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    const uploadResponse = await request('/files/upload-intents', mentorCookie, declaration());
+    expect(uploadResponse.status).toBe(201);
+    const intent = (await uploadResponse.json()) as { fileId: string; uploadUrl: string };
+    await upload(intent.uploadUrl, 'text/plain', bytes);
+    expect((await request(`/files/${intent.fileId}/complete`, mentorCookie, {})).status).toBe(202);
+    await invokeWorker(intent.fileId);
+    const create = await request(
+      `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/materials`,
+      mentorCookie,
+      {
+        contentType: 'ARTICLE',
+        title: 'HTTP mentor lesson',
+        contentHtml: '<h2>Lesson</h2><p onclick="bad()">Hello<script>bad()</script></p>',
+        attachmentFileIds: [intent.fileId],
+      },
+    );
+    expect(create.status).toBe(201);
+    const draft = (await create.json()) as { id: string; revision: number; contentHtml: string };
+    expect(draft.contentHtml).toBe('<h2>Lesson</h2><p>Hello</p>');
+    const own = `/mentor/classes/${scope.classId}/materials/${draft.id}`;
+    const manage = `/manager/materials/${draft.id}`;
+    const student = `/me/classes/${scope.classId}/materials/${draft.id}`;
+    expect((await request(student, studentCookie)).status).toBe(404);
+    expect((await request(`${own}/submit`, mentorCookie, { expectedRevision: 1 })).status).toBe(
+      200,
+    );
+    expect(
+      (await request(own, mentorCookie, { expectedRevision: 1, title: 'Pending edit' }, 'PATCH'))
+        .status,
+    ).toBe(403);
+    const queue = (await (
+      await request('/manager/materials?reviewStatus=PENDING_REVIEW', managerCookie)
+    ).json()) as { items: { id: string }[] };
+    expect(queue.items.map((item) => item.id)).toContain(draft.id);
+    const preview = await request(
+      `${manage}/assets/${intent.fileId}/access?expectedRevision=1`,
+      managerCookie,
+    );
+    expect(preview.status).toBe(200);
+    expect((await fetch(((await preview.json()) as { url: string }).url)).status).toBe(200);
+    expect(
+      (
+        await request(`${manage}/reject`, managerCookie, {
+          expectedRevision: 1,
+          reason: 'Add details',
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(
+          own,
+          mentorCookie,
+          { expectedRevision: 1, contentHtml: '<p>Updated lesson</p>' },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    expect((await request(`${own}/submit`, mentorCookie, { expectedRevision: 2 })).status).toBe(
+      200,
+    );
+    expect(
+      (await request(`${manage}/approve`, managerCookie, { expectedRevision: 1 })).status,
+    ).toBe(409);
+    expect((await request(`${manage}/approve`, mentorCookie, { expectedRevision: 2 })).status).toBe(
+      403,
+    );
+    expect(
+      (await request(`${manage}/approve`, managerCookie, { expectedRevision: 2 })).status,
+    ).toBe(200);
+    const read = await request(student, studentCookie);
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({
+      contentType: 'ARTICLE',
+      contentHtml: '<p>Updated lesson</p>',
+      file: null,
+      revision: 2,
+    });
+    expect(
+      (await request(`${student}/assets/${intent.fileId}/access?expectedRevision=1`, studentCookie))
+        .status,
+    ).toBe(409);
+    const access = await request(
+      `${student}/assets/${intent.fileId}/access?expectedRevision=2`,
+      studentCookie,
+    );
+    expect(access.status).toBe(200);
+    expect(access.headers.get('cache-control')).toBe('private, no-store');
+    expect(
+      Buffer.from(
+        await (await fetch(((await access.json()) as { url: string }).url)).arrayBuffer(),
+      ),
+    ).toEqual(bytes);
+    expect(
+      (await request(`${manage}/unpublish`, managerCookie, { expectedRevision: 2 })).status,
+    ).toBe(200);
+    expect((await request(student, studentCookie)).status).toBe(404);
+    expect(
+      (await request(`${manage}?expectedRevision=2`, managerCookie, undefined, 'DELETE')).status,
+    ).toBe(204);
+  });
+
+  it('supports CKEditor inline images, manager FILE/VIDEO creation, unit editing and release APIs', async () => {
+    expect(
+      (
+        await request(
+          `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`,
+          mentorCookie,
+          { status: 'OPEN', unlockAt: null },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    const rows = (await db.query(
+      "SELECT id,kind FROM file_objects WHERE course_unit_id=$1 AND status='READY' AND kind IN ('IMAGE','PDF','VIDEO')",
+      [scope.courseUnitId],
+    )) as { id: string; kind: string }[];
+    const image = rows.find((file) => file.kind === 'IMAGE');
+    expect(image).toBeDefined();
+    const path = `/manager/course-units/${scope.courseUnitId}/materials`;
+    const response = await request(path, managerCookie, {
+      contentType: 'ARTICLE',
+      title: 'Image lesson',
+      contentHtml: `<p>Diagram</p><figure class="image"><img data-file-id="${image?.id}" src="https://example.test/temporary"></figure>`,
+    });
+    expect(response.status).toBe(201);
+    const article = (await response.json()) as { id: string; contentHtml: string };
+    expect(article.contentHtml).not.toContain('src=');
+    expect(
+      (
+        await request(`/manager/materials/${article.id}/approve`, managerCookie, {
+          expectedRevision: 1,
+        })
+      ).status,
+    ).toBe(200);
+    const asset = await request(
+      `/me/classes/${scope.classId}/materials/${article.id}/assets/${image?.id}/access?expectedRevision=1`,
+      studentCookie,
+    );
+    expect(asset.status).toBe(200);
+    for (const kind of ['PDF', 'VIDEO']) {
+      const file = rows.find((row) => row.kind === kind);
+      expect(file).toBeDefined();
+      const created = await request(path, managerCookie, {
+        contentType: kind === 'VIDEO' ? 'VIDEO' : 'FILE',
+        title: `HTTP ${kind}`,
+        fileId: file?.id,
+      });
+      expect(created.status).toBe(201);
+      const material = (await created.json()) as { id: string };
+      const preview = await request(
+        `/manager/materials/${material.id}/preview?expectedRevision=1`,
+        managerCookie,
+      );
+      expect(preview.status).toBe(200);
+      expect(
+        (
+          await fetch(((await preview.json()) as { url: string }).url, {
+            headers: { range: 'bytes=0-7' },
+          })
+        ).status,
+      ).toBe(206);
+      expect(
+        (
+          await request(`/manager/materials/${material.id}/approve`, managerCookie, {
+            expectedRevision: 1,
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await request(
+            `/me/classes/${scope.classId}/materials/${material.id}/download`,
+            studentCookie,
+          )
+        ).status,
+      ).toBe(200);
+    }
+    const course = (
+      await db.query('SELECT course_id FROM classes WHERE id=$1', [scope.classId])
+    )[0] as { course_id: string };
+    const unitPath = `/manager/courses/${course.course_id}/units/${scope.courseUnitId}`;
+    expect((await request('/manager/courses', managerCookie)).status).toBe(200);
+    expect((await request('/manager/courses', studentCookie)).status).toBe(403);
+    expect((await request(`/manager/courses/${course.course_id}`, managerCookie)).status).toBe(200);
+    expect(
+      (
+        await request(
+          unitPath,
+          managerCookie,
+          { title: 'Updated unit', description: 'Overview' },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    const context = await request(`/mentor/classes/${scope.classId}/units`, mentorCookie);
+    expect(context.status).toBe(200);
+    expect(await context.json()).toMatchObject({
+      items: [expect.objectContaining({ courseUnitId: scope.courseUnitId, title: 'Updated unit' })],
+    });
+    const unitDetail = `/mentor/classes/${scope.classId}/units/${scope.classUnitId}`;
+    expect(await (await request(unitDetail, mentorCookie)).json()).toMatchObject({
+      id: scope.classUnitId,
+      courseUnitId: scope.courseUnitId,
+      title: 'Updated unit',
+      sessions: expect.any(Array),
+    });
+    expect((await request(unitDetail, studentCookie)).status).toBe(403);
+    const mentorAsset = `/mentor/classes/${scope.classId}/materials/${article.id}/assets/${image?.id}/access`;
+    expect((await request(`${mentorAsset}?expectedRevision=1`, mentorCookie)).status).toBe(200);
+    expect((await request(`${mentorAsset}?expectedRevision=2`, mentorCookie)).status).toBe(409);
+    expect((await request(mentorAsset, mentorCookie)).status).toBe(422);
+    const release = `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
+    expect((await request(release, mentorCookie, { status: 'LOCKED' }, 'PATCH')).status).toBe(200);
+    expect(
+      (await request(`/me/classes/${scope.classId}/materials/${article.id}`, studentCookie)).status,
+    ).toBe(404);
+    expect((await request(release, managerCookie, { status: 'OPEN' }, 'PATCH')).status).toBe(403);
+    expect((await request(release, mentorCookie, { status: 'COMPLETED' }, 'PATCH')).status).toBe(
+      422,
+    );
+    expect(
+      (
+        await request(
+          `/admin/classes/${scope.classId}/units/${scope.classUnitId}/release`,
+          adminCookie,
+          { status: 'OPEN', unlockAt: null },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await request(`/me/classes/${scope.classId}/materials/${article.id}`, studentCookie)).status,
+    ).toBe(200);
+  });
 });

@@ -20,6 +20,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
+COPY tools/build.mjs ./tools/build.mjs
 RUN pnpm build
 
 FROM base AS production-dependencies

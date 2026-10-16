@@ -1,3 +1,4 @@
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -44,7 +45,7 @@ describe.skipIf(!separateTestUrl('material_policy'))(
         fixture.users,
         new CoursesService(db),
         contexts,
-        new EnrollmentsService(db),
+        new EnrollmentsService(db, new ScheduleReservationsService()),
         new FileUploadPolicyService(fixture.users, new CoursesService(db), contexts),
       );
     }, 30000);

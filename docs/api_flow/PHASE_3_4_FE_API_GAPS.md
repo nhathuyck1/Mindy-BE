@@ -1,5 +1,13 @@
 # Rà API từ góc nhìn FE/người dùng — 2026-10-12
 
+**Cập nhật BE2026-10-16:** authoring/review/publication, release, manager catalogue,
+mentor context, ARTICLE/inline/attachments và staff preview đã implement + local
+verified. Gap BE3.3 được xử lý trong lượt này; xem
+[contract hiện hành](PHASE_3_3_flow-api-breakdown.md) và
+[student/preview](PHASE_3_4_flow-api-breakdown.md). Chưa deploy/VPS hoặc sửa FE.
+Phần bên dưới là source audit FE lịch sử2026-10-12/13, chưa rà lại repo FE hôm nay;
+các nhận định “BE còn planned/chưa implement” không còn là trạng thái hiện hành.
+
 Đọc source BE và repo `../Mindy-FE` sau khi làm ba Student Material GET.
 Đây là **source audit**, không phải nghiệm thu UI/browser/VPS. Không sửa FE trong
 lượt này. [Flow mới](PHASE_3_4_FLOW.md) · [Contract ba API](PHASE_3_4_flow-api-breakdown.md).

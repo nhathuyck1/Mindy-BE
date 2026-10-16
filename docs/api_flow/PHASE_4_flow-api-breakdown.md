@@ -1,6 +1,32 @@
 # Phase 4 — API breakdown cho frontend
 
-**2026-10-13 — API4.1–4.3 implemented/focused local verified; API4.4–4.5 vẫn PLANNED; chưa deploy.**
+**Sửa CI16/10/2026:** fixture release bổ sung compatibility bridges, test rollback
+nhắm migration đích; không thay đổi endpoint, payload, quyền hoặc tích hợp FE.
+[Evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
+**Implementation2026-10-16:** schedule projection và Student history/summary,
+management summary/incomplete4.4c đã có source/Swagger/Postman/focused PG20/
+compiled HTTP3; [contract hiện hành mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).
+Các mô tả4.4c PLANNED trong log trước là lịch sử; leave/approved intervals
+vẫn source gap riêng. Full gates ở Progress4.4, không suy local thành FE/deploy.
+
+**2026-10-16:** user xác nhận4.4b đã xong;4.4c đang PLANNING với22 AC/20
+scenarios/C1–C5. Contract hiện hành4.4b ở [API4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md#6-quy-ước-chung-của-44b);
+contract **dự kiến4.4c** đầy đủ ở [API4.4 mục13–18](PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung).
+Phần lịch/history/summary mục8–9 dưới là thiết kế baseline, được chi tiết hóa
+bởi revision16/10: physical-vs-credit, root/range, null mentor, excluded semantics,
+deadlineExpired nullable và auth/ownership. Không ghi extension/4 GET mới là
+implemented. Leave/approved intervals vẫn gap source riêng; log cũ giữ lịch sử.
+
+**2026-10-15 — slice đầu4.4a có source:** ba route management Session ở mục10
+(schedule/cancel/makeups), Class cancellation batch và SessionView ancestry.
+Contract implemented hiện hành ở [API4.4](PHASE_4_4_flow-api-breakdown.md),
+evidence ở [progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md).
+Tại lượt slice đầu này, mục11–12 và Student projections/history/summary/queues
+còn PLANNED; core4.4b đã có sau đó, xem revision hiện hành phía trên.
+
+**2026-10-14 — API4.1–4.3 đã implement; API4.4–4.5 vẫn PLANNED; chưa xác nhận deploy.**
+[Bảng toàn bộ 17 API mới và flow gọi nối tiếp của hai commit](PHASE_4_API_SUMMARY.md).
 [Flow](PHASE_4_FLOW.md) ·
 [Plan](../implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md) ·
 [Progress](../progress/phase%204/PHASE_4_PROGRESS.md).
@@ -14,22 +40,29 @@ Continuation4.3 has [detailed implemented API](PHASE_4_3_flow-api-breakdown.md),
 [flow](PHASE_4_3_FLOW.md),
 [plan](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md) and
 [progress](../progress/phase%204/PHASE_4_3_PROGRESS.md). Correction/audit/recovery
-remain unimplemented; the separate contract adds evidence admissionBasis,
-recovery audit shape and a proposed route-specific256KiB parser limit.
+đã implement trong commit `246abf4`; contract riêng mô tả admissionBasis,
+recovery audit và route-specific256KiB parser limit đã có source/tests.
 Contract actual giữ ở mục14–15; local test totals là evidence lịch sử, chưa
 chứng minh toàn edge/mixed-writer/Staff HTTP matrix hoặc server release.
 `GET /api/v1/me/schedule` là API đã có; regular attendance/mentor buổi có4.1–4.2
-local evidence; correction/recovery/guest/Student attendance projections planned.
+local evidence; correction/recovery4.3 đã có; guest/Student attendance projections planned.
 Revision này ghi quyết định user về nghỉ trước hai ngày lịch có duyệt, bù theo
 buổi/ngày và học bù lớp khác cùng Course Unit. Contract thực tế4.1 xem mục14;
-Contract thực tế4.2 xem mục15; phần correction sau chốt, legacy recovery,
-audit browsing và guest trong các shape bên dưới vẫn planned.
+Contract baseline4.2 xem mục15; contract hiện hành correction sau chốt,
+legacy recovery và audit browsing xem API4.3. Guest vẫn planned.
+Mục1–13 chứa thiết kế toàn Phase4, gồm shape/route dự kiến; không coi mọi route
+trong đó đã implement. Danh sách hiện có và flow tích hợp xem file summary ở trên.
 
 **Rule deadline mới:** ngày học từ Session.startsAt theo APP_TIME_ZONE; Mentor
 được mark/sync/finalize đến hết ngày hôm sau (`now < 00:00 ngày học+2`). Ví dụ
 thứ Ba→00:00 thứ Năm. Không overnight, không cộng24h từ actualStartedAt.
 Migration1791849600002 cập nhật clocks cũ/tăng version nếu thay đổi; API dùng cùng
 APP_TIME_ZONE với migration. GET refetch sau replay/migration để lấy hạn hiện tại.
+
+**Hiện hành15/10:** Guest roster/PUT/finalize/context/audits và placements đã có
+core4.4b; mọi ghi chú guest PLANNED trong baseline4.1–4.3 dưới đây là lịch sử.
+Tích hợp mới dùng [contract4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md).
+Approved leave và Student schedule/history/summary4.4c vẫn chưa có.
 
 ## 1. Contract chung áp dụng cho từng API bên dưới
 
@@ -326,7 +359,7 @@ không thay bằng defaults contract chung nếu baseline khác. API/field hiệ
 `attendanceApplicability:ELIGIBLE|NOT_STARTED|NOT_ELIGIBLE|PAYMENT_PENDING|LEGACY_NO_DATA|MAKEUP_PENDING|MAKEUP_CREDITED`,
 `attendanceExcluded:boolean`, `assignmentType`, mentor theo buổi (legacy nullable).
 Ví dụ chưa start `{sessionStatus:"SCHEDULED",attendanceStatus:null,
-attendanceApplicability:"NOT_STARTED",attendanceExcluded:false}`.
+attendanceApplicability:"NOT_STARTED",attendanceExcluded:true}`.
 Không attendance của người khác; CASH_PREVIEW chỉ PAYMENT_PENDING/null;
 canceled ưu tiên nhãn Đã hủy. Read-only, không URL/roster. Sau edit refresh
 lịch khi Student mở lại; errors/empty theo Phase2.3, không mở quyền enrollment cũ.
@@ -489,6 +522,12 @@ Email/chat/notification không phải side effect của bất kỳ action nghỉ
 
 ## 12. Student conflict queue và học bù lớp khác — slice 4.4b
 
+**Cập nhật15/10: core4.4b đã implement/test local.** Contract chính xác, fields
+bổ sung/lỗi/phiên bản/permissions xem [API4.4 mục6–12](PHASE_4_4_flow-api-breakdown.md).
+Approved-leave availability còn thiếu provider4.4a trong source hiện tại;
+Student schedule/history/summary4.4c chưa implement. Thiết kế tổng dưới đây không
+được dùng để suy ra đã deploy hoặc candidates đã kiểm approved leave.
+
 ### GET `/api/v1/management/student-schedule-conflicts`
 
 Staff; page/pageSize, optional classId/status; mặc định toàn OPEN/MAKEUP_ASSIGNED,
@@ -560,6 +599,10 @@ hữu giữ quyền snapshot, không dùng làm Session attendance roster.
 
 ## 14. Implemented4.1 — contract thực tế và handoff
 
+Mục này giữ baseline/evidence của riêng slice4.1; các câu attendance chưa có
+là trạng thái tại baseline đó. HEAD `246abf4` đã có attendance4.2 và correction/
+recovery/audits4.3; xem [summary hiện hành](PHASE_4_API_SUMMARY.md).
+
 Sau migration mới 1791849600000-session-mentor-assignment, API mục2–4 và GET
 mentor/schedule + GET class-sessions/:sessionId/context có source/Swagger/tests.
 Attendance, leave, makeup và Student projections vẫn planned. Chưa deploy/VPS.
@@ -604,12 +647,16 @@ recovery và guest access chuyển implemented khi slice tương ứng có evide
 
 ## 15. Implemented4.2 — contract thực tế và handoff
 
+Mục này giữ baseline/evidence của riêng slice4.2; correction/audits/recover
+được triển khai tiếp ở4.3 trong HEAD `246abf4`. Contract hiện hành ưu tiên
+[API4.3](PHASE_4_3_flow-api-breakdown.md) và [summary](PHASE_4_API_SUMMARY.md).
+
 Ngày2026-10-13. Source: AttendanceController/AttendanceService; Classes export
 SessionLifecycleService, Enrollments export roster readers. Migration
 `1791849600001-session-attendance` phải chạy trước khi bật các API này.
 Các endpoint dưới đây đã implemented local cho **REGULAR enrollment**.
-Correction sau COMPLETED/CANCELLED, GET audits, `/attendance/recover`, guest,
-Student history/summary/schedule fields và management backlog vẫn PLANNED.
+Correction sau COMPLETED/CANCELLED, GET audits và `/attendance/recover` đã có
+ở4.3. Guest, Student history/summary/schedule fields và management backlog vẫn PLANNED.
 Contract mục15 ưu tiên hơn shape đề xuất ở mục1/5–7 cho slice4.2.
 
 ### Auth, input và concurrency dùng chung
@@ -775,6 +822,23 @@ full local gates tại [Progress4.3](../progress/phase%204/PHASE_4_3_PROGRESS.md
 GAP42-01–03 thuộc implementation này;Student4.4c/guest4.4b/cancel-leave4.4a và
 release4.5 vẫn mở. Chưa deploy/VPS/browser/live-payment hoặc sửa FE.
 
+2026-10-14 deploy log review: Check397/39 HTTP pass cho release `e0c9174`;
+preflight bị chặn bởi untracked `..env.production.swp` trên VPS. Chưa chạy bước
+rollout, không thay contract API. Recovery procedure ở
+[VPS runbook](../VPS_DEPLOYMENT.md); cần retry rồi có release evidence mới để
+xác nhận các API hiện có đã bật trên VPS.
+
+## 2026-10-15 — Plan chi tiết Phase 4.4a–c
+
+[Plan 4.4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+chốt thứ tự a → b → c và kế thừa các nhóm API PLANNED tại mục 8–12; chưa thêm
+endpoint runtime hoặc đổi contract API4.1–4.3 trong lượt này. Mở rộng guest sau
+này phải giữ payload regular hiện hữu, tách guest records theo makeupPlacementId.
+Đăng ký/thanh toán sau duyệt lịch bù vẫn theo baseline; trùng mới được ghi vào
+conflict queue để Manager xử lý theo lựa chọn user. Xem [flow tổng](PHASE_4_FLOW.md).
+Chỉ kiểm tài liệu/link/diff, không runtime tests/migrations/FE/deployment mới.
+Trạng thái server/Postman 4.3 theo xác nhận user ngày 15/10 trong backlog;
+không suy ra 4.4 đã có API hoặc đã deploy.
 ## Tích hợp Materials3.3/3.4 — 2026-10-15
 
 ClassesModule giữ teaching/lifecycle/attendance4.1–4.3 cùng context/release3.3;

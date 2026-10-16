@@ -1,9 +1,11 @@
+import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { APIError, PayOS } from '@payos/node';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { PayosPayments1791158400000 } from '../../src/database/migrations/1791158400000-payos-payments.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
 import { OrderEntity } from '../../src/modules/commerce/entities/order.entity.js';
@@ -26,6 +28,7 @@ import { PaymentEmailService } from '../../src/modules/payments/services/payment
 import { PaymentLinksService } from '../../src/modules/payments/services/payment-links.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import type { MailService } from '../../src/shared/mail/mail.service.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (PostgreSQL)', () => {
@@ -120,17 +123,16 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
   }
 
   it('migrates new tables up/down/up without dropping existing hold schema', async () => {
-    // Assignment and manager-role migrations follow payment tables in the current schema.
-    await db.undoLastMigration();
-    await db.undoLastMigration();
-    await db.undoLastMigration();
+    await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'down');
+    await rehearseMigration(db, new PayosPayments1791158400000(), 'down');
     expect(await db.query("SELECT to_regclass('payment_transactions') AS name")).toEqual([
       { name: null },
     ]);
     expect(await db.query("SELECT to_regclass('enrollments') IS NOT NULL AS present")).toEqual([
       { present: true },
     ]);
-    await db.runMigrations();
+    await rehearseMigration(db, new PayosPayments1791158400000(), 'up');
+    await rehearseMigration(db, new AttendanceRecoveryEvidence1791849600003(), 'up');
   });
 
   it('creates one attempt/link for parallel requests and reuses it on retries', async () => {

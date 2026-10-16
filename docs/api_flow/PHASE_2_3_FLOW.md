@@ -9,6 +9,20 @@ Liên hệ Materials/Files: [Flow 2.3 → 3.2](PHASE_2_3_TO_3_2_FLOW.md).
 Contract: [FE Phase 2.3](../PHASE_2_3_FE_CONTRACT.md).
 Tiến độ: [Progress 2.3](../progress/phase%202/PHASE_2_3_PROGRESS.md).
 
+## Dữ liệu mẫu roster — 2026-10-16
+
+Đã thêm `pnpm seed:class-roster` (cũng nằm cuối `pnpm seed:data`): 44 tài khoản
+STUDENT riêng, ghi danh ACTIVE vào HTML-CSS-101-ON1 (20/25) và JS-101-ON1 (24/25).
+Fixture mô phỏng CASH đã xác nhận: order PAID, transaction SUCCEEDED có cash
+reference đúng mentor/order, progress NOT_STARTED theo từng class unit. Không có
+thanh toán thật, provider call hoặc email; không đổi flow checkout/payment runtime.
+FE dùng roster/lịch hiện có sau khi đăng nhập bằng demo.html.01..20@example.com
+hoặc demo.js.01..24@example.com; mật khẩu tài khoản mới lấy từ SEED_ACCOUNT_PASSWORD.
+Không đổi API/contract; [breakdown](PHASE_2_3_flow-api-breakdown.md) giữ nguyên.
+Đã chạy seed hai lần trên PostgreSQL local: lần đầu tạo 44 ghi danh, lần sau tạo 0;
+không migrate DB/VPS. Seed giữ tài khoản/ghi danh hiện có, kiểm sức chứa và rollback
+cả hai roster nếu lỗi. Đây là dữ liệu demo local, không phải evidence deploy.
+
 ## Bổ sung quản trị học sinh theo lớp — 2026-10-13
 
 Đã implement hai GET cho ADMIN: list học sinh theo Class và detail một học sinh

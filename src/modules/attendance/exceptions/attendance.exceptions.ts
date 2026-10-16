@@ -1,6 +1,16 @@
 import { HttpStatus } from '@nestjs/common';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
 
+export class AttendanceHistoryNotFoundException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.NOT_FOUND,
+      'ATTENDANCE_HISTORY_NOT_FOUND',
+      'Own class attendance history was not found',
+    );
+  }
+}
+
 export class AttendanceConflictException extends AppHttpException {
   constructor(code: string, message: string) {
     super(HttpStatus.CONFLICT, code, message);

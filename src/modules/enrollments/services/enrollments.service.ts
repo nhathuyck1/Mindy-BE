@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager, In } from 'typeorm';
-
 import { isUniqueViolation } from '../../../common/database/postgres-error.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
 import { ClassUnitProgressEntity } from '../entities/class-unit-progress.entity.js';
 import {
   EFFECTIVE_ENROLLMENT_STATUSES,
@@ -24,7 +25,19 @@ export interface SeatHoldRequest {
  */
 @Injectable()
 export class EnrollmentsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly reservations: ScheduleReservationsService,
+  ) {}
+
+  /** Historical metadata ownership; terminal and unpaid registrations do not grant content. */
+  async hasOwnHistory(
+    manager: EntityManager,
+    classId: string,
+    studentId: string,
+  ): Promise<boolean> {
+    return manager.getRepository(EnrollmentEntity).existsBy({ classId, studentId });
+  }
 
   /** Current roster includes pending, active and completed registrations, not cancelled history. */
   async listForClass(
@@ -162,6 +175,7 @@ export class EnrollmentsService {
     holds: readonly { classId: string; orderDetailId: string; unitIds: readonly string[] }[],
     now: Date,
   ): Promise<void> {
+    await this.reservations.lockStudents(manager, [studentId]);
     const rows = await manager
       .getRepository(EnrollmentEntity)
       .createQueryBuilder('enrollment')
@@ -191,6 +205,7 @@ export class EnrollmentsService {
         .getRepository(ClassUnitProgressEntity)
         .insert(hold.unitIds.map((classUnitId) => ({ enrollmentId: row.id, classUnitId })));
     }
+    await this.reservations.recordMakeupConflicts(manager, [studentId], new Date());
   }
 
   /** Seats taken per class: pending holds plus active enrollments. */
@@ -246,6 +261,7 @@ export class EnrollmentsService {
     studentId: string,
     holds: readonly SeatHoldRequest[],
   ): Promise<void> {
+    await this.reservations.lockStudents(manager, [studentId]);
     try {
       await manager.getRepository(EnrollmentEntity).insert(
         holds.map((hold) => ({
@@ -256,6 +272,7 @@ export class EnrollmentsService {
           enrolledAt: null,
         })),
       );
+      await this.reservations.recordMakeupConflicts(manager, [studentId], new Date());
     } catch (error: unknown) {
       // The partial unique index is the final defense against concurrent duplicate purchases.
       if (isUniqueViolation(error, 'uq_enrollments_student_class_effective')) {

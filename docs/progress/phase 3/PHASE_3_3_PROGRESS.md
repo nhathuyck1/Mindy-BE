@@ -1,6 +1,64 @@
 # Phase 3.3 — Tiến độ Material management
 
+## Migration verification — 2026-10-16
+
+Current branch chứa origin/dev sau fetch (ahead5/behind0); không merge thêm.
+Focused migration suites39/39 (6 suites), expanded compatibility5/5: clean24,
+dev22→24 giữ ARTICLE/FK indexes, history Materials/Phase4, down/up, no pending.
+Compiled production DataSource phát hiện stale migration1792108800000/1 trong dist;
+pnpm build đã đổi thành clean dist→tsc. Retest source24=compiled24, applied24,
+pending=false, rerun0 trên DB test riêng; build/lint/type-check pass.
+Không đổi API/migration lịch sử, không migrate development/production hoặc deploy.
+
+## 2026-10-16 — Hợp nhất API local với lõi dev
+
+Giữ implementation/migrations/review/release đã merge; ghép catalogue, metadata
+unit và GET preview/assets expectedRevision. Không đăng ký route trùng hoặc chạy
+hai migration local tạo lại typed Materials/release audit. Đã backup, giữ stash;
+[evidence tích hợp mới](../Progress.md#2026-10-16--hợp-nhất-stash-api-local-sau-cập-nhật-feat4).
+Các số test ở nhật ký local là kết quả trước tích hợp, không thay kết quả mới.
+
+## 2026-10-16 — Sửa fixture CI khi merge Phase4
+
+Release fixture bổ sung hai compatibility bridges hiện có, giữ cả attendance
+và release constraints/FKs. Rehearsal3.3.1/3.3.4 và Student materials nhắm đúng
+migration thay vì migration cuối cùng của Phase4. Thêm regression coexistence;
+không đổi SQL lịch sử/API/flow nghiệp vụ. [Evidence và giới hạn](../Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
 Cập nhật: **2026-10-15**.
+
+### Nhật ký local trước tích hợp (giữ từ stash)
+
+Cập nhật: **2026-10-16**.
+
+## Implementation — 2026-10-16
+
+Đã implement backend theo yêu cầu hoàn thiện upload/manager duyệt và CKEditor:
+ARTICLE/FILE/VIDEO schema additive, canonical HTML sanitizer, inline/attachment
+refs, atomic audits, Manager/Mentor CRUD/list/detail/submit/review/publication,
+staff primary preview/assets, Student ARTICLE detail/asset access, mentor unit
+context, Admin/Mentor release và Manager catalogue/metadata unit PATCH.
+Expected revision + material row lock bảo vệ edit/review; refs khóa theo UUID trước
+Class locks; assignment/active actor kiểm lại trong transaction. Edit gỡ publish,
+firstApprovedAt ngăn mentor lấy lại quyền; retry no-op không ghi audit trùng.
+Origin allowlist bắt buộc cho các mutations mới. JSON64KiB, HTML48KiB/depth32/
+nodes5000/images50; ảnh dùng data-file-id READY IMAGE, không persist signed URL.
+
+Migrations mới:1792108800000-material-authoring,1792108800001-unit-release.
+Đã up/down/up trên database test riêng; down từ chối khi có authoring/audit data.
+Chưa migrate DB development/production, deploy/VPS hoặc sửa/tích hợp FE.
+Tài liệu hiện hành: [flow](../../api_flow/PHASE_3_3_FLOW.md),
+[API breakdown](../../api_flow/PHASE_3_3_flow-api-breakdown.md),
+[Postman](../../../postman/Mindy-Materials-Phase33.postman_collection.json).
+
+Evidence local: full backend468/468 (47 suites); sau đó thêm2 ca ARTICLE/int32,
+targeted domain63/63. Built-app Files/material HTTP19/19 gồm upload thật, reject/
+edit/resubmit/approve, staff PDF/MP4 Range, Student HTML/inline/attachment, Origin/
+DTO/body limit, unit metadata/release. Full built-app HTTP51/51 (8 suites),
+lint/type-check/build pass. Đây là kiểm chứng local, không phải server acceptance.
+
+Các mục phía dưới là **lịch sử planning trước implementation**, không mô tả
+trạng thái source hiện tại. Các bước nghiệm thu server trong plan vẫn chưa hoàn tất.
 Plan: [PHASE_3_3_MATERIAL_MANAGEMENT.md](../../implement_phase/phase%203/PHASE_3_3_MATERIAL_MANAGEMENT.md).
 Flow: [PHASE_3_3_FLOW.md](../../api_flow/PHASE_3_3_FLOW.md).
 API đã có + dự kiến: [breakdown 3.3](../../api_flow/PHASE_3_3_flow-api-breakdown.md).

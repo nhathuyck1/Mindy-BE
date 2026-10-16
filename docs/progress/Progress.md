@@ -1,5 +1,154 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-16 — Test migration hiện hành và loại compiled migration cũ
+
+Fetch origin xác nhận Feat/Phase4 đã chứa origin/dev, ahead5/behind0; không cần
+merge thêm. Focused39/39 tests/6 suites pass; mở rộng compatibility từ3 lên5 ca,
+5/5 pass gồm full catalog24 từ trống/down-up Phase4.4, upgrade dev22→24 bảo toàn
+ARTICLE HTML/unique indexes, các history Materials/Phase4 cũ và không pending.
+Chạy production DataSource từ dist phát hiện2 migration local1792108800000/1 còn
+compiled dù source đã loại sau merge; lỗi enum42883 khi chạy trùng typed migration.
+Sửa build chạy tools/build.mjs dọn dist trước tsc; không sửa migration lịch sử.
+Build lại source24/compiled24 khớp; DB test riêng applied24, pending=false,
+rerun applied0. Build/lint/type-check pass. Chưa migrate development/production,
+merge/commit/push/deploy; API/FE contract giữ nguyên.
+[Flow/evidence](../api_flow/PHASE_3_3_FLOW.md#2026-10-16--kiểm-chứng-migration-sau-đồng-bộ-dev).
+
+## 2026-10-16 — Hợp nhất stash API local sau cập nhật feat4
+
+Bản sửa constraint đã cherry-pick thành85cb913. Conflict do stash apply lên
+36db5a6/85cb913, không phải cherry-pick thất bại. Theo lựa chọn user: giữ lõi
+Materials từ dev, ghép API catalogue/unit metadata/unit detail và GET preview/
+assets từ local; tránh duplicate route/service và hai migration tạo lại schema.
+Đã sao lưu working files/stash-untracked tại tmp/conflict-backup-20261016; stash
+gốc giữ nguyên. Các nhật ký local cũ dưới đây là evidence trước tích hợp.
+Focused Materials26/26 pass sau tích hợp; full pnpm check pass:587/587 tests,
+56 suites,0 skip; lint/type-check/build pass. HTTP lượt đầu phát hiện8 compiled
+artifacts của hai migration local cũ còn trong dist; đã chuyển vào backup và
+đối chiếu catalog24 source/24 compiled khớp. HTTP rerun:7 suites khác32/32 pass;
+Files/Materials còn2 local cases phụ thuộc Unit bị LOCKED từ test dev trước đó.
+Đã thiết lập release OPEN qua API ngay trong từng journey; chạy lại trọn suite
+Files/Materials40/40 pass,0 skip. Tổng72 HTTP cases đã pass qua các lượt kiểm.
+25 conflict paths đã resolved, stash gốc vẫn giữ; phần API giữ ở working tree/
+index để user tiếp tục. Không commit/push,
+deploy hoặc migrate DB development/VPS trong lượt giải quyết conflict này.
+
+## 2026-10-16 — Sửa CI constraint sau merge Phase4/Materials
+
+Tái hiện log merge trên36db5a6: fixture release thiếu hai compatibility bridges
+1791849599999/1791856799999 nên tạo trùng `uq_class_units_id_class`; rollback
+Materials dùng `undoLastMigration()` lại nhắm migration Phase4 mới hơn.
+Fixture dùng release nay tự thêm cả hai bridge như CLI catalog; test3.3.1,
+3.3.4 và Student materials rehearse đúng migration theo tên, trong transaction.
+Thêm regression xác nhận hai unique constraints và FK attendance/release cùng
+tồn tại sau release down/up; không sửa migration lịch sử hoặc bỏ tính năng.
+Kiểm chứng local: focused52/52 tests (4 suites),0 skip trên PostgreSQL/MinIO
+riêng cho test; gồm clean install, upgrade từ Materials/Phase4 và named down/up.
+Full `pnpm check` pass: lint/type-check/build,573/573 tests/54 suites,0 skip.
+Compiled `pnpm test:http` pass:69/69 tests/8 suites,0 skip; compiled app chạy
+toàn bộ catalog migration trên DB test. Node22.20.0/pnpm12.6.0, base36db5a6;
+bản sửa ở branch `codex/fix-phase4-constraint` trong worktree riêng, giữ nguyên
+các thay đổi đang dở ở checkout ban đầu. Chưa push/deploy, migrate
+development/VPS hoặc thực hiện payment thật.
+
+### Nhật ký local trước tích hợp (giữ từ stash)
+
+## 2026-10-16 — Hoàn thiện upload → review → student và CKEditor ARTICLE
+
+Đã implement Manager/Mentor material CRUD/submit/review/publication, ARTICLE HTML
+sanitize + verified inline/attachment refs, audit/revision locks, staff preview,
+Student ARTICLE detail/asset access, mentor unit/session context, Admin/Mentor
+unit release, Manager catalogue và Admin/Manager PATCH metadata unit.
+CKEditor lưu bài học vào ARTICLE.contentHtml; description unit giữ overview.
+Hai migrations additive:1792108800000-material-authoring và1792108800001-unit-release;
+chỉ up/down/up trên DB test riêng, chưa migrate development/production hoặc deploy.
+
+Local: full backend468/468 (47 suites); thêm2 domain cases sau đó và targeted63/63;
+full built-app HTTP51/51 (8 suites), trong đó Files/material19/19; lint/type-check/
+build pass. Có binary upload thật vào MinIO, PDF/MP4 Range, staff preview, mentor
+reject/edit/resubmit/approve, Student HTML/inline/attachment, decision race/retry,
+assignment revoke, Origin/DTO/body limit, unit editing/release. Bổ sung Swagger/
+Postman/flow/API breakdown. Chưa UI FE, VPS hoặc production acceptance.
+[Flow](../api_flow/PHASE_3_3_FLOW.md) ·
+[API FE](../api_flow/PHASE_3_3_flow-api-breakdown.md) ·
+[Progress3.3](phase%203/PHASE_3_3_PROGRESS.md).
+
+## 2026-10-16 — Seed hai roster demo 20/25 và 24/25
+
+Thêm `seed:class-roster`, tích hợp cuối `seed:data`; 44 STUDENT demo riêng với
+ACTIVE enrollment, CASH PAID order, SUCCEEDED transaction và progress từng unit.
+Đã chạy PostgreSQL local `mindy_center`: HTML-CSS-101-ON1 =20/25,
+JS-101-ON1 =24/25; chạy lại tạo0 enrollment. Giữ dữ liệu hiện có, khóa class,
+kiểm sức chứa, rollback cả hai roster nếu lỗi. Mật khẩu tài khoản mới dùng
+SEED_ACCOUNT_PASSWORD, không reset tài khoản cũ. Không đổi API/schema/runtime
+checkout/payment, không gọi provider/email, không migrate DB hoặc deploy/VPS.
+[Flow và evidence](../api_flow/PHASE_2_3_FLOW.md#dữ-liệu-mẫu-roster--2026-10-16).
+Đối chiếu DB:44 PAID orders/44 SUCCEEDED cash transactions/244 unit progress
+(HTML100,JS144), đủ44 ACTIVE enrollments. Lint/type-check/build pass;
+full check chưa pass vì thiếu TEST_DATABASE_URL/MinIO riêng cho integration suites.
+
+## 2026-10-16 — Kiểm tra PR15 Feat/Phase4 vào dev
+
+Fetch xong: head6bd851e/base0b7aefc. Merge-tree xác nhận6 conflict Markdown,
+đều cần giữ cả log Phase4.4 và log Materials/CI của dev. Source không có conflict
+theo Git,không đồng nghĩa runtime đã verified sau tích hợp. Chỉ kiểm tra và ghi
+nhật ký; chưa merge/commit/push/test tích hợp. Chi tiết tại Progress4.4.
+
+## 2026-10-16 — Hoàn tất backend4.4c và full local gates
+
+Readiness/handoff: có thể deploy4.4c để nghiệm thu server trước4.5; cần commit/
+push đủ file mới và schema4.4b đã áp dụng.4.5 là server integration,FE/browser
+và release/rollback acceptance; chưa deploy hoặc tạo evidence mới trong lượt hỏi đáp.
+
+Schedule thêm effective mentor nullable/own attendance/guest union/dedup;
+own history/summary, Staff per-enrollment summary và incomplete toàn backlog
+đã có source. Shared SQL credit policy tính một lần mỗi student/root, giữ
+physical history/terminal metadata và loại pending/no-data/canceled khỏi rate.
+20/20 focused PG,3/3 compiled HTTP4.4c,13/13 regression lịch pass. **Full pnpm
+check456/456 tests/45 suites,lint/type-check/build;HTTP48/48 tests/8 suites,
+0 skip**. Chi tiết ở [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md).
+[Contract implemented](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và Swagger/Postman có5 GET reads cùng revision. Không migration/env/dependency/
+FE/worker mới; chỉ dùng DB *_test/fake PayOS/local MinIO. Leave/approved
+intervals vẫn gap riêng; release/VPS/browser4.5 chưa nghiệm thu.
+
+## 2026-10-16 — 4.4b đã xong, lập kế hoạch 4.4c
+
+User xác nhận4.4b hoàn tất. Đã rà progress/source, sửa bảng tổng còn ghi4.4b
+chưa triển khai và mở rộng [plan4.4 mục4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+với22 AC/20 scenarios/5 bước: shared credit → lịch → own history/summary →
+management summary/backlog → kiểm thử/bàn giao. [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md)
+và [API dự kiến4.4c](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+đã đồng bộ. Giữ source/guest count một lần, physical-vs-credit và terminal
+ownership rõ; workflow leave/approved intervals vẫn gap riêng. Chưa code4.4c.
+Chỉ Markdown/source review và kiểm tra tài liệu; không BE runtime tests,
+migration/FE/deploy/payment mới. Local gates4.4b436/45 là evidence15/10;
+xác nhận4.4b không tự suy thành VPS/browser evidence. Server/Postman4.3 đã xong
+theo user15/10, không liệt kê lại là việc chưa thực hiện.
+
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
+## 2026-10-15 — Bắt đầu code Phase4.4a
+
+Đã triển khai Session management reschedule/cancel/makeups, migration ancestry/
+schedule audit và Class cancellation batch atomic. [Progress4.4](phase%204/PHASE_4_4_PROGRESS.md)
+ghi source/gates và backlog; [flow](../api_flow/PHASE_4_4_FLOW.md)/
+[API breakdown](../api_flow/PHASE_4_4_flow-api-breakdown.md)/Postman đã đồng bộ.
+Chưa hoàn tất workflow nghỉ có duyệt hoặc4.4b–c; không sửa FE/dev migrations/VPS.
+Local test evidence không đại diện deployment4.4 hoặc thanh toán thật.
+
+Gate cuối lượt: **pnpm check413/413 (41 suites), lint/type-check/build pass;
+pnpm test:http42/42 (6 suites),0 skip**. Chi tiết migration/race/fault assertions
+và phạm vi leave/guest/Student còn mở trong Progress4.4. Migrations chỉ chạy ở DB test.
 - 2026-10-15: Review PR readiness tại feat/phase-3-3 `2e7e876` so với
   origin/dev `e0c9174`: ahead22/behind0, source checkout sạch trước review.
   Node22.20.0/pnpm12.6.0: frozen install, pnpm check **513/513 (48 suites)**,
@@ -861,3 +1010,44 @@ GAP42-01–03 đã có implementation/evidence4.3,Student/guest/cancel/leave/rel
 
 Evidence4.3 cuối lượt:pnpm check397/397 tests/39 suites,HTTP39/39 tests/5 suites,
 0 skip;GAP43-01–08/GAP42-01–03 đóng local,server/browser/release4.5 vẫn mở.
+
+### 2026-10-14 — Phase4 API summary theo hai commit
+
+Đối chiếu `8a1c7e8`/`246abf4`: commit đầu chỉ docs; commit sau thêm 15 endpoint
+Phase4.1–4.3 và 2 Admin student endpoints. Tạo [bảng API và flow liên kết](../api_flow/PHASE_4_API_SUMMARY.md),
+ghi ID/version handoff, CASH sync, correction/audits và historical evidence recovery;
+đồng bộ flow/breakdown/progress Phase4, phân biệt API hiện có và kế hoạch4.4–4.5.
+Verification chỉ route coverage/local links/JSON/code fences/diff checks; không chạy
+lại BE tests/migration, không sửa FE, không deploy/VPS hoặc giao dịch thật mới.
+
+### 2026-10-14 — Review Actions deploy failure sau Check pass
+
+Logs user cung cấp cho release `e0c9174`: CI397/397 và HTTP39/39 pass, lint/
+type-check/build pass. Deploy dừng ở preflight Git status do VPS có untracked
+`..env.production.swp`, trước fetch/build/backup/migration/API replacement.
+[VPS runbook](../VPS_DEPLOYMENT.md) bổ sung bảo toàn editor swap ngoài checkout
+và retry failed jobs sau Git sạch. Chỉ log/source review và docs; không thay code/
+workflow, chưa thao tác VPS hoặc xác nhận release thành công.
+
+2026-10-14 — Deployment handoff clarification: Phase4.1–4.3 adds no required env
+variable. Keep APP_TIME_ZONE consistent between migration and API; existing
+Asia/Ho_Chi_Minh default applies if unset. DATABASE_URL remains the existing
+production PostgreSQL URL. TypeORM migration:run executes all pending migrations
+in timestamp order and skips recorded ones; do not invoke numeric filenames
+individually. Existing dev deployment workflow already builds, backs up DB and
+runs the compiled one-off migration before replacing the API. Manual Compose
+commands must preserve compose.files-production.yaml when .env.minio.production
+exists so Files scratch configuration is retained. This is read-only source
+verification/documentation; no migration, server deploy or runtime test was run.
+
+### 2026-10-15 — Phase 4.4a–c: lưu kế hoạch Markdown
+
+Lưu [plan 4.4](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+cho nghỉ có duyệt/lịch bù → cross-class placement/guest attendance → Student
+schedule/history/summary và operational queues. User chọn giữ đăng ký/thanh toán
+khi phát sinh trùng lịch bù sau duyệt; conflict được chuyển Manager xử lý.
+Đã liên kết plan/flow/API breakdown/progress Phase 4; chỉ documentation checks
+(Markdown, relative links, diff), chưa triển khai hoặc chạy runtime gates 4.4.
+Không sửa FE, chạy migrations, deploy hay giao dịch thật. Server/Postman 4.3
+đã hoàn tất theo xác nhận user được ghi trong backlog ngày 15/10; không lặp lại
+việc này là pending, không suy thành evidence 4.4/4.5.

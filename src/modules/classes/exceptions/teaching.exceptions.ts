@@ -16,3 +16,23 @@ export class SessionAssignmentRequiredException extends AppHttpException {
     );
   }
 }
+
+export class SessionScheduleNotFutureException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'SESSION_START_NOT_FUTURE',
+      'Session must start in the future',
+    );
+  }
+}
+
+export class SessionMakeupDurationMismatchException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'MAKEUP_DURATION_MISMATCH',
+      'Makeup must preserve the source duration',
+    );
+  }
+}

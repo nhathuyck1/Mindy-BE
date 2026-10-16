@@ -1,3 +1,5 @@
+import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -62,7 +64,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
       ],
     });
     f = paymentFixture(db);
-    teaching = new TeachingReadService(db, f.config, f.users);
+    teaching = new TeachingReadService(db, f.config, f.users, new ScheduleReservationsService());
     attendance = new AttendanceService(
       db,
       teaching,
@@ -71,6 +73,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
       f.enrollments,
       f.users,
       new AttendancePaymentEvidenceService(new OrderSettlementService()),
+      new GuestAttendanceService(),
     );
     audits = new AttendanceAuditService(db, teaching, f.users, f.enrollments);
     staff = actor((await f.user(UserRole.MANAGER)).id, UserRole.MANAGER);

@@ -45,11 +45,11 @@ export class AttendanceItemDto {
   @ApiProperty({ type: String, format: 'uuid' })
   readonly enrollmentId!: string;
 
-  @ApiProperty({ enum: ['REGULAR'] })
-  readonly entryType!: 'REGULAR';
+  @ApiProperty({ enum: ['REGULAR', 'MAKEUP'] })
+  readonly entryType!: 'REGULAR' | 'MAKEUP';
 
   @ApiProperty({ type: String, nullable: true })
-  readonly makeupPlacementId!: null;
+  readonly makeupPlacementId!: string | null;
 
   @ApiProperty({ type: () => TeachingMentorDto })
   readonly student!: TeachingMentorDto;

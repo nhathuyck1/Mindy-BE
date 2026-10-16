@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AttendanceProjectionService } from '../../src/modules/attendance/services/attendance-projection.service.js';
 import { toLocalDate } from '../../src/modules/classes/domain/class-calendar.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
@@ -66,14 +67,17 @@ describe.skipIf(!separateTestUrl('session_times'))('session time updates (Postgr
     });
     expect((await stored(second.id)).startsAt).toEqual(second.startsAt);
     const calendar = new MySchedulePageDto(
-      await new MyScheduleService(db, f.config).list(order.student.id, {
-        classId,
-        from: new Date(first.startsAt.getTime() - 86400000),
-        to: new Date(first.endsAt.getTime() + 86400000),
-        page: 1,
-        pageSize: 100,
-        includeCancelled: true,
-      }),
+      await new MyScheduleService(db, f.config, new AttendanceProjectionService(), f.users).list(
+        order.student.id,
+        {
+          classId,
+          from: new Date(first.startsAt.getTime() - 86400000),
+          to: new Date(first.endsAt.getTime() + 86400000),
+          page: 1,
+          pageSize: 100,
+          includeCancelled: true,
+        },
+      ),
     );
     expect(calendar.items.find((event) => event.sessionId === first.id)).toMatchObject(TIMES);
   });

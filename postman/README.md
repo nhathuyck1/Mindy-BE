@@ -25,6 +25,16 @@ Contract: [Phase 2.3 FE contract](../docs/PHASE_2_3_FE_CONTRACT.md).
 
 ## Import
 
+Phase3.3 (2026-10-16): import `Mindy-Materials-Phase33.postman_collection.json`.
+Đổi actor login trước mỗi nhóm thao tác; chọn unit/session từ context, upload READY
+bằng collection Files3.2, tạo ARTICLE/FILE/VIDEO, mentor submit, manager xem
+detail/preview đúng revision rồi reject/approve; mentor/admin release unit,
+student đọc HTML/tải primary hoặc attachment. Body expectedRevision mẫu là1:
+đổi theo revision đã thực sự xem, không auto approve sau409. Đặt Origin trùng
+CORS_ORIGINS. Không chạy toàn bộ alternatives như một runner liên tục.
+Đã kiểm backend local; chưa deploy/VPS/FE. Contract đầy đủ:
+[breakdown3.3](../docs/api_flow/PHASE_3_3_flow-api-breakdown.md).
+
 Phase3.4: import `Mindy-Materials-Phase34.postman_collection.json`, login STUDENT,
 choose FULL class from My Classes and `units[].id` from class detail, then call
 list/detail/download. ARTICLE inline images/attachments use
@@ -153,3 +163,36 @@ Sequence: roster + Staff history → correction/recovery → refetch both.
 [API contract](../docs/api_flow/PHASE_4_3_flow-api-breakdown.md) and
 [local evidence/rollout](../docs/progress/phase%204/PHASE_4_3_PROGRESS.md).
 Deployment/browser smoke is4.5; no server enablement is implied by this collection.
+
+## Phase 4.4a — Session operations (initial slice)
+
+Import [Mindy-Session-Operations-Phase44.postman_collection.json](Mindy-Session-Operations-Phase44.postman_collection.json)
+after migration1792022400000. Use existing login/cookie jar as ACTIVE ADMIN/MANAGER.
+Read Class timetable, set sessionId/classUnitId/sessionVersion, choose valid future
+dates, and provide a UUIDv4 idempotencyKey for each new intent. Copy nextSessionVersion
+only before the next action and use a new key; network retries keep original body/key/version.
+Sequence: reschedule → cancel → makeup → refetch Class schedule. Makeup preserves
+duration and uses the latest CANCELLED leaf in the same Unit; replacementSessionId
+is saved for a later chain continuation. Class endDate auto extension is atomic.
+Baseline4.4a chỉ gồm [the three implemented Session APIs](../docs/api_flow/PHASE_4_4_flow-api-breakdown.md).
+
+## Phase4.4b — Cross-class makeup
+
+Collection Phase44 đã thêm 11 requests: Staff queue/candidates/assign/cancel,
+Student own/context, target Mentor roster/start/mark/finalize và Staff guest audits.
+Cần compiled migration1792022400001 và attendance prerequisites. Dùng cookie đúng
+actor; chọn conflictId/targetSessionId, GET lấy versions. Mỗi ý định ghi cần UUIDv4
+idempotencyKey mới, retry giữ key/body. Copy nextTargetSessionVersion sang
+targetSessionVersion chỉ cho ý định mới, hoặc refetch roster. Staff cancel dùng
+placementVersion hiện hành từ queue; sau target cancel phải cancel placement cũ
+có reason trước reassign. Trước start guest context không cấp class/material access.
+Student own FINALIZED là placement metadata; schedule/summary4.4c và leave/approved
+intervals vẫn pending. Xem [contract4.4](../docs/api_flow/PHASE_4_4_flow-api-breakdown.md).
+
+### Hợp nhất stash — 2026-10-16
+
+Giữ POST files/access và thêm GET preview/assets có expectedRevision trong cả
+hai collection3.3/3.4. Manager catalogue và Mentor unit detail dùng chung các
+route dev; chỉ một controller cho mỗi release route. Không chạy hai migrations
+local1792108800000/1 vì schema đã có trong catalog dev. Contract/evidence hiện
+hành tại docs/api_flow/PHASE_3_3_flow-api-breakdown.md và Progress.md.

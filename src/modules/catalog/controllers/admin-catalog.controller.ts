@@ -19,7 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-
+import { TrustedOriginGuard } from '../../../common/http/trusted-origin.guard.js';
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
@@ -44,6 +44,8 @@ import { CreateCourseCategoryDto } from '../dtos/create-course-category.dto.js';
 import { ReorderCourseUnitsDto } from '../dtos/reorder-course-units.dto.js';
 // biome-ignore lint/style/useImportType: Nest request validation needs runtime DTO metadata.
 import { UpdateCourseDto } from '../dtos/update-course.dto.js';
+// biome-ignore lint/style/useImportType: Runtime DTO validation metadata.
+import { UpdateCourseUnitDto } from '../dtos/update-course-unit.dto.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { CourseCategoriesService } from '../services/course-categories.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -136,6 +138,19 @@ export class AdminCatalogController {
   ): Promise<CourseManagementDetailDto> {
     const detail = await this.coursesService.reorderUnits(courseId, dto.unitIds);
     return new CourseManagementDetailDto(detail.course, detail.category, detail.units);
+  }
+
+  @Patch('courses/:courseId/units/:unitId')
+  @UseGuards(TrustedOriginGuard)
+  @ApiOperation({ summary: 'Update unit metadata; CKEditor lesson HTML uses Material ARTICLE' })
+  @ApiOkResponse({ type: CourseUnitDto })
+  @ApiErrors(404, 422)
+  async updateUnit(
+    @Param('courseId', new ParseUUIDPipe({ version: '4' })) courseId: string,
+    @Param('unitId', new ParseUUIDPipe({ version: '4' })) unitId: string,
+    @Body() input: UpdateCourseUnitDto,
+  ): Promise<CourseUnitDto> {
+    return new CourseUnitDto(await this.coursesService.updateUnit(courseId, unitId, input));
   }
 
   @Post('courses/:courseId/activate')

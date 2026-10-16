@@ -4,6 +4,7 @@ import { ClassStatus } from '../../classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../classes/enums/class-unit-status.enum.js';
 import { SessionStatus } from '../../classes/enums/session-status.enum.js';
 import { UserRole } from '../../users/user-role.enum.js';
+import { MaterialContentType } from '../entities/material.entity.js';
 import { canManageOwnDraft, canPreviewMaterial, canReadMaterial } from './material-access.js';
 import {
   type MaterialActor,
@@ -76,6 +77,67 @@ function read(material: MaterialSnapshot, classContext = context, active = true)
     now,
   });
 }
+
+describe('ARTICLE review with optional primary file', () => {
+  it('reviews and delivers a text-only lesson while enforcing supplementary file readiness', () => {
+    const article = createMaterialDraft(
+      'article',
+      context.courseUnitId,
+      {
+        ...content,
+        contentType: MaterialContentType.ARTICLE,
+        file: null,
+        contentHtml: '<p>Lesson</p>',
+        contentSchemaVersion: 1,
+      },
+      mentor,
+      context,
+      now,
+    ).material;
+    const pending = applyMaterialCommand(
+      article,
+      { action: 'SUBMIT', expectedRevision: 1 },
+      mentor,
+      context,
+      now,
+    ).material;
+    const approved = applyMaterialCommand(
+      pending,
+      { action: 'APPROVE', expectedRevision: 1 },
+      manager,
+      null,
+      now,
+    ).material;
+    expect(read(approved)).toBe(true);
+    expect(read({ ...approved, attachments: [{ ...file, status: 'FAILED' }] })).toBe(false);
+    expect(() =>
+      createMaterialDraft(
+        'invalid',
+        context.courseUnitId,
+        {
+          ...content,
+          contentType: MaterialContentType.ARTICLE,
+          contentHtml: '<p>Lesson</p>',
+          contentSchemaVersion: 1,
+        },
+        mentor,
+        context,
+        now,
+      ),
+    ).toThrow();
+  });
+  it('refuses edits past the database integer revision limit', () => {
+    expect(() =>
+      applyMaterialCommand(
+        { ...draft(), revision: 2147483647 },
+        { action: 'EDIT', expectedRevision: 2147483647, changes: { title: 'Next' } },
+        manager,
+        null,
+        now,
+      ),
+    ).toThrow();
+  });
+});
 
 describe('D1/D3/D4/D5: Course Unit material access', () => {
   it('requires approval independently of binary READY', () => {

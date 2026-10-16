@@ -1,3 +1,5 @@
+import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
+import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -20,6 +22,7 @@ import { PaymentType } from '../../src/modules/commerce/enums/payment-type.enum.
 import { OrderSettlementService } from '../../src/modules/commerce/services/order-settlement.service.js';
 import { AttendancePaymentEvidenceService } from '../../src/modules/payments/services/attendance-payment-evidence.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 const PAGE = { page: 1, pageSize: 100 };
@@ -40,7 +43,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       migrations: [SessionAttendance1791849600001],
     });
     f = paymentFixture(db);
-    teaching = new TeachingReadService(db, f.config, f.users);
+    teaching = new TeachingReadService(db, f.config, f.users, new ScheduleReservationsService());
     attendance = new AttendanceService(
       db,
       teaching,
@@ -49,6 +52,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       f.enrollments,
       f.users,
       new AttendancePaymentEvidenceService(new OrderSettlementService()),
+      new GuestAttendanceService(),
     );
     staff = actor((await f.user(UserRole.MANAGER)).id, UserRole.MANAGER);
   }, 30000);
@@ -495,7 +499,9 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     await expect(
       db.query('UPDATE class_sessions SET class_id=$2 WHERE id=$1', [a.sessionId, b.classId]),
     ).rejects.toMatchObject({ code: '23503' });
-    await expect(db.undoLastMigration()).rejects.toThrow('retain schema');
+    await expect(
+      rehearseMigration(db, new SessionAttendance1791849600001(), 'down'),
+    ).rejects.toThrow('retain schema');
   });
 
   it('uses whole-roster totals across pages and keeps version, checked-in time and audits for a no-op mark', async () => {
@@ -833,8 +839,16 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
             );
       const results = await Promise.allSettled([command, f.classes.cancel(a.classId)]);
       expect(results[1]?.status).toBe('fulfilled');
-      if (results[0]?.status === 'rejected') expect(results[0].reason.status).toBe(409);
       const roster = await attendance.roster(a.sessionId, staff, PAGE);
+      expect(roster.session.status).toBe('CANCELLED');
+      // Never-started cancellation has no historical teacher; authorization precedes state.
+      const expectedCode = roster.session.effectiveMentor
+        ? 'SESSION_STATE_CONFLICT'
+        : 'SESSION_ASSIGNMENT_REQUIRED';
+      if (results[0]?.status === 'rejected')
+        expect(results[0].reason).toMatchObject({
+          status: roster.session.effectiveMentor ? 409 : 403,
+        });
       expect(roster.total).toBe(operation === 'mark' || results[0]?.status === 'fulfilled' ? 1 : 0);
       expect(roster.totals.absent).toBe(0);
       await expect(
@@ -847,7 +861,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
           a.mentorActor,
           randomUUID(),
         ),
-      ).rejects.toMatchObject({ response: { code: 'SESSION_STATE_CONFLICT' } });
+      ).rejects.toMatchObject({ response: { code: expectedCode } });
     },
   );
 
@@ -959,6 +973,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
       f.enrollments,
       f.users,
       new AttendancePaymentEvidenceService(new OrderSettlementService()),
+      new GuestAttendanceService(),
     );
     const v = await version(a.sessionId);
     vi.useFakeTimers({ toFake: ['Date'] });

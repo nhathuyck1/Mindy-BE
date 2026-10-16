@@ -15,6 +15,7 @@ import { FileProcessingJobEntity } from '../entities/file-processing-job.entity.
 import { BinaryValidationError } from '../exceptions/file.exceptions.js';
 import { FILE_STORAGE, type FileStorage } from '../files.contracts.js';
 import { BINARY_VALIDATOR, type BinaryValidator } from './binary-validation.service.js';
+import { fileProcessingDiagnostics } from './file-processing-diagnostics.js';
 export interface FileJobClaim {
   readonly id: string;
   readonly token: string;
@@ -118,6 +119,7 @@ export class FileProcessingService {
     const controller = new AbortController();
     this.active.add(controller);
     let scratch: string | undefined;
+    let stage = 'LOAD_FILE';
     const heartbeat = setInterval(() => {
       void this.heartbeat(claim)
         .then((owned) => {
@@ -136,9 +138,12 @@ export class FileProcessingService {
         .getRepository(FileObjectEntity)
         .findOneByOrFail({ id: claim.fileId });
       if (file.status !== 'PROCESSING') throw new LeaseLostError();
+      stage = 'STORAGE_CHECK';
       await this.storage.assertAvailable();
       if (!file.stagingVersionId) {
+        stage = 'HEAD_STAGING';
         const source = await this.storage.head(file.bucket, file.stagingKey);
+        stage = 'PIN_STAGING_VERSION';
         await this.db.transaction(async (manager) => {
           await this.owned(manager, claim);
           const repository = manager.getRepository(FileObjectEntity);
@@ -156,11 +161,13 @@ export class FileProcessingService {
       }
       const sourceVersion = file.stagingVersionId;
       if (!sourceVersion) throw new LeaseLostError();
+      stage = 'HEAD_STAGING_VERSION';
       const source = await this.storage.head(file.bucket, file.stagingKey, sourceVersion);
       const expected = Number(file.declaredSizeBytes);
       if (source.size !== expected || source.size <= 0 || source.size > 209715200)
         throw new BinaryValidationError('FILE_SIZE_MISMATCH');
       const key = `final/${file.id}/${claim.token}`;
+      stage = 'REGISTER_COPY';
       await this.db.transaction(async (manager) => {
         const job = await this.owned(manager, claim);
         if (!job.copyCandidates.some((candidate) => candidate.token === claim.token)) {
@@ -171,11 +178,13 @@ export class FileProcessingService {
           await manager.getRepository(FileProcessingJobEntity).save(job);
         }
       });
+      stage = 'COPY_OBJECT';
       const versionId = await this.storage.copy(
         { bucket: file.bucket, key: file.stagingKey, versionId: sourceVersion },
         key,
         controller.signal,
       );
+      stage = 'SAVE_COPY_VERSION';
       await this.db.transaction(async (manager) => {
         const job = await this.owned(manager, claim);
         job.copyCandidates = job.copyCandidates.map((candidate) =>
@@ -183,6 +192,7 @@ export class FileProcessingService {
         );
         await manager.getRepository(FileProcessingJobEntity).save(job);
       });
+      stage = 'CREATE_SCRATCH';
       const root = resolve(this.config.getOrThrow<string>('FILE_SCRATCH_DIRECTORY'));
       await mkdir(root, { recursive: true });
       scratch = await mkdtemp(join(root, 'validate-'));
@@ -199,20 +209,24 @@ export class FileProcessingService {
           }
         },
       });
+      stage = 'GET_OBJECT';
       const stream = await this.storage.read(
         { bucket: file.bucket, key, versionId },
         controller.signal,
       );
+      stage = 'DOWNLOAD_TO_SCRATCH';
       await pipeline(stream, counter, createWriteStream(path, { flags: 'wx', mode: 0o600 }), {
         signal: controller.signal,
       });
       if (bytes !== expected) throw new BinaryValidationError('FILE_SIZE_MISMATCH');
+      stage = 'VALIDATE_BINARY';
       const verified = await this.validator.validate(
         path,
         { filename: file.originalName, mimeType: file.declaredMimeType, sizeBytes: bytes },
         controller.signal,
       );
       const sha256 = hash.digest('hex');
+      stage = 'SAVE_READY';
       await this.db.transaction(async (manager) => {
         const job = await this.owned(manager, claim);
         const repository = manager.getRepository(FileObjectEntity);
@@ -251,11 +265,13 @@ export class FileProcessingService {
       this.logger.log({ event: 'FILE_READY', fileId: claim.fileId, jobId: claim.id });
     } catch (error: unknown) {
       if (!(error instanceof LeaseLostError))
-        await this.fail(claim, error).catch(() => {
+        await this.fail(claim, error, stage).catch(() => {
           this.logger.warn({
             event: 'FILE_LEASE_RECOVERY_REQUIRED',
             fileId: claim.fileId,
             jobId: claim.id,
+            stage,
+            ...fileProcessingDiagnostics(error),
           });
         });
     } finally {
@@ -266,7 +282,7 @@ export class FileProcessingService {
       if (scratch) await rm(scratch, { recursive: true, force: true });
     }
   }
-  private async fail(claim: FileJobClaim, error: unknown): Promise<void> {
+  private async fail(claim: FileJobClaim, error: unknown, stage: string): Promise<void> {
     await this.db.transaction(async (manager) => {
       const job = await this.owned(manager, claim);
       const permanent = error instanceof BinaryValidationError;
@@ -297,6 +313,8 @@ export class FileProcessingService {
         jobId: claim.id,
         errorCode: job.errorCode,
         attempt: job.attempts,
+        stage,
+        ...fileProcessingDiagnostics(error),
       });
     });
   }

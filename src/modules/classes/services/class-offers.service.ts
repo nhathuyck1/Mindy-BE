@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager, In } from 'typeorm';
-
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { CoursesService } from '../../catalog/services/courses.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
 import { isClassOpenForPurchase } from '../domain/class-lifecycle.js';
 import { ClassEntity } from '../entities/class.entity.js';
 import { ClassUnitEntity } from '../entities/class-unit.entity.js';
@@ -48,6 +49,7 @@ export class ClassOffersService {
     private readonly coursesService: CoursesService,
     private readonly enrollmentsService: EnrollmentsService,
     private readonly readService: ClassReadService,
+    private readonly reservations: ScheduleReservationsService,
   ) {}
 
   async unitIds(manager: EntityManager, classId: string): Promise<string[]> {
@@ -121,7 +123,11 @@ export class ClassOffersService {
     const classIds = offers.map((offer) => offer.classId);
     await this.enrollmentsService.assertNotEnrolled(studentId, classIds, manager);
     const occupied = await this.enrollmentsService.countOccupiedSeats(classIds, manager);
-    const full = offers.find((offer) => (occupied.get(offer.classId) ?? 0) >= offer.maxStudents);
+    const guests = await this.reservations.guestPeak(manager, classIds);
+    const full = offers.find(
+      (offer) =>
+        (occupied.get(offer.classId) ?? 0) + (guests.get(offer.classId) ?? 0) >= offer.maxStudents,
+    );
     if (full !== undefined) {
       throw new ClassFullException(full.classId);
     }

@@ -30,6 +30,8 @@ import { UserRole } from '../../users/user-role.enum.js';
 import { ManagerMaterialDetailDto, ManagerMaterialPageDto } from '../dtos/manager-material.dto.js';
 // biome-ignore lint/style/useImportType: Runtime DTO metadata.
 import { MaterialDeleteQueryDto, MaterialRevisionDto } from '../dtos/manager-material-input.dto.js';
+// biome-ignore lint/style/useImportType: Runtime query validation metadata.
+import { MaterialRevisionQueryDto } from '../dtos/material-authoring.dto.js';
 import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 // biome-ignore lint/style/useImportType: Runtime DTO metadata.
 import {
@@ -122,6 +124,41 @@ export class MentorMaterialsController {
     @Body() input: MaterialRevisionDto,
   ): Promise<ManagerMaterialDetailDto> {
     return this.materials.submit(principal, id, input.expectedRevision, { classId });
+  }
+
+  @Get('materials/:materialId/preview')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({
+    summary: 'Preview an assigned class material primary binary at the expected revision',
+  })
+  previewPrimary(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Query() input: MaterialRevisionQueryDto,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.accessAtRevision(principal, id, input.expectedRevision, undefined, {
+      classId,
+    });
+  }
+
+  @Get('materials/:materialId/assets/:fileId/access')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(503)
+  @ApiOperation({ summary: 'Preview an assigned class referenced binary at the expected revision' })
+  assetAccess(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+    @Query() input: MaterialRevisionQueryDto,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.accessAtRevision(principal, id, input.expectedRevision, fileId, {
+      classId,
+    });
   }
 
   @Post('materials/:materialId/files/:fileId/access')

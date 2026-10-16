@@ -20,6 +20,8 @@ import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { UserRole } from '../../users/user-role.enum.js';
+// biome-ignore lint/style/useImportType: Runtime query validation metadata.
+import { MaterialRevisionQueryDto } from '../dtos/material-authoring.dto.js';
 import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
 import {
   StudentMaterialDetailDto,
@@ -101,6 +103,29 @@ export class StudentMaterialsController {
     @Param('materialId', new ParseUUIDPipe({ version: '4' })) materialId: string,
   ): Promise<StudentMaterialDownloadDto> {
     return this.materials.download(user, classId, materialId);
+  }
+
+  @Get('materials/:materialId/assets/:fileId/access')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary: 'Read a referenced inline image or attachment at the expected revision',
+  })
+  @ApiOkResponse({ type: MaterialFileAccessDto })
+  @ApiErrors(HttpStatus.CONFLICT, HttpStatus.SERVICE_UNAVAILABLE)
+  assetAccess(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('classId', new ParseUUIDPipe({ version: '4' })) classId: string,
+    @Param('materialId', new ParseUUIDPipe({ version: '4' })) materialId: string,
+    @Param('fileId', new ParseUUIDPipe({ version: '4' })) fileId: string,
+    @Query() input: MaterialRevisionQueryDto,
+  ): Promise<MaterialFileAccessDto> {
+    return this.materials.accessAtRevision(
+      user,
+      classId,
+      materialId,
+      fileId,
+      input.expectedRevision,
+    );
   }
 
   @Post('materials/:materialId/files/:fileId/access')

@@ -1,5 +1,20 @@
 # Phase 4.2 — Progress và đối chiếu plan với code
 
+2026-10-16 implementation4.4c: GAP42-05 đóng local — schedule/own history/summary/
+Staff reports/backlog có source và focused PG20/HTTP3, regression lịch13 pass;
+full gates tại [Progress4.4](PHASE_4_4_PROGRESS.md). Cancel/guest4.4 đã có, historical
+credit reader không tự ABSENT cho missing snapshot/recovery omissions. Own
+terminal metadata không mở content. Planning/baseline phía dưới giữ ngày gốc.
+
+2026-10-16: rà lại dependencies với source4.4 hiện hành. Session cancellation/
+replacement và guest placement/attendance đã có;4.4b hoàn tất theo user.
+GAP42-04 phần cancellation và GAP42-06 phần guest không còn là thiếu source;
+leave/approved intervals vẫn riêng. GAP42-05 Student/summary/backlog giữ OPEN,
+đã có [plan4.4c](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành)
+22 AC/20 scenarios/C1–C5. Bảng review baseline phía dưới là evidence tại ngày
+ghi gốc; không dùng các hàng “chưa implementation” cũ để phủ nhận source mới.
+Chỉ cập nhật tài liệu, không chạy lại gates4.2 hoặc nghiệm thu deploy4.4.
+
 Cập nhật **2026-10-13**. **Core attendance/calendar deadline và coverage T42-12–14
 đã sửa/kiểm local; full recovery/dependencies/release còn mở.**
 Lượt planning ban đầu chỉ Markdown; evidence code/tests/migration mới tại mục8.
@@ -57,10 +72,10 @@ Không migrate dev/VPS, FE/browser smoke hoặc real payment evidence mới ở 
 |---|---|---|---|
 | GAP42-01 | assertWritable/permissions chỉ mark IN_PROGRESS; COMPLETED/CANCELLED reject |4.3 correction theo deadline, Staff reason/audit; không trả UNMARKED sau chốt | Đóng local4.3:correction/permissions/CORRECT audit có source/PG/HTTP/full gates |
 | GAP42-02 | open chỉ Session SCHEDULED + Class OPEN/IN_PROGRESS; không recover endpoint/legacy evidence workflow |4.3 phục hồi COMPLETED legacy/terminal Class có roster/payment/time/result evidence | Đóng local4.3:insert-only legacy/terminal evidence recovery có source/migration/PG/HTTP |
-| GAP42-03 | Baseline4.2 audit tables có write, controller không GET audit/history |4.3 bounded audit readers/scoped auth; Student own history ở4.4c | Đóng Staff reader local4.3; Student history vẫn4.4c |
-| GAP42-04 | ClassesService.cancel chỉ đổi Class state; không cancel Session và audit batch |4.4a cancel orchestration; keep attendance/history, exclude denominator; placement guard4.4b | Chưa implementation; Class cancel hiện tại không đáp ứng workflow Phase4 đầy đủ |
-| GAP42-05 | StudentLearning không attendance/summary provider; /me/schedule vẫn Class mentor |4.4c own history/summary/mentor/applicability/backlog; preserve FULL/CASH_PREVIEW | Chưa implementation |
-| GAP42-06 | Roster chỉ REGULAR; makeupPlacementId null, changedMakeupPlacementIds=[] |4.4b placements/guest schema/policy/capacity/credit once | Chưa implementation guest; không dùng foreign-Class regular rows |
+| GAP42-03 | Baseline4.2 audit tables có write, controller không GET audit/history |4.3 Staff audits và4.4c own history | CLOSED LOCAL Staff4.3/Student4.4c; current gates tại Progress4.4 |
+| GAP42-04 | Baseline4.2 Class cancel chưa orchestration |4.4a cancel batch/audits,4.4b placement guards,4.4c canceled excluded | CLOSED LOCAL source/gates4.4; leave workflow vẫn gap riêng |
+| GAP42-05 | Shared Attendance projection/reports + MySchedule compose |4.4c own history/summary/effective mentor/guest/backlog, FULL/CASH masking | CLOSED LOCAL16/10; tests/gates tại Progress4.4; FE/VPS4.5 riêng |
+| GAP42-06 | Baseline4.2 roster chỉ REGULAR |4.4b separate guest/capacity và4.4c source credit once | CLOSED LOCAL source/gates4.4b–c; regular FK giữ nguyên |
 | GAP42-07 | Trước review thiếu totals/no-op/empty snapshot edges | Multi-page whole totals/no-op mark/empty finalize/Staff reason+state matrix | Đã đóng local T42-12 |
 | GAP42-08 | Trước review thiếu mixed-flow races | PG start/mark vs assignment; actual CASH settlement/checkout vs start; complete/cancel vs writes | Đã đóng local T42-13; cancel orchestration4.4a vẫn mở |
 | GAP42-09 | Trước review chỉ một Mentor HTTP journey | Added2 Staff recovery/sync/after-close admission journeys với timestamps/nested/whitelist errors | Đã đóng local T42-14 |

@@ -1,5 +1,25 @@
 # Implementation phases
 
+2026-10-16 implementation:4.4c đã có source schedule/own attendance/Staff
+reports/backlog,20 focused PG/3 compiled HTTP4.4c/13 timetable regression pass.
+Full gates tại [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md);
+[contract implemented](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và Swagger/Postman cùng revision. Không migration/env/dependency/FE mới;
+leave/approved intervals và release4.5 còn riêng. Các log planning dưới giữ lịch sử.
+
+2026-10-16: user xác nhận **4.4b đã xong**. Bắt đầu planning4.4c trong
+[plan4.4 mục4](phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành):
+22 AC/20 test scenarios/5 bước credit→schedule→own history/summary→Staff reports/
+backlog→gates/handoff. [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md)
+và [API dự kiến4.4c](../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+cùng revision. Chưa code/test4.4c; leave/approved intervals vẫn gap source riêng,
+không suy xác nhận4.4b thành deployment. Log dưới giữ ngày gốc.
+
+2026-10-15: bắt đầu [Phase4.4](phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+bằng Session operations đầu4.4a và Class cancellation batch; check413/413 và
+HTTP42/42 local,0 skip. [Progress4.4](../progress/phase%204/PHASE_4_4_PROGRESS.md)
+core4.4b đã có source; giữ leave approval/approved intervals/4.4c/4.5 mở; chưa deploy4.4.
+
 Thư mục này chuyển các milestone cấp cao trong `CORE_FLOW_IMPLEMENTATION_PLAN.md`
 thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 
@@ -20,6 +40,7 @@ thành kế hoạch triển khai có thể giao việc và nghiệm thu.
 13. [Phase 4.1 — Mentor availability/substitution, plan chi tiết và review code](./phase%204/PHASE_4_1_MENTOR_SUBSTITUTION.md)
 14. [Phase 4.2 — Session lifecycle/attendance, plan chi tiết và review code](./phase%204/PHASE_4_2_SESSION_ATTENDANCE.md)
 15. [Phase 4.3 — Correction, evidence recovery và audit history, implemented local](./phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md)
+16. [Phase 4.4 — Session operations/guest/Student operations đã implement; leave/release còn mở](./phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
 
 2026-10-13: tiếp planning4.3 theo cấu trúc4.1/4.2:22 AC,16 test scenarios,
 5 bước correction→audit→evidence foundation→recover→HTTP/handoff và ma trận
@@ -139,6 +160,15 @@ public payment providers và parser256KiB. [Progress4.3](../progress/phase%204/P
 ghi local gates và rollout;4.4a/b/c→4.5 tiếp tục pending,chưa deploy.
 
 
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate hiện hành xem Progress4.4.
 ## Tích hợp hai nhánh — 2026-10-15
 
 Materials3.3/3.4 và dev/Phase4.1–4.3 được hợp nhất trên feat/phase-3-3.

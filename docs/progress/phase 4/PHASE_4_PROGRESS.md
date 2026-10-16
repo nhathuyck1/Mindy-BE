@@ -1,5 +1,57 @@
 # Phase 4 — Progress
 
+## 2026-10-16 — Sửa CI constraint với Materials
+
+Fixture có unit release dùng đủ hai compatibility bridges như CLI, bảo toàn
+constraint/FK attendance. Tests Materials rehearse migration đích thay vì rollback
+migration Phase4 mới hơn. Không đổi migration lịch sử/API/flow attendance;
+[evidence local và giới hạn](../Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).
+
+## 2026-10-16 — Implementation 4.4c
+
+C1–C4 có source: credit CTE chung/owner student-root, schedule mentor/attendance/
+guest, own history/summary và Staff summary/incomplete toàn backlog.
+20 focused PG/3 compiled HTTP4.4c/13 timetable regression pass; full gates cuối
+**check456/456 tests/45 suites,HTTP48/48 tests/8 suites,0 skip;lint/type-check/build pass**
+ở [Progress4.4](PHASE_4_4_PROGRESS.md). [API mục13–18](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+đã implemented/Swagger/Postman cùng revision. GAP41-01/GAP42-05 đóng phần local
+Student projection. Không migration/schema/env/FE/payment thật/deploy mới;
+leave/approved intervals và release/browser4.5 còn riêng. Log planning phía
+dưới là lịch sử trước implementation trong cùng ngày.
+
+## 2026-10-16 — 4.4b hoàn tất; planning 4.4c
+
+User xác nhận4.4b đã xong. Đã đối chiếu progress/source và chi tiết hóa
+[plan4.4 mục4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md#4-44c--lịch-student-tổng-hợp-và-hàng-chờ-vận-hành):
+22 AC/20 scenarios/5 bước C1–C5, shared credit reader/reducer, schedule
+effective mentor/guest, own history/summary, Staff summary/incomplete toàn backlog.
+[Contract dự kiến](../../api_flow/PHASE_4_4_flow-api-breakdown.md#13-44c--quy-ước-và-contract-chung)
+và [progress4.4](PHASE_4_4_PROGRESS.md) cùng revision. Chưa code4.4c; gate436/45
+ở15/10 là evidence lịch sử. Leave/approved intervals còn gap source riêng.
+Chỉ tài liệu/source review, không BE tests/migrations/FE/deploy mới. User xác
+nhận server/Postman4.3 ngày15/10 là evidence riêng, không suy thành deploy4.4b.
+
+## 2026-10-15 — Tiếp 4.4b: học bù lớp khác
+
+Đã triển khai migration1792022400001, Staff queue/candidates/create/cancel placement,
+Student own placements, capacity với checkout, guest roster/mark/finalize/audits,
+Student context đúng target và requeue/completion guards. Late CASH/PayOS activation
+không bị từ chối vì trùng replacement; ghi queue atomic. Flow/API/Postman cùng revision.
+User xác nhận a xong; source hiện tại vẫn thiếu workflow leave/approved intervals,
+không đánh dấu candidates đã kiểm approved leave. 4.4c/4.5 vẫn pending. Không sửa FE,
+không migrate dev/VPS hoặc giao dịch thật. Gate cuối local: **pnpm check436/436 tests/44 suites, pnpm test:http45/45 tests/7 suites,0 skip; lint/type-check/build pass**. Chi tiết xem Progress4.4.
+
+
+## 2026-10-15 — Implementation4.4a: Session operations đầu tiên
+
+Management schedule/cancel/makeups, ancestry/audit migration và hủy Class batch
+đã có source; chi tiết gates/rollback và pending ở [Progress4.4](PHASE_4_4_PROGRESS.md).
+Workflow nghỉ/duyệt và approved leave provider chưa có;4.4b–c/4.5 vẫn mở.
+Flow/API/Postman cập nhật cùng revision, không sửa FE/dev/VPS hoặc giao dịch thật.
+
+Local gates cuối: **check413/413 tests/41 suites,HTTP42/42 tests/6 suites,0 skip**;
+lint/type-check/build pass. Đây là slice đầu, không đánh dấu toàn4.4a đã hoàn tất.
+
 Cập nhật **2026-10-13**. Trạng thái: **core 4.1–4.2 có source/evidence local lịch sử;
 core coverage đã đóng local; dependencies/release còn mở; 4.3 implemented/full local gates verified;4.4–4.5 pending; chưa deploy**.
 
@@ -61,14 +113,14 @@ bên dưới là lịch sử. Lượt tách plan không chạy lại BE gates ho
 | Hạng mục | Trạng thái |
 |---|---|
 | 4.1 Mentor availability/substitution | Current local gates pass; GAP41-04–06 đóng; GAP41-01–03/07 dependencies/release mở |
-| 4.2 Session lifecycle/attendance roster | Current calendar deadline/local gates pass; GAP42-07–09 đóng; GAP42-01–03 chuyển sang4.3 implementation; GAP42-04–06/10 mở |
-| 4.3 Correction/audit/evidence recovery/history | Implemented correction/audit/evidence recovery; focused PG/migration/HTTP pass; full gates xem Progress4.3 |
-| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Chưa implementation |
-| 4.4b Student conflicts/học bù lớp khác/guest attendance | Chưa implementation |
-| 4.4c Student projections/summary/backlog | Chưa implementation |
+| 4.2 Session lifecycle/attendance roster | Core/correction/cancel/guest/Student có source/local gates; Student GAP42-05 đóng local,release GAP42-10 còn mở |
+| 4.3 Correction/audit/evidence recovery/history | Implemented/local gates; server/Postman hoàn tất theo user15/10, xem Progress4.3 |
+| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Session operations/replacement/cancel có source/local gates; leave/approved intervals còn thiếu |
+| 4.4b Student conflicts/học bù lớp khác/guest attendance | Hoàn tất theo user16/10; local gates15/10 tại Progress4.4; không tự suy deploy |
+| 4.4c Student projections/summary/backlog | CLOSED LOCAL16/10; check456/456,HTTP48/48,0 skip; full evidence tại Progress4.4 |
 | 4.5 Integration/release | Chưa implementation |
-| Migration local / database tests / pnpm check / HTTP gate | 4.3:check397/397,HTTP39/39,0 skip; migration mới chỉ test DB |
-| Staging/VPS / browser smoke | Chưa deploy/nghiệm thu |
+| Migration local / database tests / pnpm check / HTTP gate | Latest4.4c16/10:check456/456,HTTP48/48,0 skip; không migration4.4c mới |
+| Staging/VPS / browser smoke | Server/Postman4.3 xong theo user15/10; chưa có evidence deploy4.4/FE browser4.5 |
 
 2026-10-13: chỉ thay tài liệu; kiểm diff/relative links/coverage endpoint và
 đối chiếu contract với source baseline. Không coi test lịch/payment cũ là test
@@ -252,6 +304,42 @@ GAP42-01–03 đã có implementation/evidence4.3,Student/guest/cancel/leave/rel
 Evidence4.3 cuối lượt:pnpm check397/397 tests/39 suites,HTTP39/39 tests/5 suites,
 0 skip;GAP43-01–08/GAP42-01–03 đóng local,server/browser/release4.5 vẫn mở.
 
+## 2026-10-14 — Đối chiếu hai commit và API summary
+
+- Review `8a1c7e8` (chỉ tài liệu) và `246abf4` (implementation4.1–4.3): 15 endpoint
+  Phase4 + 2 endpoint Admin student mới; các route Admin/CASH/Student cũ được
+  phân biệt rõ trong [API summary](../../api_flow/PHASE_4_API_SUMMARY.md).
+- File summary có bảng method/endpoint/quyền/chức năng, ID/version handoff và
+  flow assignment/start/mark/finalize/correction/audit/CASH sync/evidence recovery.
+- Đồng bộ flow và breakdown tổng, sửa nhãn correction/recovery/audits còn ghi
+  chưa implement. Student/leave/makeup/guest/release giữ trạng thái planned/mở.
+- Kiểm chứng lượt này chỉ documentation checks: route coverage theo controller
+  trước/sau commit, local links, JSON examples, code fences, `git diff --check`.
+  Không chạy lại runtime tests/migration, không sửa FE, không deploy/VPS/payment.
+
+## 2026-10-14 — Deploy preflight failure, Check passed
+
+User cung cấp Actions logs `logs_104514482910`, release `e0c9174`. CI lint,
+type-check/build pass; 397 tests/39 suites và 39 HTTP tests/5 suites pass.
+Deploy lúc20:23 Asia/Bangkok dừng ở clean VPS checkout vì untracked
+`..env.production.swp`; chưa fetch/build/backup/migration/API rollout trong job.
+Đã đối chiếu guard trong deploy.yml và ghi procedure bảo toàn swap ngoài checkout
+rồi re-run failed jobs ở [runbook](../../VPS_DEPLOYMENT.md). Không thay workflow/
+API, không truy cập VPS hoặc chạy lại tests; deploy success/readiness chưa xác nhận.
+
+## 2026-10-15 — Lưu plan riêng 4.4a–c
+
+- [x] Lưu [plan 4.4](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md)
+  dựa trên plan/flow/API Phase 4 và source hiện có; thứ tự a → b → c.
+- [x] Ghi quyết định user: giữ đăng ký/thanh toán khi trùng lịch bù phát sinh
+  sau duyệt, tạo conflict queue cho Manager; không chặn settlement vì trùng lịch.
+- [x] Liên kết plan với flow/API breakdown và tiến độ tổng. Chỉ kiểm tài liệu,
+  relative links và diff; không chạy BE tests/migration hoặc thao tác FE/VPS.
+- [ ] Implementation/migrations/API/tests 4.4a–c và integration 4.5 vẫn pending.
+
+Theo [backlog ngày 15/10](../TASK_SUMMARY_BACKLOG_2026-10-15.md), user xác nhận
+4.3 đã lên server và thử Postman xong. Đây là cập nhật trạng thái theo user;
+không phải lượt lưu plan vừa deploy/test server, và không áp dụng cho 4.4.
 ## Tích hợp Materials3.3/3.4 — 2026-10-15
 
 Giữ source/contract4.1–4.3 từ dev e0c9174 và mọi nhật ký planning/implementation

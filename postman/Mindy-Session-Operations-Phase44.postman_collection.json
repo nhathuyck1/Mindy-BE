@@ -1,0 +1,721 @@
+{
+  "info": {
+    "name": "Mindy Phase 4.4 - Session Operations, Makeup and Attendance Reports",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "4.4a Session operations, 4.4b placements/guest and 4.4c timetable/history/reports are implemented locally. Requires compiled migrations through1792022400001 and all attendance prerequisites. Leave approval/approved intervals remain a separate source gap. Use the existing login cookie jar; switch ACTIVE ADMIN/MANAGER, STUDENT and assigned target MENTOR cookies explicitly. Mutations require current versions and a UUIDv4 Idempotency-Key: retry identical intent with the same key/body; use a new key for new intent. Do not run the entire mutation collection blindly. 4.4c reads never mutate; Student history/summary are own metadata only, including terminal enrollments. Schedule requires paired from/to<=31 days; report optional paired ranges<=93 days, omitted report range is full history/backlog. Guest context is session-only, no receiving Class/material/CASH entitlement. Source credit counts once, nullable rate means no finalized eligible obligations. No deployment or live payment evidence is implied."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "classId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "classUnitId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nextSessionVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "replacementSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "startsAt",
+      "value": "2026-11-03T10:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "endsAt",
+      "value": "2026-11-03T11:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "makeupStartsAt",
+      "value": "2026-11-05T10:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "makeupEndsAt",
+      "value": "2026-11-05T11:00:00+07:00",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "targetSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetSessionVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "placementId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "placementVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nextConflictVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextTargetSessionVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nextPlacementVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheduleFrom",
+      "value": "2026-10-31T17:00:00Z",
+      "type": "string"
+    },
+    {
+      "key": "scheduleTo",
+      "value": "2026-11-07T17:00:00Z",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - Read class timetable and versions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/management/classes/{{classId}}?page=1&pageSize=100",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "classes", "{{classId}}"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Class detail\", () => pm.response.to.have.status(200));",
+              "const rows = pm.response.json().sessions.items;",
+              "const s = rows.find(s => s.sessionId === pm.collectionVariables.get(\"sessionId\"));",
+              "if (s) { pm.collectionVariables.set(\"sessionVersion\", s.version); pm.collectionVariables.set(\"classUnitId\", s.classUnitId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Reschedule scheduled session",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/schedule",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "schedule"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"startsAt\": \"{{startsAt}}\",\n  \"endsAt\": \"{{endsAt}}\",\n  \"reason\": \"Change scheduled lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Rescheduled\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) pm.collectionVariables.set(\"nextSessionVersion\", pm.response.json().version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Cancel scheduled or in-progress session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/cancel",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "cancel"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Cannot hold lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Cancelled\", () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) pm.collectionVariables.set(\"nextSessionVersion\", pm.response.json().version);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Create replacement for cancelled source",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/management/class-sessions/{{sessionId}}/makeups",
+          "host": ["{{baseUrl}}"],
+          "path": ["management", "class-sessions", "{{sessionId}}", "makeups"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"classUnitId\": \"{{classUnitId}}\",\n  \"title\": \"Makeup lesson\",\n  \"startsAt\": \"{{makeupStartsAt}}\",\n  \"endsAt\": \"{{makeupEndsAt}}\",\n  \"reason\": \"Replace cancelled lesson\",\n  \"expectedVersion\": {{sessionVersion}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Created\", () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) { const v = pm.response.json(); pm.collectionVariables.set(\"nextSessionVersion\", v.originalVersion); pm.collectionVariables.set(\"replacementSessionId\", v.session.sessionId); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.4b - Staff makeup queue and reservation",
+      "item": [
+        {
+          "name": "5 - Staff conflict queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts?page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().items.find(x => x.id === pm.collectionVariables.get(\"conflictId\"));",
+                  "if (row) { pm.collectionVariables.set(\"conflictVersion\", row.version); if(row.makeupPlacementId) { pm.collectionVariables.set(\"placementId\", row.makeupPlacementId); pm.collectionVariables.set(\"placementVersion\", row.makeupPlacementVersion); } }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6 - Staff eligible makeup candidates (no reservation)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts/{{conflictId}}/makeup-candidates?page=1&pageSize=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().items.find(x => x.session.sessionId === pm.collectionVariables.get(\"targetSessionId\"));",
+                  "if (row) pm.collectionVariables.set(\"targetSessionVersion\", row.session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7 - Staff assign equivalent lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/management/student-schedule-conflicts/{{conflictId}}/makeup-placement",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetSessionId\": \"{{targetSessionId}}\",\n  \"expectedVersion\": {{conflictVersion}},\n  \"expectedTargetVersion\": {{targetSessionVersion}},\n  \"contentMatchConfirmed\": true,\n  \"reason\": \"Verified equivalent lesson content\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if(pm.response.code === 201) { const r = pm.response.json(); pm.collectionVariables.set(\"placementId\", r.placement.id); pm.collectionVariables.set(\"placementVersion\", r.placement.version); pm.collectionVariables.set(\"nextConflictVersion\", r.conflictVersion); pm.collectionVariables.set(\"nextTargetSessionVersion\", r.targetSessionVersion); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8 - Staff cancel placement (history retained)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/management/makeup-placements/{{placementId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{placementVersion}},\n  \"reason\": \"Reassign to another target\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextPlacementVersion\", pm.response.json().version);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4b - Switch cookies for Student / target Mentor / Staff",
+      "item": [
+        {
+          "name": "9 - Student own placements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/makeup-placements?page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - Student exact target context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/context"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - Target Mentor roster and current version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/attendance?page=1&pageSize=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"targetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - Target Mentor start (same teaching calendar day)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/start",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - Target Mentor mark guest",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/attendance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}},\n  \"records\": [],\n  \"guestRecords\": [{\"makeupPlacementId\": \"{{placementId}}\", \"status\": \"PRESENT\"}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 - Target Mentor finalize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/class-sessions/{{targetSessionId}}/finalize",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": {{targetSessionVersion}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code === 200) pm.collectionVariables.set(\"nextTargetSessionVersion\", pm.response.json().session.version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 - Staff guest audit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/class-sessions/{{targetSessionId}}/attendance-audits?makeupPlacementId={{placementId}}&page=1&pageSize=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4c - Switch to Student cookies: schedule and own attendance",
+      "item": [
+        {
+          "name": "16 - Student schedule with effective mentor and own makeup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/schedule?from={{scheduleFrom}}&to={{scheduleTo}}&page=1&pageSize=100&includeCancelled=true",
+            "description": "STUDENT. Set paired range<=31 days with timezone. FULL opens Class detail, CASH_PREVIEW opens preview, SESSION_MAKEUP opens exact Session context. Optional physical classId can select a guest-only receiving Class. No meeting URLs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17 - Student own Class physical attendance history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/classes/{{classId}}/attendance?page=1&pageSize=20",
+            "description": "STUDENT. classId is own SOURCE Class, including terminal enrollment. Physical source rows and ancestry are retained; credited result is separate. Guest-only receiving Class is404. No meeting/material/contact/payment data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "18 - Student own Class finalized attendance summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/classes/{{classId}}/attendance-summary",
+            "description": "STUDENT. Full source history by default. Optional paired from/to<=93 days filters effective source obligation after resolving replacement chain. Do not sum physical history pages. Pending/canceled/no-data do not enter denominator."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Source credit invariant',()=>{pm.expect(body.finalizedEligibleCount).to.eql(body.present+body.absent);if(body.finalizedEligibleCount===0)pm.expect(body.rate).to.eql(null);else pm.expect(body.rate).to.be.within(0,100);});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4.4c - Switch to Staff cookies: summaries and whole backlog",
+      "item": [
+        {
+          "name": "19 - Staff Class per-enrollment attendance summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/classes/{{classId}}/attendance-summary?page=1&pageSize=20",
+            "description": "ACTIVE ADMIN/MANAGER. Same credit formula as Student. Includes historical canceled enrollment; one credit owner per student/root. Incoming guests do not add receiving enrollment totals."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20 - Staff incomplete Session whole backlog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/class-sessions/incomplete?page=1&pageSize=20",
+            "description": "ACTIVE ADMIN/MANAGER. No implicit weekly window. Optional classId, issue OVERDUE_NOT_STARTED/STARTED_NOT_FINALIZED, or paired from/to<=93 days. Only overdue scheduled/in-progress Sessions of open/in-progress Classes. deadlineExpired can be null, is not a mutation permission. Open roster and check current permissions before recovery/finalize/cancel; refetch after writes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP200 and private no-store',()=>{pm.response.to.have.status(200);pm.expect(pm.response.headers.get('Cache-Control')).to.eql('private, no-store');});",
+                  "const body=pm.response.json();",
+                  "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
