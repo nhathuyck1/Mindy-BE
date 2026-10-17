@@ -9,6 +9,7 @@ import { ClassSessionEntity } from '../../classes/entities/class-session.entity.
 import { SessionAssignmentRequiredException } from '../../classes/exceptions/teaching.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { TeachingReadService } from '../../classes/services/teaching-read.service.js';
+import { approvedLeaveOverlap } from '../../mentor-availability/mentor-availability.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import {
   ScheduleReservationsService,
@@ -165,6 +166,7 @@ export class MakeupPlacementService {
         FROM class_sessions s JOIN class_units u ON u.id=s.class_unit_id JOIN classes c ON c.id=u.class_id
         WHERE u.course_unit_id=$2 AND c.id<>$3 AND c.status IN ('OPEN','IN_PROGRESS')
           AND s.status='SCHEDULED' AND s.starts_at>$1 AND s.starts_at>=$4 AND s.starts_at<$5
+          AND NOT ${approvedLeaveOverlap('coalesce(s.mentor_override_id,c.mentor_id)', 's.starts_at', 's.ends_at')}
           AND NOT EXISTS(SELECT 1 FROM enrollments e WHERE e.class_id=c.id AND e.student_id=$6
             AND (e.status IN ('ACTIVE','COMPLETED') OR (e.status='PENDING_PAYMENT' AND EXISTS(
               SELECT 1 FROM order_details d JOIN orders o ON o.id=d.order_id WHERE d.id=e.order_detail_id
@@ -280,6 +282,15 @@ export class MakeupPlacementService {
           throw new MakeupConflictException(
             'MAKEUP_TARGET_ENROLLED',
             'Student already has a registration in target class',
+          );
+        const leave: unknown[] = await m.query(
+          `SELECT 1 WHERE ${approvedLeaveOverlap('$1', '$2', '$3')}`,
+          [t.mentorOverrideId ?? c.mentorId, t.startsAt, t.endsAt],
+        );
+        if (leave.length)
+          throw new MakeupConflictException(
+            'MAKEUP_TARGET_UNAVAILABLE',
+            'Target mentor is on approved leave',
           );
         if (
           (

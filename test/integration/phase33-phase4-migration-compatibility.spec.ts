@@ -26,6 +26,7 @@ import { IsolateAttendanceUnitConstraint1791856799999 } from '../../src/database
 import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
+import { MentorLeave1792195200000 } from '../../src/database/migrations/1792195200000-mentor-leave.js';
 import { separateTestUrl } from '../helpers/payment-fixture.js';
 
 type MigrationClass = new () => MigrationInterface;
@@ -66,6 +67,7 @@ const bridges: readonly MigrationClass[] = [
 
 const all = [...common, ...phase4, ...materials, ...bridges];
 const current: readonly MigrationClass[] = [
+  MentorLeave1792195200000,
   ...all,
   SessionScheduleOperations1792022400000,
   CrossClassMakeup1792022400001,
@@ -162,9 +164,9 @@ describe.skipIf(!separateTestUrl('merge_migrations'))(
       await assertCombined(db);
     }, 30000);
 
-    it('runs the current 24-migration catalog from empty, then safely replays Phase 4.4', async () => {
+    it('runs the current 25-migration catalog from empty, then safely replays Phase 4.4', async () => {
       const db = await connect(await createDatabase('catalog'), current);
-      expect(await db.runMigrations()).toHaveLength(24);
+      expect(await db.runMigrations()).toHaveLength(25);
       expect(await db.showMigrations()).toBe(false);
       expect(await db.runMigrations()).toHaveLength(0);
       await db.undoLastMigration();
@@ -207,7 +209,7 @@ describe.skipIf(!separateTestUrl('merge_migrations'))(
       );
       await old.destroy();
       const db = await connect(url, current);
-      expect(await db.runMigrations()).toHaveLength(2);
+      expect(await db.runMigrations()).toHaveLength(3);
       expect(await db.showMigrations()).toBe(false);
       expect(await db.query('SELECT * FROM materials WHERE id=$1', [material[0].id])).toEqual(
         material,

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
 import type { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
+import { approvedLeaveOverlap } from '../../mentor-availability/mentor-availability.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
@@ -165,7 +166,7 @@ export class TeachingReadService {
         checkedTo: to,
         asOf: now,
         timeZone: this.timeZone(),
-        availabilityBasis: 'TEACHING_SCHEDULE_ONLY',
+        availabilityBasis: 'TEACHING_SCHEDULE_AND_APPROVED_LEAVE',
       };
     });
   }
@@ -190,7 +191,7 @@ export class TeachingReadService {
         affectedSessionCount: sessions.length,
         asOf: new Date(),
         timeZone: this.timeZone(),
-        availabilityBasis: 'TEACHING_SCHEDULE_ONLY',
+        availabilityBasis: 'TEACHING_SCHEDULE_AND_APPROVED_LEAVE',
       };
     });
   }
@@ -435,6 +436,10 @@ export class TeachingReadService {
     const excluded = intervals.map((i) => i.id);
     for (const [index, interval] of intervals.entries()) {
       if (interval.from >= interval.to) continue;
+      q.andWhere(`NOT ${approvedLeaveOverlap('mentor.id', `:from${index}`, `:to${index}`)}`, {
+        [`from${index}`]: interval.from,
+        [`to${index}`]: interval.to,
+      });
       q.andWhere(
         `NOT EXISTS (SELECT 1 FROM class_sessions s JOIN class_units u ON u.id = s.class_unit_id
         JOIN classes c ON c.id = u.class_id WHERE s.id <> ALL(:excluded::uuid[]) AND ${OCCUPIED_SESSION_SQL}

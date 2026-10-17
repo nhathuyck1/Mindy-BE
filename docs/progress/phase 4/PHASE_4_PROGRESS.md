@@ -1,5 +1,24 @@
 # Phase 4 — Progress
 
+## 2026-10-17 — Implementation leave workflow và approved intervals
+
+Phần gap4.4 đã có backend request/preview/slots/own/staff review, approved leave
+và kiểm availability trên các writer/candidates hiện hữu. Approval atomic multi-
+class/cancel/replacement/endDate/conflict queue/audit, expiry/idempotency/ownership.
+Migration mới1792195200000, không FE/env/dependency/email. Gates và giới hạn tại
+[Progress4.4](PHASE_4_4_PROGRESS.md); contract tại API4.4 mục19. Các log gap phía
+dưới giữ lịch sử;4.5 server/browser/release vẫn là bước nghiệm thu riêng.
+
+## 2026-10-17 — Làm rõ phần còn lại của 4.5
+
+4.5 là nghiệm thu integration/release: server journeys 4.4, FE/browser theo role,
+migration rehearsal và backup/rollback evidence. Local regression/HTTP và tài
+liệu bàn giao đã có; server/Postman4.3 đã xong theo user15/10, không làm lại
+như một việc chưa bắt đầu. Chưa có xác nhận mới về server4.4/browser/release4.5.
+Xin nghỉ/duyệt và approved intervals vẫn là gap chức năng4.4 riêng, không được
+đóng bằng nghiệm thu4.5. User xác nhận thanh toán thật VPS và dọn file3.5 đã xong;
+không dùng hai xác nhận đó làm evidence nghiệm thu attendance. Chỉ cập nhật docs.
+
 ## 2026-10-16 — Sửa CI constraint với Materials
 
 Fixture có unit release dùng đủ hai compatibility bridges như CLI, bảo toàn
@@ -115,11 +134,11 @@ bên dưới là lịch sử. Lượt tách plan không chạy lại BE gates ho
 | 4.1 Mentor availability/substitution | Current local gates pass; GAP41-04–06 đóng; GAP41-01–03/07 dependencies/release mở |
 | 4.2 Session lifecycle/attendance roster | Core/correction/cancel/guest/Student có source/local gates; Student GAP42-05 đóng local,release GAP42-10 còn mở |
 | 4.3 Correction/audit/evidence recovery/history | Implemented/local gates; server/Postman hoàn tất theo user15/10, xem Progress4.3 |
-| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Session operations/replacement/cancel có source/local gates; leave/approved intervals còn thiếu |
+| 4.4a Nghỉ có duyệt/slot/manual/replacement/auto endDate | Leave/approved intervals implemented17/10; local gates tại Progress4.4; server/browser4.5 riêng |
 | 4.4b Student conflicts/học bù lớp khác/guest attendance | Hoàn tất theo user16/10; local gates15/10 tại Progress4.4; không tự suy deploy |
 | 4.4c Student projections/summary/backlog | CLOSED LOCAL16/10; check456/456,HTTP48/48,0 skip; full evidence tại Progress4.4 |
 | 4.5 Integration/release | Chưa implementation |
-| Migration local / database tests / pnpm check / HTTP gate | Latest4.4c16/10:check456/456,HTTP48/48,0 skip; không migration4.4c mới |
+| Migration local / database tests / pnpm check / HTTP gate | Latest17/10:check634/634,63 suites;HTTP80/80,9 suites,0 skip; migration leave1792195200000/clean25/upgrade22→25 pass |
 | Staging/VPS / browser smoke | Server/Postman4.3 xong theo user15/10; chưa có evidence deploy4.4/FE browser4.5 |
 
 2026-10-13: chỉ thay tài liệu; kiểm diff/relative links/coverage endpoint và

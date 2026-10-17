@@ -1,5 +1,15 @@
 # Phase 4.4 — Nghỉ có duyệt, học bù và lịch/điểm danh học viên
 
+**Implementation17/10/2026:** workflow request/preview/slots/own/staff reads/
+withdraw/reject/approve, approved intervals và schedule/candidate integration đã
+có backend. Không còn giữ leave như source gap của4.4; các ghi chép gap bên dưới
+là lịch sử. Contract thực tế tại [API4.4 mục19](../../api_flow/PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+SQL typed persistence theo pattern4.4b; Classes cung cấp transaction participants
+cancel/replace/finish batch, TeachingOperations điều phối, availability độc lập.
+93 ngày/500 sources, list/detail phân trang, slot SQL theo15 phút không N+1;
+expiry persist bằng command, không thêm worker. Không email/notification/FE.
+Migration mới1792195200000, không sửa lịch sử; server/browser/release ở4.5 riêng.
+
 Ngày lập: **2026-10-15**. Cập nhật **2026-10-16**: **4.4b hoàn tất theo user; 4.4c hoàn tất backend/local gates — check456/456,HTTP48/48,0 skip**.
 Session operations 4.4a có source; workflow leave/approved intervals vẫn là gap
 được ghi riêng. Xác nhận hoàn tất 4.4b không đồng nghĩa đã nghiệm thu toàn 4.4.

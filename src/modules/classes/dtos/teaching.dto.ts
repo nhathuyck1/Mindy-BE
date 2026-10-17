@@ -151,8 +151,8 @@ export class MentorCandidatesPageDto {
   @ApiProperty({ type: String })
   readonly timeZone!: string;
 
-  @ApiProperty({ enum: ['TEACHING_SCHEDULE_ONLY'] })
-  readonly availabilityBasis!: 'TEACHING_SCHEDULE_ONLY';
+  @ApiProperty({ enum: ['TEACHING_SCHEDULE_AND_APPROVED_LEAVE'] })
+  readonly availabilityBasis!: 'TEACHING_SCHEDULE_AND_APPROVED_LEAVE';
 }
 
 export class SessionMentorCandidatesDto extends MentorCandidatesPageDto {

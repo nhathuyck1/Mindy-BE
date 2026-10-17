@@ -1,10 +1,10 @@
 # Phase 4.4 — API integration breakdown
 
-Ngày cập nhật: **2026-10-16**, 4.4b hoàn tất theo user; 4.4c CLOSED LOCAL/check456/HTTP48,0 skip.
+Ngày cập nhật: **2026-10-17**, leave4.4a/approved intervals implemented;4.4b/4.4c giữ source/evidence hiện có. Gate cuối tại Progress4.4.
 [Flow](PHASE_4_4_FLOW.md) · [Progress](../progress/phase%204/PHASE_4_4_PROGRESS.md) ·
 [Contract dự kiến toàn phase](PHASE_4_flow-api-breakdown.md#10-reschedule-cancel-và-makeup--slice-44a).
-Leave/approved intervals vẫn thiếu source; schedule/history/summary/backlog4.4c đã có.
-Contract thực tế 4.4b nằm tại mục 6–12 dưới đây; không suy ra workflow leave đã có.
+Contract leave/approved intervals implemented tại mục19; schedule/history/summary/backlog4.4c đã có.
+Contract thực tế 4.4b nằm tại mục6–12 dưới đây.
 Contract **implemented 4.4c** nằm tại mục13–18, đối chiếu controllers/DTO/services
 và compiled HTTP/PG tests. Gates cuối ở Progress4.4; không suy thành đã deploy/FE.
 
@@ -533,3 +533,131 @@ guest target ngoài range, chain nhiều tầng, no-data, partial recovery, term
 enrollment, query snapshot và role/ownership theo T44C-01–20. Swagger/Postman
 Phase44 có5 GET reads (16–20); source/PG/HTTP evidence tại Progress4.4.
 FE/VPS acceptance ở4.5, không dùng local tests thay deployment.
+## 19. Mentor leave requests — implementation 2026-10-17
+
+Backend implemented; cần migration `1792195200000-mentor-leave` trước deploy.
+Các dòng leave PLANNED/gap trong baseline trước17/10 được thay bằng mục này.
+[Flow thực hiện](PHASE_4_4_FLOW.md). Không suy local tests thành VPS/browser4.5.
+
+### Quy ước chung và quyền
+
+- Prefix `/api/v1`; auth cookie `access_token`. Mentor routes chỉ MENTOR đang
+  active; management routes chỉ ADMIN/MANAGER active. Service kiểm lại current
+  actor trước replay. Mentor chỉ own request, guessed/foreign ID trả404.
+- Mọi response là JSON trực tiếp, **không bọc `data`**. Header private/no-store
+  cho success. POST preview/slots là read-only200; create201; actions200; GET200.
+- Create/approve/reject/withdraw bắt buộc `Idempotency-Key: UUIDv4`. Retry cùng
+  actor/route/key/body trả receipt cũ, không tạo audit/replacement thứ hai; đổi
+  body cùng key409. Sau409 stale/version dùng refetch và ý định mới/key mới.
+- Ngày YYYY-MM-DD thật, range inclusive tối đa93 ngày; tối đa500 sources. Giờ
+  ISO8601 có Z/offset. APP_TIME_ZONE xác định period và notice, không timezone máy FE.
+  Body parser chung64KiB vẫn áp dụng, có thể phải chia nhỏ hơn500 sources theo
+  độ dài mappings/reason; không dùng giới hạn256KiB riêng của attendance.
+- Page/pageSize mặc định1/20, tối đa100; lists không mặc định tuần. UUID paths
+  được parse; body/query strict, không nhận field ngoài contract, null thay
+  optional hoặc version dạng string. `reason` trim,1–1000 ký tự.
+- Read snapshot REPEATABLE READ/READ ONLY. GET chỉ project EXPIRED; command
+  gặp pending quá expiresAt ghi EXPIRED+audit và commit rồi trả409. Không auto approve.
+
+### API và thứ tự FE
+
+| Method/route | Input và thời điểm FE gọi | Output |
+|---|---|---|
+| POST `/mentor/leave-requests/preview` | `{fromDate,toDate,period}` khi chọn form | `{affectedSessions:TeachingSessionDto[],sourceVersions:[{sessionId,version}],noticeEligible,noticeDeadline:ISO|null,asOf,timeZone}`. Empty không tạo đơn; noticeDeadline exclusive midnight ngay trước ngày affected sớm nhất. |
+| POST `/mentor/leave-requests/makeup-slots` | `{sourceSessionId,targetDate,targetPeriod}`; targetPeriod MORNING/AFTERNOON/EVENING | `{slots:[{startsAt,endsAt}],sessionVersion,asOf,timeZone}`; step15 phút, giữ duration, tránh class/mentor/approved leave/student ACTIVE/live CASH/guest. Empty chọn ngày khác. Không giữ slot. API chưa nhận range nghỉ; create/approve kiểm thêm target nằm ngoài toàn range/period nghỉ. |
+| POST `/mentor/leave-requests` | Body mẫu bên dưới; sourceVersions lấy nguyên preview | `LeaveRequestDto`, PENDING/version1. Requery toàn affected set, không chấp nhận subset/duplicate IDs. Không đổi source hoặc giữ slot; source đang có placement trả409. |
+| GET `/mentor/leave-requests` | `page,pageSize,status?` | `LeaveRequestPageDto`; own, submittedAt DESC/id DESC. |
+| GET `/mentor/leave-requests/:requestId` | `page,pageSize` phân trang items | `LeaveRequestDto`, current studentConflictCount, không student IDs/conflicting sessions của người khác. |
+| POST `/mentor/leave-requests/:requestId/withdraw` | `{expectedVersion,reason}` từ own pending detail | `LeaveRequestDto` WITHDRAWN; không đổi lịch. |
+| GET `/management/mentor-leave-requests` | `page,pageSize,status?,mentorId?` | `LeaveRequestPageDto`; toàn backlog nếu không filter. |
+| GET `/management/mentor-leave-requests/:requestId` | `page,pageSize` | `ManagementLeaveDetailDto`: request + `sourcesCurrent`, current `studentConflictCount`, `studentConflicts:[{sourceSessionId,studentId,conflictingSessionId}]` phân trang cùng page/pageSize. Preview không giữ lịch. |
+| POST `/management/mentor-leave-requests/:requestId/approve` | `{expectedVersion,reason,acknowledgeStudentConflicts:boolean}` bắt buộc; Manager xem detail trước | `{request:LeaveRequestDto,replacements:TeachingSessionDto[],classExtensions,studentConflictCount}`. Tối đa500 replacements theo source cap. |
+| POST `/management/mentor-leave-requests/:requestId/reject` | `{expectedVersion,reason}` | `LeaveRequestDto` REJECTED, không đổi lịch. |
+
+Statuses: PENDING, APPROVED, REJECTED, WITHDRAWN, EXPIRED. Chỉ PENDING được action;
+approve/reject là staff, withdraw là own mentor. Không có action sửa đơn; stale
+thì withdraw và preview/create mới. Không withdraw đơn đã APPROVED; xử lý lịch
+qua session operations đã có và giữ approved leave history.
+
+Create FULL_DAY mẫu (IDs giả; thay bằng preview hiện hành):
+
+```json
+{
+  "fromDate": "2026-11-06",
+  "toDate": "2026-11-06",
+  "period": "FULL_DAY",
+  "reason": "Personal leave",
+  "sourceVersions": [{"sessionId":"11111111-1111-4111-8111-111111111111","version":2}],
+  "dayMappings": [{"sourceDate":"2026-11-06","targetDate":"2026-11-08"}]
+}
+```
+
+FULL_DAY chỉ nhận dayMappings: mỗi affected source date đúng một mapping, giữ
+clock/thời lượng và mentor xin nghỉ. MORNING/AFTERNOON/EVENING chỉ nhận
+sessionMappings (không gửi dayMappings): mỗi source đúng một
+`{sourceSessionId,targetDate,targetPeriod,startsAt,endsAt}`; targetPeriod là một
+trong ba buổi, giữ duration và toàn slot trong period, không overnight. Target
+phải tương lai, không trước Class.startDate hoặc giao khoảng nghỉ đang xin/
+đã duyệt. Class.endDate tự gia hạn khi approve, không cần FE PATCH lớp trước.
+
+`LeaveRequestDto`:
+
+```text
+{id,mentorId,fromDate,toDate,period,reason,status,version,
+ submittedAt,expiresAt,itemCount,items,page,pageSize,
+ studentConflictCount,classExtensions,review,asOf,timeZone}
+items=[{sourceSessionId,classId,sourceVersion,sourceStartsAt,sourceEndsAt,
+        startsAt,endsAt,replacementSessionId:UUID|null}]
+classExtensions=[{classId,endDate:YYYY-MM-DD}]
+review=null|{reviewerId,reason,reviewedAt}
+LeaveRequestPageDto={items:LeaveRequestDto[],total,page,pageSize,asOf}
+```
+
+List summaries trả `items:[]` ở mỗi request, itemCount là tổng thật. Create và
+approve trả100 items đầu, GET detail có thể page tiếp; reject/withdraw trả summary.
+studentConflictCount null ở list/create/action request; own/staff detail có số
+current thật; approve có số count ở envelope ngoài. classExtensions liệt kê endDate
+dự kiến của mọi affected class (max current endDate và target date), không chỉ lớp
+thực sự tăng ngày. `expiresAt`=startsAt source sớm nhất. `review` ở terminal
+withdraw/expired cũng ghi actor command, không nhất thiết là reviewer staff.
+
+### Side effects, races và lỗi FE phải xử lý
+
+Approval khóa request/Class/Session/mentor/student, requery toàn affected set
+và kiểm lại version/current mentor/active role/placements/timetable. FULL_DAY
+có student conflicts cần acknowledge=true; nghỉ buổi luôn chặn student conflict.
+APPROVED + cancel sources + replacements + extend endDate + approved intervals
++ student conflict queue + schedule/leave audits + receipt cùng transaction.
+Lỗi bất kỳ bước nào rollback toàn bộ; không attendance backfill/copy ABSENT,
+không đổi payment/enrollment/material entitlement, không email/notification.
+
+| Status/code | FE xử lý |
+|---|---|
+|401|Đăng nhập lại.|
+|403 `LEAVE_FORBIDDEN` hoặc role guard|Dừng action, tải lại quyền/tài khoản.|
+|404 `LEAVE_NOT_FOUND`, `LEAVE_SOURCE_NOT_FOUND`|Không lộ own request của mentor khác; quay danh sách/refetch nguồn. Class/session lookup cũng có404 hiện hữu.|
+|422 `LEAVE_RANGE_INVALID`, `LEAVE_TOO_MANY_SESSIONS`|Sửa/chia nhỏ khoảng ngày.|
+|422 `LEAVE_NOTICE_TOO_SHORT`|Chọn affected dates cách ngày gửi ít nhất hai ngày lịch.|
+|422 `LEAVE_MAPPING_INVALID`, `LEAVE_TARGET_INVALID`|Sửa mapping/period/duration/giờ. DTO invalid trả422 hiện hữu.|
+|422 `LEAVE_KEY_INVALID`|Gửi UUIDv4 key cho ý định mới.|
+|409 `LEAVE_REQUEST_STALE`|Refetch; withdraw pending cũ và tạo request từ preview mới. Không auto retry approve.|
+|409 `LEAVE_VERSION_CONFLICT`|Refetch request/version, người dùng quyết định lại.|
+|409 `LEAVE_REQUEST_EXPIRED`, `LEAVE_STATE_CONFLICT`|Refetch, ngừng approve/reject/withdraw pending cũ.|
+|409 `LEAVE_TARGET_CONFLICT`, `LEAVE_STUDENT_CONFLICT`|Chọn lịch bù khác; PENDING không giữ slot nên có thể lỗi mới lúc approve.|
+|409 `LEAVE_STUDENT_CONFLICT_ACK_REQUIRED`|Manager xem current conflicts và xác nhận rõ trước action mới; không tự bật cờ.|
+|409 `SESSION_HAS_MAKEUP_PLACEMENTS`|Quản lý xử lý placement trước rồi preview lại.|
+|409 `LEAVE_MENTOR_INACTIVE`|Xử lý phân công/tài khoản trước, không auto approve.|
+|409 `IDEMPOTENCY_KEY_REUSED`|Không đổi body trên cùng key.|
+|409 `CLASS_MENTOR_SCHEDULE_CONFLICT`|Writer hiện hữu chặn cả approved leave; candidate basis mới là TEACHING_SCHEDULE_AND_APPROVED_LEAVE.|
+
+Loading: khóa nút action trong khi request; lỗi mạng retry cùng key/body. Preview
+empty hiển thị không có buổi phù hợp. Sau create/withdraw/reject refetch lists/
+detail. Sau approve refetch class detail/endDate, mentor schedule, student schedule,
+incomplete/conflict queues và candidates. Không polling mutation; GET chỉ metadata,
+expiresAt là mốc FE hiển thị hết hạn. Candidate/create guest placement kiểm approved
+leave, tạo placement trả MAKEUP_TARGET_UNAVAILABLE khi mentor target nghỉ.
+
+Rollback: migration additive không sửa deployed migrations; down chỉ cho schema
+chưa có leave history. Có history thì rollback ứng dụng, giữ schema/dữ liệu; dùng
+4.5 để nghiệm thu server/browser/release. Rate-limit/metrics/i18n riêng giữ giới
+hạn baseline, không tự nhận đã triển khai chúng.

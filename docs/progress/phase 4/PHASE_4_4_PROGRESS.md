@@ -1,5 +1,40 @@
 # Phase 4.4 — Progress
 
+## 2026-10-17 — Hoàn thiện phần còn thiếu của 4.4a
+
+Backend đã có Mentor preview/slots/create/list/detail/withdraw, staff list/detail/
+approve/reject, request items/snapshots/intervals/audits và idempotency receipts.
+Approval revalidates toàn source/version/current assignment/placements/targets;
+cancel/create replacements/extend Class endDate/approved leave/student conflict
+queue/audit cùng transaction. Có calendar notice2 ngày,93 ngày/500 sources,
+FULL_DAY giữ clock/ack student conflicts; partial-day chặn overlap.
+
+Availability độc lập tích hợp shared checker/candidates/add/bulk/reschedule/open/
+class-session mentor assignment và guest makeup candidates/create. DRAFT không
+giữ lịch. Batch khóa union mentor của mọi affected Class tăng dần trước students,
+Classes sở hữu cancel/replace/finish participants; leave module dùng typed SQL
+theo pattern placements, không thêm dependency/env/worker/FE/email.
+
+GET không ghi expiry; command persist EXPIRED/audit trước409. Own detail giữ
+student IDs riêng tư; staff conflict details/items phân trang tại SQL. List/slots
+không N+1; test query count pageSize1/100 bằng nhau. Migration1792195200000
+additive, down từ chối khi có leave history; giữ schema khi rollback app.
+
+Focused PG15/15, calendar/DTO4/4 và named makeup migration2/2 pass; full compiled
+HTTP80/80 tests/9 suites,0 skip pass trên PostgreSQL/MinIO local riêng. **Full
+pnpm check cuối PASS634/634 tests/63 suites,0 skip; lint/type-check/build pass**.
+Migration compatibility5/5 gồm clean25 và upgrade dev22→25 giữ Materials data.
+Postman30 requests toàn collection, folder leave10 requests/14 scripts compile;
+Markdown links/anchors mới và git diff --check pass. Một lượt broad ban đầu vướng module cache do
+chỉnh source khi tests đang chạy và fixture4.4b rollback nhầm latest migration;
+đã dùng named migration rehearsal cho4.4b như các phase cũ. Không sửa migrations
+đã deploy. Test actor inactive đã đổi sang đúng enum SUSPENDED.
+
+Flow/breakdown/Swagger/Postman folder21 đã bổ sung; contract nằm ở
+[API4.4 mục19](../../api_flow/PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+Chưa migrate development/VPS, deploy, browser/FE hoặc đóng4.5. Thanh toán thật
+VPS/dọn file3.5 đã xong theo user17/10, không chạy lại trong lượt này.
+
 Ngày bắt đầu code: **2026-10-15**. Cập nhật **2026-10-16**:
 **4.4b hoàn tất theo xác nhận user; 4.4c hoàn tất backend/local gates — check456/456,HTTP48/48,0 skip**.
 [Plan](../../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md) ·

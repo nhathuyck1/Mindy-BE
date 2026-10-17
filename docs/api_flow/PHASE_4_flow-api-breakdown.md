@@ -1,5 +1,10 @@
 # Phase 4 — API breakdown cho frontend
 
+> Implementation17/10: nhóm leave API mục11 đã có backend. Contract thực tế,
+> response fields, lỗi và FE sequence ở [API4.4 mục19](PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+> Candidate basis đổi thành TEACHING_SCHEDULE_AND_APPROVED_LEAVE; các ghi chú
+> TEACHING_SCHEDULE_ONLY/leave planned bên dưới là baseline lịch sử.
+
 **Sửa CI16/10/2026:** fixture release bổ sung compatibility bridges, test rollback
 nhắm migration đích; không thay đổi endpoint, payload, quyền hoặc tích hợp FE.
 [Evidence local và giới hạn](../progress/Progress.md#2026-10-16--sửa-ci-constraint-sau-merge-phase4materials).

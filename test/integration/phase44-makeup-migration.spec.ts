@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 describe.skipIf(!separateTestUrl('phase44b_migration'))(
@@ -19,13 +20,13 @@ describe.skipIf(!separateTestUrl('phase44b_migration'))(
       const f = paymentFixture(db);
       await f.order();
       const before = await db.query('SELECT * FROM class_sessions ORDER BY id');
-      await db.undoLastMigration();
+      await rehearseMigration(db, new CrossClassMakeup1792022400001(), 'down');
       expect(
         await db.query(
           "SELECT 1 FROM information_schema.tables WHERE table_name='makeup_placements'",
         ),
       ).toHaveLength(0);
-      await db.runMigrations();
+      await rehearseMigration(db, new CrossClassMakeup1792022400001(), 'up');
       expect(await db.query('SELECT * FROM class_sessions ORDER BY id')).toEqual(before);
       expect(await db.query('SELECT 1 FROM guest_attendance_records')).toHaveLength(0);
       expect(await db.query('SELECT 1 FROM student_schedule_conflicts')).toHaveLength(0);
@@ -102,7 +103,9 @@ describe.skipIf(!separateTestUrl('phase44b_migration'))(
       await expect(
         db.query('DELETE FROM enrollments WHERE id=$1', [enrollment.id]),
       ).rejects.toMatchObject({ code: '23503' });
-      await expect(db.undoLastMigration()).rejects.toThrow('retain schema');
+      await expect(
+        rehearseMigration(db, new CrossClassMakeup1792022400001(), 'down'),
+      ).rejects.toThrow('retain schema');
       expect(await db.query('SELECT 1 FROM makeup_placements WHERE id=$1', [id])).toHaveLength(1);
       // Refusal can also be rehearsed independently without relying on "latest" later on.
       await expect(
