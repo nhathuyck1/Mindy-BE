@@ -98,3 +98,24 @@ export class AttendanceRosterDto {
   @ApiProperty({ type: Number })
   readonly pendingPaymentCount!: number;
 }
+
+export class AttendanceCandidateDto {
+  @ApiProperty({ format: 'uuid' }) readonly enrollmentId!: string;
+  @ApiProperty({ type: () => TeachingMentorDto }) readonly student!: TeachingMentorDto;
+  @ApiProperty({ enum: ['REGULAR', 'MAKEUP'] }) readonly entryType!: 'REGULAR' | 'MAKEUP';
+  @ApiProperty({ type: String, nullable: true, format: 'uuid' }) readonly makeupPlacementId!:
+    | string
+    | null;
+}
+export class AttendanceCandidatePageDto {
+  @ApiProperty({ type: () => AttendanceCandidateDto, isArray: true })
+  readonly items!: AttendanceCandidateDto[];
+  @ApiProperty() readonly total!: number;
+  @ApiProperty() readonly page!: number;
+  @ApiProperty() readonly pageSize!: number;
+  @ApiProperty({
+    description: 'Preview only; start rechecks eligibility and creates the actual snapshot',
+  })
+  readonly provisional!: boolean;
+  @ApiProperty() readonly asOf!: Date;
+}

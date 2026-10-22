@@ -17,11 +17,14 @@ import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { ClassContentContextService } from './class-content-context.service.js';
+// biome-ignore lint/style/useImportType: Nest requires runtime constructor metadata.
+import { MentorWorkspaceService } from './mentor-workspace.service.js';
 
 @Injectable()
 export class UnitContentService {
   constructor(
     private readonly db: DataSource,
+    private readonly workspace: MentorWorkspaceService,
     private readonly contexts: ClassContentContextService,
     private readonly users: UsersService,
     private readonly courses: CoursesService,
@@ -79,14 +82,26 @@ export class UnitContentService {
   ): Promise<ClassUnitManagementDto> {
     return this.db.transaction('REPEATABLE READ', async (manager) => {
       const context = await this.contexts.getUnit(unitId, classId, manager);
-      await this.authorize(principal, context, manager);
+      if (principal.role === UserRole.MENTOR) {
+        if (context.classStatus === ClassStatus.CANCELLED)
+          throw new AppHttpException(
+            403,
+            'MATERIAL_ACCESS_DENIED',
+            'Current class assignment is required',
+          );
+        const scope = await this.workspace.scope(manager, principal, classId);
+        await this.workspace.assertUnit(manager, principal, scope, unitId);
+      } else await this.authorize(principal, context, manager);
       const unit = await manager
         .getRepository(ClassUnitEntity)
         .findOneByOrFail({ id: unitId, classId });
       const source = await this.courses.findUnitsByIds([unit.courseUnitId], manager);
-      const sessions = await manager
-        .getRepository(ClassSessionEntity)
-        .find({ where: { classUnitId: unitId }, order: { sessionNumber: 'ASC' } });
+      const sessions =
+        principal.role === UserRole.MENTOR
+          ? []
+          : await manager
+              .getRepository(ClassSessionEntity)
+              .find({ where: { classUnitId: unitId }, order: { sessionNumber: 'ASC' } });
       return new ClassUnitManagementDto({
         unit,
         title: source.get(unit.courseUnitId)?.title ?? '',

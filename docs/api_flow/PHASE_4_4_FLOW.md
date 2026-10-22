@@ -231,3 +231,26 @@ implementation/local verification, chưa deploy/VPS/browser4.5. Contract mới:
 [mục19 API4.4](PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
 Gate cuối local17/10: pnpm check634/634 tests/63 suites,lint/type-check/build pass;
 compiled HTTP80/80 tests/9 suites,0 skip; PG/MinIO test riêng và fake PayOS.
+
+## 2026-10-22 — Mentor API gap audit (planning only)
+
+Base: dev/origin/dev `1e89579`, including FixUnhappyCase `20a2214`.
+Created branch `codex/mentor-teaching-api-gaps`. No application code or schema changes.
+Existing flows: class roster/schedule, unit/session context, material authoring/review/
+preview/file access, unit release, session start/attendance/finalize, and mentor leave
+preview/create/withdraw plus staff approval and makeup scheduling.
+Remaining proposed work: mentor class detail; mentor class/student attendance and
+learning progress reads; session teaching notes; assignment/submission/grading flow.
+Assignment-aware substitute content access needs a scoped design: current content and
+roster checks require the primary mentor while schedule/session context use effective
+session assignment. Do not grant substitute mentors all class authoring permissions.
+Learning completion rules and assignment contracts remain to be defined before implementation.
+User requested this inventory before coding; implementation is pending that review.
+Source/Git inspection only; no runtime tests, migrations, deploy or FE edits this turn.
+See [API planning inventory](PHASE_4_4_flow-api-breakdown.md#2026-10-22--mentor-api-gap-planning-inventory).
+
+2026-10-22 follow-up: theo yêu cầu user đã viết kế hoạch chi tiết cho phần thiếu,
+chưa code: [Phase4.6 mentor workspace](PHASE_4_6_FLOW.md) và
+[Phase5 assignment TEST/HOMEWORK, QUIZ/ZIP](PHASE_5_FLOW.md). Timer optional phút
+cho QUIZ; ZIP deadline ngày/giờ; quiz nộp toàn bài rồi BE chấm và trả đáp án.
+Danh sách draft audit phía trên không thay thế plan/contract mới này.

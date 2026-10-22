@@ -1,5 +1,13 @@
 # Core flow implementation plan
 
+2026-10-22 planning extension (not implemented):
+[Phase4.6 Mentor workspace](../implement_phase/phase%204/PHASE_4_6_MENTOR_TEACHING_WORKSPACE.md)
+and [Phase5 Assignment](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md).
+Phase5 here is a new feature label, not the checkout Milestone5 below. Assignments
+remain excluded from implemented foundation until their new vertical slices ship.
+User scope: TEST/HOMEWORK purpose, QUIZ ABCD optional minute timer and ZIP exact
+date/time deadline; session-owned assignments and enrollment-bound submissions.
+
 2026-10-16 implementation:4.4c now has shared set-based credit projection,
 effective-mentor/own-attendance/guest timetable, own history/summary and Staff
 summary/incomplete backlog.20 focused PG/3 built HTTP4.4c/13 timetable regression

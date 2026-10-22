@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { AuthModule } from '../auth/auth.module.js';
 import { CatalogModule } from '../catalog/catalog.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
@@ -9,9 +8,10 @@ import { MentorAvailabilityService } from '../mentor-availability/mentor-availab
 import { ScheduleReservationsModule } from '../schedule-reservations/schedule-reservations.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AdminClassesController } from './controllers/admin-classes.controller.js';
-import { ClassUnitReleaseController } from './controllers/class-unit-release.controller.js';
 import { MentorContentContextController } from './controllers/mentor-content-context.controller.js';
 import { MentorScheduleController } from './controllers/mentor-schedule.controller.js';
+import { MentorSessionMeetingController } from './controllers/mentor-session-meeting.controller.js';
+import { MentorWorkspaceController } from './controllers/mentor-workspace.controller.js';
 import { SessionContextController } from './controllers/session-context.controller.js';
 import { SessionOperationsController } from './controllers/session-operations.controller.js';
 import { StudentClassesController } from './controllers/student-classes.controller.js';
@@ -24,11 +24,13 @@ import { ClassContentContextService } from './services/class-content-context.ser
 import { ClassOffersService } from './services/class-offers.service.js';
 import { ClassReadService } from './services/class-read.service.js';
 import { ClassScheduleService } from './services/class-schedule.service.js';
-import { ClassUnitReleaseService } from './services/class-unit-release.service.js';
 import { ClassesService } from './services/classes.service.js';
 import { MentorConflictService } from './services/mentor-conflict.service.js';
 import { MentorContentContextService } from './services/mentor-content-context.service.js';
+import { MentorProgressService } from './services/mentor-progress.service.js';
+import { MentorWorkspaceService } from './services/mentor-workspace.service.js';
 import { SessionLifecycleService } from './services/session-lifecycle.service.js';
+import { SessionMeetingService } from './services/session-meeting.service.js';
 import { SessionOperationsService } from './services/session-operations.service.js';
 import { StudentClassService } from './services/student-class.service.js';
 import { TeachingAssignmentService } from './services/teaching-assignment.service.js';
@@ -52,16 +54,20 @@ import { UnitContentService } from './services/unit-content.service.js';
     ]),
   ],
   controllers: [
+    MentorSessionMeetingController,
+    MentorWorkspaceController,
     AdminClassesController,
     StudentClassesController,
     MentorContentContextController,
-    ClassUnitReleaseController,
     TeachingManagementController,
     MentorScheduleController,
     SessionContextController,
     SessionOperationsController,
   ],
   providers: [
+    SessionMeetingService,
+    MentorProgressService,
+    MentorWorkspaceService,
     MentorAvailabilityService,
     UnitContentService,
     SessionLifecycleService,
@@ -69,7 +75,6 @@ import { UnitContentService } from './services/unit-content.service.js';
     TeachingReadService,
     TeachingAssignmentService,
     MentorConflictService,
-    ClassUnitReleaseService,
     ClassesService,
     ClassScheduleService,
     ClassReadService,
@@ -79,6 +84,7 @@ import { UnitContentService } from './services/unit-content.service.js';
     MentorContentContextService,
   ],
   exports: [
+    MentorWorkspaceService,
     ClassScheduleService,
     SessionLifecycleService,
     TeachingReadService,

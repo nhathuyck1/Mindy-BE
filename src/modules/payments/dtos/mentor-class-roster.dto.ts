@@ -9,6 +9,10 @@ import { PaymentType } from '../../commerce/enums/payment-type.enum.js';
 import { EnrollmentStatus } from '../../enrollments/enums/enrollment-status.enum.js';
 
 export class MentorClassPageOptionsDto extends PageOptionsDto {
+  @ApiPropertyOptional({ enum: ['PRIMARY', 'SUBSTITUTE', 'ANY'], default: 'ANY' })
+  @IsOptional()
+  @IsEnum({ PRIMARY: 'PRIMARY', SUBSTITUTE: 'SUBSTITUTE', ANY: 'ANY' })
+  readonly assignment?: 'PRIMARY' | 'SUBSTITUTE' | 'ANY';
   @ApiPropertyOptional({ enum: ClassStatus })
   @IsOptional()
   @IsEnum(ClassStatus)
@@ -28,11 +32,18 @@ export class MentorRosterPageOptionsDto extends PageOptionsDto {
 }
 
 export class MentorClassDto extends ClassDto {
+  @ApiProperty({ enum: ['PRIMARY', 'SUBSTITUTE', 'BOTH'] }) readonly assignmentType:
+    | 'PRIMARY'
+    | 'SUBSTITUTE'
+    | 'BOTH';
+  @ApiProperty({ enum: ['CLASS', 'SESSION'] }) readonly accessScope: 'CLASS' | 'SESSION';
   @ApiProperty({ enum: ClassStatus })
   readonly status: ClassStatus;
 
-  constructor(view: ClassView) {
+  constructor(view: ClassView, assignmentType: 'PRIMARY' | 'SUBSTITUTE' | 'BOTH' = 'PRIMARY') {
     super(view);
+    this.assignmentType = assignmentType;
+    this.accessScope = assignmentType === 'SUBSTITUTE' ? 'SESSION' : 'CLASS';
     this.status = view.classEntity.status;
   }
 }

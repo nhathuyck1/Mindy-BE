@@ -1,6 +1,5 @@
 import type { ClassContentContext } from '../../classes/domain/class-content-context.js';
 import { ClassStatus } from '../../classes/enums/class-status.enum.js';
-import { ClassUnitStatus } from '../../classes/enums/class-unit-status.enum.js';
 import { UserRole } from '../../users/user-role.enum.js';
 import { hasReadyMaterialContent } from './material-content.js';
 import {
@@ -41,17 +40,7 @@ function hasReached(time: Date | null, now: Date): boolean {
   return time === null || (Number.isFinite(time.getTime()) && time.getTime() <= now.getTime());
 }
 
-export function isMaterialUnitReleased(context: ClassContentContext, now: Date): boolean {
-  return (
-    Number.isFinite(now.getTime()) &&
-    context.classStatus !== ClassStatus.CANCELLED &&
-    (context.unitStatus === ClassUnitStatus.OPEN ||
-      context.unitStatus === ClassUnitStatus.COMPLETED) &&
-    hasReached(context.unlockAt, now)
-  );
-}
-
-/** D1/D3/D4/D5: delivery gates belong to the accessed class, ownership to Course Unit. */
+/** Enrollment grants class access; legacy unit locks/schedules do not restrict students. */
 export function canReadMaterial(material: MaterialSnapshot, context: MaterialReadContext): boolean {
   const { actor, classContext, hasActiveEnrollment, now } = context;
   return (
@@ -59,7 +48,7 @@ export function canReadMaterial(material: MaterialSnapshot, context: MaterialRea
     actor.role === UserRole.STUDENT &&
     Number.isFinite(now.getTime()) &&
     hasActiveEnrollment &&
-    isMaterialUnitReleased(classContext, now) &&
+    classContext.classStatus !== ClassStatus.CANCELLED &&
     material.courseUnitId === classContext.courseUnitId &&
     material.deletedAt === null &&
     hasCurrentApproval(material) &&
@@ -99,13 +88,20 @@ export function canPreviewMaterial(
   if (isMaterialManager(actor)) return true;
   if (
     context === null ||
-    !isAssignedMentor(actor, context) ||
+    !(
+      isAssignedMentor(actor, context) ||
+      (actor.active &&
+        actor.role === UserRole.MENTOR &&
+        context.mentorReadScope === 'SESSION' &&
+        context.classStatus !== ClassStatus.CANCELLED)
+    ) ||
     context.courseUnitId !== material.courseUnitId
   )
     return false;
   return (
     (hasCurrentApproval(material) && material.publishedAt !== null) ||
-    (material.createdBy === actor.userId &&
+    (isAssignedMentor(actor, context) &&
+      material.createdBy === actor.userId &&
       material.createdInClassId === context.classId &&
       material.firstApprovedAt === null)
   );

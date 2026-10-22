@@ -661,3 +661,30 @@ Rollback: migration additive không sửa deployed migrations; down chỉ cho sc
 chưa có leave history. Có history thì rollback ứng dụng, giữ schema/dữ liệu; dùng
 4.5 để nghiệm thu server/browser/release. Rate-limit/metrics/i18n riêng giữ giới
 hạn baseline, không tự nhận đã triển khai chúng.
+
+## 2026-10-22 — Mentor API gap planning inventory
+
+Planning only, based on `1e89579`; these proposals are not callable API contracts.
+All routes below use the `/api/v1` prefix. No response/error/mutation contract has
+been implemented or verified in this audit.
+
+| Proposed gap | Candidate API / next design work |
+|---|---|
+| Mentor class detail | GET `/mentor/classes/:classId`; class metadata, curriculum/timetable and assignment scope. |
+| Mentor attendance summary | GET `/mentor/classes/:classId/attendance-summary`; reuse existing attendance credit semantics, with mentor authorization. Existing management report is ADMIN/MANAGER only. |
+| Class/student learning progress | GET `/mentor/classes/:classId/progress` and `/mentor/classes/:classId/students/:studentId/progress`; progress entities exist, public completion criteria/read contracts remain unimplemented. |
+| Teaching notes | GET/PUT `/class-sessions/:sessionId/teaching-notes`; define author, readers, versioning and editing window. |
+| Assignments and feedback | Define mentor assignment CRUD/publication, student submission/read, mentor grading/feedback and student result routes as a separate learning feature; no routes exist yet. |
+| Substitute teaching access | Reconcile class discovery and scoped unit/material reads with effective session assignment; preserve primary-only authoring/release privileges unless explicitly redesigned. |
+
+Do not duplicate existing material CRUD/submit/preview/file access, unit context/release,
+attendance start/mark/finalize or leave-request approval/makeup routes.
+Next step is user review before implementation, with full DTO/error/FE breakdown and
+critical-path tests alongside each implemented feature. No FE changes are authorized.
+See [flow audit](PHASE_4_4_FLOW.md#2026-10-22--mentor-api-gap-audit-planning-only).
+
+2026-10-22 planning handoff: gap inventory đã chuyển thành
+[API proposal4.6](PHASE_4_6_flow-api-breakdown.md) và
+[API proposal5](PHASE_5_flow-api-breakdown.md). Proposal5 đã đổi từ TEXT/FILE draft
+sang QUIZ ABCD/ZIP theo user; purpose TEST/HOMEWORK riêng; quiz timer optional,
+ZIP deadline ngày giờ. Chưa triển khai route/DTO/schema nào từ các proposal này.

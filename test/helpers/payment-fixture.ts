@@ -40,7 +40,9 @@ import { ClassOffersService } from '../../src/modules/classes/services/class-off
 import { ClassReadService } from '../../src/modules/classes/services/class-read.service.js';
 import { ClassScheduleService } from '../../src/modules/classes/services/class-schedule.service.js';
 import { ClassesService } from '../../src/modules/classes/services/classes.service.js';
+import { MentorWorkspaceService } from '../../src/modules/classes/services/mentor-workspace.service.js';
 import { StudentClassService } from '../../src/modules/classes/services/student-class.service.js';
+import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import { CartEntity } from '../../src/modules/commerce/entities/cart.entity.js';
 import { CartDetailEntity } from '../../src/modules/commerce/entities/cart-detail.entity.js';
 import { OrderEntity } from '../../src/modules/commerce/entities/order.entity.js';
@@ -210,6 +212,12 @@ export function paymentFixture(db: DataSource) {
   const users = new UsersService(db.getRepository(UserEntity));
   const enrollments = new EnrollmentsService(db, new ScheduleReservationsService());
   const courses = new CoursesService(db);
+  const workspace = new MentorWorkspaceService(
+    db,
+    users,
+    new TeachingReadService(db, config, users, new ScheduleReservationsService()),
+    courses,
+  );
   const read = new ClassReadService(db, config, courses, users, enrollments);
   const offers = new ClassOffersService(
     db,
@@ -293,6 +301,7 @@ export function paymentFixture(db: DataSource) {
     return { student, mentor, classIds, ...result };
   }
   return {
+    workspace,
     values,
     config,
     provider,

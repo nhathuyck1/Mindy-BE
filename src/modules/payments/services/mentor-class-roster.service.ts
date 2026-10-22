@@ -32,19 +32,25 @@ export class MentorClassRosterService {
 
   /** Manager-only routes pass undefined; mentor routes always scope to their principal ID. */
   async classes(mentorId: string | undefined, options: MentorClassPageOptionsDto) {
+    if (mentorId !== undefined) return this.classRead.listForMentor(mentorId, options);
     const query = this.db
       .getRepository(ClassEntity)
       .createQueryBuilder('class')
       .orderBy('class.createdAt', 'DESC')
       .addOrderBy('class.id', 'ASC');
-    if (mentorId !== undefined) query.andWhere('class.mentorId = :mentorId', { mentorId });
     if (options.status !== undefined)
-      query.andWhere('class.status = :status', { status: options.status });
+      query.andWhere('class.status=:status', { status: options.status });
     const [classes, total] = await query
       .skip((options.page - 1) * options.pageSize)
       .take(options.pageSize)
       .getManyAndCount();
-    return { items: await this.classRead.toViews(classes), total };
+    return {
+      items: (await this.classRead.toViews(classes)).map((view) => ({
+        ...view,
+        assignmentType: 'PRIMARY' as const,
+      })),
+      total,
+    };
   }
 
   async students(

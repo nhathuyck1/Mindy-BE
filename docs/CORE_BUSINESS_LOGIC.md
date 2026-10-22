@@ -59,12 +59,27 @@ for a Course Unit taught in their class and submit drafts for Manager review;
 mentors cannot self-approve/publish or edit approved shared content. File `READY`
 only means binary validation passed, not that content was approved. Student reads
 require current-revision Manager approval/publication, ACTIVE enrollment, a
-non-cancelled class, an OPEN/COMPLETED Class Unit, elapsed unlock/availability times
+non-cancelled class, elapsed material availability time
 and a READY file. Editing approved content invalidates approval/publication until
 reviewed again. Enrollment COMPLETED is not newly entitled; Class COMPLETED with
 ACTIVE enrollment uses the same material gates. No external-link material in MVP.
 
+As clarified by the user on 2026-10-22, there is no manual Class Unit lock or
+scheduled release. Pending CASH students remain in preview until payment is
+confirmed and enrollment becomes ACTIVE. Paid/ACTIVE students need no mentor
+unlock action. Legacy unit status/unlock_at fields do not restrict material reads.
+The Admin/Mentor PATCH unit release endpoints have been removed. Migration
+1792627200001 opens legacy LOCKED units, clears unit schedules, and defaults new
+units to OPEN while preserving COMPLETED units and historical release audits.
+
 ### Class operations
+
+The assigned teaching mentor may update the meeting URL of their SCHEDULED or
+IN_PROGRESS session through `PATCH /mentor/class-sessions/:sessionId/meeting-url`.
+Substitute assignments and the started session's teaching mentor snapshot decide
+who can edit. Writes require the current session version; clearing the session URL
+falls back to the class URL. Cancelled/completed sessions or classes are read-only.
+See [mentor meeting API](api_flow/MENTOR_SESSION_MEETING.md).
 
 Owns `classes`, `class_units` and `class_sessions`. Phase4 AttendanceModule now
 owns ordinary attendance/audits (4.2 implemented local); cross-class guest records remain planned. Ordinary
@@ -117,7 +132,7 @@ Updating the course price affects future checkouts only. Existing carts must rev
 1. An admin selects an active course and a mentor with an active account.
 2. Validate `start_date <= end_date`, `max_students > 0` and the mentor role.
 3. Create the class in `DRAFT`.
-4. Copy every current `course_unit` into `class_units` in one transaction. `class_units` links to the reusable course unit but owns delivery position, unlock time and state.
+4. Copy every current `course_unit` into `class_units` in one transaction. New units use `OPEN` with no unlock schedule. The unit links to the reusable course unit and owns delivery position and completion state; access follows enrollment.
 5. Add scheduled sessions. Every session must satisfy `starts_at < ends_at` and fall within the class period unless an authorized override is explicitly recorded later.
 6. Move the class to `OPEN` only when required units and sessions exist.
 

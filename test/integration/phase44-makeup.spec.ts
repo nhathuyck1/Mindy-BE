@@ -817,4 +817,32 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
     expect(conflicts.items[0]?.conflictingIntervals.map((i) => i.sessionId)).toContain(clash.t.id);
     expect(await f.enrollments.hasActiveAccess(a.student.id, clash.c.id)).toBe(true);
   });
+  it('Phase 4.6 previews eligible guest roster without starting or granting class access', async () => {
+    const a = await fixture();
+    const placement = await assign(a);
+    const teacher = actor(a.target.mentor.id, UserRole.MENTOR);
+    const page = await attendance.candidates(a.target.t.id, teacher, { page: 1, pageSize: 1 });
+    expect(page).toMatchObject({
+      total: 1,
+      provisional: true,
+      items: [
+        {
+          entryType: 'MAKEUP',
+          makeupPlacementId: placement.placement.id,
+          student: { id: a.student.id },
+        },
+      ],
+    });
+    expect(JSON.stringify(page)).not.toMatch(/email|phone|payment|meeting/);
+    expect((await stored(a.target.t.id)).status).toBe('SCHEDULED');
+    expect((await attendance.roster(a.target.t.id, teacher, PAGE)).total).toBe(0);
+    await expect(f.workspace.detail(a.studentActor, a.target.c.id)).rejects.toMatchObject({
+      status: 403,
+    });
+    await db.query(
+      "UPDATE enrollments SET status='CANCELLED' WHERE student_id=$1 AND class_id=$2",
+      [a.student.id, a.sourceClassId],
+    );
+    expect((await attendance.candidates(a.target.t.id, teacher, PAGE)).total).toBe(0);
+  });
 });

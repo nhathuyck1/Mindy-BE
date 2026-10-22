@@ -14,16 +14,17 @@ import type {
   MentorContentSessionPageDto,
   MentorContentUnitPageDto,
 } from '../dtos/mentor-content-context.dto.js';
-import { ClassSessionEntity } from '../entities/class-session.entity.js';
-import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { ClassContentContextService } from './class-content-context.service.js';
+// biome-ignore lint/style/useImportType: Nest requires runtime constructor metadata.
+import { MentorWorkspaceService } from './mentor-workspace.service.js';
 
 @Injectable()
 export class MentorContentContextService {
   constructor(
     private readonly db: DataSource,
+    private readonly workspace: MentorWorkspaceService,
     private readonly users: UsersService,
     private readonly courses: CoursesService,
     private readonly contexts: ClassContentContextService,
@@ -45,9 +46,13 @@ export class MentorContentContextService {
     classId: string,
     unitId: string,
     manager: EntityManager,
+    readOnly = false,
   ): Promise<ClassContentContext> {
-    await this.assertClassAccess(principal, classId, manager);
+    const scope = readOnly ? await this.readScope(manager, principal, classId) : null;
+    if (scope) await this.workspace.assertUnit(manager, principal, scope, unitId);
+    else await this.assertClassAccess(principal, classId, manager);
     const context = await this.contexts.getUnit(unitId, classId, manager);
+    if (context.classStatus === ClassStatus.CANCELLED) this.deny();
     const unit = await this.courses.getUnitContext(context.courseUnitId, manager);
     if (unit?.courseId !== context.courseId)
       throw new AppHttpException(
@@ -55,7 +60,7 @@ export class MentorContentContextService {
         'MATERIAL_SCOPE_MISMATCH',
         'The content scope does not match',
       );
-    return context;
+    return scope ? { ...context, mentorReadScope: scope.accessScope } : context;
   }
 
   async units(
@@ -65,13 +70,16 @@ export class MentorContentContextService {
   ): Promise<MentorContentUnitPageDto> {
     return this.db.transaction('REPEATABLE READ', async (manager) => {
       await manager.query('SET TRANSACTION READ ONLY');
-      await this.assertClassAccess(principal, classId, manager);
-      const [rows, total] = await manager.getRepository(ClassUnitEntity).findAndCount({
-        where: { classId },
-        order: { position: 'ASC', id: 'ASC' },
-        skip: (options.page - 1) * options.pageSize,
-        take: options.pageSize,
-      });
+      const scope = await this.readScope(manager, principal, classId);
+      if ((await this.contexts.getClass(classId, manager)).status === ClassStatus.CANCELLED)
+        this.deny();
+      const [rows, total] = await this.workspace
+        .unitsQuery(manager, principal, scope)
+        .orderBy('unit.position', 'ASC')
+        .addOrderBy('unit.id', 'ASC')
+        .skip((options.page - 1) * options.pageSize)
+        .take(options.pageSize)
+        .getManyAndCount();
       const units = await this.courses.findUnitsByIds(
         rows.map((row) => row.courseUnitId),
         manager,
@@ -101,13 +109,16 @@ export class MentorContentContextService {
   ): Promise<MentorContentSessionPageDto> {
     return this.db.transaction('REPEATABLE READ', async (manager) => {
       await manager.query('SET TRANSACTION READ ONLY');
-      await this.getUnitAccess(principal, classId, unitId, manager);
-      const [rows, total] = await manager.getRepository(ClassSessionEntity).findAndCount({
-        where: { classUnitId: unitId },
-        order: { sessionNumber: 'ASC', id: 'ASC' },
-        skip: (options.page - 1) * options.pageSize,
-        take: options.pageSize,
-      });
+      await this.getUnitAccess(principal, classId, unitId, manager, true);
+      const scope = await this.readScope(manager, principal, classId);
+      const [rows, total] = await this.workspace
+        .sessionsQuery(manager, principal, scope)
+        .andWhere('s.classUnitId=:unitId', { unitId })
+        .orderBy('s.sessionNumber', 'ASC')
+        .addOrderBy('s.id', 'ASC')
+        .skip((options.page - 1) * options.pageSize)
+        .take(options.pageSize)
+        .getManyAndCount();
       return {
         items: rows.map((row) => ({
           id: row.id,
@@ -121,6 +132,15 @@ export class MentorContentContextService {
         total,
       };
     });
+  }
+
+  private async readScope(manager: EntityManager, principal: AuthenticatedUser, classId: string) {
+    try {
+      return await this.workspace.scope(manager, principal, classId);
+    } catch (error) {
+      if (error instanceof AppHttpException && error.getStatus() === 403) this.deny();
+      throw error;
+    }
   }
 
   private deny(): never {

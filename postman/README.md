@@ -42,7 +42,7 @@ Contract: [Phase 2.3 FE contract](../docs/PHASE_2_3_FE_CONTRACT.md).
 Phase3.3 (2026-10-16): import `Mindy-Materials-Phase33.postman_collection.json`.
 Đổi actor login trước mỗi nhóm thao tác; chọn unit/session từ context, upload READY
 bằng collection Files3.2, tạo ARTICLE/FILE/VIDEO, mentor submit, manager xem
-detail/preview đúng revision rồi reject/approve; mentor/admin release unit,
+detail/preview đúng revision rồi reject/approve; payment confirmation grants class access,
 student đọc HTML/tải primary hoặc attachment. Body expectedRevision mẫu là1:
 đổi theo revision đã thực sự xem, không auto approve sau409. Đặt Origin trùng
 CORS_ORIGINS. Không chạy toàn bộ alternatives như một runner liên tục.
@@ -54,7 +54,7 @@ choose FULL class from My Classes and `units[].id` from class detail, then call
 list/detail/download. ARTICLE inline images/attachments use
 `POST .../files/{{file_id}}/access` (Origin header, body `{}`); Phase33 collection has
 Manager/Mentor preview with `preview_file_id`. Local verified 2026-10-14, not yet deployed.
-Approved Material rows/released units are prerequisites; authoring/review/release
+Approved Material rows/ACTIVE enrollment are prerequisites; authoring/review
 HTTP3.3 đã implement và kiểm chứng local; VPS acceptance còn pending. Do not send API cookies to signed storage URLs.
 See [Student Material contract](../docs/api_flow/PHASE_3_4_flow-api-breakdown.md).
 
@@ -105,25 +105,22 @@ Use expected_revision from the latest detail; on409 refetch and explicitly decid
 again. Approve publishes, unpublish retains approval; approve retry does not republish.
 Publish/unpublish retries retain timestamps and produce no duplicate audit. Requires
 migrations through1791853200000; local verification only, VPS acceptance pending.
-Release3.3.4 is now available locally; binary preview remains a later slice.
+Manual unit release was subsequently removed on 2026-10-22.
 
-## Phase 3.3.4 Class Unit release
+## Class Unit access — correction 2026-10-22
 
-Phase33 collection adds Admin login and six Admin/Mentor release examples.
-Set admin_email/admin_password, class_id and class_unit_id; log in with the role
-matching the route (cookie jar replaces the previous identity). Mentor IDs come
-from the Unit picker; Admin IDs from class detail. Requires migration1791856800000.
-OPEN + future unlockAt waits for server time; LOCKED always blocks. Omit unlockAt
-to retain, null to clear. Retry equal values keeps timestamps/audit. On409 or lost
-response, refetch and choose again; no expectedRevision or automatic replay.
-Local checks and VPS acceptance are tracked separately in Phase3.3 progress.
+Manual unit lock/open/schedule APIs have been removed. CASH students remain in
+preview until payment confirmation activates enrollment; ACTIVE students do not
+need a mentor to unlock chapters. Run migration 1792627200001 to open old LOCKED
+units, clear unit schedules and change the database default to OPEN. COMPLETED
+units and historical release audits are preserved. Phase33 release examples have
+been removed; older phase documents describe the superseded behavior.
 
 ## Phase 3.3.5 acceptance/handoff
 
 Run the metadata journey with separate ARTICLE text-only, ARTICLE PNG inline + PDF
 attachment, FILE PDF and VIDEO MP4 fixtures. Files Phase32 supplies upload/complete/
-status; Phase33 supplies context/create/submit/reject/edit/approve/publication and
-release. Switch role by logging in again; read IDs/revisions from actual responses.
+status; Phase33 supplies context/create/submit/reject/edit/approve/publication. Switch role by logging in again; read IDs/revisions from actual responses.
 Postman numeric expected_revision templates are substituted before sending JSON.
 Local HTTP checks compare all Phase33 method/routes to Swagger and all source
 migration IDs to the built-app database. No new routes or schema in3.3.5.
@@ -220,3 +217,11 @@ Chưa xác minh VPS/browser; không gọi provider/reconcile qua các GET manage
 Word DOCX: folder Phase33 `Word DOCX upload and approval` dùng file_id của Word
 READY sau upload Phase32; tạo FILE rồi approve đúng expected_revision. DOCX25MiB,
 MIME Office Word chuẩn, kind DOCUMENT; .doc legacy và Word-to-PDF chưa hỗ trợ.
+
+Phase4.6: [Mindy-Mentor-Workspace-Phase46.postman_collection.json](Mindy-Mentor-Workspace-Phase46.postman_collection.json)
+thêm scoped discovery/detail/timetable/material read, provisional session roster,
+mentor attendance/stored progress và internal teaching notes/staff correction.
+Đọc docs/api_flow/PHASE_4_6_flow-api-breakdown.md trước khi chạy. Cookie auth;
+PUT notes cần Origin + UUIDv4 idempotency_key và expectedVersion đọc từ GET.
+Không auto-run writes; example version0 cho create, version1 cho correction phải
+đổi theo data thực. Local verification không xác nhận collection đã chạy trên VPS.

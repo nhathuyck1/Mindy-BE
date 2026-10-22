@@ -1,3 +1,4 @@
+import { MentorAttendanceReportsService } from '../../src/modules/attendance/services/mentor-attendance-reports.service.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -145,7 +146,31 @@ describe.skipIf(!separateTestUrl('phase44c'))(
         randomUUID(),
       );
     }
-    const summary = (a: Regular) => reports.ownSummary(a.classId, a.studentActor, {});
+    const summary = async (a: Regular) => {
+      const own = await reports.ownSummary(a.classId, a.studentActor, {});
+      const mentorReports = new MentorAttendanceReportsService(
+        db,
+        f.workspace,
+        projections,
+        f.enrollments,
+        teaching,
+      );
+      const mentor = await mentorReports.summary(
+        actor(a.mentor.id, UserRole.MENTOR),
+        a.classId,
+        a.student.id,
+        {},
+      );
+      const { asOf: _ownTime, ...ownMetrics } = own;
+      const {
+        asOf: _mentorTime,
+        readonly: _readonly,
+        aggregationScope: _aggregation,
+        ...mentorMetrics
+      } = mentor;
+      expect(mentorMetrics).toEqual(ownMetrics);
+      return own;
+    };
 
     async function guest() {
       const a = await regular();

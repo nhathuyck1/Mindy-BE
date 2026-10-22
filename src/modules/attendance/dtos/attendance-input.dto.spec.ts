@@ -3,12 +3,26 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { describe, expect, it } from 'vitest';
 import {
+  BulkMarkAttendanceDto,
   MarkAttendanceDto,
   RecoverAttendanceDto,
   StartSessionDto,
 } from './attendance-input.dto.js';
 
 describe('Attendance request boundaries', () => {
+  it('accepts only a boolean bulk selection with a positive integer version', async () => {
+    for (const checked of [true, false])
+      expect(
+        await validate(plainToInstance(BulkMarkAttendanceDto, { expectedVersion: 1, checked })),
+      ).toHaveLength(0);
+    for (const checked of [undefined, null, 'true', 'false', 0, 1])
+      expect(
+        await validate(plainToInstance(BulkMarkAttendanceDto, { expectedVersion: 1, checked })),
+      ).not.toHaveLength(0);
+    expect(
+      await validate(plainToInstance(BulkMarkAttendanceDto, { expectedVersion: 0, checked: true })),
+    ).not.toHaveLength(0);
+  });
   it('rejects duplicate roster IDs, invalid enums and empty/oversize batches', async () => {
     const row = { enrollmentId: '33333333-3333-4333-8333-333333333333', status: 'PRESENT' };
     for (const records of [[], [row, row], [{ ...row, status: 'LATE' }], Array(101).fill(row)])

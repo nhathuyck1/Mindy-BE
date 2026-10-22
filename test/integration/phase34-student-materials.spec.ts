@@ -8,6 +8,7 @@ import { PrivateFileUploads1791504000001 } from '../../src/database/migrations/1
 import { StudentMaterialReads1791763200000 } from '../../src/database/migrations/1791763200000-student-material-reads.js';
 import { TypedManagerMaterials1791849600000 } from '../../src/database/migrations/1791849600000-typed-manager-materials.js';
 import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
+import { RemoveClassUnitRelease1792627200001 } from '../../src/database/migrations/1792627200001-remove-class-unit-release.js';
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
@@ -16,7 +17,6 @@ import { ClassUnitReleaseAuditEntity } from '../../src/modules/classes/entities/
 import { ClassStatus } from '../../src/modules/classes/enums/class-status.enum.js';
 import { ClassUnitStatus } from '../../src/modules/classes/enums/class-unit-status.enum.js';
 import { ClassContentContextService } from '../../src/modules/classes/services/class-content-context.service.js';
-import { ClassUnitReleaseService } from '../../src/modules/classes/services/class-unit-release.service.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
 import { EnrollmentStatus } from '../../src/modules/enrollments/enums/enrollment-status.enum.js';
 import { FileMetadataEntity } from '../../src/modules/files/entities/file-metadata.entity.js';
@@ -158,7 +158,6 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
             { studentId: principal.userId, classId: id },
             { status: EnrollmentStatus.ACTIVE, enrolledAt: new Date() },
           );
-      await db.getRepository(ClassUnitEntity).update(unit.id, { status: ClassUnitStatus.OPEN });
     };
     return {
       order,
@@ -170,10 +169,48 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     };
   }
 
-  it('release commands independently gate shared Student content without altering material/enrollment/progress', async () => {
+  it('migrates legacy locks/schedules without changing completed units or enrollment', async () => {
     const s = await setup(2);
-    const actor = { userId: s.order.mentor.id, role: UserRole.MENTOR, sessionId: randomUUID() };
-    const release = new ClassUnitReleaseService(db, fixture.users, new CoursesService(db));
+    const secondClass = s.order.classIds[1];
+    const units = db.getRepository(ClassUnitEntity);
+    const second = await units.findOneByOrFail({ classId: secondClass, position: 1 });
+    await units.update(s.unit.id, {
+      status: ClassUnitStatus.LOCKED,
+      unlockAt: new Date('2099-01-01Z'),
+    });
+    await units.update(second.id, {
+      status: ClassUnitStatus.COMPLETED,
+      unlockAt: new Date('2099-01-01Z'),
+    });
+    const enrollments = await db.query('SELECT * FROM enrollments ORDER BY id');
+    const audits = await db.query('SELECT * FROM class_unit_release_audit ORDER BY id');
+    const migration = new RemoveClassUnitRelease1792627200001();
+    await rehearseMigration(db, migration, 'up');
+    expect(await units.findOneByOrFail({ id: s.unit.id })).toMatchObject({
+      status: ClassUnitStatus.OPEN,
+      unlockAt: null,
+    });
+    expect(await units.findOneByOrFail({ id: second.id })).toMatchObject({
+      status: ClassUnitStatus.COMPLETED,
+      unlockAt: null,
+    });
+    expect(await db.query('SELECT * FROM enrollments ORDER BY id')).toEqual(enrollments);
+    expect(await db.query('SELECT * FROM class_unit_release_audit ORDER BY id')).toEqual(audits);
+    await expect(reads.detail(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
+      status: 403,
+    });
+    await s.activate();
+    expect((await reads.detail(s.principal, s.classId, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await rehearseMigration(db, migration, 'down');
+    await rehearseMigration(db, migration, 'up');
+    const fresh = await setup();
+    expect(fresh.unit.status).toBe(ClassUnitStatus.OPEN);
+  });
+
+  it('legacy unit locks do not gate paid students or alter material/enrollment/progress', async () => {
+    const s = await setup(2);
     const secondClass = s.order.classIds[1];
     if (!secondClass) throw new Error('Missing second class');
     const second = await db
@@ -183,7 +220,6 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       'SELECT * FROM enrollments WHERE student_id=$1 ORDER BY id',
       [s.principal.userId],
     );
-    await release.update(actor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
     await expect(reads.detail(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
       status: 403,
     });
@@ -201,30 +237,28 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       [s.principal.userId],
     );
     const progressBefore = await db.query('SELECT * FROM class_unit_progress ORDER BY id');
-    await release.update(actor, secondClass, second.id, {
+    await db.getRepository(ClassUnitEntity).update(second.id, {
       status: ClassUnitStatus.OPEN,
       unlockAt: new Date(Date.now() + 60000).toISOString(),
     });
     expect((await reads.detail(s.principal, s.classId, s.material.id)).material.id).toBe(
       s.material.id,
     );
-    await expect(reads.detail(s.principal, secondClass, s.material.id)).rejects.toMatchObject({
-      status: 404,
-    });
-    await release.update(actor, secondClass, second.id, {
+    expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
+    await db.getRepository(ClassUnitEntity).update(second.id, {
       status: ClassUnitStatus.OPEN,
       unlockAt: new Date(Date.now() - 1).toISOString(),
     });
     expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
       s.material.id,
     );
-    await release.update(actor, s.classId, s.unit.id, {
+    await db.getRepository(ClassUnitEntity).update(s.unit.id, {
       status: ClassUnitStatus.LOCKED,
       unlockAt: new Date(Date.now() - 1).toISOString(),
     });
-    await expect(reads.download(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
-      status: 404,
-    });
+    expect((await reads.download(s.principal, s.classId, s.material.id)).url).toBeTruthy();
     expect((await reads.detail(s.principal, secondClass, s.material.id)).material.id).toBe(
       s.material.id,
     );
@@ -289,7 +323,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       expect(JSON.stringify(detail)).not.toContain(`"${field}"`);
   });
 
-  it('denies pending/outsiders and wrong parent IDs, and returns empty for locked/future units', async () => {
+  it('denies pending/outsiders and wrong parent IDs while ignoring legacy unit locks/schedules', async () => {
     const s = await setup();
     await expect(
       reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 }),
@@ -319,10 +353,10 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
       await db.getRepository(ClassUnitEntity).update(s.unit.id, update);
       expect(
         (await reads.list(s.principal, s.classId, s.unit.id, { page: 1, pageSize: 20 })).total,
-      ).toBe(0);
-      await expect(reads.detail(s.principal, s.classId, s.material.id)).rejects.toMatchObject({
-        status: 404,
-      });
+      ).toBe(1);
+      expect((await reads.detail(s.principal, s.classId, s.material.id)).material.id).toBe(
+        s.material.id,
+      );
     }
     await db
       .getRepository(ClassUnitEntity)
@@ -332,7 +366,7 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     );
   });
 
-  it('shares material across classes but independently checks each delivery gate', async () => {
+  it('shares material across paid classes without requiring chapter release', async () => {
     const s = await setup(2);
     await s.activate();
     const otherClass = s.order.classIds[1];
@@ -340,9 +374,9 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     const otherUnit = await db
       .getRepository(ClassUnitEntity)
       .findOneByOrFail({ classId: otherClass, position: 1 });
-    await expect(reads.detail(s.principal, otherClass, s.material.id)).rejects.toMatchObject({
-      status: 404,
-    });
+    expect((await reads.detail(s.principal, otherClass, s.material.id)).material.id).toBe(
+      s.material.id,
+    );
     await db
       .getRepository(ClassUnitEntity)
       .update(otherUnit.id, { status: ClassUnitStatus.COMPLETED });

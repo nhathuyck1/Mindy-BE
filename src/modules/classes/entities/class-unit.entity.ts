@@ -3,7 +3,7 @@ import { Column, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import { TimestampedEntity } from '../../../common/database/base.entity.js';
 import { ClassUnitStatus } from '../enums/class-unit-status.enum.js';
 
-/** Delivery of one course unit inside a class; owns its own position, unlock time and state. */
+/** Delivery of one course unit inside a class. Legacy release fields do not grant access. */
 @Entity({ name: 'class_units' })
 @Unique('uq_class_units_id_class', ['id', 'classId'])
 @Index('uq_class_units_class_course_unit', ['classId', 'courseUnitId'], { unique: true })
@@ -30,7 +30,7 @@ export class ClassUnitEntity extends TimestampedEntity {
     type: 'enum',
     enum: ClassUnitStatus,
     enumName: 'class_unit_status_enum',
-    default: ClassUnitStatus.LOCKED,
+    default: ClassUnitStatus.OPEN,
   })
   status!: ClassUnitStatus;
 }

@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DataSource, type EntityManager, In, type SelectQueryBuilder } from 'typeorm';
-
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { CoursesService } from '../../catalog/services/courses.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -13,6 +12,7 @@ import { UsersService } from '../../users/users.service.js';
 import { toLocalDate } from '../domain/class-calendar.js';
 import { isClassOpenForPurchase } from '../domain/class-lifecycle.js';
 import type { AdminClassStudentView, ClassDetailView, ClassView } from '../domain/class-views.js';
+import { EFFECTIVE_MENTOR_SQL } from '../domain/effective-mentor.js';
 import type { AdminClassPageOptionsDto } from '../dtos/class-page-options.dto.js';
 import { ClassEntity } from '../entities/class.entity.js';
 import { ClassSessionEntity } from '../entities/class-session.entity.js';
@@ -47,6 +47,63 @@ export class ClassReadService {
     private readonly usersService: UsersService,
     private readonly enrollmentsService: EnrollmentsService,
   ) {}
+
+  async listForMentor(
+    mentorId: string,
+    options: {
+      page: number;
+      pageSize: number;
+      status?: ClassStatus;
+      assignment?: 'PRIMARY' | 'SUBSTITUTE' | 'ANY';
+    },
+  ): Promise<{
+    items: (ClassView & { assignmentType: 'PRIMARY' | 'SUBSTITUTE' | 'BOTH' })[];
+    total: number;
+  }> {
+    const query = this.dataSource
+      .getRepository(ClassEntity)
+      .createQueryBuilder('class')
+      .orderBy('class.createdAt', 'DESC')
+      .addOrderBy('class.id', 'ASC');
+    const assigned = `EXISTS(SELECT 1 FROM class_sessions s JOIN classes c ON c.id=s.class_id WHERE c.id=class.id AND ${EFFECTIVE_MENTOR_SQL}=:mentorId AND (s.mentor_override_id IS NOT NULL OR c.mentor_id<>:mentorId))`;
+    if (mentorId !== undefined) {
+      const assignment = options.assignment ?? 'ANY';
+      query.andWhere(
+        assignment === 'PRIMARY'
+          ? 'class.mentorId=:mentorId'
+          : assignment === 'SUBSTITUTE'
+            ? assigned
+            : `(class.mentorId=:mentorId OR ${assigned})`,
+        { mentorId },
+      );
+    }
+    if (options.status !== undefined)
+      query.andWhere('class.status = :status', { status: options.status });
+    const [classes, total] = await query
+      .skip((options.page - 1) * options.pageSize)
+      .take(options.pageSize)
+      .getManyAndCount();
+    const views = await this.toViews(classes);
+    const substitutions: { id: string }[] =
+      mentorId && classes.length
+        ? await this.dataSource.query(
+            `SELECT DISTINCT c.id FROM classes c JOIN class_sessions s ON s.class_id=c.id WHERE c.id=ANY($1::uuid[]) AND ${EFFECTIVE_MENTOR_SQL}=$2 AND (s.mentor_override_id IS NOT NULL OR c.mentor_id<>$2)`,
+            [classes.map((c) => c.id), mentorId],
+          )
+        : [];
+    return {
+      items: views.map((view) => ({
+        ...view,
+        assignmentType:
+          view.classEntity.mentorId === mentorId
+            ? substitutions.some((c) => c.id === view.classEntity.id)
+              ? ('BOTH' as const)
+              : ('PRIMARY' as const)
+            : ('SUBSTITUTE' as const),
+      })),
+      total,
+    };
+  }
 
   managementUnitsQuery(manager: EntityManager): SelectQueryBuilder<ClassUnitEntity> {
     return manager.getRepository(ClassUnitEntity).createQueryBuilder('unit');

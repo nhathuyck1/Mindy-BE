@@ -11,9 +11,7 @@ import { CoursesService } from '../../src/modules/catalog/services/courses.servi
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
 import { ClassUnitReleaseAuditEntity } from '../../src/modules/classes/entities/class-unit-release-audit.entity.js';
-import { ClassUnitStatus } from '../../src/modules/classes/enums/class-unit-status.enum.js';
 import { ClassContentContextService } from '../../src/modules/classes/services/class-content-context.service.js';
-import { ClassUnitReleaseService } from '../../src/modules/classes/services/class-unit-release.service.js';
 import { MentorContentContextService } from '../../src/modules/classes/services/mentor-content-context.service.js';
 import { UnitContentService } from '../../src/modules/classes/services/unit-content.service.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
@@ -48,7 +46,6 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
   let author: MaterialAuthoringService;
   let reads: StudentMaterialsService;
   let units: UnitContentService;
-  let release: ClassUnitReleaseService;
   let files: FilesService;
   let worker: FileProcessingService;
   let manager: AuthenticatedUser;
@@ -108,11 +105,10 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
       files,
       courses,
       contexts,
-      new MentorContentContextService(db, fixture.users, courses, contexts),
+      new MentorContentContextService(db, fixture.workspace, fixture.users, courses, contexts),
     );
     reads = new StudentMaterialsService(db, contexts, materials, files);
-    units = new UnitContentService(db, contexts, fixture.users, courses);
-    release = new ClassUnitReleaseService(db, fixture.users, courses);
+    units = new UnitContentService(db, fixture.workspace, contexts, fixture.users, courses);
     manager = principal(await fixture.user(UserRole.MANAGER));
   }, 60000);
   afterAll(async () => {
@@ -157,7 +153,7 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
     expect((await files.detail(s.mentor, intent.fileId)).status).toBe('READY');
     return intent.fileId;
   }
-  it('mentor article → submit → manager approve → release → student reads canonical HTML and downloads attachment', async () => {
+  it('mentor article → submit → manager approve → paid student reads canonical HTML and downloads attachment', async () => {
     const s = await setup();
     const fileId = await ready(s);
     const draft = await author.create(
@@ -208,8 +204,7 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
       );
     expect(
       (await reads.list(s.student, s.classId, s.unit.id, { page: 1, pageSize: 20 })).total,
-    ).toBe(0);
-    await release.update(s.mentor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
+    ).toBe(1);
     const read = new StudentMaterialDetailDto(await reads.detail(s.student, s.classId, draft.id));
     expect(read.contentHtml).toBe(draft.contentHtml);
     expect(read.attachments[0]?.id).toBe(fileId);
@@ -239,7 +234,6 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
         { studentId: s.student.userId, classId: s.classId },
         { status: EnrollmentStatus.ACTIVE },
       );
-    await release.update(s.mentor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
     expect((await fetch((await reads.download(s.student, s.classId, file.id)).url)).status).toBe(
       200,
     );
@@ -399,41 +393,6 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
         .countBy({ materialId: draft.id, action: 'DELETE' }),
     ).toBe(1);
     expect((await files.detail(other.mentor, fileId)).status).toBe('READY');
-  });
-  it('release scheduling preserves omitted fields, records changes once, blocks completed units and manager role', async () => {
-    const s = await setup();
-    const future = new Date(Date.now() + 3600000).toISOString();
-    await release.update(s.mentor, s.classId, s.unit.id, {
-      status: ClassUnitStatus.LOCKED,
-      unlockAt: future,
-    });
-    const released = await release.update(s.mentor, s.classId, s.unit.id, {
-      status: ClassUnitStatus.OPEN,
-    });
-    expect(released.unlockAt?.toISOString()).toBe(future);
-    await release.update(s.mentor, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN });
-    expect(
-      (
-        await db.query(
-          'SELECT count(*)::int n FROM class_unit_release_audit WHERE class_unit_id=$1',
-          [s.unit.id],
-        )
-      )[0].n,
-    ).toBe(2);
-    await release.update(s.mentor, s.classId, s.unit.id, {
-      status: ClassUnitStatus.OPEN,
-      unlockAt: null,
-    });
-    expect((await units.detail(s.mentor, s.classId, s.unit.id)).unlockAt).toBeNull();
-    await expect(
-      release.update(manager, s.classId, s.unit.id, { status: ClassUnitStatus.OPEN }),
-    ).rejects.toMatchObject({ response: { code: 'MATERIAL_ACCESS_DENIED' } });
-    await db
-      .getRepository(ClassUnitEntity)
-      .update(s.unit.id, { status: ClassUnitStatus.COMPLETED });
-    await expect(
-      release.update(s.mentor, s.classId, s.unit.id, { status: ClassUnitStatus.LOCKED }),
-    ).rejects.toMatchObject({ response: { code: 'UNIT_RELEASE_CONFLICT' } });
   });
   it('unit metadata updates check course ancestry and preserve the HTML article separately', async () => {
     const s = await setup();

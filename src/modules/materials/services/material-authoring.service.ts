@@ -327,6 +327,7 @@ export class MaterialAuthoringService {
             scope.classId,
             scope.classUnitId ?? '',
             manager,
+            true,
           )
         : null;
       const unitId = context?.courseUnitId ?? courseUnitId ?? options.courseUnitId;
@@ -352,6 +353,11 @@ export class MaterialAuthoringService {
             classId: scope.classId,
           },
         );
+      if (context?.mentorReadScope === 'SESSION')
+        query.andWhere(
+          'material.reviewStatus=:approved AND material.approvedRevision=material.revision AND material.publishedAt IS NOT NULL',
+          { approved: MaterialReviewStatus.APPROVED },
+        );
       const [materials, total] = await query
         .orderBy(
           courseUnitId ? 'material.sortOrder' : 'material.createdAt',
@@ -373,14 +379,16 @@ export class MaterialAuthoringService {
             [],
             false,
             !scope ||
-              (material.createdBy === principal.userId &&
+              (context?.mentorReadScope !== 'SESSION' &&
+                material.createdBy === principal.userId &&
                 material.createdInClassId === scope.classId &&
                 material.firstApprovedAt === null &&
                 [MaterialReviewStatus.DRAFT, MaterialReviewStatus.REJECTED].includes(
                   material.reviewStatus,
                 )),
             !scope ||
-              (material.createdBy === principal.userId &&
+              (context?.mentorReadScope !== 'SESSION' &&
+                material.createdBy === principal.userId &&
                 material.createdInClassId === scope.classId),
           ),
         ),
@@ -546,13 +554,13 @@ export class MaterialAuthoringService {
     scope: MentorMaterialScope,
     manager: EntityManager,
   ): Promise<ClassContentContext> {
-    await this.mentorContexts.assertClassAccess(principal, scope.classId, manager);
     const context = await this.contexts.getCourseUnitInClass(scope.classId, courseUnitId, manager);
     return this.mentorContexts.getUnitAccess(
       principal,
       scope.classId,
       context.classUnitId,
       manager,
+      true,
     );
   }
 

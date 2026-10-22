@@ -91,7 +91,7 @@ export class ClassesService {
               courseUnitId: courseUnit.id,
               position: index + 1,
               unlockAt: null,
-              status: ClassUnitStatus.LOCKED,
+              status: ClassUnitStatus.OPEN,
             }),
           ),
         );

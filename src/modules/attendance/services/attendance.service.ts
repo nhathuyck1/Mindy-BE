@@ -30,6 +30,7 @@ import { UsersService } from '../../users/users.service.js';
 import { isAttendanceEditable, isAttendanceStartDay } from '../domain/attendance-window.js';
 import { hasRecoveryEvidence } from '../domain/recovery-evidence.js';
 import type {
+  AttendanceCandidatePageDto,
   AttendancePermissionsDto,
   AttendanceRosterDto,
   AttendanceSessionDto,
@@ -38,6 +39,7 @@ import type {
 } from '../dtos/attendance.dto.js';
 import type {
   AttendanceMutationDto,
+  BulkMarkAttendanceDto,
   FinalizeSessionDto,
   MarkAttendanceDto,
   RecoverAttendanceDto,
@@ -56,8 +58,13 @@ import {
 import { GuestAttendanceService } from './guest-attendance.service.js';
 
 type SessionContext = Awaited<ReturnType<TeachingReadService['loadSession']>>;
-type Operation = 'start' | 'sync' | 'mark' | 'finalize' | 'recover';
-type Input = StartSessionDto | FinalizeSessionDto | MarkAttendanceDto | RecoverAttendanceDto;
+type Operation = 'start' | 'sync' | 'mark' | 'bulk-mark' | 'finalize' | 'recover';
+type Input =
+  | StartSessionDto
+  | FinalizeSessionDto
+  | MarkAttendanceDto
+  | BulkMarkAttendanceDto
+  | RecoverAttendanceDto;
 
 @Injectable()
 export class AttendanceService {
@@ -71,6 +78,61 @@ export class AttendanceService {
     private readonly payments: AttendancePaymentEvidenceService,
     private readonly guests: GuestAttendanceService,
   ) {}
+
+  async candidates(
+    id: string,
+    actor: AuthenticatedUser,
+    page: PageOptionsDto,
+  ): Promise<AttendanceCandidatePageDto> {
+    return this.db.transaction('REPEATABLE READ', async (m) => {
+      await m.query('SET TRANSACTION READ ONLY');
+      const ctx = await this.teaching.loadSession(m, id);
+      await this.authorize(m, ctx, actor);
+      if (
+        ctx.session.status !== 'SCHEDULED' ||
+        !['OPEN', 'IN_PROGRESS'].includes(ctx.classEntity.status)
+      )
+        throw new UnprocessableEntityException(
+          'Candidates are available only before an active session starts',
+        );
+      const now = new Date();
+      const source = `WITH candidates AS (
+        SELECT e.id AS "enrollmentId",e.student_id AS "studentId",u.display_name AS "displayName",'REGULAR' AS "entryType",NULL::uuid AS "makeupPlacementId"
+        FROM enrollments e JOIN users u ON u.id=e.student_id
+        WHERE e.class_id=$1 AND e.status='ACTIVE' AND e.enrolled_at<=$3 AND e.created_at<=$3
+        UNION ALL
+        SELECT e.id,p.student_id,u.display_name,'MAKEUP',p.id FROM makeup_placements p
+        JOIN enrollments e ON e.id=p.enrollment_id JOIN classes c ON c.id=p.source_class_id JOIN users u ON u.id=p.student_id
+        WHERE p.target_session_id=$2 AND p.status='ASSIGNED' AND e.status='ACTIVE' AND e.enrolled_at<=$3 AND p.created_at<=$3 AND c.status IN ('OPEN','IN_PROGRESS')
+      )`;
+      const params = [ctx.classEntity.id, id, now];
+      const counts: { total: number }[] = await m.query(
+        `${source} SELECT count(*)::int AS total FROM candidates`,
+        params,
+      );
+      const rows: {
+        enrollmentId: string;
+        studentId: string;
+        displayName: string;
+        entryType: 'REGULAR' | 'MAKEUP';
+        makeupPlacementId: string | null;
+      }[] = await m.query(
+        `${source} SELECT * FROM candidates ORDER BY "displayName","enrollmentId","entryType" LIMIT $4 OFFSET $5`,
+        [...params, page.pageSize, (page.page - 1) * page.pageSize],
+      );
+      return {
+        items: rows.map(({ studentId, displayName, ...row }) => ({
+          ...row,
+          student: { id: studentId, displayName },
+        })),
+        total: counts[0]?.total ?? 0,
+        page: page.page,
+        pageSize: page.pageSize,
+        provisional: true,
+        asOf: now,
+      };
+    });
+  }
 
   async roster(
     id: string,
@@ -145,6 +207,15 @@ export class AttendanceService {
   ): Promise<AttendanceWriteDto> {
     return this.mutate(id, 'mark', input, actor, key);
   }
+  async bulkMark(
+    id: string,
+    input: BulkMarkAttendanceDto,
+    actor: AuthenticatedUser,
+    key?: string,
+  ): Promise<AttendanceWriteDto> {
+    return this.mutate(id, 'bulk-mark', input, actor, key);
+  }
+
   async finalize(
     id: string,
     input: FinalizeSessionDto,
@@ -182,6 +253,7 @@ export class AttendanceService {
           JSON.stringify({
             expectedVersion: input.expectedVersion,
             reason: input.reason ?? null,
+            ...('checked' in input ? { checked: input.checked } : {}),
             actualStartedAt: 'actualStartedAt' in input ? input.actualStartedAt : null,
             actualEndedAt: 'actualEndedAt' in input ? input.actualEndedAt : null,
             ...('evidenceNote' in input ? { evidenceNote: input.evidenceNote } : {}),
@@ -229,7 +301,7 @@ export class AttendanceService {
       const now = new Date();
       if (this.staff(actor) && !input.reason?.trim())
         throw new UnprocessableEntityException('Staff mutations require a reason');
-      let changed: string[];
+      let changed: string[] = [];
       let changedGuests: string[] = [];
       if (op === 'start') {
         changed = await this.open(m, ctx, input as StartSessionDto, actor);
@@ -242,12 +314,21 @@ export class AttendanceService {
           changed = await this.admit(m, ctx, actor, now, input.reason, 'SYNC', true);
           changedGuests = await this.guests.admit(m, s, actor, input.reason, s.version + 1);
           if (changed.length || changedGuests.length) await this.lifecycle.bumpVersion(m, s);
-        } else if (op === 'mark') {
-          changed = await this.markRows(m, ctx, input as MarkAttendanceDto, actor, now);
+        } else if (op === 'mark' || op === 'bulk-mark') {
+          const batch =
+            op === 'bulk-mark'
+              ? await this.bulkBatch(m, id, input as BulkMarkAttendanceDto)
+              : (input as MarkAttendanceDto);
+          if (batch.records.length || batch.guestRecords?.length)
+            changed = await this.markRows(m, ctx, batch, actor, now);
+          else if (op === 'mark')
+            throw new UnprocessableEntityException(
+              'At least one regular or guest record is required',
+            );
           changedGuests = await this.guests.mark(
             m,
             s,
-            (input as MarkAttendanceDto).guestRecords ?? [],
+            batch.guestRecords ?? [],
             actor,
             input.reason,
           );
@@ -525,6 +606,31 @@ export class AttendanceService {
     return rows.map((r) => r.enrollmentId);
   }
 
+  private async bulkBatch(
+    m: EntityManager,
+    id: string,
+    input: BulkMarkAttendanceDto,
+  ): Promise<MarkAttendanceDto> {
+    if (typeof input.checked !== 'boolean')
+      throw new UnprocessableEntityException('checked must be a boolean');
+    // Called only after the Session lock, authorization, receipt and version checks.
+    const regular: { enrollment_id: string }[] = await m.query(
+      'SELECT enrollment_id FROM attendance_records WHERE session_id=$1',
+      [id],
+    );
+    const guests: { placement_id: string }[] = await m.query(
+      'SELECT placement_id FROM guest_attendance_records WHERE session_id=$1',
+      [id],
+    );
+    const status = input.checked ? AttendanceStatus.PRESENT : AttendanceStatus.ABSENT;
+    return {
+      expectedVersion: input.expectedVersion,
+      reason: input.reason,
+      records: regular.map((r) => ({ enrollmentId: r.enrollment_id, status })),
+      guestRecords: guests.map((r) => ({ makeupPlacementId: r.placement_id, status })),
+    };
+  }
+
   private async markRows(
     m: EntityManager,
     ctx: SessionContext,
@@ -635,7 +741,7 @@ export class AttendanceService {
     const s = ctx.session;
     const staffSync = op === 'sync' && this.staff(actor) && s.status === SessionStatus.COMPLETED;
     const correction =
-      op === 'mark' &&
+      (op === 'mark' || op === 'bulk-mark') &&
       (s.status === SessionStatus.COMPLETED ||
         (this.staff(actor) && s.status === SessionStatus.CANCELLED));
     if (!s.actualStartedAt || (s.status !== SessionStatus.IN_PROGRESS && !staffSync && !correction))
