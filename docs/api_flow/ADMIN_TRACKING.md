@@ -60,6 +60,19 @@ Lọc class/session dùng liên kết sự kiện tới lớp/buổi. Audit đơ
 
 ## Triển khai và rollback
 
+Build/CI đã được nối sẵn: `pnpm build` biên dịch toàn bộ migration và tạo manifest
+checksum trong `dist/database/migration-manifest.json`; Docker image copy cả dist.
+Container `migration` chạy `dist/operations/migrate.js`, kiểm tra artifact, chạy
+toàn bộ migration còn thiếu trong transaction rồi xác nhận không còn pending.
+CI kiểm tra file gộp tracking có trong artifact và chạy compiled runner hai lần
+trên một DB test riêng bằng `tools/check-migration-rollout.mjs`.
+
+Workflow deploy trên nhánh dev: build/preflight → PostgreSQL healthy → backup đã
+kiểm tra → dừng API/job ghi DB → migrate → kiểm tra pending → API mới + health
+check. Migration lỗi thì job deploy fail và API giữ trạng thái dừng; không tự
+revert DB hoặc seed lại. Nhánh tính năng phải được merge vào dev để workflow này
+chạy với migration mới. Không cần chọn riêng migration bằng DBeaver.
+
 Backup DB theo quy trình deploy, dừng các process ghi DB, build image mới rồi
 chạy migration container. Migration khóa các bảng nguồn trong transaction trước
 khi copy và chuyển sang view; dữ liệu seed hiện có không cần seed lại. Không sửa

@@ -11,6 +11,17 @@ This document defines the business rules for the first delivery scope: course/cl
 
 ## 1. Domain boundaries
 
+### Admin activity tracking — 2026-10-22
+
+Migration `1792627200002` centralizes ordinary audit history in `audit_events`
+and four idempotency receipt stores in `mutation_receipts`. Existing names become
+compatibility views; there is one physical copy of each row. Recovery evidence
+keeps its dedicated relational tables and is also readable through tracking.
+`file_metadata` and `file_objects` remain separate. Active admins can list/filter
+events and inspect original details through `/admin/tracking/events`. This covers
+recorded domain audits, not every HTTP request or every account/payment mutation.
+See [Admin tracking and migration](api_flow/ADMIN_TRACKING.md).
+
 ### Identity
 
 Owns `users`, `user_identities`, `registration_intents`,

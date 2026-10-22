@@ -88,6 +88,9 @@ jobs:
           # Only field names/error types are printed; never dump production env values.
           "${compose[@]}" run --rm --no-deps -T migration node --input-type=module -e \
             'import { environmentSchema } from "./dist/config/environment.schema.js";
+             import { verifyCompiledMigrations } from "./dist/database/migration-artifacts.js";
+             const artifacts = verifyCompiledMigrations();
+             console.log("Verified " + artifacts.length + " migration artifacts in the release image.");
              const { error } = environmentSchema.validate(process.env, { abortEarly: false });
              if (error) {
                console.error("Production environment validation failed:");
@@ -104,7 +107,10 @@ jobs:
           test -s "$backup_file"
           "${compose[@]}" exec -T postgres pg_restore -l < "$backup_file" > /dev/null
 
-          # A failed migration leaves the old API running. Do not roll back the DB.
+          # Consolidation changes tables into compatibility views. Stop all API
+          # writers/background jobs after backup and before acquiring schema locks.
+          # On migration failure keep the API stopped; do not roll back the DB.
+          "${compose[@]}" stop --timeout 30 api
           # Run the complete compiled catalog so both compatibility bridges execute
           # in order; do not select migrations individually or rewrite old history.
           "${compose[@]}" run --rm --no-deps -T migration
