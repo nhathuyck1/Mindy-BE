@@ -211,7 +211,7 @@ describe.skipIf(!separateTestUrl('material_policy'))(
     });
 
     it.each([PaymentType.CASH, PaymentType.PAYOS])(
-      'denies %s pending and applies release/ACTIVE gates independently to shared classes',
+      'denies %s pending and applies ACTIVE enrollment gates independently while ignoring legacy unit release',
       async (paymentType) => {
         const order = await fixture.order({ paymentType, count: 2 });
         const [classA, classB] = order.classIds;
@@ -249,7 +249,7 @@ describe.skipIf(!separateTestUrl('material_policy'))(
             );
         }
         expect(await policy.canRead(principal(order.student), classA, approved, now)).toBe(true);
-        expect(await policy.canRead(principal(order.student), classB, approved, now)).toBe(false);
+        expect(await policy.canRead(principal(order.student), classB, approved, now)).toBe(true);
         await db
           .getRepository(ClassUnitEntity)
           .update(targetB.classUnitId, { status: ClassUnitStatus.OPEN });

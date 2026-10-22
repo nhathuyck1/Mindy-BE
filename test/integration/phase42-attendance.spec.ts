@@ -145,6 +145,63 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     });
   });
 
+  it('bulk checks and unchecks the snapshot, replays receipts and rejects stale or unauthorized writes', async () => {
+    const a = await fixture();
+    const opened = await start(a);
+    const key = randomUUID();
+    const input = { expectedVersion: opened.session.version, checked: true };
+    const marked = await attendance.bulkMark(a.sessionId, input, a.mentorActor, key);
+    expect(marked.totals.present).toBe(marked.totals.eligible);
+    expect(marked.changedEnrollmentIds).toEqual([a.enrollmentId]);
+    expect(marked.session.version).toBe(opened.session.version + 1);
+    expect(await attendance.bulkMark(a.sessionId, input, a.mentorActor, key)).toEqual(
+      JSON.parse(JSON.stringify(marked)),
+    );
+    await expect(
+      attendance.bulkMark(a.sessionId, { ...input, checked: false }, a.mentorActor, key),
+    ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_REUSED' } });
+    await expect(
+      attendance.bulkMark(a.sessionId, input, a.mentorActor, randomUUID()),
+    ).rejects.toMatchObject({ response: { code: 'SESSION_VERSION_CONFLICT' } });
+    const unchanged = await attendance.bulkMark(
+      a.sessionId,
+      { expectedVersion: marked.session.version, checked: true },
+      a.mentorActor,
+      randomUUID(),
+    );
+    expect(unchanged.session.version).toBe(marked.session.version);
+    expect(unchanged.changedEnrollmentIds).toEqual([]);
+    const cleared = await attendance.bulkMark(
+      a.sessionId,
+      { expectedVersion: marked.session.version, checked: false },
+      a.mentorActor,
+      randomUUID(),
+    );
+    expect(cleared.totals.absent).toBe(cleared.totals.eligible);
+    expect(cleared.totals.present).toBe(0);
+    const rows = await db.query(
+      'SELECT checked_in_at FROM attendance_records WHERE session_id=$1',
+      [a.sessionId],
+    );
+    expect(rows.every((row: { checked_in_at: Date | null }) => row.checked_in_at === null)).toBe(
+      true,
+    );
+    const audits = await db.query(
+      `SELECT new_status FROM attendance_audits WHERE attendance_id IN
+      (SELECT id FROM attendance_records WHERE session_id=$1) AND action='MARK' ORDER BY version`,
+      [a.sessionId],
+    );
+    expect(audits.map((r: { new_status: string }) => r.new_status)).toEqual(['PRESENT', 'ABSENT']);
+    await expect(
+      attendance.bulkMark(
+        a.sessionId,
+        { expectedVersion: cleared.session.version, checked: true },
+        actor((await f.user(UserRole.MENTOR)).id),
+        randomUUID(),
+      ),
+    ).rejects.toBeDefined();
+  });
+
   it('leaves cash pending out of the snapshot and admits only after committed activation; no-op keeps version', async () => {
     const a = await fixture(false);
     expect((await attendance.roster(a.sessionId, a.mentorActor, PAGE)).pendingPaymentCount).toBe(1);

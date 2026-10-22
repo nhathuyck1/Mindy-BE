@@ -4,13 +4,14 @@ import { ScheduleReservationsModule } from '../schedule-reservations/schedule-re
 import { ClassUnitProgressEntity } from './entities/class-unit-progress.entity.js';
 import { EnrollmentEntity } from './entities/enrollment.entity.js';
 import { EnrollmentsService } from './services/enrollments.service.js';
+import { StoredProgressService } from './services/stored-progress.service.js';
 
 @Module({
   imports: [
     ScheduleReservationsModule,
     TypeOrmModule.forFeature([EnrollmentEntity, ClassUnitProgressEntity]),
   ],
-  providers: [EnrollmentsService],
-  exports: [EnrollmentsService],
+  providers: [StoredProgressService, EnrollmentsService],
+  exports: [StoredProgressService, EnrollmentsService],
 })
 export class EnrollmentsModule {}

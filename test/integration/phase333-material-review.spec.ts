@@ -71,7 +71,13 @@ describe('Phase 3.3.3 Review/publication + PostgreSQL', () => {
     manager = { userId: user.id, role: user.role, sessionId: randomUUID() };
     const courses = new CoursesService(db);
     contexts = new ClassContentContextService(db);
-    pickers = new MentorContentContextService(db, fixture.users, courses, contexts);
+    pickers = new MentorContentContextService(
+      db,
+      fixture.workspace,
+      fixture.users,
+      courses,
+      contexts,
+    );
     const uploads = new FileUploadPolicyService(fixture.users, courses, contexts);
     files = new FilesService(db, fileConfig({ MINIO_ENABLED: false }), uploads, {
       assertAvailable: storage,

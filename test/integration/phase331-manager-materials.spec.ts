@@ -78,7 +78,7 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
       files,
       courses,
       contexts,
-      new MentorContentContextService(db, fixture.users, courses, contexts),
+      new MentorContentContextService(db, fixture.workspace, fixture.users, courses, contexts),
     );
   }, 60000);
   afterAll(async () => {

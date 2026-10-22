@@ -23,10 +23,15 @@ import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { UserRole } from '../../users/user-role.enum.js';
-import { AttendanceRosterDto, AttendanceWriteDto } from '../dtos/attendance.dto.js';
+import {
+  AttendanceCandidatePageDto,
+  AttendanceRosterDto,
+  AttendanceWriteDto,
+} from '../dtos/attendance.dto.js';
 // biome-ignore lint/style/useImportType: Nest validation requires runtime DTO metadata.
 import {
   AttendanceMutationDto,
+  BulkMarkAttendanceDto,
   FinalizeSessionDto,
   MarkAttendanceDto,
   StartSessionDto,
@@ -48,6 +53,20 @@ import { AttendanceService } from '../services/attendance.service.js';
 )
 export class AttendanceController {
   constructor(private readonly attendance: AttendanceService) {}
+
+  @Get(':sessionId/attendance-candidates')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary: 'Read provisional paid regular/eligible guest roster before start; no writes',
+  })
+  @ApiOkResponse({ type: AttendanceCandidatePageDto })
+  candidates(
+    @Param('sessionId', new ParseUUIDPipe({ version: '4' })) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Query() page: PageOptionsDto,
+  ): Promise<AttendanceCandidatePageDto> {
+    return this.attendance.candidates(id, actor, page);
+  }
 
   @Get(':sessionId/attendance')
   @Header('Cache-Control', 'private, no-store')
@@ -120,6 +139,27 @@ export class AttendanceController {
     @Headers('idempotency-key') key?: string,
   ): Promise<AttendanceWriteDto> {
     return this.attendance.mark(id, input, actor, key);
+  }
+
+  @Put(':sessionId/attendance/bulk')
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary:
+      'Mark the entire regular and guest roster across all pages: checked = present, unchecked = absent',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiOkResponse({ type: AttendanceWriteDto })
+  bulkMark(
+    @Param('sessionId', new ParseUUIDPipe()) id: string,
+    @Body() input: BulkMarkAttendanceDto,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Headers('idempotency-key') key?: string,
+  ): Promise<AttendanceWriteDto> {
+    return this.attendance.bulkMark(id, input, actor, key);
   }
 
   @Post(':sessionId/finalize')

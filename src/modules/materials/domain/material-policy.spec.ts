@@ -145,26 +145,34 @@ describe('D1/D3/D4/D5: Course Unit material access', () => {
     expect(read(pending())).toBe(false);
     expect(read(approved())).toBe(true);
   });
-  it('shares one material across classes with independent release gates', () => {
+  it('shares material across enrolled classes regardless of legacy release fields', () => {
     const material = approved();
     expect(read(material, { ...context, classId: 'class-B', classUnitId: 'class-unit-B' })).toBe(
       true,
     );
     expect(
       read(material, { ...context, classId: 'class-B', unitStatus: ClassUnitStatus.LOCKED }),
-    ).toBe(false);
+    ).toBe(true);
     expect(read(material, { ...context, courseUnitId: 'different-unit' })).toBe(false);
     expect(read(material, context, false)).toBe(false);
   });
-  it('accepts the exact release/availability boundary and blocks times in the future', () => {
+  it('ignores legacy unit schedules while enforcing material availability', () => {
     expect(read({ ...approved(), availableAt: now }, { ...context, unlockAt: now })).toBe(true);
     expect(read({ ...approved(), availableAt: future })).toBe(false);
-    expect(read(approved(), { ...context, unlockAt: future })).toBe(false);
+    expect(read(approved(), { ...context, unlockAt: future })).toBe(true);
     expect(read({ ...approved(), publishedAt: future })).toBe(false);
     expect(
       read(approved(), { ...context, unitStatus: ClassUnitStatus.LOCKED, unlockAt: now }),
-    ).toBe(false);
+    ).toBe(true);
   });
+  it.each([ClassUnitStatus.LOCKED, ClassUnitStatus.OPEN, ClassUnitStatus.COMPLETED])(
+    'still requires payment entitlement for legacy unit status %s',
+    (unitStatus) => {
+      const legacy = { ...context, unitStatus, unlockAt: future };
+      expect(read(approved(), legacy, true)).toBe(true);
+      expect(read(approved(), legacy, false)).toBe(false);
+    },
+  );
   it.each([
     ['unpublished', { publishedAt: null }],
     ['deleted', { deletedAt: now }],

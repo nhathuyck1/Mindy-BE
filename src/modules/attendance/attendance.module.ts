@@ -13,6 +13,7 @@ import {
   StudentAttendanceReportsController,
 } from './controllers/attendance-reports.controller.js';
 import { MakeupManagementController } from './controllers/makeup-management.controller.js';
+import { MentorAttendanceReportsController } from './controllers/mentor-attendance-reports.controller.js';
 import { StudentMakeupController } from './controllers/student-makeup.controller.js';
 import { AttendanceRecordEntity } from './entities/attendance-record.entity.js';
 import { AttendanceRecoveryAuditEntity } from './entities/attendance-recovery-audit.entity.js';
@@ -23,6 +24,7 @@ import { AttendanceProjectionService } from './services/attendance-projection.se
 import { AttendanceReportsService } from './services/attendance-reports.service.js';
 import { GuestAttendanceService } from './services/guest-attendance.service.js';
 import { MakeupPlacementService } from './services/makeup-placement.service.js';
+import { MentorAttendanceReportsService } from './services/mentor-attendance-reports.service.js';
 
 @Module({
   imports: [
@@ -39,6 +41,7 @@ import { MakeupPlacementService } from './services/makeup-placement.service.js';
     ]),
   ],
   controllers: [
+    MentorAttendanceReportsController,
     AttendanceController,
     AttendanceManagementController,
     MakeupManagementController,
@@ -47,6 +50,7 @@ import { MakeupPlacementService } from './services/makeup-placement.service.js';
     ManagementAttendanceReportsController,
   ],
   providers: [
+    MentorAttendanceReportsService,
     AttendanceService,
     AttendanceAuditService,
     MakeupPlacementService,

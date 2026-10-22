@@ -1,5 +1,39 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-22 — Mentor sửa link meeting của buổi
+
+Thêm PATCH `/mentor/class-sessions/:sessionId/meeting-url`, chỉ effective mentor
+đang hoạt động được sửa buổi SCHEDULED/IN_PROGRESS; khóa Class → Session để đồng
+bộ với thay mentor, lịch và lifecycle. expectedVersion bắt buộc, version cũ trả
+409; URL HTTP/HTTPS hoặc null để dùng lại link lớp. Giữ lịch và phân công, không
+đụng thanh toán. Cookie/role/Origin, UUID và body strict được kiểm tra.
+
+Type-check, build và Biome cho file thay đổi pass; integration PostgreSQL 4/4 và
+built-app HTTP workspace 3/3 pass (bao gồm quyền, substitute/teaching snapshot,
+hai cập nhật đồng thời, link context, xóa link và validation). Bổ sung Swagger,
+Postman và [flow meeting](../api_flow/MENTOR_SESSION_MEETING.md).
+Không cần migration; chỉ BE, chưa deploy VPS.
+
+## 2026-10-22 — Bỏ khóa/mở/hẹn giờ chương theo xác nhận của user
+
+Quyền đọc tài liệu theo enrollment ACTIVE sau xác nhận thanh toán, không yêu cầu
+mentor mở chương. Bỏ hai PATCH release của Admin/Mentor, service/DTO release và
+các test của nghiệp vụ đã bỏ. Giữ kiểm tra thanh toán, ancestry, role, lớp hủy,
+duyệt/công bố tài liệu, availableAt và file READY. Chương mới/seed dùng OPEN.
+
+Migration `1792627200001` mở LOCKED, xóa unlock_at, đổi DB default OPEN; giữ
+COMPLETED, enrollment, progress và lịch sử audit. Policy bỏ qua cả dữ liệu khóa
+cũ trước khi migration được áp dụng. Cập nhật Postman và
+[flow quyền truy cập](../api_flow/CLASS_UNIT_ACCESS.md). Chỉ sửa BE, không sửa FE.
+
+Kiểm tra local: 235 unit tests pass; 43 integration tests cho authoring/mentor
+context/student materials pass trên PostgreSQL + MinIO, gồm migration up/down/up
+và giữ chặn pending CASH. HTTP built-app files/materials 39/39 pass, gồm xác nhận
+tiền mặt → đọc/tải ngay và release routes 404/không còn Swagger. Biome cho các file
+thay đổi, type-check và build pass. Lần chạy đồng thời ban đầu gặp Node OOM; chạy lại với heap 512MB
+pass. Chưa deploy hoặc chạy migration trên DB dev/VPS; phải áp dụng migration khi
+triển khai để xóa trạng thái khóa cũ trong response.
+
 ## 2026-10-17 — Triển khai nốt workflow nghỉ có duyệt 4.4
 
 Đã implement request/preview/slots/own/staff list/detail, withdraw/reject/approve,
@@ -1136,3 +1170,64 @@ khi phát sinh trùng lịch bù sau duyệt; conflict được chuyển Manager
 Không sửa FE, chạy migrations, deploy hay giao dịch thật. Server/Postman 4.3
 đã hoàn tất theo xác nhận user được ghi trong backlog ngày 15/10; không lặp lại
 việc này là pending, không suy thành evidence 4.4/4.5.
+
+### 2026-10-22 — Mentor API gap audit before implementation
+
+Confirmed dev/origin/dev at `1e89579` contains FixUnhappyCase `20a2214` (mentor leave
+and makeup flow). Created `codex/mentor-teaching-api-gaps` from that base.
+Reviewed source controllers/services and documented proposed gaps in Phase 4.4
+flow/API breakdown: mentor class detail, mentor attendance/progress reads, session
+notes, assignments/submissions/grading, and scoped substitute content access.
+Materials and leave workflows already exist and must not be reimplemented.
+Planning/source verification only; implementation awaits the user's requested review.
+No application code, schema, FE changes, runtime checks, migration, VPS or live payment evidence.
+
+### 2026-10-22 — Kế hoạch mentor workspace và Assignment QUIZ/ZIP
+
+Đã viết plan/flow/API proposal/progress riêng Phase4.6 và Phase5, liên kết từ
+implementation index và core plan. Chỉ documentation, chưa source/migration/FE.
+4.6: scoped access chính/thay, class detail/timetable, mentor attendance reports,
+stored progress với policy unknown, teaching notes/version/audit.
+Phase5: Assignment thuộc ClassSession theo DBML (chưa runtime), purpose TEST/HOMEWORK
+khác type QUIZ/ZIP. User xác nhận quiz chọn toàn đề rồi nộp một lần, BE mới chấm và
+trả đáp án. QUIZ bật/tắt timer theo phút; ZIP deadline ngày giờ, không duration timer.
+Plan thêm private answer keys, start/resume/saved answers, atomic final submit/result,
+timeout worker đề xuất, scoped ZIP pipeline và mentor grade/release. Single-choice,
+one-attempt/default limits và timeout unanswered tính sai là design proposals.
+Thứ tự: mentor M1–M5, assignment A0–A5; source/code-execution/compiler ngoài v1.
+Verification: source/DBML/docs audit và static links/JSON/diff checks; không runtime
+tests/migrations/MinIO/VPS/browser/deployment/giao dịch thật mới. Không suy plan là
+API đã callable. Flow/API4.4 audit trước đó là lịch sử; kế hoạch chi tiết hiện ở
+PHASE_4_6_FLOW.md/PHASE_5_FLOW.md và breakdown cùng prefix.
+
+Planning verification 2026-10-22: Node static check8 new documents/23 local links/
+5 JSON examples passed; code fences balanced and git diff --check passed. Source
+runtime tests were not run because this change is documentation only.
+
+### 2026-10-22 — Phase 4.6 implementation (BE)
+
+Implemented mentor workspace M1–M4: typed primary/session scope + ANY discovery,
+class shell/scoped timetable/material preparation, provisional session roster,
+mentor attendance via shared credit projection, stored-progress reads with unknown
+completion policy, internal teaching notes with optimistic versions, idempotency,
+append-only audit and staff correction. Added notes migration1792627200000,
+Swagger, Postman25 requests and full flow/API handoff. FE unchanged.
+
+Local feature evidence: PostgreSQL/MinIO material regression;4.6 integration8 and
+makeup20 tests passed, compiled HTTP4.6 2 tests passed. Full check passed649 tests
+before parallel release removal; final acceptance re-runs on an isolated test DB
+and is recorded in docs/progress/phase 4/PHASE_4_6_PROGRESS.md. Earlier runs with
+Docker outage or old release expectations are not current pass evidence.
+Other ongoing bulk/release changes are preserved and are not claimed as4.6 work.
+No VPS/production migration/deploy/browser/live payment evidence added. Completion
+policy/Phase5 assignments/certificate remain outside4.6. Flow/API breakdown at
+docs/api_flow/PHASE_4_6_FLOW.md and PHASE_4_6_flow-api-breakdown.md are authoritative
+for FE handoff; planning proposals are no longer treated as runtime contracts.
+
+Phase4.6 final acceptance 2026-10-22 (current source, isolated PostgreSQL test DB):
+`pnpm check` PASS — lint/type-check/build +64 files/613 tests; `pnpm test:http`
+PASS — compiled app,10 files/79 tests, không skip. MinIO local included. Swagger,
+notes migration rehearsal, Postman25 requests,4 docs/16 local links/4 JSON examples
+và git diff checks passed. M1–M5 local complete; VPS/production migration/deploy
+và real payment evidence unchanged. Các lỗi hạ tầng/stale release expectations
+trong lượt trước đã được thay bằng evidence cuối này, không gộp pass historical.

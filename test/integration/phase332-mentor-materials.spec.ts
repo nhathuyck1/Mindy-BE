@@ -69,7 +69,13 @@ describe('Phase 3.3.2 Mentor submission + PostgreSQL', () => {
     manager = { userId: user.id, role: user.role, sessionId: randomUUID() };
     const courses = new CoursesService(db);
     contexts = new ClassContentContextService(db);
-    pickers = new MentorContentContextService(db, fixture.users, courses, contexts);
+    pickers = new MentorContentContextService(
+      db,
+      fixture.workspace,
+      fixture.users,
+      courses,
+      contexts,
+    );
     const uploads = new FileUploadPolicyService(fixture.users, courses, contexts);
     files = new FilesService(db, fileConfig({ MINIO_ENABLED: false }), uploads, {
       assertAvailable: storage,
@@ -156,7 +162,7 @@ describe('Phase 3.3.2 Mentor submission + PostgreSQL', () => {
       total: 2,
       pageSize: 1,
       items: [
-        { id: s.unit.id, courseUnitId: s.unit.courseUnitId, title: 'Unit one', status: 'LOCKED' },
+        { id: s.unit.id, courseUnitId: s.unit.courseUnitId, title: 'Unit one', status: 'OPEN' },
       ],
     });
     const sessions = await pickers.sessions(s.actor, s.scope.classId, s.unit.id, page);
@@ -568,6 +574,52 @@ describe('Phase 3.3.2 Mentor submission + PostgreSQL', () => {
     await service.submit(s.actor, created.id, 1, s.scope);
     await db.getRepository(ClassEntity).update(otherClassId, { mentorId: manager.userId });
     await expect(service.submit(s.actor, created.id, 1, s.scope)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+  it('Phase 4.6 scopes substitute units/materials, preserves authoring policy and revalidates after signing', async () => {
+    const s = await setup();
+    const subUser = await fixture.user(UserRole.MENTOR),
+      sub = { userId: subUser.id, role: UserRole.MENTOR, sessionId: randomUUID() };
+    const sessions = await pickers.sessions(s.actor, s.scope.classId, s.unit.id, page);
+    const id = sessions.items[0]?.id;
+    if (!id) throw new Error('Missing session');
+    await db.query('UPDATE class_sessions SET mentor_override_id=$1 WHERE id=$2', [sub.userId, id]);
+    const draftMaterial = await draft(s);
+    const binary = await ready(s.unit.courseUnitId, s.actor, s.scope.classId, s.unit.id);
+    const published = await service.create(
+      s.actor,
+      s.unit.id,
+      { contentType: MaterialContentType.FILE, title: 'Published reference', fileId: binary.id },
+      s.scope,
+    );
+    await approve(published.id);
+    expect((await pickers.units(sub, s.scope.classId, page)).total).toBe(1);
+    expect((await service.list(sub, page, s.unit.id, s.scope)).items.map((r) => r.id)).toEqual([
+      published.id,
+    ]);
+    await expect(service.detail(sub, draftMaterial.id, s.scope)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(await service.detail(sub, published.id, s.scope)).toMatchObject({ canEdit: false });
+    await expect(service.create(sub, s.unit.id, article, s.scope)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      service.patch(sub, published.id, { expectedRevision: 1, title: 'Denied' }, s.scope),
+    ).rejects.toMatchObject({ status: 403 });
+    vi.spyOn(files, 'signReadReference').mockImplementationOnce(async () => ({
+      url: 'https://example.test/private',
+      expiresAt: new Date(Date.now() + 60000),
+    }));
+    expect((await service.accessAtRevision(sub, published.id, 1, undefined, s.scope)).fileId).toBe(
+      binary.id,
+    );
+    vi.spyOn(files, 'signReadReference').mockImplementationOnce(async () => {
+      await db.query('UPDATE class_sessions SET mentor_override_id=NULL WHERE id=$1', [id]);
+      return { url: 'https://example.test/revoked', expiresAt: new Date(Date.now() + 60000) };
+    });
+    await expect(service.preview(sub, published.id, binary.id, s.scope)).rejects.toMatchObject({
       status: 403,
     });
   });

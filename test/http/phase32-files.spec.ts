@@ -151,149 +151,25 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   }
-  describe('Phase 3.3.4 Class Unit release HTTP', () => {
-    afterAll(async () => {
-      await db.query("UPDATE class_units SET status='LOCKED',unlock_at=NULL WHERE id=$1", [
-        scope.classUnitId,
-      ]);
-    });
-    const releasePath = () => `/admin/classes/${scope.classId}/units/${scope.classUnitId}/release`;
-    const mentorRelease = () =>
-      `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
-    it('checks cookie/role/Origin and strict body/path validation', async () => {
-      const body = { status: 'OPEN' };
-      expect((await request(releasePath(), undefined, body, 'PATCH')).status).toBe(401);
-      for (const cookie of [managerCookie, mentorCookie, studentCookie])
-        expect((await request(releasePath(), cookie, body, 'PATCH')).status).toBe(403);
-      expect((await request(mentorRelease(), adminCookie, body, 'PATCH')).status).toBe(403);
-      for (const origin of [undefined, 'http://evil.test', 'null']) {
-        const response = await fetch(`${url}${releasePath()}`, {
-          method: 'PATCH',
-          headers: {
-            'content-type': 'application/json',
-            cookie: adminCookie,
-            ...(origin === undefined ? {} : { origin }),
-          },
-          body: JSON.stringify(body),
-        });
-        expect(response.status).toBe(403);
-        expect(await response.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' });
-      }
-      for (const invalid of [
-        {},
-        { status: 'COMPLETED' },
-        { status: null },
-        { ...body, expectedRevision: 1 },
-        { ...body, unlockAt: '2026-02-30T12:00:00Z' },
-        { ...body, unlockAt: '2026-10-13T12:00:00' },
-        { ...body, unlockAt: 1 },
-      ])
-        expect((await request(releasePath(), adminCookie, invalid, 'PATCH')).status).toBe(422);
-      expect(
-        (await request('/admin/classes/bad/units/bad/release', adminCookie, body, 'PATCH')).status,
-      ).toBe(400);
-    });
-    it('sets/retains/clears schedule, preserves timestamps on retry and returns safe no-store context', async () => {
-      const opened = await request(
-        releasePath(),
-        adminCookie,
-        { status: 'OPEN', unlockAt: '2030-01-01T07:00:00+07:00' },
-        'PATCH',
-      );
-      expect(opened.status).toBe(200);
-      expect(opened.headers.get('cache-control')).toBe('no-store');
-      expect(await opened.json()).toMatchObject({
-        id: scope.classUnitId,
-        classId: scope.classId,
-        courseUnitId: scope.courseUnitId,
-        status: 'OPEN',
-        unlockAt: '2030-01-01T00:00:00.000Z',
-      });
-      const before = await db.query('SELECT * FROM class_units WHERE id=$1', [scope.classUnitId]);
-      const audits = await db.query(
-        'SELECT * FROM class_unit_release_audit WHERE class_unit_id=$1 ORDER BY id',
-        [scope.classUnitId],
-      );
-      expect(
-        (
-          await request(
-            mentorRelease(),
-            mentorCookie,
-            { status: 'OPEN', unlockAt: '2030-01-01T00:00:00Z' },
-            'PATCH',
-          )
-        ).status,
-      ).toBe(200);
-      expect(await db.query('SELECT * FROM class_units WHERE id=$1', [scope.classUnitId])).toEqual(
-        before,
-      );
-      expect(
-        await db.query(
-          'SELECT * FROM class_unit_release_audit WHERE class_unit_id=$1 ORDER BY id',
-          [scope.classUnitId],
-        ),
-      ).toEqual(audits);
-      expect(
-        await (await request(mentorRelease(), mentorCookie, { status: 'LOCKED' }, 'PATCH')).json(),
-      ).toMatchObject({ status: 'LOCKED', unlockAt: '2030-01-01T00:00:00.000Z' });
-      const cleared = await request(
-        mentorRelease(),
-        mentorCookie,
-        { status: 'OPEN', unlockAt: null },
-        'PATCH',
-      );
-      expect(cleared.status).toBe(200);
-      expect(Object.keys((await cleared.json()) as object).sort()).toEqual([
-        'classId',
-        'courseUnitId',
-        'id',
-        'position',
-        'status',
-        'title',
-        'unlockAt',
-      ]);
-    });
-    it('checks unit ancestry and completed/cancelled conflicts', async () => {
-      expect(
-        (
-          await request(
-            `/admin/classes/${scope.classId}/units/11111111-1111-4111-8111-111111111111/release`,
-            adminCookie,
-            { status: 'OPEN' },
-            'PATCH',
-          )
-        ).status,
-      ).toBe(404);
-      await db.query("UPDATE class_units SET status='COMPLETED' WHERE id=$1", [scope.classUnitId]);
-      try {
-        const response = await request(releasePath(), adminCookie, { status: 'OPEN' }, 'PATCH');
-        expect(response.status).toBe(409);
-        expect(await response.json()).toMatchObject({ code: 'UNIT_RELEASE_CONFLICT' });
-      } finally {
-        await db.query("UPDATE class_units SET status='OPEN' WHERE id=$1", [scope.classUnitId]);
-      }
-      await db.query("UPDATE classes SET status='CANCELLED' WHERE id=$1", [scope.classId]);
-      try {
+  describe('Removed manual Class Unit release HTTP', () => {
+    it('does not expose manual locking routes or publish them in Swagger', async () => {
+      for (const role of ['admin', 'mentor']) {
+        const path = `/${role}/classes/${scope.classId}/units/${scope.classUnitId}/release`;
         expect(
-          (await request(mentorRelease(), mentorCookie, { status: 'OPEN' }, 'PATCH')).status,
-        ).toBe(409);
-      } finally {
-        await db.query("UPDATE classes SET status='OPEN' WHERE id=$1", [scope.classId]);
+          (
+            await request(
+              path,
+              role === 'admin' ? adminCookie : mentorCookie,
+              { status: 'LOCKED' },
+              'PATCH',
+            )
+          ).status,
+        ).toBe(404);
       }
-    });
-    it('publishes both routes with separate roles and release enum in Swagger', async () => {
-      const response = await fetch(`${url.replace('/api/v1', '')}/docs-json`);
+      const response = await fetch(url.replace('/api/v1', '/docs-json'));
       expect(response.status).toBe(200);
-      const spec = (await response.json()) as {
-        paths: Record<string, unknown>;
-        components: { schemas: Record<string, { properties: { status: { enum: string[] } } }> };
-      };
-      expect(spec.paths).toHaveProperty('/api/v1/admin/classes/{classId}/units/{unitId}/release');
-      expect(spec.paths).toHaveProperty('/api/v1/mentor/classes/{classId}/units/{unitId}/release');
-      expect(spec.components.schemas.UpdateClassUnitReleaseDto?.properties.status.enum).toEqual([
-        'LOCKED',
-        'OPEN',
-      ]);
+      const spec = (await response.json()) as { paths: Record<string, unknown> };
+      expect(Object.keys(spec.paths).filter((path) => path.endsWith('/release'))).toEqual([]);
     });
   });
 
@@ -502,6 +378,18 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       [scope.courseUnitId],
     )) as { id: string; content_type: string }[];
     expect(created).toHaveLength(2);
+    await db.query(
+      "UPDATE class_units SET status='LOCKED',unlock_at='2099-01-01T00:00:00Z' WHERE id=$1",
+      [scope.classUnitId],
+    );
+    expect(
+      (
+        await request(
+          `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials`,
+          studentCookie,
+        )
+      ).status,
+    ).toBe(403);
     for (const material of created)
       expect(
         (
@@ -520,10 +408,8 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     ).toBe(200);
     const path = `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials`;
     expect(await (await request(path, studentCookie)).json()).toMatchObject({
-      items: [],
-      total: 0,
+      total: 2,
     });
-    await db.query("UPDATE class_units SET status='OPEN' WHERE id=$1", [scope.classUnitId]);
     const listing = await request(`${path}?pageSize=1`, studentCookie);
     expect(listing.status).toBe(200);
     expect(listing.headers.get('cache-control')).toBe('private, no-store');
@@ -1033,7 +919,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       { label: 'VIDEO', contentType: 'VIDEO', extension: 'mp4' },
       { label: 'Word DOCX', contentType: 'FILE', extension: 'docx' },
     ] as const)(
-      '$label follows real upload, submit, reject, approve, release and withdraw',
+      '$label follows real upload, submit, reject, approve, paid access and withdraw',
       async ({ contentType, extension }) => {
         async function readyFile(extension: string): Promise<string> {
           const binary = binaries.find((item) => item.filename.endsWith(`.${extension}`));
@@ -1171,110 +1057,98 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
           'SELECT * FROM enrollments WHERE class_id=$1 ORDER BY id',
           [scope.classId],
         );
-        const releasePath = `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
-        try {
-          await command(releasePath, mentorCookie, { status: 'OPEN', unlockAt: null }, 'PATCH');
-          const enrollment = (await db.query(
-            "SELECT e.status FROM enrollments e JOIN users u ON u.id=e.student_id WHERE e.class_id=$1 AND u.email='student@http.test'",
-            [scope.classId],
-          )) as { status: string }[];
-          expect(enrollment, 'CASH confirm test must activate the student first').toEqual([
-            { status: 'ACTIVE' },
-          ]);
-          const detail = await request(studentPath, studentCookie);
-          expect(detail.status).toBe(200);
-          const read: unknown = await detail.json();
-          expect(JSON.stringify(read)).not.toMatch(
-            /objectKey|objectVersion|bucket|ownerUserId|reviewedBy|rejectionReason|createdBy/,
-          );
+        const enrollment = (await db.query(
+          "SELECT e.status FROM enrollments e JOIN users u ON u.id=e.student_id WHERE e.class_id=$1 AND u.email='student@http.test'",
+          [scope.classId],
+        )) as { status: string }[];
+        expect(enrollment, 'CASH confirm test must activate the student first').toEqual([
+          { status: 'ACTIVE' },
+        ]);
+        const detail = await request(studentPath, studentCookie);
+        expect(detail.status).toBe(200);
+        const read: unknown = await detail.json();
+        expect(JSON.stringify(read)).not.toMatch(
+          /objectKey|objectVersion|bucket|ownerUserId|reviewedBy|rejectionReason|createdBy/,
+        );
+        expect(read).toMatchObject({
+          id: created.id,
+          contentType,
+          revision: 2,
+          attachmentCount: imageId ? 1 : 0,
+        });
+        if (imageId)
           expect(read).toMatchObject({
-            id: created.id,
-            contentType,
-            revision: 2,
-            attachmentCount: imageId ? 1 : 0,
+            file: null,
+            contentSchemaVersion: 1,
+            contentHtml: expect.stringContaining(`data-file-id="${imageId}"`),
+            inlineImages: [{ id: imageId, kind: 'IMAGE' }],
+            attachments: [{ id: fileId }],
           });
-          if (imageId)
-            expect(read).toMatchObject({
-              file: null,
-              contentSchemaVersion: 1,
-              contentHtml: expect.stringContaining(`data-file-id="${imageId}"`),
-              inlineImages: [{ id: imageId, kind: 'IMAGE' }],
-              attachments: [{ id: fileId }],
-            });
-          else
-            expect(read).toMatchObject({
-              file: { id: fileId },
-              contentHtml: null,
-              inlineImages: [],
-              attachments: [],
-            });
-          const listing = (await (
-            await request(
-              `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials?pageSize=100`,
-              studentCookie,
-            )
-          ).json()) as { items: Record<string, unknown>[] };
-          const item = listing.items.find((entry) => entry.id === created.id);
-          expect(item).toMatchObject({ contentType, attachmentCount: imageId ? 1 : 0 });
-          expect(item).not.toHaveProperty('contentHtml');
-          if (imageId) {
-            await signed(
-              await access(studentPath, imageId, studentCookie),
-              imageId,
-              'INLINE_IMAGE',
-            );
-            expect((await request(`${studentPath}/download`, studentCookie)).status).toBe(404);
-          }
-          await signed(await access(studentPath, fileId, studentCookie), fileId, primaryRole);
-          expect(
-            (await access(studentPath, '00000000-0000-4000-8000-000000000000', studentCookie))
-              .status,
-          ).toBe(404);
-          expect(await (await request(managerPath, managerCookie)).json()).toEqual(approved);
-          expect(
-            await db.query('SELECT * FROM enrollments WHERE class_id=$1 ORDER BY id', [
-              scope.classId,
-            ]),
-          ).toEqual(enrollments);
-          const withdrawn = await command(`${managerPath}/unpublish`, managerCookie, {
-            expectedRevision: 2,
+        else
+          expect(read).toMatchObject({
+            file: { id: fileId },
+            contentHtml: null,
+            inlineImages: [],
+            attachments: [],
           });
-          expect(withdrawn).toMatchObject({ publishedAt: null, approvedRevision: 2 });
-          expect((await request(studentPath, studentCookie)).status).toBe(404);
-          expect((await access(studentPath, fileId, studentCookie)).status).toBe(404);
-          await signed(await access(managerPath, fileId, managerCookie), fileId, primaryRole);
-          expect(
-            await command(`${managerPath}/approve`, managerCookie, { expectedRevision: 2 }),
-          ).toEqual(withdrawn);
-          expect(
-            await command(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 }),
-          ).toMatchObject({ approvedRevision: 2 });
-          expect(
-            await db.query(
-              'SELECT * FROM material_file_references WHERE material_id=$1 ORDER BY file_id, role',
-              [created.id],
-            ),
-          ).toEqual(refs);
-          expect(
-            await command(
-              managerPath,
-              managerCookie,
-              { expectedRevision: 2, title: 'Next revision' },
-              'PATCH',
-            ),
-          ).toMatchObject({
-            revision: 3,
-            reviewStatus: 'DRAFT',
-            approvedRevision: null,
-            publishedAt: null,
-          });
-          expect(
-            (await request(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 }))
-              .status,
-          ).toBe(409);
-        } finally {
-          await command(releasePath, mentorCookie, { status: 'LOCKED', unlockAt: null }, 'PATCH');
+        const listing = (await (
+          await request(
+            `/me/classes/${scope.classId}/units/${scope.classUnitId}/materials?pageSize=100`,
+            studentCookie,
+          )
+        ).json()) as { items: Record<string, unknown>[] };
+        const item = listing.items.find((entry) => entry.id === created.id);
+        expect(item).toMatchObject({ contentType, attachmentCount: imageId ? 1 : 0 });
+        expect(item).not.toHaveProperty('contentHtml');
+        if (imageId) {
+          await signed(await access(studentPath, imageId, studentCookie), imageId, 'INLINE_IMAGE');
+          expect((await request(`${studentPath}/download`, studentCookie)).status).toBe(404);
         }
+        await signed(await access(studentPath, fileId, studentCookie), fileId, primaryRole);
+        expect(
+          (await access(studentPath, '00000000-0000-4000-8000-000000000000', studentCookie)).status,
+        ).toBe(404);
+        expect(await (await request(managerPath, managerCookie)).json()).toEqual(approved);
+        expect(
+          await db.query('SELECT * FROM enrollments WHERE class_id=$1 ORDER BY id', [
+            scope.classId,
+          ]),
+        ).toEqual(enrollments);
+        const withdrawn = await command(`${managerPath}/unpublish`, managerCookie, {
+          expectedRevision: 2,
+        });
+        expect(withdrawn).toMatchObject({ publishedAt: null, approvedRevision: 2 });
+        expect((await request(studentPath, studentCookie)).status).toBe(404);
+        expect((await access(studentPath, fileId, studentCookie)).status).toBe(404);
+        await signed(await access(managerPath, fileId, managerCookie), fileId, primaryRole);
+        expect(
+          await command(`${managerPath}/approve`, managerCookie, { expectedRevision: 2 }),
+        ).toEqual(withdrawn);
+        expect(
+          await command(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 }),
+        ).toMatchObject({ approvedRevision: 2 });
+        expect(
+          await db.query(
+            'SELECT * FROM material_file_references WHERE material_id=$1 ORDER BY file_id, role',
+            [created.id],
+          ),
+        ).toEqual(refs);
+        expect(
+          await command(
+            managerPath,
+            managerCookie,
+            { expectedRevision: 2, title: 'Next revision' },
+            'PATCH',
+          ),
+        ).toMatchObject({
+          revision: 3,
+          reviewStatus: 'DRAFT',
+          approvedRevision: null,
+          publishedAt: null,
+        });
+        expect(
+          (await request(`${managerPath}/publish`, managerCookie, { expectedRevision: 2 })).status,
+        ).toBe(409);
       },
       30000,
     );
@@ -1577,24 +1451,12 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       '/api/v1/mentor/classes/{classId}/materials/{materialId}/submit',
       '/api/v1/manager/materials/{materialId}/preview',
       '/api/v1/me/classes/{classId}/materials/{materialId}/assets/{fileId}/access',
-      '/api/v1/mentor/classes/{classId}/units/{unitId}/release',
       '/api/v1/manager/courses/{courseId}/units/{unitId}',
     ])
       expect(doc.paths).toHaveProperty(route);
   });
 
   it('delivers mentor upload → draft → reject → edit → resubmit → approve → student attachment over HTTP', async () => {
-    // Earlier release journeys deliberately leave the unit locked; establish this journey's gate.
-    expect(
-      (
-        await request(
-          `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`,
-          mentorCookie,
-          { status: 'OPEN', unlockAt: null },
-          'PATCH',
-        )
-      ).status,
-    ).toBe(200);
     const uploadResponse = await request('/files/upload-intents', mentorCookie, declaration());
     expect(uploadResponse.status).toBe(201);
     const intent = (await uploadResponse.json()) as { fileId: string; uploadUrl: string };
@@ -1697,17 +1559,7 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     ).toBe(204);
   });
 
-  it('supports CKEditor inline images, manager FILE/VIDEO creation, unit editing and release APIs', async () => {
-    expect(
-      (
-        await request(
-          `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`,
-          mentorCookie,
-          { status: 'OPEN', unlockAt: null },
-          'PATCH',
-        )
-      ).status,
-    ).toBe(200);
+  it('supports CKEditor inline images, manager FILE/VIDEO creation, unit editing without manual release', async () => {
     const rows = (await db.query(
       "SELECT id,kind FROM file_objects WHERE course_unit_id=$1 AND status='READY' AND kind IN ('IMAGE','PDF','VIDEO')",
       [scope.courseUnitId],
@@ -1807,25 +1659,10 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     expect((await request(`${mentorAsset}?expectedRevision=1`, mentorCookie)).status).toBe(200);
     expect((await request(`${mentorAsset}?expectedRevision=2`, mentorCookie)).status).toBe(409);
     expect((await request(mentorAsset, mentorCookie)).status).toBe(422);
-    const release = `/mentor/classes/${scope.classId}/units/${scope.classUnitId}/release`;
-    expect((await request(release, mentorCookie, { status: 'LOCKED' }, 'PATCH')).status).toBe(200);
-    expect(
-      (await request(`/me/classes/${scope.classId}/materials/${article.id}`, studentCookie)).status,
-    ).toBe(404);
-    expect((await request(release, managerCookie, { status: 'OPEN' }, 'PATCH')).status).toBe(403);
-    expect((await request(release, mentorCookie, { status: 'COMPLETED' }, 'PATCH')).status).toBe(
-      422,
+    await db.query(
+      "UPDATE class_units SET status='LOCKED',unlock_at='2099-01-01T00:00:00Z' WHERE id=$1",
+      [scope.classUnitId],
     );
-    expect(
-      (
-        await request(
-          `/admin/classes/${scope.classId}/units/${scope.classUnitId}/release`,
-          adminCookie,
-          { status: 'OPEN', unlockAt: null },
-          'PATCH',
-        )
-      ).status,
-    ).toBe(200);
     expect(
       (await request(`/me/classes/${scope.classId}/materials/${article.id}`, studentCookie)).status,
     ).toBe(200);

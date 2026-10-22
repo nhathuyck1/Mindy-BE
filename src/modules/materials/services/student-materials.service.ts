@@ -10,7 +10,7 @@ import { ClassUnitNotFoundException } from '../../classes/exceptions/class.excep
 import { ClassContentContextService } from '../../classes/services/class-content-context.service.js';
 // biome-ignore lint/style/useImportType: Nest DI needs runtime constructor tokens.
 import { FilesService } from '../../files/services/files.service.js';
-import { canReadMaterial, isMaterialUnitReleased } from '../domain/material-access.js';
+import { canReadMaterial } from '../domain/material-access.js';
 import type { MaterialReadContext } from '../domain/material-contract.js';
 import { findMaterialFileRole, materialFileDisposition } from '../domain/material-file-access.js';
 import { MaterialFileAccessDto } from '../dtos/material-file-access.dto.js';
@@ -51,7 +51,6 @@ export class StudentMaterialsService {
       if (context.classStatus === ClassStatus.CANCELLED)
         throw new MaterialPolicyException('MATERIAL_ACCESS_DENIED');
       const read = await this.policy.studentReadContext(principal, context, now, manager);
-      if (!isMaterialUnitReleased(context, now)) return { items: [], total: 0, asOf: now };
       const [materials, total] = await this.visibleQuery(manager, now)
         .andWhere('material.courseUnitId = :courseUnitId', { courseUnitId: context.courseUnitId })
         .orderBy('material.sortOrder', 'ASC')

@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -59,6 +60,16 @@ export class AttendanceMarkDto {
   @IsEnum(AttendanceStatus)
   readonly status!: AttendanceStatus;
 }
+export class BulkMarkAttendanceDto extends AttendanceMutationDto {
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'Apply to the entire regular and guest snapshot, across all pages: true = PRESENT, false = ABSENT.',
+  })
+  @IsBoolean()
+  readonly checked!: boolean;
+}
+
 export class GuestAttendanceMarkDto {
   @ApiProperty({ type: String, format: 'uuid' })
   @Transform(({ value }: { value: unknown }) =>

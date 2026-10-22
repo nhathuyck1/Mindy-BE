@@ -1,0 +1,749 @@
+{
+  "info": {
+    "name": "Phase 4.6 — Mentor teaching workspace",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local verified; not deployed. No auto mutation runner. Login cookies are kept by Postman. For every note save read version, set a UUIDv4 idempotency_key; identical network retry reuses exact key/body. Units and sessions are separately paginated. Substitute has no class reports/progress/authoring."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "unit_id",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "student_id",
+      "value": ""
+    },
+    {
+      "key": "material_id",
+      "value": ""
+    },
+    {
+      "key": "file_id",
+      "value": ""
+    },
+    {
+      "key": "expected_revision",
+      "value": "1"
+    },
+    {
+      "key": "note_version",
+      "value": "0"
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "mentor_email",
+      "value": ""
+    },
+    {
+      "key": "mentor_password",
+      "value": ""
+    },
+    {
+      "key": "staff_email",
+      "value": ""
+    },
+    {
+      "key": "staff_password",
+      "value": ""
+    },
+    {
+      "key": "session_version",
+      "value": "1"
+    },
+    {
+      "key": "meeting_url",
+      "value": "https://meet.google.com/abc-defg-hij"
+    }
+  ],
+  "item": [
+    {
+      "name": "Login mentor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{mentor_email}}\",\n  \"password\": \"{{mentor_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Discover all assignments (ANY default)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes?assignment=ANY&page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes"],
+          "query": [
+            {
+              "key": "assignment",
+              "value": "ANY"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Class shell and capabilities",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Scoped units",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/units?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "units"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Scoped unit detail (no nested timetable)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/units/{{unit_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "units", "{{unit_id}}"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Scoped timetable",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/sessions?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "sessions"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Scoped unit sessions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/units/{{unit_id}}/sessions?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "units",
+            "{{unit_id}}",
+            "sessions"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Unit materials",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/units/{{unit_id}}/materials?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "units",
+            "{{unit_id}}",
+            "materials"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Material detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "materials", "{{material_id}}"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Material primary preview",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}/preview?expectedRevision={{expected_revision}}",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "materials",
+            "{{material_id}}",
+            "preview"
+          ],
+          "query": [
+            {
+              "key": "expectedRevision",
+              "value": "{{expected_revision}}"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Material asset preview",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}/assets/{{file_id}}/access?expectedRevision={{expected_revision}}",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "materials",
+            "{{material_id}}",
+            "assets",
+            "{{file_id}}",
+            "access"
+          ],
+          "query": [
+            {
+              "key": "expectedRevision",
+              "value": "{{expected_revision}}"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Material file access",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/materials/{{material_id}}/files/{{file_id}}/access",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "materials",
+            "{{material_id}}",
+            "files",
+            "{{file_id}}",
+            "access"
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Session context",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/class-sessions/{{session_id}}/context",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "class-sessions", "{{session_id}}", "context"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Provisional roster before start",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/class-sessions/{{session_id}}/attendance-candidates?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "class-sessions", "{{session_id}}", "attendance-candidates"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Attendance snapshot after start",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/class-sessions/{{session_id}}/attendance?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "class-sessions", "{{session_id}}", "attendance"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Primary class attendance summary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/attendance-summary?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "attendance-summary"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Primary student history",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/students/{{student_id}}/attendance?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "students",
+            "{{student_id}}",
+            "attendance"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Primary student summary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/students/{{student_id}}/attendance-summary",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "students",
+            "{{student_id}}",
+            "attendance-summary"
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Primary stored progress counts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/progress?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "classes", "{{class_id}}", "progress"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Primary student stored units",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/students/{{student_id}}/progress?page=1&pageSize=20",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "v1",
+            "mentor",
+            "classes",
+            "{{class_id}}",
+            "students",
+            "{{student_id}}",
+            "progress"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "pageSize",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Read teaching note",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/class-sessions/{{session_id}}/teaching-notes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "class-sessions", "{{session_id}}", "teaching-notes"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Save teaching note",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/class-sessions/{{session_id}}/teaching-notes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "class-sessions", "{{session_id}}", "teaching-notes"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 0,\n  \"content\": \"Đã dạy vòng lặp.\",\n  \"nextSteps\": \"Ôn tập.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Login staff for correction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{staff_email}}\",\n  \"password\": \"{{staff_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Staff read teaching note",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/management/class-sessions/{{session_id}}/teaching-notes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "management", "class-sessions", "{{session_id}}", "teaching-notes"]
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Staff correct note (new key + actual version)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/management/class-sessions/{{session_id}}/teaching-notes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "management", "class-sessions", "{{session_id}}", "teaching-notes"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 1,\n  \"content\": \"Đã dạy vòng lặp.\",\n  \"nextSteps\": \"Ôn tập.\",\n  \"reason\": \"Đính chính sau rà soát.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Cookie auth; see docs/api_flow/PHASE_4_6_flow-api-breakdown.md. "
+      }
+    },
+    {
+      "name": "Mentor updates session meeting URL",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/class-sessions/{{session_id}}/meeting-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "class-sessions", "{{session_id}}", "meeting-url"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meetingUrl\": \"{{meeting_url}}\",\n  \"expectedVersion\": {{session_version}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Read current session.version from context before saving; set session_version. Only effective mentor of SCHEDULED/IN_PROGRESS session may write. On 409 refetch; null uses class fallback. See docs/api_flow/MENTOR_SESSION_MEETING.md."
+      }
+    },
+    {
+      "name": "Clear session meeting override",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "http://localhost:3001"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/mentor/class-sessions/{{session_id}}/meeting-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "mentor", "class-sessions", "{{session_id}}", "meeting-url"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meetingUrl\": null,\n  \"expectedVersion\": {{session_version}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Read current session.version from context before saving; set session_version. Only effective mentor of SCHEDULED/IN_PROGRESS session may write. On 409 refetch; null uses class fallback. See docs/api_flow/MENTOR_SESSION_MEETING.md."
+      }
+    }
+  ]
+}

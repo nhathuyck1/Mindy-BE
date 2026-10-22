@@ -451,7 +451,7 @@ async function seedClasses(
           courseUnitId: courseUnit.id,
           position: unitIndex + 1,
           unlockAt: null,
-          status: ClassUnitStatus.LOCKED,
+          status: ClassUnitStatus.OPEN,
         }),
       );
       const unitStartsAt =

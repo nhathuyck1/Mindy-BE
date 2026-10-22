@@ -1,5 +1,13 @@
 # Implementation phases
 
+2026-10-22 — Kế hoạch mới, **chưa implementation**:
+[Phase4.6 Mentor workspace](phase%204/PHASE_4_6_MENTOR_TEACHING_WORKSPACE.md)
+(detail/quyền dạy thay/reports/stored progress/notes) và
+[Phase5 Assignment](phase%205/PHASE_5_ASSIGNMENTS.md) (TEST/HOMEWORK,
+QUIZ ABCD timer optional, ZIP deadline ngày/giờ). Assignment thuộc ClassSession
+theo DBML, chưa có runtime feature. Quiz nộp toàn bài rồi BE mới chấm/trả đáp án.
+Xem flow/API/progress được liên kết trong từng plan; không đổi 4.5 release thành done.
+
 2026-10-16 — Phase2.4 A–C đã implement source: manager class/contact, HR directory/relationships, order/payment read. D summary backlog; local gates xem progress2.4; chưa deploy. Các đoạn planning dưới giữ lịch sử theo thời điểm.
 
 2026-10-16 — **Planning Phase2.4 Manager HR + kế toán**: rà soát quyền đã có,

@@ -4,6 +4,7 @@ import type { SessionStatus } from '../enums/session-status.enum.js';
 
 /** Public, entity-free context for content authorization; contains no meeting URL. */
 export interface ClassContentContext {
+  readonly mentorReadScope?: 'CLASS' | 'SESSION';
   readonly classId: string;
   readonly courseId: string;
   readonly mentorId: string;
