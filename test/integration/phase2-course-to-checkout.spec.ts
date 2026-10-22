@@ -487,13 +487,14 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       const unitId = draft.units[0]?.unit.id ?? '';
 
       expect(await rejectionCode(classesService.open(classId))).toBe('CLASS_NOT_READY_TO_OPEN');
+      const outsideDay = toLocalDate(new Date(Date.now() + 90 * DAY_MS), TIME_ZONE);
       expect(
         await rejectionCode(
           classesService.scheduleSession(classId, {
             classUnitId: unitId,
             title: 'Too late',
-            startsAt: new Date(Date.now() + 90 * DAY_MS).toISOString(),
-            endsAt: new Date(Date.now() + 90 * DAY_MS + 3_600_000).toISOString(),
+            startsAt: new Date(`${outsideDay}T12:00:00+07:00`).toISOString(),
+            endsAt: new Date(`${outsideDay}T13:00:00+07:00`).toISOString(),
           }),
         ),
       ).toBe('CLASS_SESSION_OUTSIDE_CLASS_PERIOD');
