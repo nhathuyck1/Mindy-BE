@@ -30,14 +30,7 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_LOGGING: 'false'
-    command:
-      [
-        'node',
-        'node_modules/typeorm/cli.js',
-        '-d',
-        'dist/database/data-source.js',
-        'migration:run',
-      ]
+    command: ['node', 'dist/operations/migrate.js']
     depends_on:
       postgres:
         condition: service_healthy

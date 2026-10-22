@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ConsolidateTracking1792627200002 } from '../../src/database/migrations/1792627200002-consolidate-tracking.js';
 import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
@@ -11,6 +12,7 @@ import { SessionMeetingService } from '../../src/modules/classes/services/sessio
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 const actor = (userId: string, role = UserRole.MENTOR): AuthenticatedUser => ({
@@ -23,6 +25,7 @@ describe.skipIf(!separateTestUrl('session_meetings'))('Mentor meeting URL Postgr
   let db: DataSource, f: ReturnType<typeof paymentFixture>, meetings: SessionMeetingService;
   beforeAll(async () => {
     db = await paymentDatabase('session_meetings');
+    await rehearseMigration(db, new ConsolidateTracking1792627200002(), 'up');
     f = paymentFixture(db);
     meetings = new SessionMeetingService(
       db,

@@ -1,5 +1,10 @@
 # Mindy Postman checks
 
+Admin tracking 22/10/2026: `Mindy-Admin-Tracking.postman_collection.json` requires
+migration `1792627200002`. Login as ADMIN, list/filter events, then set event_source
+and event_id from a real response to read the original details. Receipt payloads
+are never exposed. [Contract and migration](../docs/api_flow/ADMIN_TRACKING.md).
+
 Phase4.4 leave17/10: trong `Mindy-Session-Operations-Phase44.postman_collection.json`
 có folder21 với preview/slots/create/own list/detail/withdraw và staff list/detail/
 approve/reject. Cần migration1792195200000. Đổi cookie actor theo từng request;

@@ -16,10 +16,12 @@ import { MaterialsModule } from './modules/materials/materials.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
 import { TeachingOperationsModule } from './modules/teaching-operations/teaching-operations.module.js';
+import { TrackingModule } from './modules/tracking/tracking.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
+    TrackingModule,
     TeachingOperationsModule,
     ConfigModule.forRoot({
       isGlobal: true,

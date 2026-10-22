@@ -49,9 +49,22 @@ export class SessionMeetingService {
           'Refetch the session before updating its meeting URL',
         );
       if (session.meetingUrl !== input.meetingUrl) {
+        const oldMeetingUrl = session.meetingUrl;
         session.meetingUrl = input.meetingUrl;
         session.version += 1;
         await m.getRepository(ClassSessionEntity).save(session);
+        await m.query(
+          `INSERT INTO session_meeting_audits(session_id,class_id,actor_id,old_meeting_url,new_meeting_url,version)
+          VALUES($1,$2,$3,$4,$5,$6)`,
+          [
+            session.id,
+            classEntity.id,
+            actor.userId,
+            oldMeetingUrl,
+            session.meetingUrl,
+            session.version,
+          ],
+        );
       }
       return {
         sessionId: session.id,

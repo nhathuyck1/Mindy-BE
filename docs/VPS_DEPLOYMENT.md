@@ -121,6 +121,14 @@ PostgreSQL port 5432. Swagger will be available at `https://api.example.com/docs
 
 ## 4. Updating
 
+The dev CI/CD workflow builds all migrations into the release image and verifies
+their checksums against `dist/database/migration-manifest.json` before DB access.
+After a verified backup it stops API writers, runs the compiled migration runner,
+checks that none remain pending, and then replaces/health-checks the API. A failed
+migration leaves the API stopped for investigation; it never automatically reverts
+the database or re-seeds it. Expect a brief maintenance window for consolidation.
+The CI check also runs the compiled migration runner twice on an isolated test DB.
+
 Back up PostgreSQL before applying a release, then run:
 
 ```bash

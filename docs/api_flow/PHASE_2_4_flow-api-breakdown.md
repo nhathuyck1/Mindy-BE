@@ -237,3 +237,24 @@ file mới trước push; không coi source local là đã có trên remote/VPS.
 MinIO/FILE_JOB hiện hữu đang hoạt động. Chưa agent deploy hoặc smoke test trên VPS;
 sau rollout kiểm readiness, manager class list và DOCX upload/approve thực tế.
 Đây là review cấu hình/readiness, không chạy lại BE tests trong lượt review này.
+
+## 2026-10-22 — Manager screen-gap proposals (not implemented)
+
+BE-only source audit, no frontend source inspection. Existing manager-accessible
+routes span /manager, /management, /class-sessions and /files; keep existing routes.
+
+| Proposed addition | FE use / scope to define before implementation |
+|---|---|
+| GET /manager/dashboard | Date range/timezone, settled revenue, today sessions, pending counts with drilldown links/filters and asOf; operational source counts reused, no raw rows from all queues. |
+| GET /management/class-sessions | Global calendar from/to bounded, class/mentor/status filters and pagination; global view absent, per-class/per-mentor timetable already exists. |
+| GET /manager/payments/summary | Aggregate verified transactions, payment method/date basis/currency; align filters with existing payment list, avoid duplicate multi-class order totals. Static route before :paymentId route. |
+| Manager student learning view | Own-role history/progress across selected enrollment/class, not Student self APIs or Mentor impersonation; attendance formula reused. Route/DTO still to design. |
+| Manager business audit view | Timeline/filter for class/session/actor/action, current authorization and redacted payloads; existing attendance audits/notes do not cover unified business timeline. |
+| Assignment oversight | TEST/HOMEWORK + QUIZ/ZIP status/results/missing/grading queues dependent on Phase5 implementation; currently not callable. |
+
+Routes above are candidates only, not available contracts. No request/error/retry
+semantics or capability changes implemented in this audit. Decide class/course
+creation/lifecycle/account-management rights separately; current ADMIN-only status
+must not be bypassed by frontend. Existing material/leave/conflict/attendance/cash
+queue APIs are sufficient for their action screens; dashboard can add counts rather
+than duplicate commands. Existing class/person queries already have search/filters.

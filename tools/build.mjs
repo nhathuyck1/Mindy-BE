@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,4 +22,28 @@ const result = spawnSync(
   },
 );
 if (result.error) throw result.error;
-process.exitCode = result.status ?? 1;
+if (result.status !== 0) process.exit(result.status ?? 1);
+
+// The production image only contains dist. Record exactly what was compiled so
+// deployment can reject a missing/stale migration before connecting to the DB.
+const sources = readdirSync(join(projectRoot, 'src/database/migrations'))
+  .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+  .map((file) => file.replace(/\.ts$/, '.js'))
+  .sort();
+const migrationsDirectory = join(output, 'database/migrations');
+const compiled = readdirSync(migrationsDirectory)
+  .filter((file) => file.endsWith('.js'))
+  .sort();
+if (!sources.length || JSON.stringify(sources) !== JSON.stringify(compiled))
+  throw new Error('Compiled migration files do not match the source catalog.');
+const files = compiled.map((name) => ({
+  name,
+  sha256: createHash('sha256')
+    .update(readFileSync(join(migrationsDirectory, name)))
+    .digest('hex'),
+}));
+writeFileSync(
+  join(output, 'database/migration-manifest.json'),
+  JSON.stringify({ version: 1, files }, null, 2),
+);
+console.log(`Built and verified ${files.length} migration artifacts.`);

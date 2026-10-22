@@ -61,6 +61,17 @@ jobs:
             http://127.0.0.1:19000/minio/health/ready
       - run: pnpm test
       - run: pnpm build
+      - name: Verify compiled tracking migration in release artifacts
+        run: |
+          node --input-type=module -e '
+            import { verifyCompiledMigrations } from "./dist/database/migration-artifacts.js";
+            const files = verifyCompiledMigrations();
+            if (!files.includes("1792627200002-consolidate-tracking.js"))
+              throw new Error("Tracking migration is missing from release artifacts.");
+            console.log("Verified " + files.length + " migration artifacts, including tracking consolidation.");'
+      - name: Smoke test compiled migration rollout and repeat deploy
+        timeout-minutes: 5
+        run: node tools/check-migration-rollout.mjs
       - run: pnpm test:http
       - name: Show MinIO logs on failure
         if: failure()

@@ -1,5 +1,44 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-22 — Build và CI/CD cho migration tracking
+
+Build tạo manifest SHA-256 và kiểm tra đủ compiled migration so với source.
+Container migration và `pnpm migration:run:build` dùng runner xác minh artifact,
+chạy toàn bộ pending migrations trong transaction và kiểm tra lại catalog.
+CI bắt buộc có artifact `1792627200002-consolidate-tracking.js`, thêm smoke test
+compiled runner hai lần trên DB test riêng. Deploy giữ backup trước khi dừng API,
+dừng writers khi chuyển bảng/view, chỉ khởi động API mới khi migrate thành công;
+nếu lỗi giữ API dừng, không tự rollback hoặc seed.
+
+Local: build đủ 28 migration artifacts, type-check/Biome pass, 5 test artifact gate
+pass; YAML và 16 shell blocks của workflow pass kiểm tra syntax. Docker daemon và
+PostgreSQL test đang tắt nên chưa build Docker image/chạy smoke DB cho runner mới
+tại local; bước smoke đã nằm trong CI. Chưa deploy hoặc chạy DB dev/VPS.
+
+## 2026-10-22 — Gộp audit/receipts và tracking cho Admin
+
+Migration `1792627200002` chuyển bốn bảng receipts vào `mutation_receipts` và
+mười bảng audit hiện có vào `audit_events`; bổ sung audit sửa link Meet trong
+cùng kho. Giữ namespace chống đụng key giữa module, dữ liệu cũ, required fields,
+CHECK/UNIQUE/FK và chế độ chỉ thêm audit/receipt. Tên cũ trở thành view đọc/ghi
+tương thích, không lưu bản sao. Giữ riêng file_metadata/file_objects và bộ chứng
+cứ attendance_recovery_audits/items có khóa ngoại tổng hợp đặc thù.
+
+Thêm `GET /admin/tracking/events` và `GET /admin/tracking/events/:source/:eventId`
+cho ADMIN đang ACTIVE: lọc source/actor/entity/class/session/action/thời gian,
+phân trang, metadata danh sách và dữ liệu gốc khi mở chi tiết; bao gồm chứng cứ
+recovery, không trả payload receipts. Lịch sử Meet mới lưu link trước/sau.
+Swagger, [flow triển khai](../api_flow/ADMIN_TRACKING.md) và collection
+`postman/Mindy-Admin-Tracking.postman_collection.json` đã có.
+
+Kiểm tra trước khi chốt commit tracking: Biome, type-check, build pass;
+235 unit + 5 integration PostgreSQL pass; toàn bộ HTTP 81/81 pass. Migration
+đã rehearse với dữ liệu có sẵn, rollback/up lại, kiểm tra FK/CHECK/UNIQUE,
+append-only và key trùng giữa namespace. Một lần chạy rộng gặp retry storage
+MinIO; chạy riêng file/materials 39/39 rồi chạy lại toàn bộ HTTP 81/81 đều pass.
+Chưa chạy migration trên DB dev/VPS; không cần seed lại. Hoàn thiện trên nhánh
+`codex/mentor-teaching-api-gaps`, không đưa thay đổi tracking vào dev trong chat này.
+
 ## 2026-10-22 — Mentor sửa link meeting của buổi
 
 Thêm PATCH `/mentor/class-sessions/:sessionId/meeting-url`, chỉ effective mentor
@@ -1231,3 +1270,15 @@ notes migration rehearsal, Postman25 requests,4 docs/16 local links/4 JSON examp
 và git diff checks passed. M1–M5 local complete; VPS/production migration/deploy
 và real payment evidence unchanged. Các lỗi hạ tầng/stale release expectations
 trong lượt trước đã được thay bằng evidence cuối này, không gộp pass historical.
+
+### 2026-10-22 — Manager API screen-gap audit, BE-only
+
+Reviewed manager/management controllers, query DTOs and current source permissions.
+User explicitly asked not to inspect FE code; no FE code read or changes. Confirmed
+existing class/HR/finance/material/teaching/leave/attendance/notes routes span several
+prefixes. Recorded proposed dashboard counts, global calendar, settled-payment
+summary, manager student learning history/progress, business audits and future
+Phase5 oversight in existing Phase2.4 flow/API breakdown. Class/course/account
+writes and reconcile remain ADMIN-only unless business permission is redesigned.
+Documentation/source review only; no application/API/schema changes, no new runtime
+tests/build/migration/VPS/browser/live-payment evidence. git diff --check used.
