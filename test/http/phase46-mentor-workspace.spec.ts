@@ -183,6 +183,52 @@ describe.skipIf(!separateTestUrl('phase46_http'))(
       expect(doc.paths).toHaveProperty('/api/v1/mentor/class-sessions/{sessionId}/meeting-url');
     });
 
+    it('exposes consolidated tracking only to admin, validates filters and includes meeting before/after', async () => {
+      const path = '/admin/tracking/events';
+      expect((await request(path)).status).toBe(401);
+      for (const cookie of [manager, mentor, student])
+        expect((await request(path, cookie)).status).toBe(403);
+      for (const query of [
+        'pageSize=101',
+        'source=mutation_receipts',
+        'actorId=bad',
+        'extra=true',
+        'from=2026-10-22',
+        'from=2026-10-23T00:00:00Z&to=2026-10-22T00:00:00Z',
+      ])
+        expect((await request(`${path}?${query}`, admin)).status).toBe(422);
+      const response = await request(
+        `${path}?source=session_meeting_audits&sessionId=${sourceId}&pageSize=1`,
+        admin,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      const page = await json<{
+        items: { id: string; source: string; action: string }[];
+        total: number;
+      }>(response);
+      expect(page.total).toBe(2);
+      expect(page.items).toHaveLength(1);
+      const event = page.items[0];
+      if (!event) throw new Error('Missing event');
+      expect(event.action).toBe('UPDATE_MEETING_URL');
+      expect(event).not.toHaveProperty('data');
+      const detail = await request(`${path}/${event.source}/${event.id}`, admin);
+      expect(detail.status).toBe(200);
+      expect(await json(detail)).toMatchObject({
+        data: { old_meeting_url: 'https://meet.google.com/abc-defg-hij', new_meeting_url: null },
+      });
+      expect((await request(`${path}/${event.source}/${event.id}`, mentor)).status).toBe(403);
+      expect((await request(`${path}/${event.source}/${randomUUID()}`, admin)).status).toBe(404);
+      expect((await request(`${path}/mutation_receipts/${event.id}`, admin)).status).toBe(400);
+      expect((await request(`${path}/session_meeting_audits/bad`, admin)).status).toBe(400);
+      const doc = await json<{ paths: Record<string, unknown> }>(
+        fetch(`${url.replace('/api/v1', '')}/docs-json`),
+      );
+      expect(doc.paths).toHaveProperty('/api/v1/admin/tracking/events');
+      expect(doc.paths).toHaveProperty('/api/v1/admin/tracking/events/{source}/{eventId}');
+    });
+
     it('enforces real cookie/role/path/query validation and publishes the workspace OpenAPI contract', async () => {
       expect((await request(`/mentor/classes/${classId}`)).status).toBe(401);
       expect((await request(`/mentor/classes/${classId}`, student)).status).toBe(403);

@@ -1231,3 +1231,15 @@ notes migration rehearsal, Postman25 requests,4 docs/16 local links/4 JSON examp
 và git diff checks passed. M1–M5 local complete; VPS/production migration/deploy
 và real payment evidence unchanged. Các lỗi hạ tầng/stale release expectations
 trong lượt trước đã được thay bằng evidence cuối này, không gộp pass historical.
+
+### 2026-10-22 — Manager API screen-gap audit, BE-only
+
+Reviewed manager/management controllers, query DTOs and current source permissions.
+User explicitly asked not to inspect FE code; no FE code read or changes. Confirmed
+existing class/HR/finance/material/teaching/leave/attendance/notes routes span several
+prefixes. Recorded proposed dashboard counts, global calendar, settled-payment
+summary, manager student learning history/progress, business audits and future
+Phase5 oversight in existing Phase2.4 flow/API breakdown. Class/course/account
+writes and reconcile remain ADMIN-only unless business permission is redesigned.
+Documentation/source review only; no application/API/schema changes, no new runtime
+tests/build/migration/VPS/browser/live-payment evidence. git diff --check used.

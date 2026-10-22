@@ -98,3 +98,30 @@ file mới trước push; không coi source local là đã có trên remote/VPS.
 MinIO/FILE_JOB hiện hữu đang hoạt động. Chưa agent deploy hoặc smoke test trên VPS;
 sau rollout kiểm readiness, manager class list và DOCX upload/approve thực tế.
 Đây là review cấu hình/readiness, không chạy lại BE tests trong lượt review này.
+
+## 2026-10-22 — Audit nhu cầu manager theo màn hình (BE-only)
+
+Source review only; user yêu cầu không đọc code FE. Manager có nhiều API ngoài tag
+manager: /management cho teaching/leave/makeup/attendance/notes, /class-sessions
+cho vận hành buổi, /files cho upload, /manager cho catalog/material/HR/commerce.
+Không đánh giá độ đủ chỉ bằng tên prefix hoặc số route trong một Swagger tag.
+
+Các màn hình dùng được từ source: course/class/unit/timetable/roster/contact;
+mentor/student directory và relationships; cash list/confirm, order/payment detail;
+material authoring/review; leave approval, substitute/reschedule/makeup/conflict
+handling; attendance summary/audits/recovery và notes staff.
+
+Đề xuất chưa implement, ưu tiên UI journey:
+P0 dashboard số liệu + counts hàng chờ có link/filter; P0 lịch vận hành toàn trung
+ tâm lọc ngày/lớp/mentor (hiện có timetable theo lớp và lịch từng mentor); P1 finance
+summary theo settled payments/dateField/currency, không cộng order totals lặp;
+P1 hồ sơ student học tập xuyên lớp/chi tiết attendance/progress theo manager role;
+P1 audit trail nghiệp vụ đọc hợp nhất; Phase5 assignment oversight sau khi có source.
+Queue chi tiết material/leave/incomplete/conflict/cash đã có, cần compose counts/
+drilldown, không viết lại mutations. Export là nhu cầu sau theo scope/report filters.
+
+Tạo course/class, lifecycle lớp, quản trị tài khoản và reconcile hiện ADMIN-only:
+đây là quyền nghiệp vụ cần quyết định nếu manager chịu trách nhiệm thao tác đó,
+không mở toàn bộ /admin cho role manager. Không có source/contract/runtime/FE/
+migration/deploy changes từ audit này. Đây là đề xuất BE phục vụ màn hình, không
+phải review implementation FE hoặc bằng chứng API đang deploy.
