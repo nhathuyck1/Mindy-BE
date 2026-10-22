@@ -227,11 +227,13 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       receivedAmount: order.totalAmount,
     });
     expect(confirmed.status).toBe(200);
-    await db.query('UPDATE class_sessions SET starts_at=$2,ends_at=$3 WHERE id=$1', [
-      s.id,
-      new Date(Date.now() - 3600000),
-      new Date(Date.now() + 3600000),
-    ]);
+    await db.query(
+      `UPDATE class_sessions SET
+        starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
+        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        WHERE id=$1`,
+      [s.id],
+    );
     const key = randomUUID(),
       input = { expectedVersion: s.version };
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);

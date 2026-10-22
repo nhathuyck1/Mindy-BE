@@ -1,5 +1,15 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-22 — Tổng quan nghiệp vụ BE bằng tiếng Việt
+
+Thêm [tài liệu ôn nghiệp vụ](../api_flow/BE_BUSINESS_OVERVIEW_VI.md) dựa trên
+controller/service/domain và flow hiện hành: actor, mô hình Course/Class/Session,
+checkout/hold, CASH/payOS, quyền học, tài liệu, mentor workspace, attendance,
+leave/makeup và QUIZ; kèm câu hỏi tình huống và ví dụ xuyên suốt.
+Làm rõ bỏ unit-release, MANAGER xác nhận CASH, ZIP/reporting/completion còn thiếu.
+Không thay API/code/schema; chỉ đối chiếu source và kiểm tra tài liệu tĩnh,
+không chạy lại runtime tests/migration/provider/deployment.
+
 ## 2026-10-22 — Build và CI/CD cho migration tracking
 
 Build tạo manifest SHA-256 và kiểm tra đủ compiled migration so với source.
