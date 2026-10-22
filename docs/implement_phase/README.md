@@ -1,11 +1,16 @@
 # Implementation phases
 
-2026-10-22 — Kế hoạch mới, **chưa implementation**:
+2026-10-22 — Phase5 QUIZ đã implement local trên `codex/phase5-assignments`:
+mentor soạn/publish đề, student start/resume/autosave/nộp toàn bài, BE chấm và trả
+result, durable timeout worker. ZIP pipeline/grading và reports A3-A5 còn TODO.
+Chi tiết [progress Phase5](../progress/phase%205/PHASE_5_PROGRESS.md); không sửa FE/deploy.
+
+Planning baseline 2026-10-22 (lịch sử, trạng thái mới xem progress từng phase):
 [Phase4.6 Mentor workspace](phase%204/PHASE_4_6_MENTOR_TEACHING_WORKSPACE.md)
 (detail/quyền dạy thay/reports/stored progress/notes) và
 [Phase5 Assignment](phase%205/PHASE_5_ASSIGNMENTS.md) (TEST/HOMEWORK,
 QUIZ ABCD timer optional, ZIP deadline ngày/giờ). Assignment thuộc ClassSession
-theo DBML, chưa có runtime feature. Quiz nộp toàn bài rồi BE mới chấm/trả đáp án.
+theo DBML; QUIZ đã có runtime slice nêu trên. Quiz nộp toàn bài rồi BE mới chấm/trả đáp án.
 Xem flow/API/progress được liên kết trong từng plan; không đổi 4.5 release thành done.
 
 2026-10-16 — Phase2.4 A–C đã implement source: manager class/contact, HR directory/relationships, order/payment read. D summary backlog; local gates xem progress2.4; chưa deploy. Các đoạn planning dưới giữ lịch sử theo thời điểm.
