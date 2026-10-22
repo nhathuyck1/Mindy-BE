@@ -1,14 +1,10 @@
 # Core flow implementation plan
 
-2026-10-22 implementation update: Phase5 QUIZ vertical slice is implemented locally,
-including authoring, private keys, start/resume, whole-paper submit/scoring/result
-and durable expiry jobs. ZIP storage/grading and A5 aggregates remain pending.
-[Phase5 progress](../progress/phase%205/PHASE_5_PROGRESS.md) records local evidence;
-no FE changes or deployment. Original planning extension follows:
+2026-10-22 planning extension (not implemented):
 [Phase4.6 Mentor workspace](../implement_phase/phase%204/PHASE_4_6_MENTOR_TEACHING_WORKSPACE.md)
 and [Phase5 Assignment](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md).
 Phase5 here is a new feature label, not the checkout Milestone5 below. Assignments
-are separate from the original foundation; QUIZ slice shipped locally, ZIP pending.
+remain excluded from implemented foundation until their new vertical slices ship.
 User scope: TEST/HOMEWORK purpose, QUIZ ABCD optional minute timer and ZIP exact
 date/time deadline; session-owned assignments and enrollment-bound submissions.
 

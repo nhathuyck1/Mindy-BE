@@ -1,30 +1,11 @@
 # Phase 5 — Assignment: bài kiểm tra/BTVN, QUIZ ABCD hoặc ZIP
 
-2026-10-22 · Base `1e89579` · IN PROGRESS trên branch `codex/phase5-assignments`. QUIZ đã có implementation và local tests; ZIP/reporting còn pending.
+2026-10-22 · Base `1e89579` · PLANNED, chưa implementation/migration/runtime test.
 Phase 5 là tên feature assignment mới, khác milestone 5 checkout của core plan cũ.
 [Flow](../../api_flow/PHASE_5_FLOW.md) · [API proposal](../../api_flow/PHASE_5_flow-api-breakdown.md) ·
 [Progress](../../progress/phase%205/PHASE_5_PROGRESS.md).
 
-## Implementation decisions — 2026-10-22
-
-Đã bắt đầu A0-A2: migration1792713600000, module assignments, authoring, private keys,
-quiz start/resume/autosave/submit/result và durable timeout worker. Current contract
-ở API breakdown, không suy các schema/route đề xuất bên dưới đều đã có.
-- Bám entitlement source hiện tại: ACTIVE enrollment, bỏ legacy unit release gates.
-- Quiz snapshot/answers/result dùng typed SQL+JSONB theo teaching-notes; chưa tạo
-  bảng grade/grade_revisions cho ZIP. Result quiz là durable auto-released snapshot.
-- Submit trả QuizAttemptDto với result nested; metadata Student không có questions.
-- ZIP tạo draft được nhưng publish409 ZIP_PIPELINE_NOT_IMPLEMENTED. A3-A5 còn TODO;
-  mentor queue/history/metrics và assignmentSummary aggregation chưa implement.
-- API authoring PATCH chỉ sửa draft title/description/dueAt/timer. Chưa mở published
-  ZIP extensions/maxAttempts changes; quiz/ZIP published content vẫn frozen.
-- 64KiB JSON request limit hiện hành vẫn áp dụng cho replacement cả bộ câu hỏi.
-- Không thêm TypeORM entities chỉ để mirror SQL; module sở hữu schema qua migration,
-  private typed persistence rows và DTO mapping. Biên Classes/Users/Enrollments qua
-  exported providers, không import repositories ngoài module.
-- Full plan tiếp tục qua A3/A4 pipeline/grade release rồi A5 reports và full handoff.
-
-## 1. Quan hệ thiết kế ban đầu (planning baseline)
+## 1. Quan hệ hiện tại trong tài liệu, chưa có trong runtime
 
 `document/mindy_center_full.dbml` thiết kế:
 

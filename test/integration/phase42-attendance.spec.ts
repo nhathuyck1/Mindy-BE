@@ -65,12 +65,11 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     if (!classId) throw new Error('Missing class');
     const session = (await f.read.getDetail(classId)).units[0]?.sessions[0];
     if (!session) throw new Error('Missing session');
-    const day = toLocalDate(new Date(), teaching.timeZone());
     // Test only: schedule today, without changing the production day/range policy.
     await db.query('UPDATE class_sessions SET starts_at=$2,ends_at=$3 WHERE id=$1', [
       session.id,
-      new Date(`${day}T00:00:00+07:00`),
-      new Date(`${day}T23:59:59.999+07:00`),
+      new Date(Date.now() - 3600000),
+      new Date(Date.now() + 3600000),
     ]);
     if (paid)
       await f.cash.confirm(
@@ -424,9 +423,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
   it('rejects mentor clock injection and outside-day starts; manager recovery keeps the scheduled calendar deadline', async () => {
     const a = await fixture();
     const v = await version(a.sessionId),
-      past = new Date(
-        `${toLocalDate(new Date(Date.now() - 3 * 86400000), teaching.timeZone())}T12:00:00+07:00`,
-      );
+      past = new Date(Date.now() - 3 * 86400000);
     await db.query('UPDATE class_sessions SET starts_at=$2,ends_at=$3 WHERE id=$1', [
       a.sessionId,
       past,
@@ -968,7 +965,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
 
   it('allows edits until the end of the following scheduled day and expires exactly at its midnight boundary', async () => {
     const a = await fixture();
-    const day = toLocalDate(new Date(Date.now() + 86400000), teaching.timeZone());
+    const day = toLocalDate(new Date(), teaching.timeZone());
     const startsAt = new Date(`${day}T08:00:00+07:00`);
     await db.query('UPDATE class_sessions SET starts_at=$2,ends_at=$3 WHERE id=$1', [
       a.sessionId,
