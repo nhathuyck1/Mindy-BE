@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
 import { CatalogModule } from '../catalog/catalog.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
+import { MentorAvailabilityService } from '../mentor-availability/mentor-availability.service.js';
 import { ScheduleReservationsModule } from '../schedule-reservations/schedule-reservations.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AdminClassesController } from './controllers/admin-classes.controller.js';
@@ -61,6 +62,7 @@ import { UnitContentService } from './services/unit-content.service.js';
     SessionOperationsController,
   ],
   providers: [
+    MentorAvailabilityService,
     UnitContentService,
     SessionLifecycleService,
     SessionOperationsService,
@@ -77,6 +79,7 @@ import { UnitContentService } from './services/unit-content.service.js';
     MentorContentContextService,
   ],
   exports: [
+    ClassScheduleService,
     SessionLifecycleService,
     TeachingReadService,
     MentorConflictService,

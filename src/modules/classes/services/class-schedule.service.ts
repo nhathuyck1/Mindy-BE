@@ -8,11 +8,12 @@ import { ScheduleReservationsService } from '../../schedule-reservations/schedul
 import {
   isSingleTeachingDay,
   isWithinClassPeriod,
+  toLocalDate,
   withLocalTime,
 } from '../domain/class-calendar.js';
 import type { ScheduleClassSessionDto } from '../dtos/schedule-class-session.dto.js';
 import type { UpdateClassSessionTimeDto } from '../dtos/update-class-session-time.dto.js';
-import type { ClassEntity } from '../entities/class.entity.js';
+import { ClassEntity } from '../entities/class.entity.js';
 import { ClassSessionEntity } from '../entities/class-session.entity.js';
 import { ClassUnitEntity } from '../entities/class-unit.entity.js';
 import { ClassStatus } from '../enums/class-status.enum.js';
@@ -52,6 +53,57 @@ export class ClassScheduleService {
 
   bindsMentorCalendar(classEntity: ClassEntity): boolean {
     return SCHEDULE_BINDING_STATUSES.includes(classEntity.status);
+  }
+
+  /** Public transaction participant for approved leave; caller owns Class/Session/mentor locks. */
+  async replaceCancelledSession(
+    m: EntityManager,
+    c: ClassEntity,
+    source: ClassSessionEntity,
+    target: { startsAt: Date; endsAt: Date; mentorId: string },
+    actorId: string,
+    reason: string,
+  ): Promise<ClassSessionEntity> {
+    if (source.status !== SessionStatus.CANCELLED)
+      throw new TeachingConflictException(
+        'SESSION_STATE_CONFLICT',
+        'Cancel the source before replacing it',
+      );
+    const endBefore = c.endDate,
+      endAfter = toLocalDate(new Date(+target.endsAt - 1), this.timeZone());
+    if (endAfter > c.endDate) c.endDate = endAfter;
+    const repo = m.getRepository(ClassSessionEntity);
+    const last = await repo.findOne({
+      where: { classUnitId: source.classUnitId },
+      order: { sessionNumber: 'DESC' },
+    });
+    const s = repo.create({
+      classUnitId: source.classUnitId,
+      sessionNumber: (last?.sessionNumber ?? 0) + 1,
+      title: source.title,
+      startsAt: target.startsAt,
+      endsAt: target.endsAt,
+      status: SessionStatus.SCHEDULED,
+      mentorOverrideId: target.mentorId,
+      roomName: source.roomName,
+      meetingUrl: source.meetingUrl,
+      makeupForSessionId: source.id,
+      makeupRootSessionId: source.makeupRootSessionId ?? source.id,
+    });
+    this.assertInterval(s, c);
+    await repo.save(s);
+    await this.audit(m, c, s, actorId, reason, 'MAKEUP', this.snapshot(source), endBefore);
+    return s;
+  }
+
+  async finishScheduleBatch(m: EntityManager, classes: readonly ClassEntity[]): Promise<void> {
+    for (const c of classes) {
+      c.assignmentVersion += 1;
+      await m.getRepository(ClassEntity).save(c);
+      await this.assertNoClassOverlap(m, c.id);
+      await this.assertMentorAvailable(m, c);
+      await this.recordConflicts(m, c.id);
+    }
   }
 
   assertInterval(session: ClassSessionEntity, c: ClassEntity): void {

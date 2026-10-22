@@ -310,3 +310,8 @@ Không đổi API3.3/3.4; không FE/development/VPS migration hoặc server/brow
 Kiểm chứng tích hợp15/10: pnpm check513/513 (48 suites), HTTP60/60 (5 suites)
 qua cấu hình mặc định; lint/type-check/build pass. Migration compatibility3/3
 đã chạy lại sau guard tên DB test. Không VPS/browser/FE hoặc live payment evidence.
+> Cập nhật17/10/2026: user xác nhận luồng thanh toán thật trên VPS đã test
+> thành công và phần dọn file3.5 đã hoàn tất. Các ghi chép pending cũ là lịch sử;
+> không suy thành đã nghiệm thu mọi ca email/A1, metadata hoặc3.6. Lượt này chỉ
+> đồng bộ trạng thái theo user, không chạy lại runtime/deploy và không đổi flow,
+> endpoint, payload hoặc API breakdown hiện hành.

@@ -139,6 +139,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         OrderDetailEntity,
       ],
       migrations: [
+        MentorLeave1792195200000,
         IdentityFoundation1790640000000,
         AddUserUpdatedAt1790640000001,
         RegistrationAndGoogleIdentity1790760000000,
@@ -1365,3 +1366,5 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
     });
   });
 });
+
+import { MentorLeave1792195200000 } from '../../src/database/migrations/1792195200000-mentor-leave.js';

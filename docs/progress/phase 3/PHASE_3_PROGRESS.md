@@ -1,5 +1,11 @@
 # Phase 3 — Tiến độ File + Materials
 
+## 2026-10-17 — User xác nhận đã dọn file 3.5
+
+Phần dọn file 3.5 đã hoàn tất theo xác nhận trực tiếp của user; không tiếp tục
+liệt kê cleanup là chưa làm. Xác nhận này không tự đóng các tác vụ trích metadata
+hoặc nghiệm thu tổng thể 3.6. Agent không chạy lại cleanup/test; không đổi API.
+
 Cập nhật: **2026-10-15**.
 Kế hoạch: [PHASE_3_FILES_MATERIALS.md](../../implement_phase/phase%203/PHASE_3_FILES_MATERIALS.md).
 
@@ -88,7 +94,7 @@ VPS/browser/FE và user sign-off3.3/3.4 vẫn pending; evidence3.2 không thay n
 | 3.2 Upload slice | Hoàn tất local + nghiệm thu VPS theo user2026-10-12 | Files/MinIO/migration/worker/reference; PDF/MP4 READY/private objects; chi tiết progress3.2. |
 | 3.3 Material management | 3.3.1–3.3.5 implemented/local verified | Typed authoring/review/release, refs/audit/schema và acceptance/handoff; VPS/user sign-off pending. |
 | 3.4 Student access + staff preview | ARTICLE/FILE/VIDEO và scoped assets/staff preview implemented local14/10 | Pinned-version URLs/recheck/Range/expiry và typed reads có local evidence; VPS/browser/FE pending. Xem [progress3.4](PHASE_3_4_PROGRESS.md). |
-| 3.5 Metadata/lifecycle | Chưa thực hiện | Chưa có worker/cleanup/purge evidence. |
+| 3.5 Metadata/lifecycle | Dọn file hoàn tất theo user17/10 | Cleanup đã xong theo user; phạm vi trích metadata chưa được xác nhận riêng. |
 | 3.6 Quality gate/rollout | Chưa thực hiện | 3.1/3.2 đã test local; full journey 3.3–3.6, staging và deploy chưa nghiệm thu. |
 
 ## Kiểm tra lượt planning ban đầu — 2026-10-09 (lịch sử)

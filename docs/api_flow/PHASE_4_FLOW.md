@@ -1,5 +1,21 @@
 # Phase 4 — Flow điểm danh, nghỉ dạy, học bù và dạy thay
 
+> Implementation17/10: workflow Mentor xin nghỉ/Manager duyệt và approved-leave
+> availability đã có backend; gap chức năng4.4 được xử lý trong lượt này.
+> [Flow4.4](PHASE_4_4_FLOW.md) và [API mục19](PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+> Candidate availabilityBasis=TEACHING_SCHEDULE_AND_APPROVED_LEAVE; cần migration
+> 1792195200000 trước deploy. Các ghi chép gap bên dưới giữ lịch sử;4.5 vẫn là
+> server/browser/release acceptance riêng, không tự đóng bởi implementation này.
+
+## 2026-10-17 — Phạm vi nghiệm thu 4.5
+
+Còn server journey4.4 → FE/browser theo role → release/migration/backup/rollback
+acceptance. Local tests/Swagger/Postman đã có; server/Postman4.3 đã được user
+xác nhận xong15/10. Xin nghỉ/duyệt và approved intervals là gap chức năng4.4
+riêng. Không đổi flow/API hoặc breakdown trong lượt giải thích này; không chạy
+lại test/deploy. Thanh toán thật VPS và dọn file3.5 đã xong theo user17/10,
+không còn liệt kê chúng là việc chưa thực hiện.
+
 > 2026-10-16: CASH chuyển sang manager bất kỳ, không cần assignment. Mentor chỉ đọc payment roster rồi sync attendance sau PAID. [Flow/contract thu tiền](PHASE_2_3_FLOW.md#thu-tiền-mặt-chuyển-sang-manager--2026-10-16). Tương thích evidence mentor cũ được giữ; Student flow không đổi.
 
 ## 2026-10-16 — Constraint compatibility trong CI

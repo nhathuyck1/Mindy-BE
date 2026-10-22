@@ -2,7 +2,7 @@
   "info": {
     "name": "Mindy Phase 4.4 - Session Operations, Makeup and Attendance Reports",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "4.4a Session operations, 4.4b placements/guest and 4.4c timetable/history/reports are implemented locally. Requires compiled migrations through1792022400001 and all attendance prerequisites. Leave approval/approved intervals remain a separate source gap. Use the existing login cookie jar; switch ACTIVE ADMIN/MANAGER, STUDENT and assigned target MENTOR cookies explicitly. Mutations require current versions and a UUIDv4 Idempotency-Key: retry identical intent with the same key/body; use a new key for new intent. Do not run the entire mutation collection blindly. 4.4c reads never mutate; Student history/summary are own metadata only, including terminal enrollments. Schedule requires paired from/to<=31 days; report optional paired ranges<=93 days, omitted report range is full history/backlog. Guest context is session-only, no receiving Class/material/CASH entitlement. Source credit counts once, nullable rate means no finalized eligible obligations. No deployment or live payment evidence is implied."
+    "description": "4.4a Session operations, 4.4b placements/guest and 4.4c timetable/history/reports are implemented locally. Requires compiled migrations through1792195200000 and all attendance prerequisites. Leave preview/slots/create/own/staff review and approved intervals are implemented locally17/10. See folder21; switch actor cookies explicitly. Clear the corresponding leave action key only for new intent; identical retries retain key/body. Candidate basis now TEACHING_SCHEDULE_AND_APPROVED_LEAVE. Use the existing login cookie jar; switch ACTIVE ADMIN/MANAGER, STUDENT and assigned target MENTOR cookies explicitly. Mutations require current versions and a UUIDv4 Idempotency-Key: retry identical intent with the same key/body; use a new key for new intent. Do not run the entire mutation collection blindly. 4.4c reads never mutate; Student history/summary are own metadata only, including terminal enrollments. Schedule requires paired from/to<=31 days; report optional paired ranges<=93 days, omitted report range is full history/backlog. Guest context is session-only, no receiving Class/material/CASH entitlement. Source credit counts once, nullable rate means no finalized eligible obligations. No deployment or live payment evidence is implied."
   },
   "variable": [
     {
@@ -118,6 +118,61 @@
     {
       "key": "scheduleTo",
       "value": "2026-11-07T17:00:00Z",
+      "type": "string"
+    },
+    {
+      "key": "leaveFromDate",
+      "value": "2026-11-06",
+      "type": "string"
+    },
+    {
+      "key": "leaveToDate",
+      "value": "2026-11-06",
+      "type": "string"
+    },
+    {
+      "key": "leaveTargetDate",
+      "value": "2026-11-08",
+      "type": "string"
+    },
+    {
+      "key": "leavePeriod",
+      "value": "FULL_DAY",
+      "type": "string"
+    },
+    {
+      "key": "leaveId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveVersion",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "leaveSourceVersions",
+      "value": "[]",
+      "type": "string"
+    },
+    {
+      "key": "leaveCreateKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveApproveKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveWithdrawKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveRejectKey",
+      "value": "",
       "type": "string"
     }
   ],
@@ -711,6 +766,421 @@
                   "const body=pm.response.json();",
                   "pm.test('Stable page envelope',()=>{pm.expect(body.items).to.be.an('array');pm.expect(body.total).to.be.at.least(0);pm.expect(body).to.have.property('asOf');pm.expect(body).to.have.property('timeZone');});"
                 ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "21 - Mentor leave request and approval (choose actor/action)",
+      "description": "Backend17/10, migration1792195200000. Example FULL_DAY maps one source date; for multiple affected dates provide one mapping per date. Partial-day example uses sessionMappings from API4.4 section19. Pending does not reserve targets. Review full-day student conflicts before manually enabling acknowledgeStudentConflicts; default false.",
+      "item": [
+        {
+          "name": "01 Mentor preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests/preview",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests", "preview"]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromDate\": \"{{leaveFromDate}}\",\n  \"toDate\": \"{{leaveToDate}}\",\n  \"period\": \"{{leavePeriod}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code===200) { const r=pm.response.json(); pm.collectionVariables.set('leaveSourceVersions',JSON.stringify(r.sourceVersions)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Mentor suggested makeup slots",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests/makeup-slots",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests", "makeup-slots"]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"sourceSessionId\":\"{{sessionId}}\",\"targetDate\":\"{{leaveTargetDate}}\",\"targetPeriod\":\"AFTERNOON\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Mentor create FULL_DAY pending",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{leaveCreateKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests"]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"fromDate\":\"{{leaveFromDate}}\",\"toDate\":\"{{leaveToDate}}\",\"period\":\"FULL_DAY\",\"reason\":\"Personal leave\",\"sourceVersions\":{{leaveSourceVersions}},\"dayMappings\":[{\"sourceDate\":\"{{leaveFromDate}}\",\"targetDate\":\"{{leaveTargetDate}}\"}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('leaveCreateKey')) pm.collectionVariables.set('leaveCreateKey', pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) { const r=pm.response.json(); pm.collectionVariables.set('leaveId',r.id); pm.collectionVariables.set('leaveVersion',r.version); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Mentor list own",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Mentor own detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests/{{leaveId}}?page=1&pageSize=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests", "{{leaveId}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Mentor withdraw pending (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{leaveWithdrawKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mentor/leave-requests/{{leaveId}}/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["mentor", "leave-requests", "{{leaveId}}", "withdraw"]
+            },
+            "description": "Use ACTIVE MENTOR cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"expectedVersion\":{{leaveVersion}},\"reason\":\"Review leave request\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('leaveWithdrawKey')) pm.collectionVariables.set('leaveWithdrawKey', pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Staff list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/management/mentor-leave-requests?page=1&pageSize=20&status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["management", "mentor-leave-requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                }
+              ]
+            },
+            "description": "Use ACTIVE ADMIN/MANAGER cookies. Do not run alternative state transitions sequentially. See API4.4 section19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Staff current detail/conflicts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/management/mentor-leave-requests/{{leaveId}}?page=1&pageSize=100",
+              "host": ["{{baseUrl}}"],
+              "path": ["management", "mentor-leave-requests", "{{leaveId}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Use ACTIVE ADMIN/MANAGER cookies. Do not run alternative state transitions sequentially. See API4.4 section19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if(pm.response.code===200) pm.collectionVariables.set('leaveVersion',pm.response.json().version);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 Staff approve after review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{leaveApproveKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/management/mentor-leave-requests/{{leaveId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["management", "mentor-leave-requests", "{{leaveId}}", "approve"]
+            },
+            "description": "Use ACTIVE ADMIN/MANAGER cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"expectedVersion\":{{leaveVersion}},\"reason\":\"Approve reviewed leave\",\"acknowledgeStudentConflicts\":false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('leaveApproveKey')) pm.collectionVariables.set('leaveApproveKey', pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 Staff reject (alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{leaveRejectKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/management/mentor-leave-requests/{{leaveId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["management", "mentor-leave-requests", "{{leaveId}}", "reject"]
+            },
+            "description": "Use ACTIVE ADMIN/MANAGER cookies. Do not run alternative state transitions sequentially. See API4.4 section19.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"expectedVersion\":{{leaveVersion}},\"reason\":\"Review leave request\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('leaveRejectKey')) pm.collectionVariables.set('leaveRejectKey', pm.variables.replaceIn('{{$randomUUID}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]
               }
             }
           ]

@@ -1,6 +1,6 @@
 # Phase 4.4 — Flow triển khai
 
-Ngày cập nhật: **2026-10-16**. **4.4b hoàn tất theo user; 4.4c CLOSED LOCAL/check456/HTTP48**, chưa hoàn tất toàn4.4.
+Ngày cập nhật: **2026-10-17**. **4.4a leave/approved intervals đã implement backend**, cùng4.4b/4.4c hiện hữu. Gate cuối tại Progress4.4; server/browser acceptance ở4.5 riêng.
 [Plan](../implement_phase/phase%204/PHASE_4_4_LEAVE_MAKEUP_STUDENT_OPERATIONS.md) ·
 [API breakdown](PHASE_4_4_flow-api-breakdown.md) ·
 [Progress](../progress/phase%204/PHASE_4_4_PROGRESS.md) · [Flow tổng](PHASE_4_FLOW.md).
@@ -203,3 +203,31 @@ pnpm test:http45/45 tests/7 suites,0 skip. Migrations chỉ DB _test; HTTP compi
 Nest app với cookie/guards thật, fake PayOS và local private MinIO. Trigger alias
 trùng biến đã sửa sau regression; migration rehearsals tháo/reapply đúng dependency,
 không sửa migrations cũ. Docs/Postman/diff kiểm tra tĩnh, không bằng deployment.
+## 2026-10-17 — Bổ sung workflow nghỉ có duyệt (4.4a)
+
+Đã implement backend: Mentor preview toàn bộ buổi trong khoảng nghỉ → chọn
+lịch bù → tạo PENDING → xem/rút own request; Manager/Admin đọc → approve/reject.
+Pending không đổi lịch hoặc giữ slot. Preview/range tối đa93 ngày inclusive,
+tối đa500 buổi; báo trước hai ngày lịch theo buổi affected sớm nhất.
+
+Approval khóa request → Class IDs tăng dần → Session IDs → mentor → student IDs;
+kiểm lại toàn tập source/version/effective mentor, placements và target conflicts.
+Một transaction cancel sources → tạo replacements cùng unit/mentor → auto extend
+Class.endDate → lưu approved intervals → queue student conflicts/audits/receipt.
+Nghỉ buổi chặn mọi student overlap; FULL_DAY giữ clock, cho overlap student khi
+Manager acknowledge rõ. GET detail/list chỉ project EXPIRED; command persist
+EXPIRED/audit rồi trả409, không rollback mất dấu hết hạn.
+
+Provider khoảng nghỉ dùng chung trong candidate discovery, schedule/add/bulk/open,
+assignment class/session và candidate/create guest makeup. DRAFT vẫn không giữ
+lịch, kiểm lại trước open. Candidate availabilityBasis đổi thành
+TEACHING_SCHEDULE_AND_APPROVED_LEAVE. Session và Class vẫn do Classes sở hữu;
+TeachingOperations điều phối qua các service export và lưu leave bằng SQL typed,
+theo pattern placements đã có. Không dependency/env/worker/email/FE mới.
+
+Migration additive1792195200000; chạy trước code mới trên server. Nếu đã có leave
+history thì không down schema: rollback application và giữ dữ liệu. Đây là
+implementation/local verification, chưa deploy/VPS/browser4.5. Contract mới:
+[mục19 API4.4](PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+Gate cuối local17/10: pnpm check634/634 tests/63 suites,lint/type-check/build pass;
+compiled HTTP80/80 tests/9 suites,0 skip; PG/MinIO test riêng và fake PayOS.

@@ -1,5 +1,10 @@
 # Phase 4.1 — Progress và đối chiếu plan với code
 
+**17/10:** GAP41-03 đóng phần backend/local nhờ workflow4.4a và approved leave
+provider. Candidate availabilityBasis=TEACHING_SCHEDULE_AND_APPROVED_LEAVE;
+source/evidence hiện hành tại [Progress4.4](PHASE_4_4_PROGRESS.md). Các log
+dependency leave trước17/10 giữ lịch sử; material-context/release nghiệm thu riêng.
+
 2026-10-16 implementation4.4c: GAP41-01 đóng local bằng public Attendance
 projection trên timetable, effective Session mentor (terminal legacy nullable),
 current access/CASH masking/guest scope.20 PG/3 HTTP4.4c và13 regression lịch
@@ -122,3 +127,9 @@ Schedule add/time/open reject overnight theo quyết định user mới.
 Không migrate dev/VPS, sửa FE, deploy hoặc commit/push. GAP41-01–03/07 vẫn mở:
 Student effective mentor/Materials context/approved leave/server acceptance.
 Không coi current Class cancel state race test là cancel orchestration đã có.
+> 17/10/2026: GAP41-03 đã được xử lý ở backend/local: approved intervals provider,
+> candidate filtering và shared mentor checker cho schedule/assignment writers.
+> availabilityBasis=TEACHING_SCHEDULE_AND_APPROVED_LEAVE. Contract/gates hiện hành
+> tại [API4.4 mục19](../../api_flow/PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17)
+> và [Progress4.4](PHASE_4_4_PROGRESS.md). Các ghi chép leave planned bên dưới giữ
+> baseline lịch sử; không đóng material-context handoff hoặc server/browser4.5.

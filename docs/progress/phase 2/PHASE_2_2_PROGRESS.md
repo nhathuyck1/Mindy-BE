@@ -1,5 +1,12 @@
 # Phase 2.2 — Tiến độ tích hợp payOS BE và giao dịch thật
 
+## 2026-10-17 — User xác nhận thanh toán thật trên VPS thành công
+
+Luồng thanh toán thật đã test thành công trên VPS theo xác nhận trực tiếp của
+user. Không tiếp tục liệt kê live payment là chưa thực hiện; các mục pending
+bên dưới giữ làm lịch sử. Agent không chạy lại hoặc tự bổ sung evidence cho
+từng ca email/A1 chưa được xác nhận riêng. Không đổi API/payment runtime.
+
 ## 2026-10-16 — Manager thu tiền mặt ở mọi lớp
 
 Theo yêu cầu user, bỏ quyền mentor xác nhận CASH; manager active bất kỳ được xem

@@ -1,5 +1,15 @@
 # Mindy Postman checks
 
+Phase4.4 leave17/10: trong `Mindy-Session-Operations-Phase44.postman_collection.json`
+có folder21 với preview/slots/create/own list/detail/withdraw và staff list/detail/
+approve/reject. Cần migration1792195200000. Đổi cookie actor theo từng request;
+FULL_DAY mẫu một sourceDate, range nhiều ngày phải bổ sung đủ dayMappings.
+Chọn sourceVersions từ preview, review current conflicts trước approve; cờ
+acknowledgeStudentConflicts mặc địnhfalse, không tự bật. Key action được tạo khi
+trống: retry giữ key/body, ý định mới xóa key tương ứng để tạo lại. Withdraw/reject/
+approve là lựa chọn thay thế, không chạy cả collection mù. API và rollback:
+[contract4.4 mục19](../docs/api_flow/PHASE_4_4_flow-api-breakdown.md#19-mentor-leave-requests--implementation-2026-10-17).
+
 Cập nhật CASH 2026-10-16: collection BE dùng manager_email/manager_password,
 manager/classes → class students → manager/cash-orders/:orderId/confirm.
 Manager không cần gán lớp; mentor không còn quyền thu/xác nhận tiền mặt.

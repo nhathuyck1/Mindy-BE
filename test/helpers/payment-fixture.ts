@@ -21,6 +21,7 @@ import { IsolateAttendanceUnitConstraint1791856799999 } from '../../src/database
 import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
+import { MentorLeave1792195200000 } from '../../src/database/migrations/1792195200000-mentor-leave.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -124,6 +125,7 @@ export async function paymentDatabase(
       ...(extra.entities ?? []),
     ],
     migrations: [
+      MentorLeave1792195200000,
       ...new Set([
         IdentityFoundation1790640000000,
         AddUserUpdatedAt1790640000001,

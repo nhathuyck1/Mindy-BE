@@ -1,5 +1,31 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-17 — Triển khai nốt workflow nghỉ có duyệt 4.4
+
+Đã implement request/preview/slots/own/staff list/detail, withdraw/reject/approve,
+approved intervals và kiểm lịch/candidates/guest placements. Approval atomic
+cancel sources → replacements cùng unit/request mentor → extend endDate →
+intervals/conflict queue/audits/receipt; current source/version/roles/placements
+được recheck dưới Class/Session/mentor/student locks. Có notice2 calendar days,
+FULL_DAY acknowledgment và partial-day student conflict guards; GET expiry không
+ghi DB, command persist EXPIRED trước409. Không FE/payment/email/env/dependency.
+Migration1792195200000 và down guard; server/browser/release4.5 còn riêng.
+[Progress4.4](phase%204/PHASE_4_4_PROGRESS.md) ghi gates và giới hạn local.
+Gate cuối17/10: **pnpm check634/634 tests/63 suites, lint/type-check/build pass;
+pnpm test:http80/80 tests/9 suites,0 skip**. Focused leave PG15/calendar4 và
+migration compatibility5 pass; local PostgreSQL/MinIO riêng, fake PayOS.
+
+## 2026-10-17 — Xác nhận thanh toán VPS, dọn file 3.5 và phạm vi 4.5
+
+User xác nhận luồng thanh toán thật đã test thành công trên VPS và phần dọn
+file 3.5 đã hoàn tất. Đây là xác nhận trực tiếp của user, không phải agent chạy
+lại; các ghi chép pending trước đây là lịch sử. Không tự suy thành đã nghiệm thu
+mọi ca email/A1 hoặc mọi tác vụ trích metadata của 3.5.
+4.5 còn nghiệm thu tích hợp 4.4 trên server, FE/browser theo role và release/
+backup/rollback; không làm lại server/Postman 4.3 đã được user xác nhận xong.
+Workflow xin nghỉ/duyệt và approved intervals là gap chức năng 4.4 riêng.
+Lượt này chỉ đối chiếu/cập nhật tài liệu, không test runtime hoặc deploy mới.
+
 ## 2026-10-16 — Phase2.4 A–C và manager Materials text HTML
 
 Đã implement manager class/contact, role-scoped mentor/student directory và
