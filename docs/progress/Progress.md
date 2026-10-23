@@ -1,5 +1,15 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-22 — Tổng quan nghiệp vụ BE bằng tiếng Việt
+
+Thêm [tài liệu ôn nghiệp vụ](../api_flow/BE_BUSINESS_OVERVIEW_VI.md) dựa trên
+controller/service/domain và flow hiện hành: actor, mô hình Course/Class/Session,
+checkout/hold, CASH/payOS, quyền học, tài liệu, mentor workspace, attendance,
+leave/makeup và QUIZ; kèm câu hỏi tình huống và ví dụ xuyên suốt.
+Làm rõ bỏ unit-release, MANAGER xác nhận CASH, ZIP/reporting/completion còn thiếu.
+Không thay API/code/schema; chỉ đối chiếu source và kiểm tra tài liệu tĩnh,
+không chạy lại runtime tests/migration/provider/deployment.
+
 ## 2026-10-22 — Build và CI/CD cho migration tracking
 
 Build tạo manifest SHA-256 và kiểm tra đủ compiled migration so với source.
@@ -1282,3 +1292,42 @@ Phase5 oversight in existing Phase2.4 flow/API breakdown. Class/course/account
 writes and reconcile remain ADMIN-only unless business permission is redesigned.
 Documentation/source review only; no application/API/schema changes, no new runtime
 tests/build/migration/VPS/browser/live-payment evidence. git diff --check used.
+
+
+### 2026-10-22 — Phase5 QUIZ implementation on codex/phase5-assignments
+
+Added additive migration1792713600000 and AssignmentsModule: session-owned drafts,
+scoped mentor ABCD authoring/publish/archive, Student ACTIVE enrollment metadata,
+start/resume, versioned full-answer autosave, complete-paper submit, atomic scoring
+and durable result, PostgreSQL timeout jobs/worker. Default1 quiz attempt; optional
+timer; timeout only saved choices, blanks wrong. Private keys hidden until result.
+Current entitlement follows source without legacy unit-release gates. Audit failure
+rolls back grading; terminal quiz submissions and audits immutable. Existing summary
+stays NOT_IMPLEMENTED until real aggregate. No entity mirrors; typed SQL/JSONB
+following teaching-notes; ZIP grade/file schema remains A3/A4. ZIP draft metadata
+only, publish explicitly blocked. A3-A5 still TODO; no claim Phase5 complete.
+
+Local feature: domain5/5, isolated PostgreSQL9/9, compiled HTTP2/2. Final pnpm check
+PASS69 files/637 tests, including untimed-revocation coverage.
+Lint/type-check/build29 migration artifacts passed. Final full HTTP PASS11 files/83
+tests, no skips; compiled rollout clean29/repeat0 migrations passed. Static handoff
+4 docs/13 links/1 JSON example/Postman16 requests passed. Postman16 manual requests,
+flow/current API and plan updated together. No FE changes, no application/dev/VPS
+migrations or deployment/live payment evidence. Worker flag defaults enabled.
+
+## 2026-10-23 — Restore Phase 5 QUIZ after PR #21
+
+Branch `codex/restore-phase5-assignments` restores PR #20 from dev `569bfcb`.
+Fixed the CI test fixture's UTC/local date mismatch using APP_TIME_ZONE and
+covered 00:15 Vietnam time in the mentor-leave migration/history test.
+QUIZ restored; ZIP and reports remain pending. Current validation evidence is
+tracked in [Phase 5 progress](phase%205/PHASE_5_PROGRESS.md).
+No VPS database migration, merge, deployment or real payment performed.
+
+### 2026-10-23 — CI media provisioning timeout
+
+PR #22 Check run 39898049364 failed before tests: apt FFmpeg installation on
+Ubuntu 26.04 exceeded five minutes. Replaced apt provisioning with the existing
+lockfile-pinned ffprobe-static binary at /usr/bin/ffprobe after frozen install.
+Linux MP3/MP4 validator-flag smoke, lint and diff checks PASS; no API, application
+code or production image change. GitHub rerun pending; no deployment evidence.

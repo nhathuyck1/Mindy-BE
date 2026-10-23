@@ -1,199 +1,174 @@
-# Phase 5 — API proposal assignment QUIZ/ZIP
+# Phase 5 — Assignment API: QUIZ local implementation, ZIP planned
 
-2026-10-22 · **PLANNED, chưa route/DTO/migration runtime**.
-[Plan](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) · [Flow](PHASE_5_FLOW.md).
-Assignment là bài kiểm tra hoặc BTVN (`purpose=TEST|HOMEWORK`), khác hình thức
-`type=QUIZ|ZIP`. QUIZ có timer phút tùy chọn; ZIP có deadline ngày giờ bắt buộc.
+2026-10-23 restoration: `codex/restore-phase5-assignments` restores the QUIZ
+routes removed by PR #21. No new route, DTO or business-rule change beyond
+PR #20; the date correction affects test fixtures only. ZIP publication remains
+409 ZIP_PIPELINE_NOT_IMPLEMENTED. PR checks do not establish a VPS deployment.
 
-## 1. Contract đề xuất dùng chung
+CI follow-up 2026-10-23: media tool provisioning now uses the existing locked
+ffprobe-static dependency instead of apt. No API/DTO/authorization change.
 
-Prefix `/api/v1`, cookie access_token, active actor. Mentor scope primary toàn lớp
-hoặc substitute đúng session, resolve provider Phase4.6; student own enrollment
-ACTIVE + unit released/class writable cho start/draft/upload/submit. Own submitted
-history/result giữ theo ownership/retention kể cả enrollment terminal; không mở
-class content qua result. API trả typed DTO, không entity. Giữ envelope hệ thống;
-JSON bên dưới chỉ payload. Cache-Control private,no-store; UTC ISO có offset trong
-request, serverNow/timeZone trong timer/detail; FE dùng APP_TIME_ZONE để date picker.
+2026-10-22 · Branch codex/phase5-assignments. QUIZ routes below are implemented;
+ZIP upload/submit/grading and reports remain planned. No VPS/deployment evidence.
+[Plan](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) · [Flow](PHASE_5_FLOW.md) ·
+[Progress](../progress/phase%205/PHASE_5_PROGRESS.md).
 
-UUIDv4 mọi path ID, unexpected body field reject422. Page1/pageSize20 (1..100),
-stable sort dueAt/id hoặc position/id. Mutation state cần `expectedVersion`/revision
-và UUIDv4 Idempotency-Key; receipt atomic với outcome, retry same key/body, hash
-mismatch409. Read/filter trước pagination/count, empty vẫn authorize. Create201,
-GET/PATCH/PUT/action POST200, draft delete204. Mutations dùng Origin guard baseline.
-No hidden answer keys trong student DTO, draft validation lỗi, receipt public hay logs.
+## 1. Shared contract
 
-## 2. Mentor soạn và giao assignment
+Prefix /api/v1. Login using existing /auth/login; HttpOnly access_token cookie.
+MENTOR for /mentor, STUDENT for /me; account must still be ACTIVE with its current
+role. Each mutation requires Origin in CORS_ORIGINS. UUIDv4 path IDs; unknown body
+fields and invalid nested DTOs return422. No content/password/token in these docs.
 
-| Method + route | FE step / inputs | Payload/side effect dự kiến |
+Primary mentor manages every session of their class. Substitute only manages their
+currently effective sessions (scheduled override or teaching snapshot). Reassignment
+revokes authoring/key access even for createdBy. Completed/cancelled class is read
+only; cancelled session blocks mutation. Student needs an ACTIVE own enrollment;
+CASH_PENDING/guest makeup is insufficient. Legacy unit LOCKED/unlockAt does not gate
+content in current source. New work in completed/cancelled classes is blocked.
+Own submitted result survives terminal enrollment, cancelled session/class and
+assignment archive; ownership/current ACTIVE account are still required.
+
+Assignment mutations lock actor -> Class -> Session -> Assignment; attempt writes
+also lock enrollment and submission. Server clock is PostgreSQL clock_timestamp().
+Reads do not finalize attempts. GET/quiz mutations and mentor key detail use
+Cache-Control: private, no-store. No automatic completion/certification changes.
+
+JSON below is the response payload (existing app response/error handling retained).
+Assignment metadata: id,sessionId,purpose,type,title,description,maxScore (decimal
+string),dueAt (UTC ISO/null),timeLimitMinutes (int/null),maxAttempts,status,revision,
+publishedAt (UTC ISO/null). Mentor detail/questions additionally include questions
+with id,position,prompt,options[{label,text}],correctOption. Student metadata and
+lists do not include questions or keys. Student start provides questions without
+correctOption, score or isCorrect. OpenAPI has separate student metadata schemas.
+
+Page payload: items,total,page,pageSize. Default page1/pageSize20, max100; stable
+created_at DESC,id ASC; scope/filters apply before count/pagination. Growable
+submission queues/history/report endpoints are not implemented in this slice.
+Request JSON limit remains the existing64KiB; individual field limits do not
+promise that every field can reach its maximum in a single question-set request.
+
+## 2. Mentor authoring — implemented
+
+IDs: classId/sessionId come from mentor workspace/session APIs. Assignment ID and
+revision come from create/list/get. Re-fetch after409; never overwrite newer work.
+
+| Method + route (after /api/v1) | Input and UI step | Success / state |
 |---|---|---|
-| POST `/mentor/class-sessions/:sessionId/assignments` | Trong buổi → tạo bài. Body purpose,type,title,description?,maxScore; ZIP dueAt bắt buộc/maxAttempts1..10 default1; QUIZ timeLimitMinutes null hoặc1..240,dueAt optional/maxAttempts cố định1 |201 assignment DRAFT/revision1. Creator audit, không student-visible. |
-| GET `/mentor/class-sessions/:sessionId/assignments` | Tab bài của buổi; page/pageSize,status?,type?,purpose? |200 page AssignmentMentorDto, có counts/quyền, không toàn bài nộp inline. |
-| GET `/mentor/classes/:classId/assignments` | Dashboard lớp; cùng filters, sessionId? UUID thuộc lớp |200 page scoped; substitute chỉ own sessions. |
-| GET `/mentor/assignments/:assignmentId` | Edit/preview; ID từ list |200 full authoring detail; QUIZ gồm key đúng scope, ZIP dueAt; no student submissions. |
-| PATCH `/mentor/assignments/:assignmentId` | Save draft, body expectedRevision + allowed changes |200 revision+1. Published chỉ ZIP dueAt tăng/maxAttempts tăng + reason; đề/key/QUIZ timer frozen. |
-| PUT `/mentor/assignments/:assignmentId/questions` | QUIZ soạn câu hỏi; expectedRevision, questions1..200 [{id? UUID,prompt,options:[{label,text}] đủ4,correctOption}] |200 atomic replace draft set, stable IDs assigned/returned server. No per-question Student grade API. |
-| POST `/mentor/assignments/:assignmentId/publish` | Preview → Giao bài; expectedRevision |200 PUBLISHED; QUIZ đủ4 options/1 key mỗi câu, timer config hợp lệ; ZIP deadline tương lai. |
-| POST `/mentor/assignments/:assignmentId/archive` | Đóng bài; expectedRevision,reason1..2000 |200 ARCHIVED, active quiz attempts VOIDED dưới locks; giữ submitted result, không delete. |
-| DELETE `/mentor/assignments/:assignmentId` | Draft chưa có attempts; body expectedRevision |204 soft delete. Published/started409. |
+| POST /mentor/class-sessions/:sessionId/assignments | Create draft. purpose TEST/HOMEWORK; type QUIZ/ZIP; title1..250 nonblank; description optional<=20000; maxScore decimal string0.01..999999.99; dueAt optional ISO with Z/offset for QUIZ, required ZIP; timeLimitMinutes null or int1..240 for QUIZ, null ZIP; maxAttempts1 QUIZ,1..10 default1 ZIP |201 metadata, DRAFT/revision1; append audit. No idempotency receipt: reload list before recreating after uncertain network failure. |
+| GET /mentor/class-sessions/:sessionId/assignments | Session tab; page,pageSize,status DRAFT/PUBLISHED/ARCHIVED?,type QUIZ/ZIP?,purpose TEST/HOMEWORK?,sessionId? |200 page metadata, no keys/submissions inline. |
+| GET /mentor/classes/:classId/assignments | Class tab, same filters |200 page; substitute sessions only. |
+| GET /mentor/assignments/:assignmentId | Edit/preview; ID from list |200 metadata plus questions/private correctOption; current scoped mentor only. |
+| PATCH /mentor/assignments/:assignmentId | expectedRevision>=1; title?,description?,dueAt? (explicit null removes QUIZ due date),timeLimitMinutes? (null disables QUIZ timer) |200 metadata/revision+1; DRAFT only. type/purpose/maxScore/maxAttempts immutable in this slice; published edits409. |
+| PUT /mentor/assignments/:assignmentId/questions | expectedRevision; questions1..200 [{id? UUIDv4,prompt1..5000 nonblank,options:[{label A/B/C/D,text1..2000 nonblank}] exactly4 unique labels,correctOption A/B/C/D}] |200 metadata + canonical questions/server IDs/revision+1. Atomic full replacement, existing IDs must belong to this draft; omitted IDs generated. |
+| POST /mentor/assignments/:assignmentId/publish | expectedRevision; preview -> publish |200 PUBLISHED/revision+1. Requires QUIZ with>=1 valid question/key and optional dueAt in future. Freezes all content/config. ZIP409 ZIP_PIPELINE_NOT_IMPLEMENTED. |
+| POST /mentor/assignments/:assignmentId/archive | expectedRevision,reason1..2000 nonblank |200 ARCHIVED/revision+1; PUBLISHED only; active attempts VOIDED, pending expiry jobs completed atomically. Graded results retained. |
+| DELETE /mentor/assignments/:assignmentId | JSON body expectedRevision; discard draft |204 soft delete/revision audit. DRAFT only. |
 
-Một phiên bản draft questions tối đa200 prompt≤5000/options text≤2000; request JSON
-body cap đề xuất2MiB, phải set route limit rõ khi code (không nới global material).
-maxScore decimal string0.01..999999.99. description plain text≤20000. QUIZ timer
-toggle map null=off, integer=on; ZIP timeLimitMinutes phải null, dueAt có offset
-bắt buộc. QUIZ dueAt nếu đặt phải còn tương lai khi publish/start.
+An empty list is valid after authorization; a foreign mentor scope returns403.
+Published edits return409 ASSIGNMENT_CONTENT_FROZEN; use a new draft for correction.
+Archive is irreversible in v1; refetch lists/detail afterward. Creation and every
+transition write append-only audits without answer content or keys.
 
-Ví dụ tạo quiz theo user flow:
+## 3. Student metadata and QUIZ — implemented
+
+Get classId from My Classes; then list -> assignmentId -> metadata -> start.
+GET metadata before start deliberately has no questions. Timer may be disabled;
+purpose TEST does not force a timer. Expiry=min(start+minutes,dueAt), ignoring null
+limits. Both null means no expiry. Reload/tab changes never reset the server clock.
+
+Every start/answers/submit requires Idempotency-Key UUIDv4. Reuse exact key/body for
+network retry. Different body with same actor/route/key409 IDEMPOTENCY_KEY_REUSED.
+Start creates201, same active attempt/resume200. Start consumes the single quiz
+attempt; there is no reset/restart after grading or voiding. Keys are route scoped.
+
+| Method + route (after /api/v1) | Input and UI step | Success / effects |
+|---|---|---|
+| GET /me/classes/:classId/assignments | page/pageSize,sessionId?,type?,purpose?,status? (assignment lifecycle enum) |200 metadata page, PUBLISHED only. No ownStatus/resultId aggregate yet. |
+| GET /me/assignments/:assignmentId | Open instructions before starting |200 student metadata; no questions/keys. |
+| POST /me/assignments/:assignmentId/start | expectedAssignmentRevision>=1, required key |201 new attempt or200 resume; returns frozen questions/saved answers/version/timer, no keys or result. |
+| GET /me/assignment-submissions/:submissionId | Reload own attempt using attemptId returned by start |200 attempt payload; terminal own history readable without active enrollment. Result stays null on this route; use /result. |
+| PUT /me/assignment-submissions/:submissionId/answers | expectedVersion>=1,answers0..200 [{questionId UUIDv4,selectedOption A/B/C/D}], required key |200 full replacement/version+1; no grading. Replaying save returns current state without overwriting newer answers; expired replay409. |
+| POST /me/assignment-submissions/:submissionId/submit | expectedVersion, full answers array, required key; stop in-flight autosaves then submit once |200 GRADED, immutable answers/result/audit/receipt committed together. Requires exactly all distinct question IDs. Result immediately available inside result field. |
+| GET /me/assignment-submissions/:submissionId/result | Open result/reload lost response |200 graded payload with result, or200 FINALIZING +result:null/retryAfterSeconds2 if expired and awaiting worker. Unsubmitted nonexpired409 RESULT_NOT_AVAILABLE. |
+
+Attempt payload: attemptId,assignmentId,status,version,startedAt,expiresAt,
+submittedAt,submissionSource (MANUAL/TIMEOUT/null),serverNow,totalQuestions,
+answeredCount,questions,answers,result,retryAfterSeconds. Status IN_PROGRESS,
+FINALIZING (derived read state),GRADED,VOIDED. VOIDED hides questions/answers and
+has no result. result is null except successful submit, its exact replay and
+GET /result after committed grading. Questions never include keys before result.
+
+Example submit body (two-question example; real quiz must answer every question):
 
 ```json
-{"purpose":"TEST","type":"QUIZ","title":"Kiểm tra chương 1","description":"Chọn một đáp án mỗi câu.","maxScore":"100.00","timeLimitMinutes":45,"dueAt":null}
+{"expectedVersion":1,"answers":[{"questionId":"11111111-1111-4111-8111-111111111111","selectedOption":"B"},{"questionId":"22222222-2222-4222-8222-222222222222","selectedOption":"A"}]}
 ```
 
-Ví dụ bài ZIP:
+Result fields: totalQuestions,answeredCount,correctCount,wrongCount,score,maxScore,
+results[{questionId,selectedOption (null when unanswered timeout),correctOption,
+isCorrect}]. 33/40 at maxScore100.00 yields82.50. Equal question weights, one
+round after summing using integer cents. No score/key accepted from client.
+Unlike the earlier proposal, result is nested in QuizAttemptDto.result, not flat
+at submit response top level; resultUrl and graderId are not response fields.
 
-```json
-{"purpose":"HOMEWORK","type":"ZIP","title":"Nộp project","maxScore":"10.00","dueAt":"2026-10-29T23:59:00+07:00","maxAttempts":1}
-```
+Missing manual answers422 SUBMISSION_INCOMPLETE with missingQuestionIds in error
+details; selection duplicates/foreign IDs422 INVALID_QUIZ_ANSWERS. No draft writes
+on failed submit. At serverNow>=expiresAt, manual payload is rejected409
+ATTEMPT_EXPIRED. Durable worker grades only choices saved before expiry; unanswered
+questions count wrong. No client-side grading or late answer acceptance.
 
-FE lấy sessionId từ workspace4.6, create rồi questions/save rồi publish. Sau mỗi
-mutation refetch detail/list/revision;403 stop/refetch scope,409 không overwrite,
-422 field errors/publish validation. No approve-material dependency cho bài theo lớp.
+Poll result every2s only while FINALIZING, stop when GRADED/VOIDED/access revoked;
+stop automatic polling after60s and allow refresh. Server job continues independently
+of browser/restart. Enrollment revoke/archive/cancel before timeout causes VOIDED.
+ASSIGNMENT_TIMEOUT_JOB_ENABLED defaults true; disabling it pauses timeout processing
+and must not be used for a live timed-quiz deployment. Active attempts also receive
+durable entitlement rechecks every30s or at their earlier expiry, including untimed
+quizzes, so cancellation/revocation cannot leave an immortal active draft.
+Jobs use capped exponential
+retry2..300s and terminal submissions are immutable at the database boundary.
 
-## 3. Student discovery và bắt đầu QUIZ
+## 4. Errors / FE handling — current implementation
 
-| Method + route | Inputs / FE step | Response dự kiến |
-|---|---|---|
-| GET `/me/classes/:classId/assignments` | page/pageSize,sessionId?,type?,purpose?,status? learning state |200 page **published visible only**, metadata title,type,purpose,dueAt,timeLimitMinutes,ownStatus/resultId. |
-| GET `/me/assignments/:assignmentId` | Mở bài |200 metadata/instructions/capabilities. QUIZ chưa start không trả questions; ZIP instructions/deadline và own draft. No keys/grades draft. |
-| POST `/me/assignments/:assignmentId/start` | QUIZ only; body expectedAssignmentRevision, key required |201 attempt mới hoặc200 resume same active attempt. `{attemptId,version,startedAt,expiresAt,serverNow,questions,answers,answeredCount,totalQuestions}`; không đáp án đúng. |
-| GET `/me/assignment-submissions/:submissionId` | Reload/resume own attempt/draft |200 own saved answers/version, timer và same frozen questions nếu active; submitted snapshot no answer key trừ result endpoint authorized. |
-| PUT `/me/assignment-submissions/:submissionId/answers` | Autosave batch QUIZ; `{expectedVersion,answers:[{questionId,selectedOption}]}`; key required |200 full replacement lựa chọn đã chọn (0..N), version+1/answeredCount/serverNow. Không score/isCorrect/correctOption. |
-
-QuestionDto `{id,position,prompt,options:[{label:'A'|'B'|'C'|'D',text}]}`.
-Mỗi câu một option, duplicate question IDs422. Lưu nháp có thể chưa chọn hết; final
-POST submit phải có N câu. Start tiêu hao attempt duy nhất; resume/retry không reset
-clock. Student GET key-free không dùng DTO mentor rồi xóa field bằng FE.
-timeLimitMinutes null và dueAt null → expiresAt null, không worker timer. Có timer
-thì expiry=min(started+minutes,dueAt nếu có), snapshot không đổi khi reload/đổi máy.
-
-FE hiển thị progress ví dụ39/40, còn thiếu câu chưa cho nộp; countdown tính từ
-serverNow/expiresAt và sync sau resume, không local timer authority. Autosave debounce,
-hiển thị saved/saving/failed; final submit chặn autosave in-flight và gửi toàn bộ
-answers hiện tại. Multi-tab409 refetch/resolve, không dùng expectedVersion giả.
-
-## 4. Nộp cả bài QUIZ và trả đáp án
-
-POST `/me/assignment-submissions/:submissionId/submit`, QUIZ body:
-
-```json
-{"expectedVersion":8,"answers":[{"questionId":"11111111-1111-4111-8111-111111111111","selectedOption":"B"}]}
-```
-
-Ví dụ body chỉ minh họa một phần tử; đề40 câu phải gửi đủ40 phần tử khác nhau.
-Required UUID key. BE now<expiresAt nếu có, kiểm đúng frozen question set, đủN
-options hợp lệ và ownership/eligibility; server mới tính. HTTP200 payload:
-
-```json
-{"submissionId":"22222222-2222-4222-8222-222222222222","status":"GRADED","submissionSource":"MANUAL","totalQuestions":40,"answeredCount":40,"correctCount":33,"wrongCount":7,"score":"82.50","maxScore":"100.00","resultUrl":"/api/v1/me/assignment-submissions/22222222-2222-4222-8222-222222222222/result","results":[{"questionId":"11111111-1111-4111-8111-111111111111","selectedOption":"B","correctOption":"A","isCorrect":false}]}
-```
-
-results phải đủ40 khi implementation; example rút gọn để minh họa shape.
-BE cùng tx lưu immutable answers/snapshot/result/auto released grade/audit/receipt.
-Không gọi mỗi câu để chấm, không tin score/isCorrect/client timestamps. Score câu
-đồng trọng số, round decimal2 sau tổng. Student được xem đáp án ngay sau submit
-thành công theo user requirement. QUIZ v1 maxAttempts1, không thi lại sau xem key.
-
-GET `/me/assignment-submissions/:submissionId/result`:200 own durable result như
-trên, bao gồm question/option snapshot để UI render history; DRAFT/IN_PROGRESS409
-`RESULT_NOT_AVAILABLE`, không key. Timed expired chưa worker commit trả200
-`{status:'FINALIZING',result:null,retryAfterSeconds:2}`. Timer expiry finalizer dùng
-**chỉ saved answers trước hạn**, missing selectedOption=null/isCorrect=false;
-điểm và đáp án trả sau finalization. Không yêu cầu đủ40 cho timeout (chỉ manual).
-
-No late manual overrides: now>=expiresAt →409 `ATTEMPT_EXPIRED`/resultUrl, body
-không được persist. Durable worker finalize độc lập browser, restart recover jobs,
-manual vs worker cùng lock chỉ một winner. GET không write. Retry committed manual
-submit cùng key sau hạn trả receipt cũ; GET result không tạo attempt/grade mới.
-Nếu tab mất mạng trước save, UI báo rõ các câu chưa lưu có thể không được chấm khi
-hết giờ; final payload trước hạn vẫn có thể ghi và chấm atomically.
-
-GET `/me/assignments/:assignmentId/submissions`:200 page own attempt history;
-foreign assignment404. Primary/substitute scoped có mentor result route ở §6,
-không reuse student route bằng studentId input.
-
-## 5. ZIP: draft, upload và deadline ngày giờ
-
-| Method + route | Request / thứ tự | Response/state |
-|---|---|---|
-| POST `/me/assignments/:assignmentId/submissions` | ZIP only; body expectedAssignmentRevision, key |201 own DRAFT/version1, existing active draft409(existingDraftId); không có timer. |
-| POST `/me/assignment-submissions/:submissionId/upload-intents` | expectedVersion,originalFilename .zip,declaredSizeBytes,declaredMimeType; key |201 fileId/uploadUrl/expiresAt. Scoped student intent, chưa attach/submit. |
-| POST `/me/assignment-submissions/:submissionId/files/:fileId/complete` | key, expectedVersion theo submission context |200/202 Files pipeline state; kiểm scope/deadline; promotion/scan async. |
-| GET `/me/assignment-submissions/:submissionId/files/:fileId` | Poll authorized intent trạng thái |200 PENDING_UPLOAD/PROCESSING/READY/FAILED, safe errorCode; no storage secrets. |
-| PUT `/me/assignment-submissions/:submissionId/files` | `{expectedVersion,fileIds:[UUID]}`, đúng1 READY ZIP, key |200 attached file summary/version+1. Wrong owner/purpose422/403; submit chưa xảy ra. |
-| POST `/me/assignment-submissions/:submissionId/submit` | ZIP body `{expectedVersion}`, key; no answers |200 SUBMITTED immutable, server submittedAt/deadline snapshot; ngay tại now>=dueAt409, không nhận late. |
-| POST `/me/assignment-submissions/:submissionId/files/:fileId/access` | Own submitted history hoặc mentor route riêng, expectedVersion, purpose download |200 `{url,expiresAt,filename}` no-store; file attached/current. Không cache signed URL trong receipt. |
-
-Upload PUT bytes tới **object storage**, không POST file bytes vào JSON API; upload
-intent expiry khác dueAt. Uploaded/READY trước dueAt không cho submit muộn. No
-timeLimitMinutes ZIP. UI show exact deadline theo zone, disable submit khi pending
-validation; check server vẫn là quyết định. Poll bounded theo intent expiry, dừng
-READY/FAILED/403/expiry. FAILED yêu cầu upload mới; không retry submit vô hạn.
-
-Giới hạn đề xuất ZIP1 file≤20MiB, expanded≤100MiB, entries≤1000, ratio≤100; reject
-encrypted/nested/traversal/symlink/bomb/invalid ZIP. Files purpose/scope mới chỉ cho
-assignment submission, không mở student material upload; source code không execute.
-Files capability/policy/migration + scanner là prerequisite A3, không coi ZIP usable
-chỉ vì thêm extension .zip vào allowlist. File access signing sau live permission và
-revalidate, không network trong DB mutation tx.
-
-## 6. Mentor nhận bài/chấm ZIP và đọc quiz results
-
-| Method + route | Input / FE step | Result/transition |
-|---|---|---|
-| GET `/mentor/assignments/:assignmentId/submissions` | page/pageSize,status?,studentId? scoped |200 page attempts summary, không đáp án/zip bytes inline. |
-| GET `/mentor/assignments/:assignmentId/roster` | page/pageSize, filter ALL/MISSING/UNSUBMITTED/UNGRADED |200 per eligible enrollment, latest attempt/result state. Không gán MISSING trước due; không late filter v1. |
-| GET `/mentor/assignment-submissions/:submissionId` | ID từ queue |200 scoped submitted snapshot, QUIZ graded result hoặc ZIP file summary/grade revisions; no contact/payment. |
-| POST `/mentor/assignment-submissions/:submissionId/files/:fileId/access` | expectedVersion; download button |200 short-lived signed ZIP URL sau current scope/attached validation. |
-| PUT `/mentor/assignment-submissions/:submissionId/grade` | ZIP SUBMITTED/GRADED; `{expectedGradeVersion,score,feedback,reason?}`, key |200 grade draft revision+1, score0..maxScore; correction sau released reason required. Student vẫn thấy released trước. |
-| POST `/mentor/assignment-submissions/:submissionId/grade/release` | `{expectedGradeVersion}`, key |200 released grade version, submission GRADED; atomic score+feedback publish. |
-
-Grade expectedGradeVersion là grade version (0 khi chưa có), khác submission version.
-QUIZ auto
-grade không qua PUT grade/release manual v1; nếu sai key cần explicit correction
-feature v2, không sửa key silent chấm lại history.
-Feedback≤10000 plain text; score chuỗi decimal≤2 lẻ, không NaN/Infinity. Draft grade
-không lộ student. File retry/access authorization và grade correction có audit.
-Sau save/release refetch queue/detail và Student result (khi mở lại), không gửi email
-hoặc websocket nếu chưa có notification implementation.
-
-## 7. Errors và xử lý FE đề xuất
-
-| HTTP / code dự kiến | Cách xử lý |
+| Status/code | Handling |
 |---|---|
-|401 auth|Refresh theo flow hiện có, failed về login; không reset timer.|
-|403 ASSIGNMENT_SCOPE_REQUIRED / SUBMISSION_ACCESS_DENIED|Dừng retry, refetch scope; không lộ foreign content/key.|
-|404 ASSIGNMENT_NOT_FOUND / SUBMISSION_NOT_FOUND|Quay list, foreign student IDs cùng404.|
-|409 ASSIGNMENT_VERSION_CONFLICT / SUBMISSION_VERSION_CONFLICT|Refetch; không tự ghi đè answers hoặc đề.|
-|409 ASSIGNMENT_CLOSED / ASSIGNMENT_DEADLINE_PASSED|Dừng submit/upload, hiển thị archive/deadline, history vẫn đúng quyền.|
-|409 ATTEMPT_EXPIRED|Mở result/poll FINALIZING bounded; không gửi lựa chọn mới sau hạn.|
-|409 ATTEMPT_LIMIT_REACHED / ALREADY_SUBMITTED|Mở result/history; không tự tạo lượt mới.|
-|409 RESULT_NOT_AVAILABLE|Chưa nộp thì quay attempt; expired FINALIZING không trả key, theo result state.|
-|409 IDEMPOTENCY_KEY_REUSED|Giữ payload của retry; intent khác dùng key mới khi còn đủ quyền.|
-|422 SUBMISSION_INCOMPLETE|Chỉ missing IDs/count; quay câu chưa chọn, không gợi ý key.|
-|422 QUIZ_ANSWER_INVALID / QUIZ_QUESTIONS_INVALID|Chỉ field/ancestry errors, không answer key.|
-|409 FILE_NOT_READY / 422 ZIP_INVALID, ZIP_LIMIT_EXCEEDED|Chờ pipeline bounded hoặc upload mới theo error; không submit file quarantine.|
-|409 GRADE_VERSION_CONFLICT / 422 GRADE_INVALID|Refetch grade, sửa score/feedback; không tự overwrite grader khác.|
-|503 storage unavailable|Metadata/result QUIZ độc lập; ZIP upload/access báo tạm lỗi, retry bounded.|
+|401 existing auth error|Refresh/login through existing adapter; timer does not pause.|
+|403 ORIGIN_NOT_ALLOWED|Use configured FE Origin; do not retry unchanged request.|
+|403 ASSIGNMENT_SCOPE_REQUIRED / SUBMISSION_ACCESS_DENIED|Stop writes/key reads; refetch scope.|
+|404 ASSIGNMENT_NOT_FOUND / SUBMISSION_NOT_FOUND|Unknown/foreign/unavailable student resource; return to list.|
+|409 ASSIGNMENT_VERSION_CONFLICT / SUBMISSION_VERSION_CONFLICT|Refetch and reconcile; no automatic overwrite.|
+|409 ASSIGNMENT_CLOSED / ASSIGNMENT_DEADLINE_PASSED / ASSIGNMENT_STATE_CONFLICT|Stop new work; retain permitted own result.|
+|409 ASSIGNMENT_CONTENT_FROZEN|Published content cannot change; make a new draft.|
+|409 QUIZ_ALREADY_STARTED / SUBMISSION_ALREADY_FINALIZED|Use details resultId/attemptId from start; GET own result.|
+|409 ATTEMPT_EXPIRED / RESULT_NOT_AVAILABLE|Poll only expired FINALIZING; otherwise resume unfinished attempt.|
+|409 IDEMPOTENCY_KEY_REUSED|Retry original key/body or use new key for a new valid mutation.|
+|409 ZIP_PIPELINE_NOT_IMPLEMENTED|ZIP is draft-only; no upload UI yet.|
+|422 INVALID_ASSIGNMENT_CONFIG / INVALID_ASSIGNMENT_DEADLINE / INVALID_QUIZ_QUESTIONS / QUIZ_QUESTIONS_REQUIRED / ASSIGNMENT_TYPE_MISMATCH|Correct input/configuration; do not retry unchanged body.|
+|422 IDEMPOTENCY_KEY_REQUIRED / INVALID_QUIZ_ANSWERS / SUBMISSION_INCOMPLETE|Supply UUID key/valid distinct answers/all required answers.|
+|400 path UUID /422 global DTO validation|Correct request fields; unexpected score/key injection is rejected.|
 
-Codes trên là proposal; khi code phải map với exception existing cho401/422/files,
-không tạo wrapper/error shape khác. Empty eligible roster/list/saved answers là
-trạng thái hợp lệ; loading/saving/finalizing/graded phân biệt. Không chấm hoặc tính
-score ở FE như nguồn kết quả chính thức.
+Error details follow existing AppHttpException array: details:[{missingQuestionIds:...}]
+or details:[{resultId:...}], not a new envelope. UI distinguishes loading/empty,
+saving, conflict, finalizing, graded and voided; refetch after authoring mutations.
 
-## 8. Handoff/gates
+## 5. Planned, unavailable routes and remaining work
 
-Mỗi route cần DTO/validation/role/origin/ownership tests, OpenAPI/Postman cùng source.
-Critical40-question test + timeout (timer off/on, exact boundary, reload, worker
-restart, autosave/submit race), ZIP scanner/MinIO/purpose isolation, grade release
-history và migration rehearsal. pnpm lint/type-check/test/build + compiled HTTP.
-Timer worker/config/health phải triển khai cùng QUIZ timer; không chỉ frontend clock.
-Chưa có runtime/deploy evidence trong lượt planning này, không sửa repo FE.
+ZIP: upload-intents,complete,status,attach,submit,download and mentor grade/release.
+Mentor submissions queue/detail/roster, student attempt-history list, summary metrics
+and integration into stored-progress assignmentSummary remain unavailable. Existing
+assignmentSummary stays NOT_IMPLEMENTED until real class aggregation is provided.
+ZIP dueAt/maxAttempts increases with audit are also deferred; all published edits
+are currently frozen. No promise of grant via unit release, source execution,
+weighted gradebook or certification. See original plan A3-A5 for remaining contracts.
+
+Migration1792713600000 is additive. Apply through normal migration runner before
+app rollout; do not run automatically against production from this task. Down is
+allowed only with an empty assignments table; populated environments roll back app
+and preserve data. Quiz result/snapshot/answers are module-owned typed SQL/JSONB,
+following teaching-notes transaction style; separate ZIP grade revisions/entities
+will be delivered with A3/A4. No new entity export or cross-module repository read.
+
+Verification: domain rules, isolated PostgreSQL migration up/down, concurrent
+start/submit/timeout, audit-failure rollback, cancellation/reassignment and compiled
+HTTP cookie/Origin/DTO/OpenAPI/40-question journey. Final gate results live in
+[Progress](../progress/phase%205/PHASE_5_PROGRESS.md). No FE changes or VPS evidence.

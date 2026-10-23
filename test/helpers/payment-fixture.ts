@@ -32,6 +32,7 @@ import { CourseCategoryEntity } from '../../src/modules/catalog/entities/course-
 import { CourseUnitEntity } from '../../src/modules/catalog/entities/course-unit.entity.js';
 import { CourseCategoriesService } from '../../src/modules/catalog/services/course-categories.service.js';
 import { CoursesService } from '../../src/modules/catalog/services/courses.service.js';
+import { toLocalDate } from '../../src/modules/classes/domain/class-calendar.js';
 import { ClassEntity } from '../../src/modules/classes/entities/class.entity.js';
 import { ClassSessionEntity } from '../../src/modules/classes/entities/class-session.entity.js';
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
@@ -272,7 +273,11 @@ export function paymentFixture(db: DataSource) {
     await courses.activate(course.id);
     const classIds: string[] = [];
     for (let n = 0; n < (options.count ?? 1); n++) {
-      const slot = new Date(Date.now() + ++day * 86400000).toISOString().slice(0, 10);
+      // Follow the center's calendar even while UTC is still on the previous day.
+      const slot = toLocalDate(
+        new Date(Date.now() + ++day * 86400000),
+        config.getOrThrow<string>('APP_TIME_ZONE'),
+      );
       const view = await classes.create({
         courseId: course.id,
         mentorId: mentor.id,

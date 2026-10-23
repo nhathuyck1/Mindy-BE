@@ -35,12 +35,16 @@ jobs:
         with:
           node-version: 22.20.0
           cache: pnpm
-      - name: Install media validation dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ffmpeg
-          /usr/bin/ffprobe -version
       - run: pnpm install --frozen-lockfile
+      - name: Install locked ffprobe for media validation
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          # ffprobe-static is already pinned in pnpm-lock.yaml and ships Linux binaries.
+          # Linux validation uses /usr/bin/ffprobe; avoid a separate apt/FFmpeg download.
+          ffprobe_path="$(node -p 'require("ffprobe-static").path')"
+          sudo install -m 755 "$ffprobe_path" /usr/bin/ffprobe
+          /usr/bin/ffprobe -version
       - run: pnpm lint
       - run: pnpm type-check
       - name: Verify Materials and attendance migration compatibility
