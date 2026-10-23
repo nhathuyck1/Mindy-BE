@@ -21,6 +21,21 @@
   (ignored local files). The 00:15 Vietnam regression passes with the date fix.
 - No VPS migration, merge or deployment has been performed by this restoration task.
 
+### CI media dependency timeout — 2026-10-23
+
+- User-supplied logs_108139096828.zip matches Check run 39898049364 on 2206bdf.
+  Ensure media validation dependency timed out after 5 minutes downloading
+  FFmpeg (81 packages / 66.4 MB) from Ubuntu 26.04 mirrors. The run never
+  reached pnpm install, lint or tests; this is separate from the fixed leave date.
+- Workflow now runs frozen pnpm install first, copies the existing pinned
+  ffprobe-static binary to /usr/bin/ffprobe and verifies its version. No apt
+  download or dependency/version change; production Docker still uses its
+  existing FFmpeg package. Test FFmpeg remains the existing ffmpeg-static fixture.
+- Local Linux smoke PASS for MP3 and H.264 MP4 using the actual validator's
+  protocol/format whitelist, packet count, duration and JSON flags. Lint and
+  git diff --check PASS. Previous full 637-test and 83-HTTP-test local results
+  remain applicable to unchanged application code. GitHub rerun pending.
+
 2026-10-22 — IN PROGRESS, branch codex/phase5-assignments.
 [Plan](../../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) ·
 [Flow](../../api_flow/PHASE_5_FLOW.md) ·

@@ -1323,3 +1323,11 @@ covered 00:15 Vietnam time in the mentor-leave migration/history test.
 QUIZ restored; ZIP and reports remain pending. Current validation evidence is
 tracked in [Phase 5 progress](phase%205/PHASE_5_PROGRESS.md).
 No VPS database migration, merge, deployment or real payment performed.
+
+### 2026-10-23 — CI media provisioning timeout
+
+PR #22 Check run 39898049364 failed before tests: apt FFmpeg installation on
+Ubuntu 26.04 exceeded five minutes. Replaced apt provisioning with the existing
+lockfile-pinned ffprobe-static binary at /usr/bin/ffprobe after frozen install.
+Linux MP3/MP4 validator-flag smoke, lint and diff checks PASS; no API, application
+code or production image change. GitHub rerun pending; no deployment evidence.

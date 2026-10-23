@@ -10,6 +10,12 @@ The shared payment test fixture now derives scheduled dates in APP_TIME_ZONE
 this fixes the UTC/local calendar discrepancy without changing leave policy.
 Validation and deployment evidence are recorded in Phase 5 progress.
 
+CI follow-up: run 39898049364 stopped before dependency installation/tests while
+apt downloaded FFmpeg on Ubuntu 26.04, exceeding the five-minute step limit.
+The workflow now installs the lockfile-pinned ffprobe-static Linux binary at
+/usr/bin/ffprobe after pnpm install. All validation/test gates remain enabled;
+no assignment flow, API or production container behavior changes.
+
 2026-10-22 · codex/phase5-assignments. QUIZ vertical slice implemented; A3-A5 pending.
 [Plan](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) ·
 [Current API](PHASE_5_flow-api-breakdown.md) · [Progress](../progress/phase%205/PHASE_5_PROGRESS.md).
