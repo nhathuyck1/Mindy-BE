@@ -214,8 +214,10 @@ Approval khóa request → Class IDs tăng dần → Session IDs → mentor → 
 kiểm lại toàn tập source/version/effective mentor, placements và target conflicts.
 Một transaction cancel sources → tạo replacements cùng unit/mentor → auto extend
 Class.endDate → lưu approved intervals → queue student conflicts/audits/receipt.
-Nghỉ buổi chặn mọi student overlap; FULL_DAY giữ clock, cho overlap student khi
-Manager acknowledge rõ. GET detail/list chỉ project EXPIRED; command persist
+Cập nhật 23/10/2026: mọi period chặn student overlap cả khi tạo và duyệt.
+FULL_DAY có thể dùng sessionMappings để đổi giờ nhưng giữ duration, bù ngoài
+khoảng ngày nghỉ; dayMappings cũ vẫn giữ clock. Nghỉ theo buổi được bù cùng
+ngày ngoài khoảng nghỉ. targetPeriod có FULL_DAY và không giới hạn trong tuần. GET detail/list chỉ project EXPIRED; command persist
 EXPIRED/audit rồi trả409, không rollback mất dấu hết hạn.
 
 Provider khoảng nghỉ dùng chung trong candidate discovery, schedule/add/bulk/open,
