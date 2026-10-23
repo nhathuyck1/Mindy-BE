@@ -1,5 +1,26 @@
 # Phase 5 progress — Assignment QUIZ / ZIP
 
+## Restoration — 2026-10-23
+
+- Branch `codex/restore-phase5-assignments`, base dev `569bfcb`; reversed removal
+  commit `7f50985` from PR #21 to restore PR #20's QUIZ slice.
+- Previous PR #20 CI failed the first mentor-leave migration test with
+  LEAVE_NOTICE_TOO_SHORT at 00:15 Vietnam time: the shared fixture scheduled
+  dates using UTC, leaving only one local calendar day of notice.
+- Fixture now uses APP_TIME_ZONE (Asia/Ho_Chi_Minh). The migration/history test
+  simulates 00:15 Vietnam time to cover the UTC date boundary. Leave policy and
+  production code remain unchanged by this fix.
+- QUIZ restored; ZIP upload/submission/manual grading and A5 reports stay TODO.
+- Current compiled HTTP verification: 11 files / 83 tests PASS, including the
+  40-question authoring/start/autosave/submit/result flow with private-key checks.
+- Compiled rollout: 29 migrations on a fresh isolated test database; repeat
+  applies 0, no pending migrations. Production build verified 29 artifacts.
+- Final `pnpm check` PASS: lint/type-check, 69 files / 637 tests, production build
+  with 29 verified migration artifacts. Dedicated PostgreSQL and test MinIO used;
+  logs: tmp/restore-final-check.log, tmp/restore-http.log, tmp/restore-rollout.log
+  (ignored local files). The 00:15 Vietnam regression passes with the date fix.
+- No VPS migration, merge or deployment has been performed by this restoration task.
+
 2026-10-22 — IN PROGRESS, branch codex/phase5-assignments.
 [Plan](../../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) ·
 [Flow](../../api_flow/PHASE_5_FLOW.md) ·

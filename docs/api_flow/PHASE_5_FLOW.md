@@ -1,5 +1,15 @@
 # Phase 5 — Assignment: QUIZ implemented locally, ZIP pending
 
+## Restoration — 2026-10-23
+
+Branch `codex/restore-phase5-assignments` starts from dev `569bfcb` and reverses
+the removal in PR #21, restoring PR #20's QUIZ implementation. ZIP and A3-A5
+remain pending. The API and business rules match the restored implementation.
+The shared payment test fixture now derives scheduled dates in APP_TIME_ZONE
+(Asia/Ho_Chi_Minh), with a leave migration regression at 00:15 Vietnam time;
+this fixes the UTC/local calendar discrepancy without changing leave policy.
+Validation and deployment evidence are recorded in Phase 5 progress.
+
 2026-10-22 · codex/phase5-assignments. QUIZ vertical slice implemented; A3-A5 pending.
 [Plan](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) ·
 [Current API](PHASE_5_flow-api-breakdown.md) · [Progress](../progress/phase%205/PHASE_5_PROGRESS.md).

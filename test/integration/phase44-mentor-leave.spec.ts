@@ -97,9 +97,12 @@ describe.skipIf(!separateTestUrl('leave'))('Phase4.4 mentor leave PostgreSQL', (
     return rows[0];
   }
 
-  it('rehearses a clean migration down/up and refuses destructive rollback after history', async () => {
+  it('rehearses migration down/up and retains leave history across the UTC/local date boundary', async () => {
     await rehearseMigration(db, new MentorLeave1792195200000(), 'down');
     await rehearseMigration(db, new MentorLeave1792195200000(), 'up');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // Reproduce CI at 00:15 in Vietnam, when the UTC calendar is one day behind.
+    vi.setSystemTime(new Date(`${toLocalDate(new Date(), read.timeZone())}T00:15:00+07:00`));
     const a = await fixture();
     await leaves.create(a.input, a.mentor, randomUUID());
     await expect(rehearseMigration(db, new MentorLeave1792195200000(), 'down')).rejects.toThrow(

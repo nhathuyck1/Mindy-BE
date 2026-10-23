@@ -1314,3 +1314,12 @@ tests, no skips; compiled rollout clean29/repeat0 migrations passed. Static hand
 4 docs/13 links/1 JSON example/Postman16 requests passed. Postman16 manual requests,
 flow/current API and plan updated together. No FE changes, no application/dev/VPS
 migrations or deployment/live payment evidence. Worker flag defaults enabled.
+
+## 2026-10-23 — Restore Phase 5 QUIZ after PR #21
+
+Branch `codex/restore-phase5-assignments` restores PR #20 from dev `569bfcb`.
+Fixed the CI test fixture's UTC/local date mismatch using APP_TIME_ZONE and
+covered 00:15 Vietnam time in the mentor-leave migration/history test.
+QUIZ restored; ZIP and reports remain pending. Current validation evidence is
+tracked in [Phase 5 progress](phase%205/PHASE_5_PROGRESS.md).
+No VPS database migration, merge, deployment or real payment performed.

@@ -1,5 +1,10 @@
 # Phase 5 — Assignment API: QUIZ local implementation, ZIP planned
 
+2026-10-23 restoration: `codex/restore-phase5-assignments` restores the QUIZ
+routes removed by PR #21. No new route, DTO or business-rule change beyond
+PR #20; the date correction affects test fixtures only. ZIP publication remains
+409 ZIP_PIPELINE_NOT_IMPLEMENTED. PR checks do not establish a VPS deployment.
+
 2026-10-22 · Branch codex/phase5-assignments. QUIZ routes below are implemented;
 ZIP upload/submit/grading and reports remain planned. No VPS/deployment evidence.
 [Plan](../implement_phase/phase%205/PHASE_5_ASSIGNMENTS.md) · [Flow](PHASE_5_FLOW.md) ·
