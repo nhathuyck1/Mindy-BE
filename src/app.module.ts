@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { environmentSchema } from './config/environment.schema.js';
 import { createTypeOrmOptions } from './database/typeorm-options.js';
+import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { AttendanceModule } from './modules/attendance/attendance.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
@@ -21,6 +22,7 @@ import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
+    AssignmentsModule,
     TrackingModule,
     TeachingOperationsModule,
     ConfigModule.forRoot({

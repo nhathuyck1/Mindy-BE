@@ -102,6 +102,7 @@ export const environmentSchema = Joi.object({
   ORDER_PAYOS_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(86_400).default(900),
   ORDER_CASH_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(2_592_000).default(172_800),
   ORDER_EXPIRY_JOB_ENABLED: Joi.boolean().default(true),
+  ASSIGNMENT_TIMEOUT_JOB_ENABLED: Joi.boolean().default(true),
   PAYOS_ENABLED: Joi.boolean().default(false),
   PAYOS_CREATE_LINK_ENABLED: Joi.boolean().default(true),
   PAYOS_CLIENT_ID: payosSecret(),
