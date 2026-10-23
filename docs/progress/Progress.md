@@ -1,5 +1,18 @@
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
 
+## 2026-10-23 — Giờ bù linh hoạt khi xin nghỉ
+
+Mọi period nhận sessionMappings để chọn giờ khác, giữ đúng thời lượng.
+FULL_DAY vẫn nhận dayMappings cũ để giữ giờ; không được gửi hai dạng cùng lúc.
+Slot discovery và mapping mở targetPeriod=FULL_DAY. Nghỉ cả ngày không được
+bù trong khoảng ngày nghỉ; nghỉ theo buổi được bù cùng ngày ngoài khoảng nghỉ.
+Mọi student conflict chặn cả tạo và duyệt, không còn cho staff bỏ qua bằng
+acknowledgeStudentConflicts. Không migration/dependency mới.
+
+Type-check, build (29 migration artifacts), Biome phần sửa và 9 test leave
+calendar/planning pass. 15 integration tests PostgreSQL bỏ qua vì chưa có
+TEST_DATABASE_URL; chưa xác nhận DB thật hoặc deploy. Cần deploy BE đồng bộ FE2.
+
 ## 2026-10-22 — Tổng quan nghiệp vụ BE bằng tiếng Việt
 
 Thêm [tài liệu ôn nghiệp vụ](../api_flow/BE_BUSINESS_OVERVIEW_VI.md) dựa trên

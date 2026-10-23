@@ -79,7 +79,8 @@ export class LeavePlanningService {
   }
 
   mappings(input: CreateLeaveInput, sources: readonly LeaveSource[], zone: string): LeaveTarget[] {
-    const full = input.period === 'FULL_DAY';
+    // Legacy day mappings keep the original clock; session mappings allow choosing a new one.
+    const full = input.period === 'FULL_DAY' && input.dayMappings !== undefined;
     const dates = [...new Set(sources.map((s) => toLocalDate(s.session.startsAt, zone)))];
     if (
       full
@@ -151,6 +152,8 @@ export class LeavePlanningService {
       const startsAt = new Date(mapping.startsAt),
         endsAt = new Date(mapping.endsAt);
       if (
+        !Number.isFinite(startsAt.getTime()) ||
+        !Number.isFinite(endsAt.getTime()) ||
         startsAt < from ||
         endsAt > to ||
         startsAt >= endsAt ||
@@ -168,7 +171,7 @@ export class LeavePlanningService {
   async validate(
     m: EntityManager,
     mentorId: string,
-    period: LeavePeriod,
+    _period: LeavePeriod,
     targets: readonly LeaveTarget[],
     classes: ReadonlyMap<string, ClassEntity>,
     intervals: readonly { startsAt: Date; endsAt: Date }[],
@@ -212,10 +215,10 @@ export class LeavePlanningService {
         'Makeup overlaps a mentor, class or approved leave interval',
       );
     const students = await this.studentConflicts(m, targets, now);
-    if (period !== 'FULL_DAY' && students.total)
+    if (students.total)
       throw new LeaveException(
         'LEAVE_STUDENT_CONFLICT',
-        'Partial-day makeup cannot overlap student timetables',
+        'Makeup cannot overlap student timetables',
       );
     return students;
   }

@@ -393,31 +393,12 @@ describe.skipIf(!separateTestUrl('leave'))('Phase4.4 mentor leave PostgreSQL', (
     await f.checkout.checkout(a.student.id, PaymentType.CASH);
     return targetDate;
   }
-  it('FULL_DAY requires current student-conflict acknowledgment, records queue and keeps mentor preview private', async () => {
+  it('FULL_DAY rejects student conflicts instead of requiring staff acknowledgment', async () => {
     const a = await fixture();
     await studentConflict(a);
-    const request = await leaves.create(a.input, a.mentor, randomUUID());
-    const own = await leaves.detail(request.id, { page: 1, pageSize: 20 }, a.mentor);
-    expect(own).toMatchObject({ studentConflictCount: 1 });
-    expect(own).not.toHaveProperty('studentConflicts');
-    const management = await leaves.detail(request.id, { page: 1, pageSize: 20 }, staff);
-    expect(management).toMatchObject({ studentConflictCount: 1, sourcesCurrent: true });
-    await expect(approve(request.id, false)).rejects.toMatchObject({
-      response: { code: 'LEAVE_STUDENT_CONFLICT_ACK_REQUIRED' },
+    await expect(leaves.create(a.input, a.mentor, randomUUID())).rejects.toMatchObject({
+      response: { code: 'LEAVE_STUDENT_CONFLICT' },
     });
-    expect((await row(request.id)).status).toBe('PENDING');
-    const result = await approve(request.id, true);
-    expect(result.studentConflictCount).toBe(1);
-    const replacementId = result.replacements[0]?.sessionId;
-    const queue = await db.query(
-      'SELECT * FROM student_schedule_conflicts WHERE source_session_id=$1',
-      [replacementId],
-    );
-    expect(queue).toHaveLength(1);
-    expect(queue[0].status).toBe('OPEN');
-    expect(
-      (await leaves.detail(request.id, { page: 1, pageSize: 20 }, a.mentor)).studentConflictCount,
-    ).toBe(1);
   });
   it('partial leave rejects CASH student collisions and slots exclude them; valid manual slot can be approved', async () => {
     const a = await fixture(),
@@ -467,7 +448,7 @@ describe.skipIf(!separateTestUrl('leave'))('Phase4.4 mentor leave PostgreSQL', (
       request = await leaves.create(a.input, a.mentor, randomUUID());
     await studentConflict(a);
     await expect(approve(request.id, false)).rejects.toMatchObject({
-      response: { code: 'LEAVE_STUDENT_CONFLICT_ACK_REQUIRED' },
+      response: { code: 'LEAVE_STUDENT_CONFLICT' },
     });
     expect((await row(request.id)).status).toBe('PENDING');
   });

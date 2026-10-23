@@ -66,8 +66,8 @@ export class LeaveSessionMapping {
   @IsISO8601({ strict: true })
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   readonly targetDate!: string;
-  @ApiProperty({ enum: LEAVE_PERIODS.slice(0, 3) })
-  @IsIn(LEAVE_PERIODS.slice(0, 3))
+  @ApiProperty({ enum: LEAVE_PERIODS })
+  @IsIn(LEAVE_PERIODS)
   readonly targetPeriod!: LeavePeriod;
   @ApiProperty({ format: 'date-time' })
   @IsISO8601({ strict: true })
@@ -91,14 +91,22 @@ export class CreateLeaveInput extends LeavePreviewInput {
   @ValidateNested({ each: true })
   @Type(() => LeaveSourceVersion)
   readonly sourceVersions!: LeaveSourceVersion[];
-  @ApiPropertyOptional({ type: [LeaveDayMapping] })
+  @ApiPropertyOptional({
+    type: [LeaveDayMapping],
+    description:
+      'Legacy FULL_DAY mapping preserving the original clock. Mutually exclusive with sessionMappings.',
+  })
   @ValidateIf((_o, v: unknown) => v !== undefined)
   @IsArray()
   @ArrayMaxSize(93)
   @ValidateNested({ each: true })
   @Type(() => LeaveDayMapping)
   readonly dayMappings?: LeaveDayMapping[];
-  @ApiPropertyOptional({ type: [LeaveSessionMapping] })
+  @ApiPropertyOptional({
+    type: [LeaveSessionMapping],
+    description:
+      'One mapping per affected session, for any leave period. Preserves duration and must not overlap leave or timetables.',
+  })
   @ValidateIf((_o, v: unknown) => v !== undefined)
   @IsArray()
   @ArrayMaxSize(500)
@@ -123,8 +131,8 @@ export class LeaveSlotsInput {
   @IsISO8601({ strict: true })
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   readonly targetDate!: string;
-  @ApiProperty({ enum: LEAVE_PERIODS.slice(0, 3) })
-  @IsIn(LEAVE_PERIODS.slice(0, 3))
+  @ApiProperty({ enum: LEAVE_PERIODS })
+  @IsIn(LEAVE_PERIODS)
   readonly targetPeriod!: LeavePeriod;
 }
 export class LeaveListQuery extends PageOptionsDto {

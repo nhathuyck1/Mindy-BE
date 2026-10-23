@@ -592,11 +592,14 @@ Create FULL_DAY mẫu (IDs giả; thay bằng preview hiện hành):
 }
 ```
 
-FULL_DAY chỉ nhận dayMappings: mỗi affected source date đúng một mapping, giữ
-clock/thời lượng và mentor xin nghỉ. MORNING/AFTERNOON/EVENING chỉ nhận
-sessionMappings (không gửi dayMappings): mỗi source đúng một
-`{sourceSessionId,targetDate,targetPeriod,startsAt,endsAt}`; targetPeriod là một
-trong ba buổi, giữ duration và toàn slot trong period, không overnight. Target
+Cập nhật 23/10/2026: mọi period nhận sessionMappings (không gửi đồng thời
+dayMappings): mỗi source đúng một
+`{sourceSessionId,targetDate,targetPeriod,startsAt,endsAt}`; targetPeriod nhận
+MORNING/AFTERNOON/EVENING/FULL_DAY. Giữ duration, cho đổi giờ; toàn slot nằm
+trong targetPeriod, không overnight. FULL_DAY vẫn nhận dayMappings cũ theo mỗi
+affected source date để giữ clock/thời lượng. Nghỉ cả ngày phải bù ngoài khoảng
+ngày nghỉ; nghỉ theo buổi được bù cùng ngày nếu toàn slot ngoài khoảng nghỉ.
+Có thể chọn ngày ở tuần sau, không giới hạn trong tuần nghỉ. Target
 phải tương lai, không trước Class.startDate hoặc giao khoảng nghỉ đang xin/
 đã duyệt. Class.endDate tự gia hạn khi approve, không cần FE PATCH lớp trước.
 
@@ -624,8 +627,10 @@ withdraw/expired cũng ghi actor command, không nhất thiết là reviewer sta
 ### Side effects, races và lỗi FE phải xử lý
 
 Approval khóa request/Class/Session/mentor/student, requery toàn affected set
-và kiểm lại version/current mentor/active role/placements/timetable. FULL_DAY
-có student conflicts cần acknowledge=true; nghỉ buổi luôn chặn student conflict.
+và kiểm lại version/current mentor/active role/placements/timetable. Mọi period
+đều chặn student conflict bằng LEAVE_STUDENT_CONFLICT, kể cả FULL_DAY;
+acknowledgeStudentConflicts không cho phép bỏ qua xung đột. DTO vẫn giữ field
+này để tương thích client quản lý và dữ liệu lịch sử.
 APPROVED + cancel sources + replacements + extend endDate + approved intervals
 + student conflict queue + schedule/leave audits + receipt cùng transaction.
 Lỗi bất kỳ bước nào rollback toàn bộ; không attendance backfill/copy ABSENT,
