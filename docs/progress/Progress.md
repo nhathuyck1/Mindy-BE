@@ -1,4 +1,85 @@
+## 2026-10-27 — Kiểm tra sáu integration suites failed
+
+Tái hiện `pnpm test` khi thiếu TEST_DATABASE_URL:6 suites failed ở beforeAll,
+272 tests passed/419 skipped. Sáu suites Files/Materials32/33/331/332/333/34
+đều yêu cầu DB test riêng; đây là lỗi thiếu cấu hình trước khi chạy assertions.
+Đã start PostgreSQL/MinIO test containers hiện hữu và chạy lại với
+TEST_DATABASE_URL trỏ mindy_center_test. Cả6 suites đã PASS (117 tests).
+Full pnpm check PASS: lint/type-check/build PASS,78 suites/691 tests PASS,
+0 skipped,32 migration artifacts được build và verify.
+README sửa hướng dẫn setup và mô tả skip/fail cho đúng. API/business flow không đổi.
+Logs local ignored: tmp/test-failures-20261027.log và tmp/test-check-configured-20261027.log.
+
+## Đồng bộ group chat local — 2026-10-27
+
+Đã chạy backfill dry-run → apply → repeat (limit20) trên local:10 classes →10 groups, missing0; giữ1 DM,0 messages/0 notifications và original join/history/read state. Cờ local .env đã đặt CHAT_ENABLED=true/CHAT_JOB_ENABLED=true; key1 mới chỉ lưu .env ignored, DB chưa có message/receipt trước khi tạo key. Group DRAFT vẫn deny theo source. Không đổi API/quyền/schema hoặc bật attachments.
+
+Cơ chế tự tạo đã có: class/enrollment/order/account trigger → lifecycle outbox → chat worker → reconcile group/DM/member. **Live worker còn chờ API restart** để đọc cờ mới. Automatic approval đã chặn stop/start tiến trình API port3000 (blocked by policy, không có lý do chi tiết); không thực hiện restart. User cần Ctrl+C rồi pnpm dev/pnpm start trong terminal API. Jobs chờ1 LIFECYCLE/9 REALTIME/9 NOTIFICATION; chưa tính là live auto-sync đã verify. Chi tiết/logs ở Progress Phase6; build/CLI/repeat và DB checks PASS, không chạy lại runtime suites cho thao tác vận hành này.
+
+## Fixture SQL local — 2026-10-27
+
+Đã thêm student Chi (`student.chi@gmail.com`, user UUID `1f9a0b9f-d88d-4ac9-940b-2821998b1d77`) vào lớp `HTML-CSS-101-ON1` / `0d92ff10-6a12-4571-b96f-719707221378` bằng SQL local. Tạo CASH pending48h + enrollment PENDING_PAYMENT, group/DM với primary mentor để test Phase6. Group conversation_id `98f91cca-b59e-4e74-aeb7-15c440ceddbd`; mentor peer_user_id `08939ff0-7497-421e-9b54-2765789981b4`. Không mở materials/quiz hoặc ghi nhận thanh toán thật. Chạy SQL lại no-op, xác nhận1 order/detail/enrollment và0 payment transactions; source eligibility true. Chi tiết/script local ở Progress Phase6; không đổi API/schema/flags hoặc chạy application suites trong lượt fixture này.
+
+## 2026-10-27 — Postman Phase6: login theo nhóm test
+
+Đã nhóm19 APIs Phase6 thành5 phần, mỗi phần có Login Student/Login Mentor/GET auth/me. Thêm4 credential variables rỗng, cookie jar giữ actor đăng nhập gần nhất; request login có assertion200/role/ACTIVE. Giữ nguyên19 requests nghiệp vụ. Cập nhật parity check để duyệt folders và tách Auth khỏi19 routes chat. JSON/body/script syntax và exact-preservation PASS; lint/type-check PASS. Chưa chạy request Postman tới backend hoặc chạy lại HTTP suite cho thay đổi collection này; kết quả runtime39/39 trước đó giữ lịch sử.
+
+## 2026-10-27 — Chốt nghiệm thu backend local Phase6
+
+39/39 AC PASS, source manifest drift0,13 tài liệu/155 local links hợp lệ. Migration32/no pending và check691/HTTP117/restore PASS đã thực chạy trong lượt trước; [evidence](phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26). Docker daemon không còn sẵn khi kiểm cuối27/10 nên không đọc lại live DB/services. FE/VPS/production IAM/load acceptance vẫn riêng.
+
+## 2026-10-26 — Docker migration và tiếp tục nghiệm thu Phase6
+
+Đã backup DB dev, khởi động PostgreSQL/MinIO Docker, áp dụng16 migration còn thiếu lên32 và chạy lại no-op. Users8/orders0/enrollments0 giữ nguyên; tests chạy DB/bucket riêng. **39/39 AC PASS — backend local Phase6/R4 complete** (trước13/39). Full check691/691, HTTP117/117, focused chat34/34 và restore/ops rehearsal PASS. Đã đóng24 revoke barriers và contract/log harness; sửa drift docs theo runtime. [Progress6](phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26) có evidence/source fingerprint. FE/VPS/production IAM/load acceptance vẫn riêng; không đổi API/quyền hoặc deploy.
+
+
+## 2026-10-26 — Nghiệm thu tự động từng slice Phase6 (lịch sử lượt trước Docker)
+
+Đã đối chiếu8 slices/39 AC với source và thực chạy bộ tests local trên Node22/PostgreSQL17/MinIO test riêng; thêm6 PG tests, mở rộng rollback checks và đối chiếu19 routes Postman↔Swagger runtime. Chốt13 AC PASS,26 PARTIAL; checkbox và thiếu evidence được ghi riêng ở từng plan. Full check/HTTP/restore results xem [Progress6](phase%206/PHASE_6_PROGRESS.md#nghiệm-thu-tự-động-theo-slice--2026-10-26). Chưa đóng nghiệm thu Phase6/R4; FE/VPS/live payment không có evidence mới. Không đổi runtime API/business rules, không deploy/commit/push hoặc sửa FE.
+
+## 2026-10-26 — Tách kế hoạch Phase 6 theo slice
+
+Đã chuyển 8 slices 6.0–6.7 thành 8 file plan riêng như Phase 4; plan tổng giữ
+quy tắc chung, dependency và liên kết tới từng slice. Giữ nguyên 59 task IDs và
+39 acceptance IDs; cập nhật liên kết từ flow/progress và index implement phases.
+Xem [mục lục Phase 6](../implement_phase/phase%206/PHASE_6_CHAT_NOTIFICATIONS.md#kế-hoạch-triển-khai-theo-slice).
+Kiểm tra tài liệu PASS: 8 file slice, 59 task IDs/39 acceptance IDs duy nhất,
+246 liên kết nội bộ hợp lệ; code fences cân bằng, không conflict markers/trailing whitespace.
+Chỉ sửa tài liệu; không thay code, API, schema hoặc trạng thái nghiệm thu.
+
 THIS IS THE PROGRESS THAT U WILL BE UPDATED THROUGHOUT THE PROJECT
+
+## 2026-10-24 — Phase 6 runtime implementation
+
+Đã có group/DM source-aware cho CASH pending/ACTIVE, AES-GCM + shared HMAC receipts,
+transactional lifecycle outbox, Socket.IO/catchup/passive auth checks, edit/delete/read,
+generic inbox, scoped image/PDF và safe cleanup. Thêm3 migrations, verified Auth expiry,
+public owner providers, Swagger/Postman19 routes, maintenance/rotation/restore tools và
+[runbook](../PHASE_6_CHAT_RUNBOOK.md). [Progress6](phase%206/PHASE_6_PROGRESS.md) ghi local
+gates và acceptance còn mở. Chưa deploy, không sửa FE; flags mặc định tắt. Các ghi chép
+planning dưới giữ lịch sử, không còn mô tả trạng thái source hiện tại.
+
+## 2026-10-24 — Phase 6 Chat / Notification planning
+
+Follow-up lập chi tiết slices: [plan6 mục9](../implement_phase/phase%206/PHASE_6_CHAT_NOTIFICATIONS.md#slice-60)
+có8 slices6.0–6.7,59 task IDs,39 acceptance criteria, source/test targets và mốc
+R0–R4. Đồng bộ flow/API readiness và backlog progress6. Đã đối chiếu kho
+mutation_receipts chung, Auth expiry/revoke, Files scope và cash/expiry lock paths;
+receipt physical mapping/lock graph phải chốt6.0. Read mở6.4, inbox6.5, file/image6.6.
+Planning only; chưa code/cài package/migrate/test runtime/deploy hoặc sửa FE.
+
+Follow-up cùng ngày: trình bày lại schema plan thành từng bảng/từng cột; tách rõ
+domain outbox và chat dispatch jobs. Không code/migration/API change.
+
+Đã tạo [implement plan6](../implement_phase/phase%206/PHASE_6_CHAT_NOTIFICATIONS.md),
+[flow6](../api_flow/PHASE_6_FLOW.md),
+[API/event proposal6](../api_flow/PHASE_6_flow-api-breakdown.md) và
+[progress6](phase%206/PHASE_6_PROGRESS.md), baseline dev `cc8d843`.
+Phạm vi nhóm lớp/DM mentor–student, CASH pending/ACTIVE, AES-GCM server keyring,
+Socket.IO auth/revoke/recovery, retry receipts, read/unread, inbox và scoped files.
+Các mặc định chưa xác nhận được ghi là proposed. Group tự provision qua outbox
+sau commit, không hứa cùng transaction với Class. Chưa code/migrate/deploy hoặc
+test runtime chat; không đổi trạng thái Phase5. Kiểm chứng lượt này chỉ tài liệu.
 
 ## 2026-10-23 — Giờ bù linh hoạt khi xin nghỉ
 

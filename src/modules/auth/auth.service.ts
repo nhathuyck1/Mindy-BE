@@ -190,16 +190,26 @@ export class AuthService {
     });
   }
 
-  async assertAccessPrincipalValid(principal: AuthenticatedUser): Promise<void> {
-    const session = await this.dataSource.getRepository(AuthSessionEntity).findOne({
+  async assertAccessPrincipalValid(
+    principal: AuthenticatedUser,
+    manager = this.dataSource.manager,
+  ): Promise<void> {
+    const session = await manager.getRepository(AuthSessionEntity).findOne({
       where: { id: principal.sessionId, userId: principal.userId, revokedAt: IsNull() },
+      ...(manager.queryRunner?.isTransactionActive
+        ? { lock: { mode: 'pessimistic_read' as const } }
+        : {}),
     });
     if (session === null || session.expiresAt.getTime() <= Date.now()) {
       throw new AuthenticationRequiredException();
     }
 
-    const user = await this.usersService.findById(principal.userId);
-    if (user.status !== UserStatus.ACTIVE || user.role !== principal.role) {
+    const user = await this.usersService.findActiveByRole(
+      principal.userId,
+      principal.role,
+      manager,
+    );
+    if (user === null) {
       throw new AuthenticationRequiredException();
     }
   }

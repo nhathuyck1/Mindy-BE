@@ -7,6 +7,7 @@ import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { AttendanceModule } from './modules/attendance/attendance.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
 import { ClassesModule } from './modules/classes/classes.module.js';
 import { CommerceModule } from './modules/commerce/commerce.module.js';
 import { CourseBrowseModule } from './modules/course-browse/course-browse.module.js';
@@ -22,6 +23,7 @@ import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
   imports: [
+    ChatModule,
     AssignmentsModule,
     TrackingModule,
     TeachingOperationsModule,

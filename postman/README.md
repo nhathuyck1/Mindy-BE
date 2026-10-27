@@ -230,3 +230,29 @@ mentor attendance/stored progress và internal teaching notes/staff correction.
 PUT notes cần Origin + UUIDv4 idempotency_key và expectedVersion đọc từ GET.
 Không auto-run writes; example version0 cho create, version1 cho correction phải
 đổi theo data thực. Local verification không xác nhận collection đã chạy trên VPS.
+# Phase 6 — Chat / Notification
+
+Import [Mindy-Chat-Phase6.postman_collection.json](Mindy-Chat-Phase6.postman_collection.json).
+Collection có5 nhóm: Hội thoại, Tin nhắn, Read/Recovery, Thông báo, File/Ảnh.
+Mỗi nhóm có folder **00 — Đăng nhập (chọn một vai trò)** với Login Student,
+Login Mentor và kiểm tra tài khoản hiện tại (GET auth/me).
+
+Điền `student_email`, `student_password`, `mentor_email`, `mentor_password` trong
+environment local; collection để rỗng các credentials. `base_url` là host gốc,
+ví dụ http://localhost:3000; `origin` phải khớp CORS_ORIGINS. Nếu dùng seed account,
+password là SEED_ACCOUNT_PASSWORD của môi trường tương ứng, không phải password
+mẫu của HTTP test fixtures. Chọn một login đúng vai trò rồi kiểm tra auth/me;
+Postman cookie jar dùng actor login gần nhất. Khi dùng Runner, chọn login của
+vai trò đang test, bỏ chọn login còn lại và các mutation không định thực hiện.
+
+Send→edit/delete giữ cùng author; upload intent→complete/status/send giữ uploader.
+Inbox/notification_id thuộc actor hiện tại. Student cần enrollment hợp lệ,
+Mentor phải là primary mentor có quan hệ chat. Login scripts kiểm200/role/ACTIVE;
+không đưa JWT/cookie vào variables, không export passwords.
+
+Tổng34 requests =19 APIs nghiệp vụ giữ nguyên +10 login +5 auth/me.
+Đọc docs/api_flow/PHASE_6_flow-api-breakdown.md và runbook Phase6 trước khi bật flags.
+Giữ client_message_id/idempotency_key cho exact retry; F1 cần key và size
+đúng bytes, sau đó PUT storage→complete→poll READY→M2 IMAGE/FILE→file-access.
+Không điền JWT, keyring hoặc cookie vào collection variables; không ghi là deployed
+từ collection này. Socket harness: pnpm test:chat:socket trên DB/bucket test riêng.

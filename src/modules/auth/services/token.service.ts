@@ -44,6 +44,13 @@ export class TokenService {
   }
 
   verifyAccessToken(token: string): AuthenticatedUser {
+    return this.verifyAccessTokenWithExpiry(token).principal;
+  }
+
+  verifyAccessTokenWithExpiry(token: string): {
+    principal: AuthenticatedUser;
+    expiresAt: Date;
+  } {
     const parts = token.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid JWT shape');
@@ -84,9 +91,12 @@ export class TokenService {
     }
 
     return {
-      userId: payload.sub,
-      sessionId: payload.sid,
-      role: payload.role,
+      principal: {
+        userId: payload.sub,
+        sessionId: payload.sid,
+        role: payload.role,
+      },
+      expiresAt: new Date(payload.exp * 1000),
     };
   }
 

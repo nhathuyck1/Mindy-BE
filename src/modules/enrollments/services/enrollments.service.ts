@@ -25,6 +25,50 @@ export interface SeatHoldRequest {
  */
 @Injectable()
 export class EnrollmentsService {
+  async lockChatScopes(manager: EntityManager, classIds: readonly string[]): Promise<void> {
+    if (!classIds.length) return;
+    await manager
+      .getRepository(EnrollmentEntity)
+      .createQueryBuilder('e')
+      .where('e.classId IN (:...classIds)', { classIds: [...classIds] })
+      .orderBy('e.id', 'ASC')
+      .setLock('pessimistic_read')
+      .getMany();
+  }
+  async chatClassIds(manager: EntityManager, studentId: string): Promise<string[]> {
+    return (
+      await manager
+        .getRepository(EnrollmentEntity)
+        .createQueryBuilder('e')
+        .select('DISTINCT e.classId', 'id')
+        .where('e.studentId=:studentId', { studentId })
+        .getRawMany<{ id: string }>()
+    ).map((r) => r.id);
+  }
+  /** Typed batch scope; payment eligibility is supplied by Commerce, not inferred here. */
+  async chatScopes(
+    manager: EntityManager,
+    classIds: readonly string[],
+  ): Promise<
+    {
+      classId: string;
+      studentId: string;
+      orderDetailId: string;
+      enrollmentStatus: string;
+    }[]
+  > {
+    if (!classIds.length) return [];
+    return manager
+      .getRepository(EnrollmentEntity)
+      .createQueryBuilder('e')
+      .select('e.classId', 'classId')
+      .addSelect('e.studentId', 'studentId')
+      .addSelect('e.orderDetailId', 'orderDetailId')
+      .addSelect('e.status', 'enrollmentStatus')
+      .where('e.classId IN (:...classIds)', { classIds: [...classIds] })
+      .getRawMany();
+  }
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly reservations: ScheduleReservationsService,
