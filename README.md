@@ -69,10 +69,14 @@ pnpm check
 
 For a full check, provide `TEST_DATABASE_URL` for a dedicated PostgreSQL database
 whose name ends with `_test`. The integration suite wipes that database's public
-schema and reruns migrations; it skips without this variable. Never point it at
-development, staging or production data. In PowerShell, for example:
+schema and reruns migrations. Some database suites skip without this variable,
+but six Materials/Files suites fail during setup to require their dependencies.
+PostgreSQL and the local MinIO test fixture must both be running. Never point
+the test URL at development, staging or production data. In PowerShell, for example:
 
 ```powershell
+docker compose up -d postgres
+pnpm files:local:up
 $env:TEST_DATABASE_URL = 'postgresql://mindy:mindy@127.0.0.1:5433/mindy_center_test'
 pnpm check
 ```

@@ -40,6 +40,54 @@ export interface PageRequest {
 /** Read side of the classes module: views for management screens and public browsing. */
 @Injectable()
 export class ClassReadService {
+  async lockChatScopes(manager: EntityManager, ids: readonly string[]): Promise<void> {
+    if (!ids.length) return;
+    await manager
+      .getRepository(ClassEntity)
+      .createQueryBuilder('c')
+      .select('c.id')
+      .where('c.id IN (:...ids)', { ids: [...ids] })
+      .orderBy('c.id', 'ASC')
+      .setLock('pessimistic_read')
+      .getMany();
+  }
+  async chatClassIds(
+    manager: EntityManager,
+    mentorId?: string,
+    afterId?: string,
+    limit?: number,
+  ): Promise<string[]> {
+    const query = manager.getRepository(ClassEntity).createQueryBuilder('c').select('c.id', 'id');
+    if (mentorId) query.where('c.mentorId=:mentorId', { mentorId });
+    if (afterId) query.andWhere('c.id>:afterId', { afterId });
+    query.orderBy('c.id', 'ASC');
+    if (limit) query.limit(limit);
+    return (await query.getRawMany<{ id: string }>()).map((r) => r.id);
+  }
+  /** Public chat scope: primary mentor only, never session substitutes or makeup guests. */
+  async chatScopes(
+    manager: EntityManager,
+    ids: readonly string[],
+  ): Promise<
+    {
+      id: string;
+      mentorId: string;
+      status: string;
+      name: string;
+    }[]
+  > {
+    if (!ids.length) return [];
+    return manager
+      .getRepository(ClassEntity)
+      .createQueryBuilder('c')
+      .select('c.id', 'id')
+      .addSelect('c.mentorId', 'mentorId')
+      .addSelect('c.status', 'status')
+      .addSelect('c.name', 'name')
+      .where('c.id IN (:...ids)', { ids: [...ids] })
+      .getRawMany();
+  }
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,

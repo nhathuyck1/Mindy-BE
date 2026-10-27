@@ -1,6 +1,7 @@
 import { Readable } from 'node:stream';
 import {
   CopyObjectCommand,
+  DeleteObjectCommand,
   GetBucketPolicyCommand,
   GetBucketVersioningCommand,
   GetObjectCommand,
@@ -21,6 +22,15 @@ import type {
 
 @Injectable()
 export class MinioFileStorage implements FileStorage {
+  async deleteVersion(location: StorageLocation): Promise<void> {
+    await this.internal.send(
+      new DeleteObjectCommand({
+        Bucket: location.bucket,
+        Key: location.key,
+        VersionId: location.versionId,
+      }),
+    );
+  }
   private readonly internal: S3Client;
   private readonly publicClient: S3Client;
   constructor(private readonly config: ConfigService) {

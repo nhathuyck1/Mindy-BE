@@ -13,6 +13,44 @@ import type { OrderWithDetails } from './checkout.service.js';
 
 @Injectable()
 export class OrdersService {
+  async lockChatScopes(manager: EntityManager, detailIds: readonly string[]): Promise<void> {
+    if (!detailIds.length) return;
+    await manager
+      .getRepository(OrderEntity)
+      .createQueryBuilder('o')
+      .where(
+        'EXISTS (SELECT 1 FROM order_details d WHERE d.order_id=o.id AND d.id IN (:...detailIds))',
+        { detailIds: [...detailIds] },
+      )
+      .orderBy('o.id', 'ASC')
+      .setLock('pessimistic_read')
+      .getMany();
+  }
+  /** Read current CASH deadline/order state inside the caller's transaction snapshot. */
+  async chatScopes(
+    manager: EntityManager,
+    detailIds: readonly string[],
+  ): Promise<
+    {
+      orderDetailId: string;
+      paymentType: string;
+      orderStatus: string;
+      expiresAt: Date;
+    }[]
+  > {
+    if (!detailIds.length) return [];
+    return manager
+      .getRepository(OrderDetailEntity)
+      .createQueryBuilder('d')
+      .innerJoin(OrderEntity, 'o', 'o.id = d.orderId')
+      .select('d.id', 'orderDetailId')
+      .addSelect('o.paymentType', 'paymentType')
+      .addSelect('o.status', 'orderStatus')
+      .addSelect('o.expiresAt', 'expiresAt')
+      .where('d.id IN (:...detailIds)', { detailIds: [...detailIds] })
+      .getRawMany();
+  }
+
   constructor(private readonly dataSource: DataSource) {}
 
   managementQuery(

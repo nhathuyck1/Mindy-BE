@@ -30,6 +30,11 @@ const payosUrl = () =>
     });
 
 export const environmentSchema = Joi.object({
+  CHAT_ENABLED: Joi.boolean().default(false),
+  CHAT_ATTACHMENTS_ENABLED: Joi.boolean().default(false),
+  CHAT_JOB_ENABLED: Joi.boolean().default(false),
+  CHAT_ENCRYPTION_ACTIVE_KEY_VERSION: Joi.number().integer().positive().default(1),
+  CHAT_ENCRYPTION_KEYS: Joi.string().allow('').default(''),
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'staging', 'production')
     .default('development'),

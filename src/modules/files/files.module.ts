@@ -34,6 +34,6 @@ import { MinioFileStorage } from './storage/minio-file-storage.js';
     { provide: FILE_STORAGE, useExisting: MinioFileStorage },
     { provide: BINARY_VALIDATOR, useExisting: BinaryValidationService },
   ],
-  exports: [FileUploadPolicyService, FilesService],
+  exports: [FileUploadPolicyService, FilesService, FILE_STORAGE, BINARY_VALIDATOR],
 })
 export class FilesModule {}

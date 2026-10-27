@@ -1,5 +1,31 @@
 # Implementation phases
 
+2026-10-26 — **Phase6 backend local acceptance complete39/39 AC**:8 slices PASS, dev16→32 migrations/repeat no-op; full check691/691, HTTP117/117 và restore/ops PASS. [Báo cáo hiện hành](../progress/phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26) có24 revoke barriers, contract/log harness và source fingerprint. FE/VPS/production IAM/load acceptance cần evidence riêng.
+
+
+2026-10-26 — **Nghiệm thu tự động Phase6 theo8 slices**: [kết quả39 AC và evidence](../progress/phase%206/PHASE_6_PROGRESS.md#nghiệm-thu-tự-động-theo-slice--2026-10-26);13 PASS/26 PARTIAL, chỉ tick tiêu chí có đủ bằng chứng trong plan riêng. Local gates và deployment/FE acceptance được ghi riêng; Phase6 chưa đóng.
+
+
+2026-10-26 — **Tách kế hoạch Phase 6 theo slice như Phase 4**: [mục lục 6.0–6.7](phase%206/PHASE_6_CHAT_NOTIFICATIONS.md#kế-hoạch-triển-khai-theo-slice), mỗi slice một file riêng; giữ 59 tasks/39 acceptance criteria và dependency. Chỉ tổ chức lại tài liệu, không thay trạng thái triển khai hoặc nghiệm thu.
+
+2026-10-24 — **Phase6 runtime đã triển khai local**: group/DM, CASH source entitlement,
+AES-GCM/retry, Socket.IO/replay, edit/delete/read, inbox và scoped image/PDF.
+Swagger/Postman, maintenance CLI và DB/key restore rehearsal đã có. Flags mặc định
+tắt; chưa deploy/FE sign-off. Xem [Progress6](../progress/phase%206/PHASE_6_PROGRESS.md)
+và [runbook](../PHASE_6_CHAT_RUNBOOK.md); planning logs bên dưới giữ lịch sử.
+
+2026-10-24 — **Planning Phase6 Chat / Notification**: nhóm lớp tự động, DM mentor–
+student, CASH pending/ACTIVE entitlement, AES-256-GCM tại backend, Socket.IO,
+retry/recovery, read receipt, inbox và file/image theo slice riêng. Chưa implement.
+[Plan6](phase%206/PHASE_6_CHAT_NOTIFICATIONS.md) ·
+[Flow6](../api_flow/PHASE_6_FLOW.md) ·
+[API proposal6](../api_flow/PHASE_6_flow-api-breakdown.md) ·
+[Progress6](../progress/phase%206/PHASE_6_PROGRESS.md).
+
+Chi tiết Phase6 đã bổ sung: [8 slices6.0–6.7](phase%206/PHASE_6_CHAT_NOTIFICATIONS.md#slice-60),
+59 tasks/39 acceptance criteria, dependency, source/test targets và R0–R4 handoff.
+Tất cả còn TODO implementation; read6.4, inbox6.5, attachments6.6, full gates6.7.
+
 2026-10-22 — Phase5 QUIZ đã implement local trên `codex/phase5-assignments`:
 mentor soạn/publish đề, student start/resume/autosave/nộp toàn bài, BE chấm và trả
 result, durable timeout worker. ZIP pipeline/grading và reports A3-A5 còn TODO.

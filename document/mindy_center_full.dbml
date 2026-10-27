@@ -590,72 +590,141 @@
   // CHAT & NOTIFICATIONS
   // -----------------------------------------------------------------------------
 
+  // Phase 6 runtime reference (2026-10-24). Migrations 1792800000000..2 own executable CHECKs/triggers.
   Table chat_conversations {
     id uuid [pk]
-    type conversation_type [not null]
-    class_id uuid [note: 'Optional class-scoped group chat']
-    name varchar(200) [note: 'Required for group chat; null for direct message']
-    direct_key varchar(100) [unique, note: 'Sorted pair of user IDs for one unique DM conversation']
-    created_by uuid [not null]
-    created_at timestamptz [not null, default: `now()`]
-    updated_at timestamptz [not null, default: `now()`]
-
-    indexes {
-      (class_id, type)
-    }
-
-    Note: 'GROUP requires a name. DIRECT requires direct_key and exactly two active members; enforce in application or migration constraints.'
+    type varchar(10) [not null, note: 'CLASS or DIRECT; API serializes CLASS as GROUP']
+    class_id uuid [unique]
+    user_low uuid
+    user_high uuid
+    last_event_seq bigint [not null, default: 0]
+    events_pruned_through_seq bigint [not null, default: 0]
+    created_at timestamptz [not null]
+    updated_at timestamptz [not null]
+    indexes { (user_low, user_high) [unique] }
+    Note: 'CLASS has only class_id. DIRECT has only sorted user_low < user_high. SYSTEM provisioning has no fabricated actor.'
   }
-
   Table chat_members {
     conversation_id uuid [not null]
     user_id uuid [not null]
-    role chat_member_role [not null, default: 'MEMBER']
-    joined_at timestamptz [not null, default: `now()`]
+    joined_at timestamptz [not null]
     left_at timestamptz
+    visible_from_seq bigint [not null, default: 1]
+    last_read_seq bigint [not null, default: 0]
     last_read_at timestamptz
-
-    indexes {
-      (conversation_id, user_id) [pk]
-      (user_id, left_at)
-    }
+    entitlement_version integer [not null, default: 1]
+    announced_version integer [not null, default: 0]
+    indexes { (conversation_id,user_id) [pk] }
   }
-
   Table chat_messages {
     id uuid [pk]
     conversation_id uuid [not null]
     sender_id uuid [not null]
-    reply_to_message_id uuid
-    type chat_message_type [not null, default: 'TEXT']
-    body text
+    client_message_id uuid [not null]
+    type varchar(10) [not null, note: 'TEXT, IMAGE, FILE']
+    sequence bigint [not null]
+    last_changed_seq bigint [not null]
+    version integer [not null, default: 1]
+    reply_to_id uuid
     file_object_id uuid
-    edited_at timestamptz
+    body_is_null boolean [not null, default: false]
+    ciphertext bytea
+    iv bytea [note: '12 bytes']
+    tag bytea [note: '16 bytes']
+    key_version integer
+    crypto_version integer
     deleted_at timestamptz
-    created_at timestamptz [not null, default: `now()`]
-
+    created_at timestamptz [not null]
+    updated_at timestamptz [not null]
     indexes {
-      (conversation_id, created_at)
-      (sender_id, created_at)
-      (reply_to_message_id)
+      (conversation_id,id) [unique]
+      (conversation_id,sequence) [unique]
+      (conversation_id,sender_id,client_message_id) [unique]
     }
-
-    Note: 'TEXT requires body; FILE or IMAGE requires file_object_id.'
+    Note: 'AES-256-GCM only; no plaintext column. Tombstones retain IDs/receipts; shared mutation_receipts namespace chat stores HMAC and IDs/key versions, never body snapshots.'
   }
-
+  Table chat_events {
+    id uuid [pk]
+    conversation_id uuid [not null]
+    sequence bigint [not null]
+    type varchar(40) [not null]
+    message_id uuid
+    actor_id uuid
+    created_at timestamptz [not null]
+    indexes { (conversation_id,sequence) [unique] }
+  }
+  Table domain_outbox {
+    event_id uuid [pk]
+    type varchar(80) [not null]
+    version integer [not null, default: 1]
+    aggregate_type varchar(40) [not null]
+    aggregate_id uuid [not null]
+    occurred_at timestamptz [not null]
+  }
+  Table chat_jobs {
+    id uuid [pk]
+    consumer varchar(40) [not null, note: 'LIFECYCLE / REALTIME / NOTIFICATION / UPLOAD / CLEANUP']
+    event_id uuid [not null, note: 'Domain event, chat event, or chat file ID according to consumer']
+    conversation_id uuid
+    recipient_ids uuid[] [not null]
+    checkpoint integer [not null, default: 0]
+    status varchar(12) [not null, default: 'PENDING']
+    attempts integer [not null, default: 0]
+    next_attempt_at timestamptz [not null]
+    lease_token uuid
+    lease_until timestamptz
+    last_error_code varchar(80)
+    created_at timestamptz [not null]
+    completed_at timestamptz
+    indexes { (event_id,consumer) [unique] }
+  }
   Table notifications {
     id uuid [pk]
     user_id uuid [not null]
-    actor_id uuid
-    type varchar(80) [not null]
-    title varchar(250) [not null]
-    body text [not null]
-    data jsonb
+    actor_id uuid [not null]
+    type varchar(80) [not null, default: 'CHAT_MESSAGE']
+    conversation_id uuid [not null]
+    message_id uuid [not null]
     read_at timestamptz
-    created_at timestamptz [not null, default: `now()`]
-
-    indexes {
-      (user_id, read_at, created_at)
-    }
+    created_at timestamptz [not null]
+    indexes { (user_id,type,message_id) [unique] }
+    Note: 'Generic title/body/data are response projections; message body is never copied to inbox storage.'
+  }
+  Table chat_file_objects {
+    id uuid [pk]
+    purpose varchar(10) [not null, default: 'CHAT']
+    conversation_id uuid [not null]
+    owner_user_id uuid [not null]
+    original_name varchar(250) [not null]
+    declared_mime_type varchar(150) [not null]
+    declared_size_bytes bigint [not null]
+    bucket varchar(100) [not null]
+    staging_key varchar(1024) [not null]
+    staging_version_id varchar(1024)
+    object_key varchar(1024)
+    object_version_id varchar(1024)
+    mime_type varchar(150)
+    kind varchar(10)
+    size_bytes bigint
+    status varchar(20) [not null, default: 'PENDING_UPLOAD']
+    intent_expires_at timestamptz [not null]
+    created_at timestamptz [not null]
+    ready_at timestamptz
+    error_code varchar(80)
+    indexes { (conversation_id,id) [unique] }
+    Note: 'Separate CHAT owner model. No fabricated CourseUnit; material/assignment file_objects remain unchanged. Immutable pinned and verified versions.'
+  }
+  Table chat_file_copies {
+    file_id uuid [not null]
+    token uuid [not null]
+    object_key varchar(1024) [not null]
+    version_id varchar(1024)
+    created_at timestamptz [not null]
+    indexes { (file_id,token) [pk] }
+  }
+  Table chat_key_usage {
+    key_version integer [pk]
+    encryptions bigint [not null, default: 0, note: 'CHECK <= 1000000; reserve in message transaction']
   }
 
   // -----------------------------------------------------------------------------
@@ -1092,13 +1161,12 @@
   Ref: file_metadata.preview_file_id > file_objects.id
 
   Ref: chat_conversations.class_id > classes.id
-  Ref: chat_conversations.created_by > users.id
   Ref: chat_members.conversation_id > chat_conversations.id
   Ref: chat_members.user_id > users.id
   Ref: chat_messages.conversation_id > chat_conversations.id
   Ref: chat_messages.sender_id > users.id
-  Ref: chat_messages.reply_to_message_id > chat_messages.id
-  Ref: chat_messages.file_object_id > file_objects.id
+  Ref: chat_messages.(conversation_id,reply_to_id) > chat_messages.(conversation_id,id)
+  Ref: chat_messages.(conversation_id,file_object_id) > chat_file_objects.(conversation_id,id)
   Ref: notifications.user_id > users.id
   Ref: notifications.actor_id > users.id
 
@@ -1155,3 +1223,12 @@
   Ref: judge_runs.code_submission_id > code_submissions.id
   Ref: test_results.judge_run_id > judge_runs.id
   Ref: test_results.test_case_id > test_cases.id
+
+Ref: chat_conversations.user_low > users.id
+Ref: chat_conversations.user_high > users.id
+Ref: chat_events.conversation_id > chat_conversations.id
+Ref: chat_events.(conversation_id,message_id) > chat_messages.(conversation_id,id)
+Ref: chat_file_objects.conversation_id > chat_conversations.id
+Ref: chat_file_objects.owner_user_id > users.id
+Ref: chat_file_copies.file_id > chat_file_objects.id
+Ref: notifications.(conversation_id,message_id) > chat_messages.(conversation_id,id)
