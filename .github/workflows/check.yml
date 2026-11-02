@@ -45,6 +45,13 @@ jobs:
           ffprobe_path="$(node -p 'require("ffprobe-static").path')"
           sudo install -m 755 "$ffprobe_path" /usr/bin/ffprobe
           /usr/bin/ffprobe -version
+      - name: Install Poppler for whiteboard PDF integration tests
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y poppler-utils
+          pdftoppm -v
       - run: pnpm lint
       - run: pnpm type-check
       - name: Verify Materials and attendance migration compatibility
