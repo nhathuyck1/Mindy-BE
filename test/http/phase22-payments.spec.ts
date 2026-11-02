@@ -121,6 +121,30 @@ describe.skipIf(!separateTestUrl('http'))('Phase 2.2 built-app HTTP E2E', () => 
     });
   }
 
+  it('allows only the owning student to cancel a pending order through the built app', async () => {
+    expect((await request('/me/cart/items', otherCookie, { classId })).status).toBe(201);
+    const checkout = await request('/me/cart/checkout', otherCookie, { paymentType: 'PAYOS' });
+    expect(checkout.status).toBe(201);
+    const { orders } = (await checkout.json()) as { orders: { id: string }[] };
+    const order = orders[0];
+    if (!order) throw new Error('Missing order');
+    const path = `/me/orders/${order.id}/cancel`;
+    expect((await request(path, undefined, {})).status).toBe(401);
+    for (const cookie of [adminCookie, managerCookie, mentorCookie, studentCookie])
+      expect((await request(path, cookie, {})).status).toBe(403);
+    expect((await request('/me/orders/bad/cancel', otherCookie, {})).status).toBe(400);
+    const cancelled = await request(path, otherCookie, {});
+    expect(cancelled.status).toBe(200);
+    expect(await cancelled.json()).toMatchObject({ id: order.id, status: 'CANCELLED' });
+    expect((await request(path, otherCookie, {})).status).toBe(200);
+    expect(
+      await db.query(
+        'SELECT status FROM enrollments WHERE order_detail_id IN (SELECT id FROM order_details WHERE order_id=$1)',
+        [order.id],
+      ),
+    ).toEqual([{ status: 'CANCELLED' }]);
+  });
+
   it('protects every Phase 2.4 manager read with role/session guards and no inherited admin mutations', async () => {
     const id = randomUUID();
     const paths = [

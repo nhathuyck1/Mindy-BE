@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentsService } from '../../src/modules/assignments/services/assignments.service.js';
@@ -257,7 +257,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       dueAt: new Date(Date.now() + 86400000).toISOString(),
     });
     await expect(assignments.publish(s.mentor, zip.id, 1)).rejects.toMatchObject({
-      response: { code: 'ZIP_PIPELINE_NOT_IMPLEMENTED' },
+      response: { code: 'ASSIGNMENT_ZIP_DISABLED' },
     });
   });
   it('rejects duplicate/foreign answers, stale versions and invalid question replacement atomically', async () => {
@@ -401,5 +401,161 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       status: 'VOIDED',
       result: null,
     });
+  });
+  it('replaces 200 multilingual questions with bounded queries, preserving IDs/order and replacing keys', async () => {
+    const s = await setup();
+    const draft = await assignments.create(s.mentor, s.sessionId, {
+      purpose: 'HOMEWORK',
+      type: 'QUIZ',
+      title: 'Bulk 200',
+      maxScore: '100',
+    });
+    const questions = Array.from({ length: 200 }, (_, i) => ({
+      prompt: `Câu ${i + 1}: Tiếng Việt\nDòng hai: '); SELECT 1; --`,
+      correctOption: 'D' as const,
+      options: (['D', 'B', 'A', 'C'] as const).map((label) => ({
+        label,
+        text: `Đáp án ${label}\n${i}`,
+      })),
+    }));
+    const queries = vi.spyOn(db.logger, 'logQuery');
+    const started = performance.now();
+    let authored: Awaited<ReturnType<AssignmentsService['replaceQuestions']>>;
+    try {
+      authored = await assignments.replaceQuestions(s.mentor, draft.id, {
+        expectedRevision: 1,
+        questions,
+      });
+      const elapsed = performance.now() - started;
+      const sql = queries.mock.calls.map(([query]) => query);
+      expect(
+        sql.filter((query) =>
+          /^INSERT INTO assignment_(questions|question_options|answer_keys)\b/.test(query),
+        ),
+      ).toHaveLength(3);
+      expect(sql.length).toBeLessThanOrEqual(30);
+      console.info(
+        `Bulk 200: ${sql.length} SQL queries, ${elapsed.toFixed(1)} ms (local PostgreSQL)`,
+      );
+    } finally {
+      queries.mockRestore();
+    }
+    expect(authored.questions).toHaveLength(200);
+    expect(authored.questions?.map((q) => q.position)).toEqual(
+      Array.from({ length: 200 }, (_, i) => i + 1),
+    );
+    expect(authored.questions?.[199]).toMatchObject({
+      ...questions[199],
+      options: expect.any(Array),
+    });
+    const keep = authored.questions?.[199];
+    if (!keep) throw new Error('Missing bulk question');
+    const input = {
+      expectedRevision: authored.revision,
+      questions: [
+        {
+          id: keep.id.toUpperCase(),
+          prompt: 'Giữ ID, thay thứ tự và đáp án',
+          options: questions[0]?.options ?? [],
+          correctOption: 'B' as const,
+        },
+      ],
+    };
+    const replaced = await assignments.replaceQuestions(s.mentor, draft.id, input);
+    expect(replaced.questions).toEqual([
+      expect.objectContaining({ id: keep.id, position: 1, correctOption: 'B' }),
+    ]);
+    await expect(assignments.replaceQuestions(s.mentor, draft.id, input)).rejects.toMatchObject({
+      response: { code: 'ASSIGNMENT_VERSION_CONFLICT' },
+    });
+    const counts = await db.query(
+      `SELECT
+      (SELECT count(*) FROM assignment_questions WHERE assignment_id=$1) AS questions,
+      (SELECT count(*) FROM assignment_question_options o JOIN assignment_questions q ON q.id=o.question_id WHERE q.assignment_id=$1) AS options,
+      (SELECT count(*) FROM assignment_answer_keys k JOIN assignment_questions q ON q.id=k.question_id WHERE q.assignment_id=$1) AS keys`,
+      [draft.id],
+    );
+    expect(counts).toEqual([{ questions: '1', options: '4', keys: '1' }]);
+  });
+  it('rejects duplicate/cross-assignment IDs and repeated labels with field paths before replacing anything', async () => {
+    const s = await setup();
+    const draft = await assignments.create(s.mentor, s.sessionId, {
+      purpose: 'TEST',
+      type: 'QUIZ',
+      title: 'Atomic bulk',
+      maxScore: '10',
+    });
+    const question = {
+      prompt: 'Câu gốc',
+      correctOption: 'A' as const,
+      options: (['A', 'B', 'C', 'D'] as const).map((label) => ({ label, text: label })),
+    };
+    const original = await assignments.replaceQuestions(s.mentor, draft.id, {
+      expectedRevision: 1,
+      questions: [question],
+    });
+    const qid = original.questions?.[0]?.id ?? '';
+    const foreign = (await assignments.get(s.mentor, s.published.id)).questions?.[0]?.id ?? '';
+    const before = await assignments.get(s.mentor, draft.id);
+    await expect(
+      assignments.replaceQuestions(s.mentor, draft.id, {
+        expectedRevision: before.revision,
+        questions: [
+          { ...question, id: qid },
+          { ...question, id: qid.toUpperCase() },
+          { ...question, id: foreign },
+          { ...question, options: question.options.map((o) => ({ ...o, label: 'B' as const })) },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: 'INVALID_QUIZ_QUESTIONS',
+        details: [
+          {
+            fields: expect.arrayContaining([
+              { path: 'questions.1.id', code: 'DUPLICATE_QUESTION_ID' },
+              { path: 'questions.2.id', code: 'FOREIGN_QUESTION_ID' },
+              { path: 'questions.3.options', code: 'DISTINCT_ABCD_REQUIRED' },
+              { path: 'questions.3.correctOption', code: 'OPTION_REQUIRED' },
+            ]),
+          },
+        ],
+      },
+    });
+    expect(await assignments.get(s.mentor, draft.id)).toEqual(before);
+  });
+  it('rolls back batch questions, options, keys and revision if the authoring audit fails', async () => {
+    const s = await setup();
+    const draft = await assignments.create(s.mentor, s.sessionId, {
+      purpose: 'TEST',
+      type: 'QUIZ',
+      title: 'Rollback bulk',
+      maxScore: '10',
+    });
+    const before = await assignments.get(s.mentor, draft.id);
+    await db.query(
+      `CREATE FUNCTION test_reject_questions() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='QUESTIONS' THEN RAISE EXCEPTION 'test questions audit failure'; END IF; RETURN NEW; END $$`,
+    );
+    await db.query(
+      'CREATE TRIGGER test_questions_failure BEFORE INSERT ON assignment_audits FOR EACH ROW EXECUTE FUNCTION test_reject_questions()',
+    );
+    try {
+      await expect(
+        assignments.replaceQuestions(s.mentor, draft.id, {
+          expectedRevision: 1,
+          questions: [
+            {
+              prompt: 'Rollback',
+              correctOption: 'A',
+              options: (['A', 'B', 'C', 'D'] as const).map((label) => ({ label, text: label })),
+            },
+          ],
+        }),
+      ).rejects.toThrow('test questions audit failure');
+      expect(await assignments.get(s.mentor, draft.id)).toEqual(before);
+    } finally {
+      await db.query('DROP TRIGGER test_questions_failure ON assignment_audits');
+      await db.query('DROP FUNCTION test_reject_questions()');
+    }
   });
 });

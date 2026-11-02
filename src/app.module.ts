@@ -20,9 +20,11 @@ import { StudentLearningModule } from './modules/student-learning/student-learni
 import { TeachingOperationsModule } from './modules/teaching-operations/teaching-operations.module.js';
 import { TrackingModule } from './modules/tracking/tracking.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
 
 @Module({
   imports: [
+    WhiteboardsModule,
     ChatModule,
     AssignmentsModule,
     TrackingModule,

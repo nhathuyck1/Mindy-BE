@@ -1,0 +1,308 @@
+{
+  "info": {
+    "name": "Mindy Phase 7 Whiteboards",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Session context",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/whiteboard"
+      }
+    },
+    {
+      "name": "Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/class-sessions/{{sessionId}}/whiteboard",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Board metadata",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}"
+      }
+    },
+    {
+      "name": "Control",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/control",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedControlVersion\": \"1\",\n  \"mode\": \"COLLABORATIVE\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Snapshots",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/snapshots?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Save checkpoint",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/snapshots",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedEpoch\": \"{{epoch}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Reset",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/resets",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedEpoch\": \"{{epoch}}\",\n  \"expectedSequence\": \"0\",\n  \"expectedControlVersion\": \"1\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Image intent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/assets",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"filename\": \"image.png\",\n  \"mimeType\": \"image/png\",\n  \"sizeBytes\": 100\n}"
+        }
+      }
+    },
+    {
+      "name": "Complete upload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/assets/{{assetId}}/complete",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Asset status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/assets/{{assetId}}"
+      }
+    },
+    {
+      "name": "Asset access",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/assets/{{assetId}}/access",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "PNG export",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/exports",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedEpoch\": \"{{epoch}}\",\n  \"format\": \"PNG\",\n  \"scope\": \"CONTENT\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Export status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/exports/{{exportId}}"
+      }
+    },
+    {
+      "name": "Export access",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{$guid}}"
+          }
+        ],
+        "url": "{{baseUrl}}/whiteboards/{{boardId}}/exports/{{exportId}}/access",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    }
+  ]
+}

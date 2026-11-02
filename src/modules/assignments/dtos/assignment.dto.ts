@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import type { AssignmentRow, SubmissionRow } from '../assignment.types.js';
 import type { OptionLabel, QuizAnswer, QuizQuestion, QuizResult } from '../domain/quiz.js';
+import type { InstructionFile } from '../zip.types.js';
+import { AssignmentInstructionFileDto } from './zip.dto.js';
 
 export class QuizOptionDto {
   @ApiProperty({ enum: ['A', 'B', 'C', 'D'] }) readonly label!: OptionLabel;
@@ -38,6 +40,13 @@ export class QuizResultDto implements QuizResult {
 }
 
 export class AssignmentDto {
+  @ApiProperty({ type: [AssignmentInstructionFileDto] })
+  readonly instructionFiles: readonly InstructionFile[];
+  @ApiProperty({
+    type: Object,
+    example: { zipMutationsEnabled: false, instructionFilesEnabled: false },
+  })
+  readonly capabilities: { zipMutationsEnabled: boolean; instructionFilesEnabled: boolean };
   @ApiProperty() readonly id: string;
   @ApiProperty() readonly sessionId: string;
   @ApiProperty({ enum: ['TEST', 'HOMEWORK'] }) readonly purpose: string;
@@ -60,7 +69,11 @@ export class AssignmentDto {
   constructor(
     row: AssignmentRow,
     questions?: readonly (QuizQuestion & { correctOption: OptionLabel })[],
+    instructionFiles: readonly InstructionFile[] = [],
+    enabled = false,
   ) {
+    this.instructionFiles = instructionFiles;
+    this.capabilities = { zipMutationsEnabled: enabled, instructionFilesEnabled: enabled };
     this.id = row.id;
     this.sessionId = row.session_id;
     this.purpose = row.purpose;

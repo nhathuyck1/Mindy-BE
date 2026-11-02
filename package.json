@@ -71,7 +71,8 @@
     "sharp": "0.35.5",
     "socket.io": "4.8.1",
     "typeorm": "0.3.31",
-    "yauzl": "3.4.0"
+    "yauzl": "3.4.0",
+    "yjs": "13.6.32"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

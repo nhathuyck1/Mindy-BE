@@ -6,6 +6,7 @@ import {
   GetBucketVersioningCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectVersionsCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -22,6 +23,40 @@ import type {
 
 @Injectable()
 export class MinioFileStorage implements FileStorage {
+  async put(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    mimeType: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const result = await this.internal.send(
+      new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: mimeType }),
+      { abortSignal: signal },
+    );
+    if (!result.VersionId || result.VersionId === 'null') throw new Error('FILE_VERSION_REQUIRED');
+    return result.VersionId;
+  }
+  async deleteAllVersions(bucket: string, key: string): Promise<void> {
+    let keyMarker: string | undefined;
+    let versionMarker: string | undefined;
+    do {
+      const page = await this.internal.send(
+        new ListObjectVersionsCommand({
+          Bucket: bucket,
+          Prefix: key,
+          KeyMarker: keyMarker,
+          VersionIdMarker: versionMarker,
+        }),
+      );
+      for (const version of [...(page.Versions ?? []), ...(page.DeleteMarkers ?? [])]) {
+        if (version.Key === key && version.VersionId)
+          await this.deleteVersion({ bucket, key, versionId: version.VersionId });
+      }
+      keyMarker = page.IsTruncated ? page.NextKeyMarker : undefined;
+      versionMarker = page.IsTruncated ? page.NextVersionIdMarker : undefined;
+    } while (keyMarker);
+  }
   async deleteVersion(location: StorageLocation): Promise<void> {
     await this.internal.send(
       new DeleteObjectCommand({

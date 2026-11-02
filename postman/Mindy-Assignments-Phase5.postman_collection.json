@@ -1,19 +1,54 @@
 {
   "info": {
-    "name": "Phase 5 — Assignment QUIZ",
+    "name": "Phase 5 — Assignment QUIZ / ZIP",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Implemented QUIZ slice; ZIP/reporting pending. Manual requests only. Use existing auth cookie jar. Set IDs and latest revisions/versions before mutations. Set idempotency_key to an explicit UUIDv4; exact network retries reuse key/body. Switch mentor/student login for the appropriate routes. Local verification only."
+    "description": "Implemented backend QUIZ, ZIP/instruction uploads, grade revisions/release/history and reports. ZIP defaults OFF: migrate schema and enable feature/storage/worker after environment smoke. Manual requests only; existing auth cookie jar. Switch student/mentor explicitly. Update expected revisions/versions from each response. New logical mutation needs a new Idempotency-Key UUID; exact retry reuses key/body. Upload raw bytes to the presigned storage URL before complete; no BE cookie on storage PUT. See docs/api_flow/PHASE_5_flow-api-breakdown.md and docs/core/ASSIGNMENT_ZIP_RUNBOOK.md. Local verified; no deployment implied."
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:3000" },
-    { "key": "origin", "value": "http://localhost:3001" },
-    { "key": "class_id", "value": "" },
-    { "key": "session_id", "value": "" },
-    { "key": "assignment_id", "value": "" },
-    { "key": "submission_id", "value": "" },
-    { "key": "question_id_1", "value": "" },
-    { "key": "question_id_2", "value": "" },
-    { "key": "idempotency_key", "value": "" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "assignment_id",
+      "value": ""
+    },
+    {
+      "key": "submission_id",
+      "value": ""
+    },
+    {
+      "key": "question_id_1",
+      "value": ""
+    },
+    {
+      "key": "question_id_2",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "zip_submission_id",
+      "value": ""
+    },
+    {
+      "key": "assignment_file_id",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -21,8 +56,14 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/class-sessions/{{session_id}}/assignments",
         "body": {
@@ -59,8 +100,14 @@
       "request": {
         "method": "PATCH",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}",
         "body": {
@@ -75,15 +122,21 @@
       "request": {
         "method": "PUT",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/questions",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"expectedRevision\": 1,\n  \"questions\": [\n    { \"prompt\": \"Question one\", \"correctOption\": \"A\", \"options\": [{\"label\":\"A\",\"text\":\"One\"},{\"label\":\"B\",\"text\":\"Two\"},{\"label\":\"C\",\"text\":\"Three\"},{\"label\":\"D\",\"text\":\"Four\"}] },\n    { \"prompt\": \"Question two\", \"correctOption\": \"A\", \"options\": [{\"label\":\"A\",\"text\":\"One\"},{\"label\":\"B\",\"text\":\"Two\"},{\"label\":\"C\",\"text\":\"Three\"},{\"label\":\"D\",\"text\":\"Four\"}] }\n  ]\n}"
         },
-        "description": "1..200 questions within64KiB. Copy canonical question IDs and new revision from response."
+        "description": "Replace ALL questions, not append. 1..200 questions, JSON <=1MiB/1048576 bytes including UTF-8/escapes. For imports send the complete merged set with latest expectedRevision. Copy canonical IDs/order/revision from response. 422 INVALID_QUIZ_QUESTIONS: details[0].fields contains zero-based {path,code}; unknown names are $unknown, no rejected values. 409: refetch/reconcile. 413 INVALID_JSON_BODY: reduce serialized bytes. No raw-text parser."
       }
     },
     {
@@ -91,11 +144,20 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/publish",
-        "body": { "mode": "raw", "raw": "{\"expectedRevision\":2}" },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"expectedRevision\":2}"
+        },
         "description": "Latest revision required. Freezes content. ZIP publication unavailable."
       }
     },
@@ -120,12 +182,24 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
         ],
         "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/start",
-        "body": { "mode": "raw", "raw": "{\"expectedAssignmentRevision\":3}" },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"expectedAssignmentRevision\":3}"
+        },
         "description": "Set UUIDv4 key.201 new or200 resume. Copy attemptId to submission_id and canonical question IDs. Timer cannot reset."
       }
     },
@@ -141,9 +215,18 @@
       "request": {
         "method": "PUT",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
         ],
         "url": "{{base_url}}/api/v1/me/assignment-submissions/{{submission_id}}/answers",
         "body": {
@@ -158,9 +241,18 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
         ],
         "url": "{{base_url}}/api/v1/me/assignment-submissions/{{submission_id}}/submit",
         "body": {
@@ -183,8 +275,14 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/archive",
         "body": {
@@ -199,12 +297,447 @@
       "request": {
         "method": "DELETE",
         "header": [
-          { "key": "Origin", "value": "{{origin}}" },
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}",
-        "body": { "mode": "raw", "raw": "{\"expectedRevision\":1}" },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"expectedRevision\":1}"
+        },
         "description": "Explicit manual discard of a DRAFT only. Published assignments cannot be deleted."
+      }
+    },
+    {
+      "name": "Mentor create ZIP draft",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/class-sessions/{{session_id}}/assignments",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"purpose\": \"HOMEWORK\",\n  \"type\": \"ZIP\",\n  \"title\": \"ZIP assignment\",\n  \"description\": \"Submit one ZIP with the completed assignment.\",\n  \"maxScore\": \"10.00\",\n  \"maxAttempts\": 2,\n  \"dueAt\": \"2027-01-01T23:59:00+07:00\"\n}"
+        },
+        "description": "MENTOR. Set a future dueAt with timezone. Copy id/revision into assignment_id and subsequent requests. ZIP/file mutations require feature/storage enabled. Optional instructions upload/bind before publish; then use existing publish request with latest revision."
+      }
+    },
+    {
+      "name": "Mentor instruction upload intent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/instruction-upload-intents",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 1,\n  \"originalFilename\": \"instructions.pdf\",\n  \"declaredMimeType\": \"application/pdf\",\n  \"declaredSizeBytes\": 2048\n}"
+        },
+        "description": "MENTOR DRAFT only. PDF/DOCX/PNG/JPEG <=25MiB. Use actual file size. Copy fileId into assignment_file_id, PUT binary bytes to uploadUrl with requiredHeaders (no BE cookie), then complete. Intent15min, signed PUT<=5min."
+      }
+    },
+    {
+      "name": "Assignment complete upload",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/assignment-files/{{assignment_file_id}}/complete",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 1\n}"
+        },
+        "description": "OWNER. expectedVersion is FILE version, not submission/assignment/grade. Pin staging version and queue validation. Exact retry keeps key/body. Poll status; READY does not attach/submit."
+      }
+    },
+    {
+      "name": "Assignment file status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/assignment-files/{{assignment_file_id}}",
+        "description": "Authorized owner/binding/history. Poll every2s until READY/FAILED; stop automatic polling after60s and allow refresh. Never log raw parser errors or private locators."
+      }
+    },
+    {
+      "name": "Assignment private download",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/assignment-files/{{assignment_file_id}}/download",
+        "description": "Own draft/retained submitted binding or current scoped mentor; instructions require current assignment or own submitted history. Returns 60-second attachment URL. Already-issued URL lives to TTL; newly signing rechecks access."
+      }
+    },
+    {
+      "name": "Mentor replace instruction files",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/instruction-files",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 1,\n  \"fileIds\": [\n    \"{{assignment_file_id}}\"\n  ]\n}"
+        },
+        "description": "MENTOR DRAFT only, ordered0..5 own READY files from this assignment. Replace all, [] removes all. Revision+1; copy new revision."
+      }
+    },
+    {
+      "name": "Mentor extend published ZIP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/extend",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 2,\n  \"dueAt\": \"2027-01-01T23:59:00+07:00\",\n  \"maxAttempts\": 3,\n  \"reason\": \"Additional time for the assignment\"\n}"
+        },
+        "description": "MENTOR published ZIP only. Update future deadline/current revision. At least one strict increase; no deadline/attempt decrease. Existing submitted snapshots remain unchanged."
+      }
+    },
+    {
+      "name": "Student create or resume ZIP draft",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/zip-submissions",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedAssignmentRevision\": 2\n}"
+        },
+        "description": "STUDENT ACTIVE enrollment, published ZIP, before DB deadline. Create/resume one DRAFT, does not consume an attempt. Copy id into zip_submission_id."
+      }
+    },
+    {
+      "name": "Student ZIP upload intent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/zip-submissions/{{zip_submission_id}}/upload-intents",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 1,\n  \"originalFilename\": \"solution.zip\",\n  \"declaredMimeType\": \"application/zip\",\n  \"declaredSizeBytes\": 2048\n}"
+        },
+        "description": "STUDENT expectedVersion is SUBMISSION version. Use actual ZIP size <=20MiB. Copy fileId into assignment_file_id, PUT binary bytes to uploadUrl with requiredHeaders, complete using FILE version1, poll READY."
+      }
+    },
+    {
+      "name": "Student attach READY ZIP",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/zip-submissions/{{zip_submission_id}}/file",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 1,\n  \"fileId\": \"{{assignment_file_id}}\"\n}"
+        },
+        "description": "STUDENT DRAFT only. Exactly one own READY file from this same draft. Replaces previous draft file, submission version+1; copy returned version for submit."
+      }
+    },
+    {
+      "name": "Student submit ZIP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/zip-submissions/{{zip_submission_id}}/submit",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 2\n}"
+        },
+        "description": "STUDENT before DB dueAt; final write checks deadline. Consumes one attempt, snapshots instructions/title/description/maxScore/dueAt. SUBMITTED file immutable. Exact receipt retry survives later deadline/feature rollback."
+      }
+    },
+    {
+      "name": "Student ZIP detail or result",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/zip-submissions/{{zip_submission_id}}",
+        "description": "Own draft/history. Only released score/feedback; null until released. New draft does not supersede latest submitted result. Own submitted history survives enrollment/source closure, active account required."
+      }
+    },
+    {
+      "name": "Student assignment submission history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/submissions?page=1&pageSize=20",
+        "description": "Discriminated type QUIZ/ZIP. All submitted attempts newest first; no drafts. Optional status SUBMITTED/RELEASED, attemptNumber. Draft grade filters rejected."
+      }
+    },
+    {
+      "name": "Mentor submission queue",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/submissions?page=1&pageSize=20",
+        "description": "Latest submitted per student by default; optional history=true,studentId,status SUBMITTED/UNGRADED/GRADED/RELEASED/UNRELEASED,attemptNumber. Current mentor scope required."
+      }
+    },
+    {
+      "name": "Mentor ZIP submission detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/zip-submissions/{{zip_submission_id}}",
+        "description": "MENTOR current primary/substitute scope, submitted only. grade is current draft; gradeVersion0 before first save, releasedVersion nullable."
+      }
+    },
+    {
+      "name": "Mentor save draft ZIP grade",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/zip-submissions/{{zip_submission_id}}/grade",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 0,\n  \"score\": \"8.50\",\n  \"feedback\": \"Meets the assignment requirements.\"\n}"
+        },
+        "description": "GRADE expectedVersion0 on first save, then current gradeVersion. Decimal string <=2 fraction digits,0..submitted snapshot maxScore; feedback<=10000. Corrections require reason and create immutable revisions. Student retains prior released grade until new release."
+      }
+    },
+    {
+      "name": "Mentor release ZIP grade",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/zip-submissions/{{zip_submission_id}}/grade/release",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 1,\n  \"gradeVersion\": 1\n}"
+        },
+        "description": "Both versions must equal current grade revision. Stale/already released409; exact key/body retry returns same outcome. Release does not mutate grade revision."
+      }
+    },
+    {
+      "name": "Mentor ZIP grade and audit history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/zip-submissions/{{zip_submission_id}}/grade/history?page=1&pageSize=20",
+        "description": "Immutable revisions newest first plus paginated GRADE/RELEASE audits and totalAudits. Scoped mentor only, even after class closure."
+      }
+    },
+    {
+      "name": "Mentor assignment current roster",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/roster?page=1&pageSize=20",
+        "description": "Current ACTIVE entitled students; submitted/graded/released/missing flags. Missing only published after deadline without valid submitted attempt. Does not infer historical eligibility."
+      }
+    },
+    {
+      "name": "Mentor class assignment metrics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/assignment-metrics?type=ZIP",
+        "description": "Optional type,purpose,sessionId. Latest submitted student/assignment pairs; drafts/extra attempts do not inflate counts. Terminal submitted history retained; current eligibility denominator. Pending correction may count as both released and unreleased."
+      }
+    },
+    {
+      "name": "Mentor progress with assignment summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/classes/{{class_id}}/progress?page=1&pageSize=20",
+        "description": "PRIMARY mentor. assignmentSummary availability AVAILABLE with real assignment counts. No completion/certificate policy inferred."
       }
     }
   ]

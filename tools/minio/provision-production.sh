@@ -50,7 +50,8 @@ jq -n --arg bucket "$MINIO_BUCKET" '{
   Statement: [
     {Effect: "Allow", Action: ["s3:GetBucketLocation", "s3:GetBucketVersioning", "s3:GetBucketPolicy", "s3:ListBucket"], Resource: ["arn:aws:s3:::" + $bucket]},
     {Effect: "Allow", Action: ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"], Resource: ["arn:aws:s3:::" + $bucket + "/*"]},
-    {Effect: "Allow", Action: ["s3:DeleteObjectVersion"], Resource: ["arn:aws:s3:::" + $bucket + "/chat-staging/*", "arn:aws:s3:::" + $bucket + "/chat-final/*"]}
+    {Effect: "Allow", Action: ["s3:DeleteObjectVersion"], Resource: ["arn:aws:s3:::" + $bucket + "/chat-staging/*", "arn:aws:s3:::" + $bucket + "/chat-final/*", "arn:aws:s3:::" + $bucket + "/assignment-staging/*", "arn:aws:s3:::" + $bucket + "/assignment-verified/*"]},
+    {Effect: "Allow", Action: ["s3:ListBucketVersions"], Resource: ["arn:aws:s3:::" + $bucket], Condition: {StringLike: {"s3:prefix": ["assignment-staging/*", "assignment-verified/*"]}}}
   ]
 }' > /tmp/backend-policy.json
 mc admin policy create admin "$policy" /tmp/backend-policy.json >/dev/null \

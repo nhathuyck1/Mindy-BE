@@ -1,4 +1,14 @@
-import { Controller, Get, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
@@ -12,6 +22,8 @@ import { OrderDto, OrderPageDto } from '../dtos/order.dto.js';
 // biome-ignore lint/style/useImportType: Nest request validation needs runtime DTO metadata.
 import { OrderPageOptionsDto } from '../dtos/order-page-options.dto.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { OrderCancellationService } from '../services/order-cancellation.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { OrdersService } from '../services/orders.service.js';
 
 @ApiTags('orders')
@@ -21,7 +33,22 @@ import { OrdersService } from '../services/orders.service.js';
 @ApiCookieAuth('access_token')
 @ApiErrors(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly cancellation: OrderCancellationService,
+  ) {}
+
+  @Post(':orderId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel my unpaid order and release its seat holds' })
+  @ApiOkResponse({ type: OrderDto })
+  @ApiErrors(HttpStatus.NOT_FOUND, HttpStatus.CONFLICT, HttpStatus.BAD_REQUEST)
+  async cancel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('orderId', new ParseUUIDPipe({ version: '4' })) orderId: string,
+  ): Promise<OrderDto> {
+    return new OrderDto(await this.cancellation.cancel(user.userId, orderId));
+  }
 
   @Get()
   @ApiOperation({ summary: 'List my orders, newest first' })

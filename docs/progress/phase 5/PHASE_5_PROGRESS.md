@@ -1,5 +1,127 @@
 # Phase 5 progress — Assignment QUIZ / ZIP
 
+## B0/B2–B5 — ZIP completion — 2026-11-02
+
+Implementation covers the remaining backend plan. New migration1793577600000 adds
+isolated ZIP submissions/files/instruction bindings and snapshots/grade revisions/
+audits/receipts/durable jobs/copy tracking. QUIZ persistence and result schema remain
+unchanged. ZIP starts as DRAFT; unique open draft, scoped FKs, immutable terminal
+submissions/file bindings/revisions/audits/receipts and grade-release pointer guards
+protect history. Populated down refuses data loss.
+
+- Private purpose-scoped instruction upload (PDF/DOCX/PNG/JPEG,5 files,25MiB each)
+  and student ZIP upload20MiB; server-derived ancestry/owner, pin staging version,
+  complete/processing/READY/status/60s attachment download with post-sign auth check.
+  No widening of material FilesController/student role or chat file-ID scope.
+- Isolated ZIP parser streams actual sizes/CRC, bounds100MiB/1000 entries/ratio100,
+  rejects encrypted/nested/signature-spoofed/symlink/unsafe or duplicate paths;
+  heap128MiB/process35s/archive30s budgets. No extraction or execution.
+- Durable jobs poll3s, lease180s/heartbeat15s, task90s/max5 attempts. Recover expired
+  leases and final-attempt worker death; stale workers cannot publish READY. Worker
+  rechecks source/student/deadline/state before committing. Storage IO outside tx.
+- Cleanup rechecks expiry/grace/references under file lock; exact-key all-version
+  deletion plus pre-recorded copy keys handles overwrite/crash. DELETED tombstones
+  rechecked daily for late writes; FAILED cleanup is terminal for investigation.
+  Submitted/instruction references are retained. Default cleanup grace24h, configurable.
+- Published ZIP can extend dueAt/maxAttempts with reason/revision/audit, never reduce.
+  Create/resume DRAFT does not consume attempts; attach one READY own ZIP; submit
+  allocates next attempt under locks and rechecks DB clock in final write. Submitted
+  title/description/maxScore/deadline/instruction/file version snapshots are immutable.
+  Archive voids drafts atomically; worker voids other revoked drafts durably.
+- Draft grade revisions, explicit current-version release, reason for corrections,
+  optimistic locks and exact receipt replay. Students retain old released grade until
+  new release and cannot infer draft grades using list filters. Mentor current scope
+  is required even after source closure; createdBy is not a permanent grant.
+- Student QUIZ/ZIP discriminated history, mentor latest-submitted queue with history
+  filters, grade/audit history, roster/missing and scoped class metrics. Drafts/extra
+  attempts do not inflate student counts. Terminal enrollment submissions retained;
+  current eligibility denominator documented. Pending corrections count as unreleased
+  while the old released result remains visible. assignmentSummary now AVAILABLE in
+  compiled mentor progress endpoints through an assignment-owned read participant.
+- Feature ASSIGNMENT_ZIP_ENABLED defaults false. Flag rollback preserves submitted
+  reads/downloads/results and committed submit receipt replay; QUIZ remains usable.
+  Environment examples, Swagger,37-request Postman collection, flow/API and
+  [worker/rollout runbook](../../core/ASSIGNMENT_ZIP_RUNBOOK.md) updated. Provision script
+  adds assignment-only ListBucketVersions/DeleteObjectVersion permissions; no material
+  delete widening and no actual production provisioning was performed.
+
+Focused local evidence:5 ZIP validator cases and10 PostgreSQL+MinIO tests, including
+upgrade over a real graded QUIZ, cleanup/down guards, whole pipeline, multiple attempts,
+grade privacy/corrections, concurrent submit/grade/release, stale leases, pinned staging
+overwrite, revoke during copy, post-sign revoke, current substitute scope, audit/receipt
+rollback, missing denominator/quota and late-PUT tombstone cleanup. Compiled HTTP5 tests
+cover QUIZ/bulk plus a real isolated ZIP validator process and cookie/Origin/role/DTO/
+OpenAPI/history/feature rollback. Final full regression/migration evidence recorded below.
+
+Final gates on dedicated local test infrastructure:
+
+- `pnpm check` PASS:80 files/709 tests,0 skipped, lint/type-check and build33 verified
+  migration artifacts. Log `tmp/assignment-verified-check.log`.
+- Compiled HTTP PASS:12 files/120 tests,0 skipped. Includes40-question quiz/bulk,
+  ZIP subprocess validator/whole flow, real mentor assignmentSummary aggregate and
+  flag rollback, materials/chat/teaching/payments regressions. Log
+  `tmp/assignment-complete-http.log`. An existing Files Swagger assertion originally
+  rejected all paths ending /release; scoped it to the removed class-unit release
+  routes because /grade/release is now a valid distinct command. The old routes
+  remain404 and absent from Swagger. Earlier run119/120 is retained in
+  `tmp/assignment-verified-http.log`; final full run is120/120.
+- Compiled migration smoke PASS: fresh dedicated database applies33 migrations,
+  repeat applies0/no pending. Log `tmp/assignment-verified-rollout.log`.
+- Final repository lint/type-check/diff whitespace PASS;37 Postman request bodies
+  parse as JSON,27 local links validated, production MinIO script shell syntax PASS.
+  A preliminary check without TEST_DATABASE_URL failed fixture setup/skipped DB
+  tests; it is not counted as evidence. Configured final checks above have0 skips.
+
+No frontend changes, development/production migrations, deployment, commit or push.
+Production IAM/CORS/scratch/proxy/load/browser acceptance requires environment smoke;
+local fixtures only use dedicated *_test DBs and private -test MinIO buckets.
+
+## B1 — Bulk ABCD — 2026-11-02
+
+Started the [remaining backend plan](../../implement_phase/phase%205/PHASE_5_REMAINING_BE_PLAN.md)
+with the independent B1 slice. B0/B2–B5 (ZIP schema/storage/submit/grades/reports)
+remain pending; ZIP publication still returns409 ZIP_PIPELINE_NOT_IMPLEMENTED.
+
+- PUT mentor assignment questions has its own 1MiB JSON parser before the global
+  parser (adjusted from 8MiB to 1MiB). Global 64KiB and attendance recovery 256KiB remain unchanged. Source review
+  corrected the plan's reference to a chat 256KiB parser: chat uses global 64KiB.
+- Full replacement,1..200 questions, current mentor scope and expectedRevision
+  semantics retained. UUID comparisons normalize case; duplicate/foreign IDs,
+  repeated labels, missing keys and nested/unknown fields reject the whole set.
+- 422 INVALID_QUIZ_QUESTIONS now supplies details[0].fields[{path,code}], zero-based
+  question/option indexes. Unknown field names become $unknown; no rejected values,
+  answer values or validation targets are serialized. Other DTO errors retain
+  the existing global exception format.
+- Three parameterized batch INSERTs replace1200 sequential question/option/key
+  INSERTs for200 questions; all deletes/inserts/revision/audit remain in one tx.
+  Local PostgreSQL measurement:22 total SQL queries,129.5ms for200 questions.
+  This is a small local fixture, not a production latency benchmark.
+- Updated Swagger, Postman, flow/API breakdown and proxy rollout guidance. Repo
+  does not manage active reverse-proxy config; standard reverse-proxy defaults (1m)
+  now cover this route directly. App 413 is INVALID_JSON_BODY.
+
+Focused local evidence: 17/17 domain+PostgreSQL tests and 4/4 compiled assignment
+HTTP tests PASS. Covers 40-question regression, 200-question multilingual import
+above 64KiB, exact 1MiB and +1 byte (413), UTF-8/JSON escaping, parser isolation including
+attendance256KiB, field mapping/no private values, stale revisions, ID/order/key
+retention, replace-all removal and audit-failure rollback.
+
+Full `pnpm check` PASS: lint/type-check,78 files/694 tests, zero skips; production
+build verified32 migration artifacts. Uses dedicated `*_test` PostgreSQL databases
+and test MinIO. Log: `tmp/assignment-b1-check.log` (ignored local evidence).
+Postman16 requests/raw bodies and17 local Markdown links validate; diff whitespace
+and final repository lint/type-check pass.
+
+Final compiled HTTP:12 files/119 tests PASS, zero skips, including34 chat tests and
+4 assignment tests. Log: `tmp/assignment-b1-http-final.log`. Earlier HTTP run overlapped
+the check's clean-dist build and finished118/119 with a chat fixture `reconciled`
+IPC timeout (`tmp/assignment-b1-http.log`). Running only that chat test is not a
+valid isolation because it depends on an earlier restart fixture (`workers-stopped`
+timeout, `tmp/assignment-b1-chat-recheck.log`). The final full HTTP run after the build
+passed with no chat source/test changes; build and compiled HTTP must run sequentially.
+
+No FE changes, production migrations, commit/push or deployment in this slice.
+
 ## Restoration — 2026-10-23
 
 - Branch `codex/restore-phase5-assignments`, base dev `569bfcb`; reversed removal

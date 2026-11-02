@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { DataSource, type EntityManager } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
@@ -19,6 +21,8 @@ import type {
   UpdateAssignmentInput,
 } from '../dtos/assignment-input.dto.js';
 import { AssignmentException } from '../exceptions/assignment.exceptions.js';
+import type { QuestionFieldError } from '../validation/questions-validation.js';
+import type { InstructionFile } from '../zip.types.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { AssignmentAccessService } from './assignment-access.service.js';
 
@@ -29,6 +33,7 @@ export class AssignmentsService {
     private readonly access: AssignmentAccessService,
     private readonly workspace: MentorWorkspaceService,
     private readonly enrollments: EnrollmentsService,
+    @Optional() private readonly config?: ConfigService,
   ) {}
 
   async create(
@@ -65,14 +70,15 @@ export class AssignmentsService {
       const row = rows[0];
       if (!row) throw new Error('ASSIGNMENT_INSERT_INVARIANT');
       await this.audit(m, row, actor.userId, 'CREATE');
-      return new AssignmentDto(row);
+      return this.dto(m, row);
     });
   }
 
   async get(actor: AuthenticatedUser, id: string): Promise<AssignmentDto> {
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const a = await this.authorized(m, actor, id);
-      return new AssignmentDto(
+      return this.dto(
+        m,
         a,
         actor.role === UserRole.MENTOR ? await this.questionsWithKeys(m, id) : undefined,
       );
@@ -118,7 +124,7 @@ export class AssignmentsService {
         [...params, query.pageSize, (query.page - 1) * query.pageSize],
       );
       return {
-        items: rows.map((r) => new AssignmentDto(r)),
+        items: await Promise.all(rows.map((r) => this.dto(m, r))),
         total: Number(count[0]?.total ?? 0),
         page: query.page,
         pageSize: query.pageSize,
@@ -158,13 +164,24 @@ export class AssignmentsService {
       const a = await this.draft(m, actor, id, input.expectedRevision);
       if (a.type !== 'QUIZ') throw new AssignmentException(422, 'ASSIGNMENT_TYPE_MISMATCH');
       const old = new Set((await this.questions(m, id)).map((q) => q.id));
-      const supplied = input.questions.flatMap((q) => (q.id ? [q.id] : []));
-      if (
-        new Set(supplied).size !== supplied.length ||
-        supplied.some((qid) => !old.has(qid)) ||
-        input.questions.some((q) => new Set(q.options.map((o) => o.label)).size !== 4)
-      )
-        throw new AssignmentException(422, 'INVALID_QUIZ_QUESTIONS');
+      const supplied = new Set<string>();
+      const fields: QuestionFieldError[] = [];
+      for (const [index, q] of input.questions.entries()) {
+        // PostgreSQL UUID identity is case-insensitive; preserve that when comparing inputs.
+        const qid = q.id?.toLowerCase();
+        if (qid) {
+          if (supplied.has(qid))
+            fields.push({ path: `questions.${index}.id`, code: 'DUPLICATE_QUESTION_ID' });
+          if (!old.has(qid))
+            fields.push({ path: `questions.${index}.id`, code: 'FOREIGN_QUESTION_ID' });
+          supplied.add(qid);
+        }
+        if (new Set(q.options.map((o) => o.label)).size !== 4)
+          fields.push({ path: `questions.${index}.options`, code: 'DISTINCT_ABCD_REQUIRED' });
+        if (!q.options.some((o) => o.label === q.correctOption))
+          fields.push({ path: `questions.${index}.correctOption`, code: 'OPTION_REQUIRED' });
+      }
+      if (fields.length) throw new AssignmentException(422, 'INVALID_QUIZ_QUESTIONS', { fields });
       await m.query(
         'DELETE FROM assignment_answer_keys WHERE question_id IN (SELECT id FROM assignment_questions WHERE assignment_id=$1)',
         [id],
@@ -174,39 +191,70 @@ export class AssignmentsService {
         [id],
       );
       await m.query('DELETE FROM assignment_questions WHERE assignment_id=$1', [id]);
-      for (const [index, q] of input.questions.entries()) {
-        const qid = q.id ?? randomUUID();
-        await m.query(
-          'INSERT INTO assignment_questions(id,assignment_id,position,prompt) VALUES($1,$2,$3,$4)',
-          [qid, id, index + 1, q.prompt],
-        );
-        for (const o of q.options)
-          await m.query(
-            'INSERT INTO assignment_question_options(question_id,label,text) VALUES($1,$2,$3)',
-            [qid, o.label, o.text],
-          );
-        await m.query(
-          'INSERT INTO assignment_answer_keys(question_id,correct_option) VALUES($1,$2)',
-          [qid, q.correctOption],
-        );
-      }
+      const questions = input.questions.map((q, index) => ({
+        ...q,
+        id: q.id?.toLowerCase() ?? randomUUID(),
+        position: index + 1,
+      }));
+      // Three bounded parameterized writes, rather than six round trips per question.
+      await m.query(
+        `INSERT INTO assignment_questions(id,assignment_id,position,prompt)
+        SELECT q.id,$1,q.position,q.prompt
+        FROM jsonb_to_recordset($2::jsonb) AS q(id uuid,position integer,prompt text)`,
+        [
+          id,
+          JSON.stringify(questions.map(({ id, position, prompt }) => ({ id, position, prompt }))),
+        ],
+      );
+      await m.query(
+        `INSERT INTO assignment_question_options(question_id,label,text)
+        SELECT o.question_id,o.label,o.text
+        FROM jsonb_to_recordset($1::jsonb) AS o(question_id uuid,label text,text text)`,
+        [
+          JSON.stringify(
+            questions.flatMap((q) => q.options.map((o) => ({ question_id: q.id, ...o }))),
+          ),
+        ],
+      );
+      await m.query(
+        `INSERT INTO assignment_answer_keys(question_id,correct_option)
+        SELECT k.question_id,k.correct_option
+        FROM jsonb_to_recordset($1::jsonb) AS k(question_id uuid,correct_option text)`,
+        [
+          JSON.stringify(
+            questions.map((q) => ({ question_id: q.id, correct_option: q.correctOption })),
+          ),
+        ],
+      );
       await m.query(
         'UPDATE assignments SET revision=revision+1,updated_at=clock_timestamp() WHERE id=$1',
         [id],
       );
       const result = await this.changed(m, a, actor.userId, 'QUESTIONS');
-      return new AssignmentDto(await this.row(m, result.id), await this.questionsWithKeys(m, id));
+      return this.dto(m, await this.row(m, result.id), await this.questionsWithKeys(m, id));
     });
   }
 
   async publish(actor: AuthenticatedUser, id: string, revision: number): Promise<AssignmentDto> {
     return this.db.transaction(async (m) => {
       const a = await this.draft(m, actor, id, revision);
-      // ZIP remains draft-only until its isolated upload and grading slices are available.
-      if (a.type === 'ZIP') throw new AssignmentException(409, 'ZIP_PIPELINE_NOT_IMPLEMENTED');
-      const questions = await this.questionsWithKeys(m, id);
-      if (!questions.length || questions.some((q) => q.options.length !== 4))
-        throw new AssignmentException(422, 'QUIZ_QUESTIONS_REQUIRED');
+      if (a.type === 'ZIP' && !this.config?.get<boolean>('ASSIGNMENT_ZIP_ENABLED', false))
+        throw new AssignmentException(503, 'ASSIGNMENT_ZIP_DISABLED');
+      if (a.type === 'ZIP' && !this.config?.get<boolean>('MINIO_ENABLED', false))
+        throw new AssignmentException(503, 'ASSIGNMENT_STORAGE_UNAVAILABLE');
+      if (this.config?.get<boolean>('ASSIGNMENT_ZIP_ENABLED', false)) {
+        const invalid = await m.query(
+          `SELECT 1 FROM assignment_instruction_files b JOIN assignment_files f ON f.id=b.file_id
+          WHERE b.assignment_id=$1 AND f.status<>'READY' LIMIT 1`,
+          [id],
+        );
+        if (invalid.length) throw new AssignmentException(409, 'FILE_NOT_READY');
+      }
+      if (a.type === 'QUIZ') {
+        const questions = await this.questionsWithKeys(m, id);
+        if (!questions.length || questions.some((q) => q.options.length !== 4))
+          throw new AssignmentException(422, 'QUIZ_QUESTIONS_REQUIRED');
+      }
       const now = await this.now(m);
       if (a.due_at && a.due_at <= now)
         throw new AssignmentException(422, 'INVALID_ASSIGNMENT_DEADLINE');
@@ -237,6 +285,12 @@ export class AssignmentsService {
         "UPDATE assignment_submissions SET status='VOIDED',version=version+1,updated_at=clock_timestamp() WHERE assignment_id=$1 AND status='IN_PROGRESS'",
         [id],
       );
+      if (a.type === 'ZIP')
+        await m.query(
+          `WITH voided AS (UPDATE assignment_zip_submissions SET status='VOIDED',version=version+1,updated_at=clock_timestamp() WHERE assignment_id=$1 AND status='DRAFT' RETURNING *)
+          INSERT INTO assignment_zip_audits(assignment_id,submission_id,actor_id,action,version,reason) SELECT assignment_id,id,$2,'VOID',version,$3 FROM voided`,
+          [id, actor.userId, input.reason],
+        );
       await m.query(
         'UPDATE assignment_finalization_jobs SET completed_at=clock_timestamp() WHERE submission_id IN (SELECT id FROM assignment_submissions WHERE assignment_id=$1) AND completed_at IS NULL',
         [id],
@@ -345,6 +399,28 @@ export class AssignmentsService {
   ): Promise<AssignmentDto> {
     const row = await this.row(m, a.id);
     await this.audit(m, row, actorId, action, reason);
-    return new AssignmentDto(row);
+    return this.dto(m, row);
+  }
+  private async dto(
+    m: EntityManager,
+    row: AssignmentRow,
+    questions?: readonly (QuizQuestion & { correctOption: OptionLabel })[],
+  ): Promise<AssignmentDto> {
+    const files: InstructionFile[] = this.config
+      ? await m.query(
+          `SELECT f.id,f.original_name AS "originalFilename",f.declared_mime_type AS "mimeType",f.declared_size_bytes AS "sizeBytes",b.position
+      FROM assignment_instruction_files b JOIN assignment_files f ON f.id=b.file_id WHERE b.assignment_id=$1 ORDER BY b.position`,
+          [row.id],
+        )
+      : [];
+    return new AssignmentDto(
+      row,
+      questions,
+      files,
+      Boolean(
+        this.config?.get<boolean>('ASSIGNMENT_ZIP_ENABLED', false) &&
+          this.config?.get<boolean>('MINIO_ENABLED', false),
+      ),
+    );
   }
 }

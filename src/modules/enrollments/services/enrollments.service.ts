@@ -199,10 +199,12 @@ export class EnrollmentsService {
     studentId: string,
     classId: string,
     manager: EntityManager = this.dataSource.manager,
+    lock = false,
   ): Promise<EnrollmentEntity | null> {
-    return manager
-      .getRepository(EnrollmentEntity)
-      .findOneBy({ studentId, classId, status: EnrollmentStatus.ACTIVE });
+    return manager.getRepository(EnrollmentEntity).findOne({
+      where: { studentId, classId, status: EnrollmentStatus.ACTIVE },
+      ...(lock ? { lock: { mode: 'pessimistic_read' as const } } : {}),
+    });
   }
 
   /** Boolean entitlement check used by material policy; joins the caller's transaction. */

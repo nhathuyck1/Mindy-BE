@@ -119,6 +119,13 @@ an HTTPS certificate. Only ports 22, 80 and 443 should normally be public. Do no
 PostgreSQL port 5432. Swagger will be available at `https://api.example.com/docs` when
 `SWAGGER_ENABLED=true`.
 
+Assignment bulk questions (`PUT /api/v1/mentor/assignments/:id/questions`) accepts
+1 MiB JSON (1048576 bytes) in the application. Requests exceeding 1 MiB receive a 413
+`INVALID_JSON_BODY` payload too large error. This limit aligns with standard reverse proxy
+defaults (e.g. Nginx `client_max_body_size 1m`). Keep the application's global 64KiB and
+attendance recovery 256KiB limits unchanged.
+Local direct HTTP verification tests exact 1 MiB and 1 MiB + 1 byte (413).
+
 ## 4. Updating
 
 The dev CI/CD workflow builds all migrations into the release image and verifies

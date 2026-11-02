@@ -1,4 +1,13 @@
-# Phase 5 — Assignment API: QUIZ local implementation, ZIP planned
+# Phase 5 — Assignment API: QUIZ / ZIP backend
+
+2026-11-02 — B0–B5 implemented locally, migration1793577600000. ZIP/file features
+default OFF; deployment and environment smoke are separate. The current ZIP contract
+is in section5 below; earlier dated restoration entries describe previous slices.
+
+2026-11-02 — B1 bulk ABCD implemented locally: PUT questions accepts up to 8 MiB,
+uses three batch INSERTs, and returns indexed validation fields. Global JSON remains
+64 KiB; attendance recovery remains 256 KiB. ZIP upload/submit/grading/reports remain
+pending. This does not establish proxy/VPS deployment evidence.
 
 2026-10-23 restoration: `codex/restore-phase5-assignments` restores the QUIZ
 routes removed by PR #21. No new route, DTO or business-rule change beyond
@@ -44,9 +53,12 @@ correctOption, score or isCorrect. OpenAPI has separate student metadata schemas
 
 Page payload: items,total,page,pageSize. Default page1/pageSize20, max100; stable
 created_at DESC,id ASC; scope/filters apply before count/pagination. Growable
-submission queues/history/report endpoints are not implemented in this slice.
-Request JSON limit remains the existing64KiB; individual field limits do not
-promise that every field can reach its maximum in a single question-set request.
+submission queues/history/report endpoints are described in section5.
+JSON is limited to64KiB except PUT mentor assignment questions (1MiB/1048576 bytes)
+and POST attendance recovery (256KiB). The questions limit counts decoded HTTP-body
+bytes, including UTF-8 multibyte text, JSON escapes and whitespace, independently
+of the 200-question/field limits. Even valid individual fields can exceed the total
+request byte budget;413 does not save any part of the set.
 
 ## 2. Mentor authoring — implemented
 
@@ -60,8 +72,8 @@ revision come from create/list/get. Re-fetch after409; never overwrite newer wor
 | GET /mentor/classes/:classId/assignments | Class tab, same filters |200 page; substitute sessions only. |
 | GET /mentor/assignments/:assignmentId | Edit/preview; ID from list |200 metadata plus questions/private correctOption; current scoped mentor only. |
 | PATCH /mentor/assignments/:assignmentId | expectedRevision>=1; title?,description?,dueAt? (explicit null removes QUIZ due date),timeLimitMinutes? (null disables QUIZ timer) |200 metadata/revision+1; DRAFT only. type/purpose/maxScore/maxAttempts immutable in this slice; published edits409. |
-| PUT /mentor/assignments/:assignmentId/questions | expectedRevision; questions1..200 [{id? UUIDv4,prompt1..5000 nonblank,options:[{label A/B/C/D,text1..2000 nonblank}] exactly4 unique labels,correctOption A/B/C/D}] |200 metadata + canonical questions/server IDs/revision+1. Atomic full replacement, existing IDs must belong to this draft; omitted IDs generated. |
-| POST /mentor/assignments/:assignmentId/publish | expectedRevision; preview -> publish |200 PUBLISHED/revision+1. Requires QUIZ with>=1 valid question/key and optional dueAt in future. Freezes all content/config. ZIP409 ZIP_PIPELINE_NOT_IMPLEMENTED. |
+| PUT /mentor/assignments/:assignmentId/questions | expectedRevision; questions1..200 [{id? UUIDv4,prompt1..5000 nonblank,options:[{label A/B/C/D,text1..2000 nonblank}] exactly4 unique labels,correctOption A/B/C/D}]; JSON <=1MiB |200 metadata + canonical questions/server IDs/revision+1. Atomic full replacement, existing IDs must belong to this draft; omitted IDs generated. |
+| POST /mentor/assignments/:assignmentId/publish | expectedRevision; preview -> publish |200 PUBLISHED/revision+1. QUIZ requires>=1 valid question/key. ZIP requires ASSIGNMENT_ZIP_ENABLED and MINIO_ENABLED; disabled503. dueAt must be future. Bound instructions must be READY. Freezes content/config; ZIP extension has its own command. |
 | POST /mentor/assignments/:assignmentId/archive | expectedRevision,reason1..2000 nonblank |200 ARCHIVED/revision+1; PUBLISHED only; active attempts VOIDED, pending expiry jobs completed atomically. Graded results retained. |
 | DELETE /mentor/assignments/:assignmentId | JSON body expectedRevision; discard draft |204 soft delete/revision audit. DRAFT only. |
 
@@ -69,6 +81,30 @@ An empty list is valid after authorization; a foreign mentor scope returns403.
 Published edits return409 ASSIGNMENT_CONTENT_FROZEN; use a new draft for correction.
 Archive is irreversible in v1; refetch lists/detail afterward. Creation and every
 transition write append-only audits without answer content or keys.
+
+Bulk editing/import flow: FE parses/previews text locally, then sends the complete
+merged questions array. This endpoint replaces all questions; it does not append
+and does not accept raw text/Quizlet input. Loading state ends at200 or an error;
+no jobs/polling. Replace local IDs/order/revision with the canonical200 response.
+Questions omitted from a successful replacement are removed. Existing IDs are
+compared as UUIDs (case-insensitive); duplicate/foreign IDs reject the whole set.
+
+On422 INVALID_QUIZ_QUESTIONS, map `details[0].fields` to input fields using zero-based
+paths. For example:
+
+```json
+{"statusCode":422,"code":"INVALID_QUIZ_QUESTIONS","message":"invalid quiz questions","details":[{"fields":[{"path":"questions.1.options.2.text","code":"matches"}]}]}
+```
+
+DTO codes are class-validator constraint names (e.g. isString,isIn,isUuid,matches,
+maxLength,arrayMaxSize,nestedValidation,whitelistValidation). Business codes are
+DUPLICATE_QUESTION_ID,FOREIGN_QUESTION_ID,DISTINCT_ABCD_REQUIRED,OPTION_REQUIRED.
+Unknown property names use `$unknown` in the path; error responses contain neither
+rejected values nor answer keys. Missing correctOption is an error; no inference.
+Keep the draft locally while fixing fields; refetch/reconcile on409 revision conflict.
+On413 INVALID_JSON_BODY reduce serialized bytes before retrying. Network uncertainty
+requires GET authoring detail to determine the current revision before another PUT;
+this mutation uses optimistic revision protection and has no idempotency receipt.
 
 ## 3. Student metadata and QUIZ — implemented
 
@@ -142,33 +178,130 @@ retry2..300s and terminal submissions are immutable at the database boundary.
 |409 QUIZ_ALREADY_STARTED / SUBMISSION_ALREADY_FINALIZED|Use details resultId/attemptId from start; GET own result.|
 |409 ATTEMPT_EXPIRED / RESULT_NOT_AVAILABLE|Poll only expired FINALIZING; otherwise resume unfinished attempt.|
 |409 IDEMPOTENCY_KEY_REUSED|Retry original key/body or use new key for a new valid mutation.|
-|409 ZIP_PIPELINE_NOT_IMPLEMENTED|ZIP is draft-only; no upload UI yet.|
+|503 ASSIGNMENT_ZIP_DISABLED / ASSIGNMENT_STORAGE_UNAVAILABLE|Feature/storage unavailable; preserve local work, retry only after availability changes.|
 |422 INVALID_ASSIGNMENT_CONFIG / INVALID_ASSIGNMENT_DEADLINE / INVALID_QUIZ_QUESTIONS / QUIZ_QUESTIONS_REQUIRED / ASSIGNMENT_TYPE_MISMATCH|Correct input/configuration; do not retry unchanged body.|
 |422 IDEMPOTENCY_KEY_REQUIRED / INVALID_QUIZ_ANSWERS / SUBMISSION_INCOMPLETE|Supply UUID key/valid distinct answers/all required answers.|
 |400 path UUID /422 global DTO validation|Correct request fields; unexpected score/key injection is rejected.|
+|400 INVALID_JSON_BODY|Fix malformed JSON; no replacement committed.|
+|413 INVALID_JSON_BODY|Reduce JSON bytes; questions PUT 1MiB, attendance recovery 256KiB, global 64KiB. Do not retry unchanged body.|
 
 Error details follow existing AppHttpException array: details:[{missingQuestionIds:...}]
 or details:[{resultId:...}], not a new envelope. UI distinguishes loading/empty,
 saving, conflict, finalizing, graded and voided; refetch after authoring mutations.
 
-## 5. Planned, unavailable routes and remaining work
+## 5. ZIP, instruction files, grading and reporting — implemented
 
-ZIP: upload-intents,complete,status,attach,submit,download and mentor grade/release.
-Mentor submissions queue/detail/roster, student attempt-history list, summary metrics
-and integration into stored-progress assignmentSummary remain unavailable. Existing
-assignmentSummary stays NOT_IMPLEMENTED until real class aggregation is provided.
-ZIP dueAt/maxAttempts increases with audit are also deferred; all published edits
-are currently frozen. No promise of grant via unit release, source execution,
-weighted gradebook or certification. See original plan A3-A5 for remaining contracts.
+All mutations below require the existing cookie/role/Origin guards AND an
+Idempotency-Key UUIDv4. Reuse the exact key/body after a network failure; a changed
+body with the same key409 IDEMPOTENCY_KEY_REUSED. Durable receipts return the same
+committed outcome. Upload receipts retain only fileId and re-sign the same live
+intent after authorization; signed URLs are never stored in receipts. GETs do not
+submit, grade, create jobs or alter state. Responses are private,no-store.
 
-Migration1792713600000 is additive. Apply through normal migration runner before
-app rollout; do not run automatically against production from this task. Down is
-allowed only with an empty assignments table; populated environments roll back app
-and preserve data. Quiz result/snapshot/answers are module-owned typed SQL/JSONB,
-following teaching-notes transaction style; separate ZIP grade revisions/entities
-will be delivered with A3/A4. No new entity export or cross-module repository read.
+New writes require ASSIGNMENT_ZIP_ENABLED=true; storage mutations additionally
+require MINIO_ENABLED and a private versioned bucket. Reads of own submitted history,
+released grades and bound downloads remain available when the ZIP flag is OFF.
+Grade/release allow a scoped current mentor to grade submitted history even when the
+source class/session has closed; createdBy never grants permanent access.
+
+IDs below: assignmentId comes from existing create/list/get; submissionId comes
+from ZIP draft/history; fileId comes from upload intent. A file version is distinct
+from the submission version, assignment revision and grade version.
+
+| Method + route after /api/v1 | Input / FE step | Success / effects |
+|---|---|---|
+| POST /mentor/assignments/:id/instruction-upload-intents | expectedRevision,originalFilename,declaredMimeType,declaredSizeBytes; current mentor, assignment DRAFT |201 upload intent. PDF/DOCX/PNG/JPEG only, <=25MiB each. |
+| PUT /mentor/assignments/:id/instruction-files | expectedRevision,fileIds[] ordered0..5; own READY files from this assignment |200 {revision,instructionFiles}; replace all in tx, revision+1/audit. Empty array removes all while DRAFT. |
+| POST /mentor/assignments/:id/extend | expectedRevision,reason1..2000 nonblank,dueAt? ISO with timezone,maxAttempts?1..10 |200 {revision,dueAt,maxAttempts}; published ZIP only, no decreases, at least one strict increase; existing submission snapshots unchanged. |
+| POST /me/assignments/:id/zip-submissions | expectedAssignmentRevision>=1; ACTIVE own enrollment, class writable, published ZIP, DB now<dueAt |201 ZIP draft (create or resume), version1 on create. One open DRAFT per student/assignment. No attempt consumed. |
+| POST /me/zip-submissions/:id/upload-intents | expectedVersion (submission),originalFilename,declaredMimeType="application/zip",declaredSizeBytes1..20971520 |201 scoped upload intent; owner/assignment/enrollment/storage keys server-derived. |
+| POST /assignment-files/:id/complete | expectedVersion (FILE version); owner and current source permission |200 PROCESSING, file version+1, pins staging object version and inserts one durable validation job. Does not attach or submit. |
+| GET /assignment-files/:id | owner/scoped binding/history authorization |200 id,status,version,purpose,originalFilename,mimeType,sizeBytes,errorCode. No storage locator. |
+| GET /assignment-files/:id/download | own draft or bound submitted history; currently scoped mentor; student instructions require current assignment access or own submitted snapshot |200 {url,expiresAt}; 60s private attachment URL, recheck scope/binding after signing. Issued URL remains valid until TTL. |
+| PUT /me/zip-submissions/:id/file | expectedVersion (submission),fileId; one own READY ZIP from the same draft |200 ZIP view, submission version+1; replaces previous draft file, no attempt consumed. |
+| POST /me/zip-submissions/:id/submit | expectedVersion (submission); one READY bound verified version |200 SUBMITTED, version+1, next attemptNumber allocated1..maxAttempts; immutable title/description/maxScore/dueAt/instruction snapshot, audit+receipt in same commit. DB time rechecked in final UPDATE. |
+| GET /me/zip-submissions/:id | own current draft or retained history with ACTIVE account |200 student ZIP view; released grade only, grade:null until release; no gradeVersion/releasedVersion/private draft feedback. |
+| GET /mentor/zip-submissions/:id | current primary/scoped substitute; submitted only |200 mentor ZIP view plus gradeVersion (0 before first grade),releasedVersion nullable; grade is current mentor draft revision. |
+| PUT /mentor/zip-submissions/:id/grade | expectedVersion (GRADE,0 on first save),score decimal string0..snapshot.maxScore with<=2 fractional digits,feedback<=10000,reason?<=2000 |200 mentor ZIP view. New immutable grade revision; any correction requires nonblank reason. Old released grade remains visible to student. |
+| POST /mentor/zip-submissions/:id/grade/release | expectedVersion (GRADE),gradeVersion; both must equal current grade revision>=1 |200 mentor ZIP view; stale/already released409. Exact replay returns original outcome. |
+| GET /mentor/zip-submissions/:id/grade/history | page,pageSize (defaults1/20,max100) |200 {items,total,audits,totalAudits,page,pageSize}. Revisions version DESC; audits GRADE/RELEASE createdAt DESC,id; each list paginated independently by the same page options. |
+| GET /me/assignments/:id/submissions | page/pageSize,attemptNumber?,status? SUBMITTED/RELEASED |200 discriminated QUIZ/ZIP history, newest submittedAt DESC,id. All submitted attempts retained; new draft does not replace current result. Other grade-state filters422 to prevent draft-grade inference. |
+| GET /mentor/assignments/:id/submissions | page/pageSize,studentId?,attemptNumber?,history? string true/false,status? SUBMITTED/UNGRADED/GRADED/RELEASED/UNRELEASED |200 page; latest submitted per student by default, history=true exposes older attempts. GRADED includes released; UNRELEASED includes pending corrections. No drafts in queue. |
+| GET /mentor/assignments/:id/roster | page/pageSize,studentId? |200 {items,total,page,pageSize,denominator:"CURRENT_ACTIVE_ENTITLEMENTS"}; studentId,enrollmentId,displayName,submissionId nullable,submitted/graded/released/missing booleans. |
+| GET /mentor/classes/:id/assignment-metrics | type? QUIZ/ZIP,purpose? TEST/HOMEWORK,sessionId?; current mentor scope |200 assignment/student-pair counts described below; substitute session scope applied before aggregating. |
+
+Upload declaration example for an open submission at version1:
+
+```json
+{"expectedVersion":1,"originalFilename":"solution.zip","declaredMimeType":"application/zip","declaredSizeBytes":2048}
+```
+
+Upload response adds fileId,uploadUrl,requiredHeaders{"content-type":...},
+uploadUrlExpiresAt (<=300s),intentExpiresAt (15min), and file status/version1.
+PUT raw bytes to uploadUrl with requiredHeaders (storage call, no BE cookie).
+POST complete using FILE expectedVersion1; poll GET file every2s until READY/FAILED,
+stop automatic polling after60s and allow refresh. Worker continues independently.
+READY is not submitted. Attach file using SUBMISSION expectedVersion1, then submit
+using returned submission version2. Stop polling on401/403/404; fix FAILED input by
+creating a new intent. Uploading before the deadline never reserves a submission.
+
+ZIP view: type="ZIP",id,assignmentId,studentId,status DRAFT/SUBMITTED/VOIDED,version,
+attemptNumber nullable until submit,submittedAt nullable,snapshot nullable,file nullable,
+grade nullable. Snapshot contains title,description,maxScore,dueAt,instructionFiles.
+file contains id,originalFilename,mimeType,sizeBytes; no object keys/version locator.
+Student grade contains only released version,score,feedback; mentor additionally gets
+gradeVersion and releasedVersion and sees current draft grade. History QUIZ items
+contain type="QUIZ",id,assignmentId,studentId,attemptNumber,submittedAt,status="GRADED",
+result (existing QuizResultDto unchanged),instructionFiles. A latest ungraded/unreleased
+ZIP result is pending even when an older attempt has a released grade.
+
+Assignment metadata now includes instructionFiles and capabilities
+{zipMutationsEnabled,instructionFilesEnabled}. Capabilities describe feature/storage
+configuration; access, lifecycle, deadline and versions are always enforced by commands.
+Instruction bindings freeze at publish for QUIZ and ZIP. Own graded QUIZ history also
+permits downloading the immutable bound instructions after source/enrollment closure.
+
+Metrics: assignments = nondeleted PUBLISHED/ARCHIVED assignments in scope; eligible =
+current ACTIVE account/enrollment + writable class + noncancelled session + PUBLISHED
+assignment student pairs; submitted = latest valid submitted ZIP or graded QUIZ pair,
+including terminal enrollment history; missing = eligible pairs with dueAt<=DB now and
+no submitted attempt. No historical eligibility is inferred. ungraded = submitted
+without any grade; unreleased = current grade version newer than released (including
+corrections); released = a public grade exists. A pending correction can count in both
+unreleased and released. Drafts and extra attempts never inflate student counts.
+`denominator="CURRENT_ACTIVE_ASSIGNMENT_STUDENT_PAIRS"`,
+historyIncludesTerminalEnrollments=true,missingIsHistorical=false document this choice.
+Primary mentor stored-progress endpoints now expose assignmentSummary
+{availability:"AVAILABLE",counts:{assignments,eligible,submitted,missing,ungraded,unreleased,released}}
+through the assignment-owned public read participant, within the same read snapshot.
+No unit completion, certificate, completionPolicy or attendance rule is inferred.
+
+ZIP errors:404 FILE_SCOPE_MISMATCH/ASSIGNMENT_FILE_NOT_FOUND for foreign IDs;
+409 FILE_NOT_READY/SUBMISSION_ALREADY_SUBMITTED/ATTEMPT_LIMIT_REACHED/
+GRADE_VERSION_CONFLICT/ASSIGNMENT_UPLOAD_EXPIRED for state conflicts; refetch before
+retry, do not overwrite automatically.422 INVALID_ASSIGNMENT_FILE/
+ASSIGNMENT_FILE_SIZE_MISMATCH/INVALID_GRADE_SCORE/GRADE_CORRECTION_REASON_REQUIRED/
+INVALID_SUBMISSION_FILTER for invalid input.429 ASSIGNMENT_UPLOAD_LIMIT_REACHED:
+max10 live pending/processing intents per owner,50 new intents/hour per owner,
+500 live intents per assignment; stop repeated intent creation. FAILED file errorCode
+ZIP_INVALID/ZIP_LIMIT_EXCEEDED/ASSIGNMENT_FILE_INVALID/FILE_ACCESS_REVOKED or
+JOB_ATTEMPTS_EXHAUSTED is safe to display; never render raw parser errors.
+
+Migration1793577600000 adds isolated ZIP/file/grade/receipt/job tables and DB guards;
+it does not alter QUIZ persistence. New writes lock actor -> class -> session ->
+assignment -> enrollment/submission -> file/grade; storage IO is outside transactions.
+Archive voids ZIP drafts atomically; worker durably voids drafts after source/account/
+enrollment revocation. Submission and grade revisions/audits/snapshots are immutable.
+Down refuses file/submission/audit data; roll back app/flag and retain schema/history.
+See [ZIP rollout/worker runbook](../core/ASSIGNMENT_ZIP_RUNBOOK.md).
 
 Verification: domain rules, isolated PostgreSQL migration up/down, concurrent
 start/submit/timeout, audit-failure rollback, cancellation/reassignment and compiled
 HTTP cookie/Origin/DTO/OpenAPI/40-question journey. Final gate results live in
 [Progress](../progress/phase%205/PHASE_5_PROGRESS.md). No FE changes or VPS evidence.
+
+Bulk rollout: see [reverse proxy runbook](../core/VPS_DEPLOYMENT.md#3-reverse-proxy).
+The repository has no active Nginx/Caddy config to apply or verify. Ensure upstream
+body limits permit 1MiB on this route before rollout (standard reverse proxy default);
+upstream 413 can have a different error body. App-level boundaries are verified directly
+against compiled HTTP locally.

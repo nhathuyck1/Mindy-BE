@@ -34,7 +34,7 @@ FROM node:${NODE_VERSION}-alpine AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN apk add --no-cache dumb-init ffmpeg
+RUN apk add --no-cache dumb-init ffmpeg poppler-utils font-noto
 WORKDIR /app
 
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules

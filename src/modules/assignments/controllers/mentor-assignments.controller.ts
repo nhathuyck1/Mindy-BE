@@ -104,7 +104,15 @@ export class MentorAssignmentsController {
   }
   @Put('assignments/:assignmentId/questions')
   @Header('Cache-Control', 'private, no-store')
-  @ApiOperation({ summary: 'Atomically replace draft ABCD questions and private keys' })
+  @ApiOperation({
+    summary: 'Atomically replace draft ABCD questions and private keys',
+    description:
+      'Replace all questions (not append), 1–200 questions, JSON body up to 1 MiB (1048576 bytes). ' +
+      'Send the complete merged set when importing additional questions. expectedRevision protects concurrent edits. ' +
+      '422 INVALID_QUIZ_QUESTIONS details[0].fields contains {path,code} with zero-based question/option indexes; no rejected values. ' +
+      '413 INVALID_JSON_BODY when the JSON byte limit is exceeded, including UTF-8 and JSON escaping.',
+  })
+  @ApiErrors(413)
   @ApiOkResponse({ type: AssignmentDto })
   questions(
     @CurrentUser() actor: AuthenticatedUser,
@@ -115,7 +123,10 @@ export class MentorAssignmentsController {
   }
   @Post('assignments/:assignmentId/publish')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Publish and freeze a complete quiz; ZIP publication is deferred' })
+  @ApiOperation({
+    summary: 'Publish and freeze a complete QUIZ or ZIP (ZIP feature/storage required)',
+  })
+  @ApiErrors(503)
   @ApiOkResponse({ type: AssignmentDto })
   publish(
     @CurrentUser() actor: AuthenticatedUser,

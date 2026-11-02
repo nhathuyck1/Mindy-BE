@@ -1,5 +1,8 @@
 # Phase 5 — Assignment: bài kiểm tra/BTVN, QUIZ ABCD hoặc ZIP
 
+2026-11-02 — [Kế hoạch hoàn thiện BE: ZIP, chấm/công bố điểm, reports và bulk ABCD](PHASE_5_REMAINING_BE_PLAN.md).
+Tài liệu bổ sung chỉ là plan, chưa thay đổi trạng thái implementation A3–A5.
+
 2026-10-22 · Base `1e89579` · IN PROGRESS trên branch `codex/phase5-assignments`. QUIZ đã có implementation và local tests; ZIP/reporting còn pending.
 Phase 5 là tên feature assignment mới, khác milestone 5 checkout của core plan cũ.
 [Flow](../../api_flow/PHASE_5_FLOW.md) · [API proposal](../../api_flow/PHASE_5_flow-api-breakdown.md) ·
