@@ -124,6 +124,19 @@ process.send?.({
   courseUnitId: view.units[0].unit.courseUnitId,
 });
 process.on('message', async (msg) => {
+  if (msg === 'assignment-files-process') {
+    const { AssignmentFilesService } = await import(
+      '../../dist/modules/assignments/services/assignment-files.service.js'
+    );
+    const files = app.get(AssignmentFilesService),
+      job = await files.claim();
+    if (job) await files.process(job);
+    process.send?.({ assignmentProcessed: job?.file_id ?? null });
+  }
+  if (msg?.type === 'assignment-feature') {
+    app.get(ConfigService).set('ASSIGNMENT_ZIP_ENABLED', msg.enabled);
+    process.send?.({ assignmentFeature: msg.enabled });
+  }
   if (msg === 'files-process') {
     const { FileProcessingService } = await import(
       '../../dist/modules/files/services/file-processing.service.js'

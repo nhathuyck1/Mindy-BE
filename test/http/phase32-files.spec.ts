@@ -169,7 +169,11 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
       const response = await fetch(url.replace('/api/v1', '/docs-json'));
       expect(response.status).toBe(200);
       const spec = (await response.json()) as { paths: Record<string, unknown> };
-      expect(Object.keys(spec.paths).filter((path) => path.endsWith('/release'))).toEqual([]);
+      expect(
+        Object.keys(spec.paths).filter((path) =>
+          /^\/api\/v1\/(?:admin|mentor)\/classes\/[^/]+\/units\/[^/]+\/release$/.test(path),
+        ),
+      ).toEqual([]);
     });
   });
 

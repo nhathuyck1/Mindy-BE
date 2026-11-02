@@ -76,7 +76,7 @@ Network copy/head/sign/read ngoài DB transaction. Mỗi attempt ghi copy candid
 
 Worker enqueue orphan cleanup sau24h, claim và khóa/recheck live message refs trước khi chuyển DELETING; send không attach được file đang cleanup. Storage failure giữ job retry, không xóa live file. Xóa message giữ tombstone/receipt, mất quyền cấp URL mới.
 
-Provision script đã thêm s3:DeleteObjectVersion chỉ cho chat-staging/* và chat-final/* để backend cleanup đúng phiên bản; không cấp delete cho material/assignment prefixes. Owner cần áp dụng IAM policy này khi rollout, rồi nghiệm thu bằng backend credentials (local fixtures dùng storage test credentials).
+Provision script có s3:DeleteObjectVersion cho chat-staging/* và chat-final/* để cleanup chat. Assignment ZIP bổ sung delete trên assignment-staging/* và assignment-verified/*, cùng ListBucketVersions giới hạn các assignment prefixes; không cấp delete cho material prefixes. Xem [runbook ZIP](core/ASSIGNMENT_ZIP_RUNBOOK.md). Owner cần áp dụng IAM policy khi rollout, rồi nghiệm thu bằng backend credentials (local fixtures dùng storage test credentials).
 
 Bucket lifecycle riêng cần dọn chat-staging current/noncurrent versions sau grace đủ lớn (đề xuất7 ngày), vì incomplete PUT/overwrites không có pinned version trong DB. Copy crash trước khi lưu versionId cần kiểm candidate prefix/version qua công cụ storage có quyền quản trị; không sweep toàn bộ chat-final vì có live messages. Đây là giới hạn cleanup cần giữ trong handoff.
 

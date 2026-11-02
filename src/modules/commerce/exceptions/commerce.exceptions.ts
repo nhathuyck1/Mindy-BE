@@ -32,6 +32,16 @@ export class OrderNotFoundException extends AppHttpException {
   }
 }
 
+export class OrderNotCancellableException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'ORDER_NOT_CANCELLABLE',
+      'Chỉ có thể hủy đơn đang chờ thanh toán và chưa hết hạn.',
+    );
+  }
+}
+
 export class OrderAccessDeniedException extends AppHttpException {
   constructor() {
     super(HttpStatus.FORBIDDEN, 'ORDER_ACCESS_DENIED', 'You do not have access to this order');

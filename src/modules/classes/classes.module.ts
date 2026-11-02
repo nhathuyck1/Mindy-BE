@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AssignmentReportingModule } from '../assignments/assignment-reporting.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { CatalogModule } from '../catalog/catalog.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
@@ -42,6 +43,7 @@ import { UnitContentService } from './services/unit-content.service.js';
   imports: [
     ScheduleReservationsModule,
     ConfigModule,
+    AssignmentReportingModule,
     AuthModule,
     UsersModule,
     CatalogModule,

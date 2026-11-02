@@ -1,3 +1,39 @@
+## 2026-11-02 — Student tự hủy đơn hàng
+
+- Thêm `POST /api/v1/me/orders/:orderId/cancel` (200 OrderDto), chỉ STUDENT ACTIVE sở hữu đơn; UUIDv4, 401/403/404, 409 ORDER_NOT_CANCELLABLE nếu đơn PAID/EXPIRED hoặc quá deadline.
+- OrderCancellationService khóa lớp → đơn → enrollment đúng thứ tự settlement/checkout; đổi PENDING → CANCELLED và releaseHolds trong một transaction. Hủy lại CANCELLED idempotent; không xóa đơn, không hoàn tiền và không gọi hủy link provider. Webhook đến sau hủy chuyển REQUIRES_REVIEW theo policy hiện hữu.
+- FE2 đã nối nút tại danh sách/chi tiết đơn, giỏ hàng và checkout. Không cần migration. Kiểm tra type-check/build, 5 integration PostgreSQL (PAYOS/CASH, ownership, repeat/race, rollback, late webhook), 17 built HTTP tests pass. Chưa deploy.
+
+## 2026-11-02 — Hoàn thiện backend Assignment B0–B5
+
+Đã implement schema ZIP riêng1793577600000; upload file đề/ZIP private, validator
+ZIP có giới hạn/CRC/path/nested checks, durable worker/cleanup/recovery; publish,
+gia hạn, draft/attach/submit nhiều lượt và lịch sử bất biến. Chấm nháp/release/sửa
+điểm có reason/revision/audit; student chỉ thấy bản released. Có queue/roster/missing/
+class metrics và assignmentSummary AVAILABLE qua read participant của assignments.
+QUIZ giữ schema/result hiện có. Swagger/Postman37 requests/flow/API/runbook/env/IAM
+đã đồng bộ; không mở quyền Student vào Files/materials/chat routes.
+
+Final pnpm check PASS:80 suites/709 tests,0 skipped,lint/type-check/build33 migrations.
+Compiled rollout trên DB test mới:33 applied,repeat0,no pending. Full compiled HTTP
+12 suites/120 tests PASS,0 skipped. Evidence/logs xem
+[Progress5](phase%205/PHASE_5_PROGRESS.md#b0b2b5--zip-completion--2026-11-02).
+ZIP mặc định tắt; cần environment smoke/IAM/CORS/scratch/proxy trước bật. Không sửa
+FE, chạy migration development/production, deploy, commit hay push.
+
+## 2026-11-02 — Assignment B1: bulk ABCD
+
+Đã đọc plan Assignment mới và triển khai slice B1 độc lập: PUT questions nhận
+JSON tối đa8MiB/200 câu; giữ global64KiB và attendance recovery256KiB. Thay1200
+INSERT tuần tự bằng3 batch INSERT trong cùng transaction; lỗi422 có vị trí câu/field,
+không phản chiếu đáp án/giá trị lỗi. Giữ replace-all, revision và quyền hiện tại.
+Đã cập nhật Swagger/Postman/flow/API/proxy runbook; B0/B2–B5 còn pending, ZIP vẫn
+bị chặn publish. `pnpm check` PASS:78 files/694 tests, lint/type-check/build32 migrations;
+17 focused domain/PG và full compiled HTTP12 files/119 tests PASS (bao gồm4 assignment
+HTTP và34 chat tests); lượt HTTP cuối chạy sau build. Chi tiết/logs tại
+[Progress Phase5](phase%205/PHASE_5_PROGRESS.md#b1--bulk-abcd--2026-11-02).
+Không sửa FE, migration production, commit/push hoặc deploy.
+
 ## 2026-10-27 — Kiểm tra sáu integration suites failed
 
 Tái hiện `pnpm test` khi thiếu TEST_DATABASE_URL:6 suites failed ở beforeAll,

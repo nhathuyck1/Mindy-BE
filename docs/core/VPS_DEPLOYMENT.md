@@ -119,6 +119,17 @@ an HTTPS certificate. Only ports 22, 80 and 443 should normally be public. Do no
 PostgreSQL port 5432. Swagger will be available at `https://api.example.com/docs` when
 `SWAGGER_ENABLED=true`.
 
+Assignment bulk questions (`PUT /api/v1/mentor/assignments/:id/questions`) accepts
+8 MiB JSON (8388608 bytes) in the application. Before rollout, configure/check the
+Nginx/Caddy/CDN request limit for this route to permit at least8MiB, including a
+trailing slash/query string. For Nginx, use `client_max_body_size 8m` in the matching
+proxy location while preserving existing proxy/auth/header settings and other
+locations' limits. The repo does not manage the active reverse-proxy configuration.
+Keep the application's global64KiB and attendance recovery256KiB limits unchanged.
+Smoke-test a valid200-question body above64KiB through the public proxy and an
+8MiB+1 request (413); a proxy-generated413 need not use the app JSON error envelope.
+Local direct HTTP verification alone does not verify the deployed proxy.
+
 ## 4. Updating
 
 The dev CI/CD workflow builds all migrations into the release image and verifies

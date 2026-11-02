@@ -1,4 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AssignmentCountsDto } from '../../assignments/dtos/zip.dto.js';
+
+export class StoredAssignmentSummaryDto {
+  @ApiProperty({ enum: ['AVAILABLE', 'NOT_IMPLEMENTED'] }) availability!:
+    | 'AVAILABLE'
+    | 'NOT_IMPLEMENTED';
+  @ApiProperty({ type: AssignmentCountsDto, nullable: true }) counts!: AssignmentCountsDto | null;
+}
 
 export class StoredProgressSummaryDto {
   @ApiProperty({ format: 'uuid' }) readonly enrollmentId!: string;
@@ -34,8 +42,8 @@ export class StoredProgressPageDto {
   @ApiProperty() readonly pageSize!: number;
   @ApiProperty({ enum: ['UNDEFINED'] }) readonly completionPolicy!: 'UNDEFINED';
   @ApiProperty({ nullable: true, type: String }) readonly policyVersion!: null;
-  @ApiProperty({ example: { availability: 'NOT_IMPLEMENTED', counts: null } })
-  readonly assignmentSummary!: { availability: 'NOT_IMPLEMENTED'; counts: null };
+  @ApiProperty({ type: StoredAssignmentSummaryDto })
+  readonly assignmentSummary!: StoredAssignmentSummaryDto;
   @ApiProperty() readonly readonly!: boolean;
   @ApiProperty() readonly asOf!: Date;
   @ApiProperty() readonly timeZone!: string;
@@ -48,8 +56,8 @@ export class StoredProgressUnitPageDto {
   @ApiProperty() readonly pageSize!: number;
   @ApiProperty({ enum: ['UNDEFINED'] }) readonly completionPolicy!: 'UNDEFINED';
   @ApiProperty({ nullable: true, type: String }) readonly policyVersion!: null;
-  @ApiProperty({ example: { availability: 'NOT_IMPLEMENTED', counts: null } })
-  readonly assignmentSummary!: { availability: 'NOT_IMPLEMENTED'; counts: null };
+  @ApiProperty({ type: StoredAssignmentSummaryDto })
+  readonly assignmentSummary!: StoredAssignmentSummaryDto;
   @ApiProperty() readonly readonly!: boolean;
   @ApiProperty() readonly asOf!: Date;
   @ApiProperty() readonly timeZone!: string;

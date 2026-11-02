@@ -13,6 +13,7 @@ import { OrderEntity } from './entities/order.entity.js';
 import { OrderDetailEntity } from './entities/order-detail.entity.js';
 import { CartService } from './services/cart.service.js';
 import { CheckoutService } from './services/checkout.service.js';
+import { OrderCancellationService } from './services/order-cancellation.service.js';
 import { OrderExpiryService } from './services/order-expiry.service.js';
 import { OrderExpiryWorker } from './services/order-expiry.worker.js';
 import { OrderSettlementService } from './services/order-settlement.service.js';
@@ -34,6 +35,7 @@ import { OrdersService } from './services/orders.service.js';
     OrderExpiryService,
     OrderExpiryWorker,
     OrderSettlementService,
+    OrderCancellationService,
   ],
   exports: [OrderSettlementService, OrdersService],
 })

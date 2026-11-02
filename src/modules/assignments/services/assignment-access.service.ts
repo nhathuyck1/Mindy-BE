@@ -34,6 +34,7 @@ export class AssignmentAccessService {
     actor: AuthenticatedUser,
     id: string,
     write = false,
+    historyWrite = false,
   ): Promise<string | null> {
     await this.actor(m, actor, write);
     const { session, classEntity } = await this.teaching.loadSession(m, id, write);
@@ -46,6 +47,7 @@ export class AssignmentAccessService {
     }
     if (
       write &&
+      !historyWrite &&
       ([ClassStatus.CANCELLED, ClassStatus.COMPLETED].includes(classEntity.status) ||
         session.status === SessionStatus.CANCELLED)
     )

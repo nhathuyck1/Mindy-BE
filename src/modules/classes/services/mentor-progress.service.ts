@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { DataSource } from 'typeorm';
 import { inReadSnapshot } from '../../../common/database/read-snapshot.js';
 import type { PageOptionsDto } from '../../../common/dtos/page-options.dto.js';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { AssignmentReportingService } from '../../assignments/services/assignment-reporting.service.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import type {
   StoredProgressPageDto,
@@ -26,6 +28,7 @@ export class MentorProgressService {
     private readonly progress: StoredProgressService,
     private readonly enrollments: EnrollmentsService,
     private readonly teaching: TeachingReadService,
+    @Optional() private readonly assignments?: AssignmentReportingService,
   ) {}
   async summary(
     actor: AuthenticatedUser,
@@ -41,6 +44,14 @@ export class MentorProgressService {
         page: page.page,
         pageSize: page.pageSize,
         ...this.metadata(),
+        ...(this.assignments
+          ? {
+              assignmentSummary: {
+                availability: 'AVAILABLE' as const,
+                counts: await this.assignments.counts(m, classId, null, unitId ?? null),
+              },
+            }
+          : {}),
       };
     });
   }
@@ -59,6 +70,14 @@ export class MentorProgressService {
         page: page.page,
         pageSize: page.pageSize,
         ...this.metadata(),
+        ...(this.assignments
+          ? {
+              assignmentSummary: {
+                availability: 'AVAILABLE' as const,
+                counts: await this.assignments.counts(m, classId, null, null, studentId),
+              },
+            }
+          : {}),
       };
     });
   }

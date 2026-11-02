@@ -1,4 +1,70 @@
-# Phase 5 — Assignment: QUIZ implemented locally, ZIP pending
+# Phase 5 — Assignment: QUIZ / ZIP backend
+
+## ZIP completion — 2026-11-02
+
+B0/B2–B5 implemented: isolated additive ZIP/file/grade schema, durable validation/
+cleanup worker, private instruction files, immutable ZIP submission attempts,
+grade revisions/release/history, queue/roster/class metrics and actual assignmentSummary.
+Feature ASSIGNMENT_ZIP_ENABLED defaults false; reads of submitted history/released
+grades and bound downloads survive a flag rollback. Quiz remains independent.
+Current contracts are in [API section5](PHASE_5_flow-api-breakdown.md#5-zip-instruction-files-grading-and-reporting--implemented);
+[runbook](../core/ASSIGNMENT_ZIP_RUNBOOK.md) covers worker/IAM/scratch/retention/rollout.
+
+```mermaid
+flowchart LR
+  D[Mentor draft] --> I[Optional private instruction files READY]
+  I --> P[Publish freezes instructions and max score]
+  P --> Z[Student create or resume ZIP draft]
+  Z --> U[Upload intent and PUT bytes]
+  U --> C[Complete pins staging version]
+  C --> W[Durable worker validates streamed ZIP and copies verified version]
+  W --> R[READY]
+  R --> A[Attach one ZIP]
+  A --> S[Submit before DB deadline allocates immutable attempt]
+  S --> G[Mentor grade revision]
+  G --> L[Release current revision]
+  L --> H[Student released result and retained history]
+  L --> E[Correction requires reason]
+  E --> G
+  S --> N[New draft if attempts remain]
+  N --> U
+```
+
+Only successful submit consumes a ZIP attempt; new drafts do not supersede the last
+submitted result. Submit rechecks deadline in its final SQL write. Upload/READY
+before dueAt does not reserve a submission. Archive voids drafts atomically;
+source/account/enrollment revocation blocks writes immediately and worker maintenance
+durably voids drafts. Grade mutations require current mentor scope even after source
+closure. Students see the old released grade until a corrected revision is released.
+History survives terminal enrollment/source archive; current account/ownership remain
+required. Download rechecks binding/access after signing; issued URL TTL is60s.
+
+Queue/report counts use latest submitted per student, excluding drafts. Missing is
+computed only for currently eligible pairs after deadline; historical eligibility is
+not inferred. Pending corrections may count in both released and unreleased. Stored
+progress consumes the assignment-owned read participant; no unit/certificate policy
+is inferred. Local evidence and full gate results live in
+[progress](../progress/phase%205/PHASE_5_PROGRESS.md). No FE/deployment/production DB work.
+Earlier dated sections below describe previous partial slices.
+
+## Bulk ABCD — 2026-11-02
+
+B1 of the [remaining backend plan](../implement_phase/phase%205/PHASE_5_REMAINING_BE_PLAN.md)
+is implemented locally. Mentor prepares the entire merged question set, then PUTs
+questions with expectedRevision. Up to200 questions and8MiB JSON are accepted;
+three parameterized batch INSERTs run in one transaction with revision/audit.
+Success returns canonical IDs/order/revision; any invalid question rolls back the
+whole replacement.422 details[0].fields gives zero-based field paths without rejected
+values/private keys;409 requires refetch/reconcile;413 requires reducing JSON bytes.
+No raw-text parser or FE changes. Existing global64KiB and attendance recovery256KiB
+parsers are preserved (the new plan initially misidentified the latter as chat).
+
+Local verification includes multilingual200-question import, exact8MiB/+1 byte,
+parser isolation, duplicate/foreign IDs, ID/order retention, stale revision and
+audit-failure rollback. Scope/quiz grading/history remain unchanged. Runtime gates
+and measurements are in [progress](../progress/phase%205/PHASE_5_PROGRESS.md);
+proxy/VPS limits still require environment verification. ZIP remains draft-only;
+B0/B2–B5 are pending.
 
 ## Restoration — 2026-10-23
 
@@ -63,12 +129,12 @@ No notifications/certificates/automatic unit completion changes in this slice.
 Implementation choice: module-owned typed SQL and JSONB quiz snapshot/answers/result
 follow existing teaching-notes style; private keys normalized separately. Audits
 append only; GRADED/VOIDED submissions immutable; migration down refuses populated
-history. Separate ZIP file binding/grade-revision schema waits for A3/A4. Existing
-assignmentSummary remains NOT_IMPLEMENTED until A5 aggregates are implemented.
+history. The ZIP completion above adds the separate file/grade schema and real
+assignmentSummary aggregates without changing QUIZ result persistence.
 
 New APIs: mentor create/list/detail/draft edit/question replace/publish/archive/delete;
 student published list/instructions/start/resume/save/submit/result. Each route is
-specified in current API breakdown; proposed ZIP endpoints are explicitly absent.
+specified in current API breakdown; ZIP/reporting routes now appear in section5.
 Postman collection contains only implemented routes and does not auto-run mutations.
 
 Local verification includes isolated PostgreSQL, migration clean/down-up/guard,
@@ -76,4 +142,4 @@ Local verification includes isolated PostgreSQL, migration clean/down-up/guard,
 rollback on audit failure, cancellation/reassignment and real compiled HTTP guards,
 DTO validation and OpenAPI. Final full-gate counts are recorded in progress.
 No development/production migration applied, no VPS/deploy/browser/live payment
-claim. FE repositories are unchanged. ZIP/reporting are remaining Phase5 work.
+claim. FE repositories are unchanged. ZIP/reporting local implementation is recorded above.

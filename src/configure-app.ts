@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { requestContextMiddleware } from './common/http/request-context.js';
 import { GlobalExceptionFilter } from './filters/global-exception.filter.js';
+import { questionsValidationException } from './modules/assignments/validation/questions-validation.js';
 import { setupSwagger } from './setup-swagger.js';
 
 /** Same HTTP boundary for the production app and built-app HTTP tests. */
@@ -15,6 +16,14 @@ export function configureApp(app: NestExpressApplication): void {
   app.use(compression());
   app.use(cookieParser());
   app.use(requestContextMiddleware);
+  // Register before the global parser: consuming this stream there would apply 64 KiB.
+  app.useBodyParser('json', {
+    limit: 8 * 1024 * 1024,
+    type: (req) =>
+      req.method === 'PUT' &&
+      /^\/api\/v1\/mentor\/assignments\/[^/]+\/questions\/?(?:\?|$)/i.test(req.url ?? '') &&
+      /^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? ''),
+  });
   app.useBodyParser('json', {
     limit: '256kb',
     type: (req) =>
@@ -27,12 +36,17 @@ export function configureApp(app: NestExpressApplication): void {
   app.useBodyParser('json', { limit: '64kb' });
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+  const defaultValidationException = new ValidationPipe({
+    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+  }).createExceptionFactory();
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
       errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      exceptionFactory: (errors) =>
+        questionsValidationException(errors) ?? defaultValidationException(errors),
     }),
   );
   app.useGlobalFilters(new GlobalExceptionFilter());
