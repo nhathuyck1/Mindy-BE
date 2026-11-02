@@ -10,6 +10,8 @@ mốc lưu/restore/PNG → PDF/nghiệm thu. Không sửa FE/demo hoặc runtime
 [API proposal7](../api_flow/PHASE_7_flow-api-breakdown.md) ·
 [Progress7](../progress/phase%207/PHASE_7_PROGRESS.md).
 
+2026-11-02 — **Planning Phase7 bài tập lập trình (CODE)**: owner chốt 13 quyết định (JS + Java, đề viết hàm kiểu LeetCode, nâng cấp compiler-runner thay Judge0, điểm cao nhất, editor trên app). [Kế hoạch](phase%207/PHASE_7_CODE_ASSIGNMENTS.md). C1–C4 (runner v2, BE soạn đề/nộp/chấm/theo dõi), C5 (web FE2) đã implement local; C6 (app Flutter) còn cần khôi phục/xác minh theo progress; C7 có [runbook](../PHASE_7_CODE_RUNBOOK.md) + script load test. Chưa merge/deploy; [progress](../progress/phase%207/PHASE_7_CODE_PROGRESS.md).
+
 2026-10-26 — **Phase6 backend local acceptance complete39/39 AC**:8 slices PASS, dev16→32 migrations/repeat no-op; full check691/691, HTTP117/117 và restore/ops PASS. [Báo cáo hiện hành](../progress/phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26) có24 revoke barriers, contract/log harness và source fingerprint. FE/VPS/production IAM/load acceptance cần evidence riêng.
 
 

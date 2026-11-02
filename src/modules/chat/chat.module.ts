@@ -45,6 +45,7 @@ import { ChatWorkerService } from './services/chat-worker.service.js';
     ChatJobsService,
     ChatReceiptService,
   ],
-  exports: [ChatLifecycleService, ChatCryptoService],
+  // ChatSocketService: Phase 7 code submission push (`own` user events, ids/status only).
+  exports: [ChatLifecycleService, ChatCryptoService, ChatSocketService],
 })
 export class ChatModule {}

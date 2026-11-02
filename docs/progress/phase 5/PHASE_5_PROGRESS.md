@@ -1,5 +1,13 @@
 # Phase 5 progress — Assignment QUIZ / ZIP
 
+## CODE coexistence — 02/11/2026
+
+ZIP feature/storage checks, READY instructions, publish, uploads, grading/release
+and retained history are preserved while CODE joins the shared module/reports.
+QUIZ/ZIP integration and compiled HTTP pass in the combined backend. Full evidence:
+[CODE integration](../phase%207/PHASE_7_CODE_PROGRESS.md#backend-integration--02112026).
+No ZIP migration changes, frontend edits or deployment.
+
 ## B0/B2–B5 — ZIP completion — 2026-11-02
 
 Implementation covers the remaining backend plan. New migration1793577600000 adds

@@ -1,5 +1,11 @@
 # Phase 3.4 — Student Material access và staff preview
 
+03/11/2026 compiler regression: the Materials test setup waits for an eligible
+validation claim and asserts the expected file ID. This avoids a small app/DB clock
+skew cascading into unrelated tests. The compiled Files HTTP helper also polls for
+its expected completed job. Materials19/19 and full backend790/790 plus HTTP125/125
+pass locally. No Materials API, processing rule, deployment or real payment changes.
+
 ## 2026-10-16 — Hợp nhất stash với dev
 
 Student giữ list/detail/download và POST files/access của dev; thêm GET assets

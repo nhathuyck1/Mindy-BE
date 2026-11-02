@@ -2,6 +2,7 @@ import { type ChildProcess, fork } from 'node:child_process';
 import { generateKeyPairSync, randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { toLocalDate } from '../../src/modules/classes/domain/class-calendar.js';
 import { separateTestUrl } from '../helpers/payment-fixture.js';
 
 describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E', () => {
@@ -139,7 +140,7 @@ describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E'
       'SELECT course_id FROM classes WHERE id=$1',
       [classId],
     );
-    const day = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    const day = toLocalDate(new Date(Date.now() + 2 * 86400000), 'Asia/Ho_Chi_Minh');
     const created = await request('/admin/classes', adminCookie, {
       courseId: courses[0]?.course_id,
       mentorId: mentor.id,
@@ -184,7 +185,7 @@ describe.skipIf(!separateTestUrl('phase43_http'))('Phase 4.3 built-app HTTP E2E'
 
   async function historicalFixture() {
     const a = await staffFixture();
-    const day = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const day = toLocalDate(new Date(Date.now() - 86400000), 'Asia/Ho_Chi_Minh');
     const start = new Date(`${day}T12:00:00+07:00`),
       end = new Date(`${day}T13:00:00+07:00`);
     expect(

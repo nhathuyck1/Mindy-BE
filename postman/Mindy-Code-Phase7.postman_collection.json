@@ -1,0 +1,650 @@
+{
+  "info": {
+    "name": "Phase 7 — CODE assignments",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Phase 7 C2–C4 (local). Manual requests; use the auth cookie jar. Revisions shown are an example sequence: always send the latest assignment.revision. Set a fresh UUID idempotency_key per new submission."
+  },
+  "item": [
+    {
+      "name": "Mentor list code languages",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/code-languages"
+      },
+      "description": "MENTOR. javascript (Node 22), java21."
+    },
+    {
+      "name": "Mentor preview starter code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/code-signatures/preview",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"signature\": {\n    \"functionName\": \"twoSum\",\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returnType\": \"int[]\"\n  }\n}"
+        }
+      },
+      "description": "MENTOR. Not saved."
+    },
+    {
+      "name": "Mentor create CODE draft",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/class-sessions/{{session_id}}/assignments",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"purpose\": \"HOMEWORK\",\n  \"type\": \"CODE\",\n  \"title\": \"Two Sum\",\n  \"maxScore\": \"10.00\",\n  \"maxAttempts\": 10,\n  \"dueAt\": \"2026-12-31T23:59:00+07:00\"\n}"
+        }
+      },
+      "description": "MENTOR. dueAt required, no timeLimitMinutes. Copy id → assignment_id and revision."
+    },
+    {
+      "name": "Mentor upsert problem",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-problem",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 1,\n  \"statementMd\": \"Return indices of two numbers adding up to target.\",\n  \"signature\": {\n    \"functionName\": \"twoSum\",\n    \"params\": [\n      {\n        \"name\": \"nums\",\n        \"type\": \"int[]\"\n      },\n      {\n        \"name\": \"target\",\n        \"type\": \"int\"\n      }\n    ],\n    \"returnType\": \"int[]\"\n  },\n  \"compareMode\": \"EXACT\",\n  \"scoringMode\": \"PER_TEST\",\n  \"cpuTimeLimitMs\": 2000,\n  \"memoryLimitMb\": 256\n}"
+        }
+      },
+      "description": "Every authoring mutation returns the new assignment.revision; use it next."
+    },
+    {
+      "name": "Mentor set languages",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-languages",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 2,\n  \"languages\": [\n    {\n      \"languageKey\": \"javascript\"\n    },\n    {\n      \"languageKey\": \"java21\"\n    }\n  ]\n}"
+        }
+      },
+      "description": "Omitted starterCode is generated from the signature."
+    },
+    {
+      "name": "Mentor CODE library (reuse)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/mentor/code-library?page=1&pageSize=20&q=Two"
+      },
+      "description": "CODE assignments created by this mentor, newest first."
+    },
+    {
+      "name": "Mentor import problem from another assignment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-import",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 2,\n  \"sourceAssignmentId\": \"{{source_assignment_id}}\"\n}"
+        }
+      },
+      "description": "Copies problem, languages, tests and references into this DRAFT; validation is not copied."
+    },
+    {
+      "name": "Mentor generate expected outputs",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-tests/generate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"languageKey\": \"javascript\",\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  for (let i = 0; i < nums.length; i++)\\n    for (let j = i + 1; j < nums.length; j++)\\n      if (nums[i] + nums[j] === target) return [i, j];\\n  return [];\\n}\",\n  \"inputs\": [\n    [\n      [\n        2,\n        7,\n        11,\n        15\n      ],\n      9\n    ],\n    [\n      [\n        3,\n        2,\n        4\n      ],\n      6\n    ],\n    [\n      [\n        3,\n        3\n      ],\n      6\n    ]\n  ]\n}"
+        }
+      },
+      "description": "Runs the reference on inputs; returns outputs (status OK = expected value). Nothing is saved. Calls the runner."
+    },
+    {
+      "name": "Mentor replace all tests",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-tests",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 4,\n  \"tests\": [\n    {\n      \"visibility\": \"SAMPLE\",\n      \"inputArgs\": [\n        [\n          2,\n          7,\n          11,\n          15\n        ],\n        9\n      ],\n      \"expected\": [\n        0,\n        1\n      ],\n      \"explanationMd\": \"2 + 7 = 9\"\n    },\n    {\n      \"visibility\": \"HIDDEN\",\n      \"inputArgs\": [\n        [\n          3,\n          2,\n          4\n        ],\n        6\n      ],\n      \"expected\": [\n        1,\n        2\n      ],\n      \"weight\": 2\n    },\n    {\n      \"visibility\": \"HIDDEN\",\n      \"inputArgs\": [\n        [\n          3,\n          3\n        ],\n        6\n      ],\n      \"expected\": [\n        0,\n        1\n      ]\n    }\n  ]\n}"
+        }
+      },
+      "description": "One revision for the whole table; positions follow array order."
+    },
+    {
+      "name": "Mentor upsert SAMPLE test 1",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-tests/1",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 3,\n  \"visibility\": \"SAMPLE\",\n  \"inputArgs\": [\n    [\n      2,\n      7,\n      11,\n      15\n    ],\n    9\n  ],\n  \"expected\": [\n    0,\n    1\n  ],\n  \"explanationMd\": \"nums[0] + nums[1] = 9\"\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor upsert HIDDEN test 2",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-tests/2",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 4,\n  \"visibility\": \"HIDDEN\",\n  \"inputArgs\": [\n    [\n      3,\n      2,\n      4\n    ],\n    6\n  ],\n  \"expected\": [\n    1,\n    2\n  ],\n  \"weight\": 3\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor delete test",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-tests/2",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 5\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor save JS reference",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-reference/javascript",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 5,\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  const seen = new Map();\\n  for (let i = 0; i < nums.length; i++) {\\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\\n    seen.set(nums[i], i);\\n  }\\n  return [];\\n}\"\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor authoring detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code"
+      },
+      "description": "Includes HIDDEN tests, references and publishBlockers."
+    },
+    {
+      "name": "Mentor validate references",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-validate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 6\n}"
+        }
+      },
+      "description": "Calls compiler-runner (CODE_RUNNER_URL). 429 CODE_RUNNER_BUSY / 503 CODE_RUNNER_UNAVAILABLE are not verdicts."
+    },
+    {
+      "name": "Mentor publish",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/publish",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 6\n}"
+        }
+      },
+      "description": "Requires publishBlockers = []."
+    },
+    {
+      "name": "Mentor extend deadline/attempts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-extension",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedRevision\": 7,\n  \"dueAt\": \"2027-01-07T23:59:00+07:00\",\n  \"maxAttempts\": 15,\n  \"reason\": \"Lớp cần thêm thời gian\"\n}"
+        }
+      },
+      "description": "Published only; forward-only."
+    },
+    {
+      "name": "Student CODE view",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code"
+      },
+      "description": "STUDENT with ACTIVE enrollment. Samples only."
+    },
+    {
+      "name": "Student read draft",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-drafts/javascript"
+      },
+      "description": "version 0 = starter code."
+    },
+    {
+      "name": "Student save draft",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-drafts/javascript",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expectedVersion\": 0,\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  return [0, 1];\\n}\"\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Student run samples",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-runs",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"languageKey\": \"javascript\",\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  return [0, 1];\\n}\"\n}"
+        }
+      },
+      "description": "Not stored; rate limited (CODE_RUN_PER_MINUTE/DAY)."
+    },
+    {
+      "name": "Student run custom input",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-runs",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"languageKey\": \"javascript\",\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  return [0, 1];\\n}\",\n  \"customArgs\": [\n    [\n      1,\n      4\n    ],\n    5\n  ]\n}"
+        }
+      },
+      "description": ""
+    },
+    {
+      "name": "Student submit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-submissions",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"languageKey\": \"javascript\",\n  \"sourceCode\": \"function twoSum(nums, target) {\\n  return [0, 1];\\n}\"\n}"
+        }
+      },
+      "description": "202 created / 200 replay with the same key. Copy id → submission_id."
+    },
+    {
+      "name": "Student submission detail (poll)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/code-submissions/{{submission_id}}"
+      },
+      "description": "Poll every retryAfterMs while QUEUED/RUNNING."
+    },
+    {
+      "name": "Student history",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/me/assignments/{{assignment_id}}/code-submissions"
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-summary?page=1&pageSize=20"
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor submissions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/assignments/{{assignment_id}}/code-submissions?page=1&pageSize=20"
+      },
+      "description": ""
+    },
+    {
+      "name": "Mentor submission detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/code-submissions/{{submission_id}}"
+      },
+      "description": "Source and every test incl. hidden inputs."
+    },
+    {
+      "name": "Mentor rejudge FAILED",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/code-submissions/{{submission_id}}/rejudge"
+      },
+      "description": "Only status FAILED."
+    },
+    {
+      "name": "Mentor void",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "{{origin}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/mentor/code-submissions/{{submission_id}}/void",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Chép bài\"\n}"
+        }
+      },
+      "description": "Still counts as an attempt; excluded from best score."
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "assignment_id",
+      "value": ""
+    },
+    {
+      "key": "submission_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "source_assignment_id",
+      "value": ""
+    }
+  ]
+}

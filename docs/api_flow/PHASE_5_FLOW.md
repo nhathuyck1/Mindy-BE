@@ -1,5 +1,14 @@
 # Phase 5 — Assignment: QUIZ / ZIP backend
 
+## CODE coexistence — 02/11/2026
+
+Integrated [CODE assignments](PHASE_7_CODE_FLOW.md) while preserving ZIP publish
+flags/storage checks, instruction readiness, uploads, grading/release/history and
+QUIZ question validation. Combined class metrics/assignmentSummary now include
+non-voided CODE submissions once per assignment/student; a prior graded result
+remains released while another attempt is pending. Existing QUIZ/ZIP history
+payloads stay unchanged. Integration evidence is in CODE progress.
+
 ## ZIP completion — 2026-11-02
 
 B0/B2–B5 implemented: isolated additive ZIP/file/grade schema, durable validation/

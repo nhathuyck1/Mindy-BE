@@ -117,8 +117,14 @@ describe('Student materials: PostgreSQL + signed private MinIO GET', () => {
     const worker = new FileProcessingService(db, config, remote.storage, {
       validate: validateBinary,
     });
-    const claim = await worker.claim();
-    if (!claim) throw new Error('Missing validation claim');
+    // The application and PostgreSQL clocks can differ by a millisecond. A job
+    // scheduled with the application clock may not be eligible on the first poll.
+    const claim = await vi.waitFor(async () => {
+      const pending = await worker.claim();
+      if (!pending) throw new Error('Validation job is not eligible yet');
+      return pending;
+    });
+    expect(claim.fileId).toBe(intent.fileId);
     await worker.process(claim);
     expect((await files.detail(manager, intent.fileId)).status).toBe('READY');
     const approvedAt = new Date(Date.now() - 1000);

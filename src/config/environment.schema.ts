@@ -111,6 +111,21 @@ export const environmentSchema = Joi.object({
   ASSIGNMENT_ZIP_ENABLED: Joi.boolean().default(false),
   ASSIGNMENT_FILE_JOB_ENABLED: Joi.boolean().default(true),
   ASSIGNMENT_FILE_CLEANUP_GRACE_HOURS: Joi.number().integer().min(1).max(8760).default(24),
+  // Phase 7: compiler-runner v2 (internal network). Empty URL disables code runs/validation (503).
+  CODE_RUNNER_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default(''),
+  CODE_RUNNER_TOKEN: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi's conditional schema uses the `then` option.
+    .when('CODE_RUNNER_URL', { is: Joi.string().min(1), then: Joi.string().min(32).required() }),
+  CODE_RUNNER_TIMEOUT_MS: Joi.number().integer().min(5_000).max(600_000).default(120_000),
+  CODE_JUDGE_JOB_ENABLED: Joi.boolean().default(true),
+  CODE_JUDGE_CONCURRENCY: Joi.number().integer().min(1).max(8).default(2),
+  CODE_RUN_PER_MINUTE: Joi.number().integer().min(1).max(120).default(10),
+  CODE_RUN_PER_DAY: Joi.number().integer().min(1).max(5_000).default(300),
   PAYOS_ENABLED: Joi.boolean().default(false),
   PAYOS_CREATE_LINK_ENABLED: Joi.boolean().default(true),
   PAYOS_CLIENT_ID: payosSecret(),

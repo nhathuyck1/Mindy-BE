@@ -1,3 +1,22 @@
+## 2026-11-03 — compiler PR validation
+
+CODE backend on `compiler` includes both env examples, tests, contracts and runbooks.
+`pnpm check`:790/790 PASS with lint/type-check/build; compiled HTTP/WS125/125 PASS;
+36 migrations apply cleanly and repeat is a no-op. Existing Materials worker timing
+and attendance fixture timezone assumptions are stabilized; production rules unchanged.
+[Details](phase%207/PHASE_7_CODE_PROGRESS.md). FE companion targets main; Flutter deferred.
+No production migration or deployment; local checks use isolated test resources.
+
+## 2026-11-02 — Backend ZIP/Whiteboard + CODE integration
+
+Resolved all six stash conflicts, preserving existing ZIP/Whiteboard behavior and
+adding CODE. Shared reports count CODE once per student; CODE docs now have their
+own paths. Local `pnpm check`: 91 suites / 790 tests, lint/type-check/build PASS
+(36 migration artifacts); compiled HTTP/WS: 14 suites / 125 tests PASS, no skips.
+[Integration details](phase%207/PHASE_7_CODE_PROGRESS.md#backend-integration--02112026).
+Only isolated test databases/buckets were used; no FE edits, dev/VPS migration,
+deployment, commit or push. Earlier entries below retain their original evidence.
+
 ## 2026-11-02 — Planning Phase 7 Whiteboard, UI theo miro-demo
 
 2026-11-02 — Phase7 BE local runtime implemented. `pnpm check`:724/724,82 suites; focused compiled HTTP/WS3/3. Full HTTP/FE acceptance in progress. [Progress7](phase%207/PHASE_7_PROGRESS.md). No deployment evidence.

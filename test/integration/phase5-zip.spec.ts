@@ -5,6 +5,7 @@ import { PDFDocument } from 'pdf-lib';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
+import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
 import { AssignmentZip1793577600000 } from '../../src/database/migrations/1793577600000-assignment-zip.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentFilesService } from '../../src/modules/assignments/services/assignment-files.service.js';
@@ -39,7 +40,11 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
       reporting: AssignmentReportingService;
     beforeAll(async () => {
       db = await paymentDatabase('phase5_zip', {
-        migrations: [AssignmentsQuiz1792713600000, AssignmentZip1793577600000],
+        migrations: [
+          AssignmentsQuiz1792713600000,
+          CodeAssignments1792886400000,
+          AssignmentZip1793577600000,
+        ],
       });
       await rehearseMigration(db, new AssignmentZip1793577600000(), 'down');
       config = fileConfig({ ASSIGNMENT_ZIP_ENABLED: true, ASSIGNMENT_FILE_JOB_ENABLED: false });

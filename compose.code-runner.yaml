@@ -1,0 +1,14 @@
+# Phase 7: cho API gọi compiler-runner qua network nội bộ `mindy-compiler` (tạo bởi compose của runner).
+# Dùng kèm file chính:
+#   docker compose -f compose.production.yaml -f compose.code-runner.yaml up -d
+# Network phải tồn tại trước (runner đã `up`); xem docs/PHASE_7_CODE_RUNBOOK.md.
+services:
+  api:
+    networks:
+      - backend
+      - compiler
+
+networks:
+  compiler:
+    name: mindy-compiler
+    external: true

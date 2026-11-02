@@ -1,5 +1,10 @@
 # Phase 7 — Flow bảng vẽ
 
+02/11/2026 integration: giữ nguyên runtime Whiteboard trên `dev`, bổ sung CODE
+assignments theo [flow riêng](PHASE_7_CODE_FLOW.md). Các đoạn planning dưới đây
+là lịch sử; trạng thái runtime/evidence hiện hành ở progress và Whiteboard runbook.
+Không đổi protocol, quyền hoặc route Whiteboard trong lượt gộp backend này.
+
 **02/11/2026 — PLANNED, chưa có runtime/API triển khai hoặc deployment evidence.**
 
 [Plan](../implement_phase/phase%207/PHASE_7_WHITEBOARD.md) ·

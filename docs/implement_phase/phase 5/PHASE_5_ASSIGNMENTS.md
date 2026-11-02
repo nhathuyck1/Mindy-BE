@@ -8,6 +8,10 @@ Phase 5 là tên feature assignment mới, khác milestone 5 checkout của core
 [Flow](../../api_flow/PHASE_5_FLOW.md) · [API proposal](../../api_flow/PHASE_5_flow-api-breakdown.md) ·
 [Progress](../../progress/phase%205/PHASE_5_PROGRESS.md).
 
+> **02/11/2026 — owner mở phạm vi CODE:** bài tập lập trình chấm tự động được làm ở
+> [Phase 7](../phase%207/PHASE_7_CODE_ASSIGNMENTS.md) (type `CODE`, bảng `code_*` riêng). Các câu
+> "không compiler/judge CODE v1" bên dưới chỉ còn đúng cho phạm vi Phase 5.
+
 ## Implementation decisions — 2026-10-22
 
 Đã bắt đầu A0-A2: migration1792713600000, module assignments, authoring, private keys,

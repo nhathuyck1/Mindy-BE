@@ -27,11 +27,16 @@ export function configureApp(app: NestExpressApplication): void {
   app.useBodyParser('json', {
     limit: '256kb',
     type: (req) =>
-      req.method === 'POST' &&
-      /^\/api\/v1\/management\/class-sessions\/[^/]+\/attendance\/recover\/?(?:\?|$)/.test(
-        req.url ?? '',
-      ) &&
-      /^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? ''),
+      /^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? '') &&
+      ((req.method === 'POST' &&
+        /^\/api\/v1\/management\/class-sessions\/[^/]+\/attendance\/recover\/?(?:\?|$)/.test(
+          req.url ?? '',
+        )) ||
+        // Phase 7: CODE source, tests and reference solutions exceed the 64kb default.
+        ((req.method === 'PUT' || req.method === 'POST') &&
+          /^\/api\/v1\/(?:mentor|me)\/(?:assignments\/[^/]+\/code-[a-z-]+(?:\/[^/?]+)?|code-[a-z-]+(?:\/[^/?]+)?)\/?(?:\?|$)/.test(
+            req.url ?? '',
+          ))),
   });
   app.useBodyParser('json', { limit: '64kb' });
   app.setGlobalPrefix('api');

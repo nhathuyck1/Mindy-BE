@@ -1,5 +1,10 @@
 # Phase 4.3 — Flow correction, evidence recovery và audit history
 
+03/11/2026 compiler regression: HTTP fixture dates now derive from
+Asia/Ho_Chi_Minh instead of UTC, keeping the calendar correction window valid
+between local midnight and07:00. Focused4/4 and full HTTP125/125 pass locally;
+attendance permissions/deadline rules and API contracts remain unchanged.
+
 **2026-10-13: IMPLEMENTED, focused PostgreSQL/built-app HTTP verified local; chưa deploy.**
 [Plan](../implement_phase/phase%204/PHASE_4_3_ATTENDANCE_CORRECTIONS_HISTORY.md) ·
 [Progress](../progress/phase%204/PHASE_4_3_PROGRESS.md) ·

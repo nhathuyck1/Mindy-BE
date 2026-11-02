@@ -1,5 +1,13 @@
 # Mindy Postman checks
 
+Phase 7 CODE 02/11/2026 (thêm 4 request wizard: code-library, code-import, code-tests/generate, PUT code-tests): `Mindy-Code-Phase7.postman_collection.json` requires migration
+`1792886400000` and, for validate/run/submit, a compiler-runner v2 reachable at `CODE_RUNNER_URL`
+with the shared `CODE_RUNNER_TOKEN`. Mentor: create CODE → problem → languages → tests → reference →
+validate → publish. Student: view → draft → run → submit (fresh UUID `idempotency_key`) → poll detail.
+Mentor: summary → submissions → detail → rejudge (FAILED only) / void. Revisions in the bodies are an
+example sequence; always send the latest `assignment.revision`.
+[Contract](../docs/api_flow/PHASE_7_CODE_flow-api-breakdown.md).
+
 Admin tracking 22/10/2026: `Mindy-Admin-Tracking.postman_collection.json` requires
 migration `1792627200002`. Login as ADMIN, list/filter events, then set event_source
 and event_id from a real response to read the original details. Receipt payloads

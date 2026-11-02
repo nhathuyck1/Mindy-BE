@@ -25,6 +25,7 @@ import type { QuestionFieldError } from '../validation/questions-validation.js';
 import type { InstructionFile } from '../zip.types.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { AssignmentAccessService } from './assignment-access.service.js';
+import { loadCodeReadiness } from './code-readiness.query.js';
 
 @Injectable()
 export class AssignmentsService {
@@ -45,10 +46,15 @@ export class AssignmentsService {
       await this.access.session(m, actor, sessionId, true);
       if (actor.role !== UserRole.MENTOR)
         throw new AssignmentException(403, 'ASSIGNMENT_SCOPE_REQUIRED');
+      const maxAttempts = input.maxAttempts ?? (input.type === 'CODE' ? 10 : 1);
       if (
         Number(input.maxScore) <= 0 ||
-        (input.type === 'QUIZ' && (input.maxAttempts ?? 1) !== 1) ||
-        (input.type === 'ZIP' && (!input.dueAt || input.timeLimitMinutes != null))
+        (input.type === 'QUIZ' && maxAttempts !== 1) ||
+        (input.type === 'ZIP' &&
+          (!input.dueAt || input.timeLimitMinutes != null || maxAttempts > 10)) ||
+        // Phase 7: CODE homework has a mandatory deadline, no quiz timer, 1..50 attempts.
+        (input.type === 'CODE' &&
+          (!input.dueAt || input.timeLimitMinutes != null || maxAttempts > 50))
       )
         throw new AssignmentException(422, 'INVALID_ASSIGNMENT_CONFIG');
       const rows: AssignmentRow[] = await m.query(
@@ -63,7 +69,7 @@ export class AssignmentsService {
           input.maxScore,
           input.dueAt ?? null,
           input.timeLimitMinutes ?? null,
-          input.maxAttempts ?? 1,
+          maxAttempts,
           actor.userId,
         ],
       );
@@ -139,7 +145,10 @@ export class AssignmentsService {
   ): Promise<AssignmentDto> {
     return this.db.transaction(async (m) => {
       const a = await this.draft(m, actor, id, input.expectedRevision);
-      if (a.type === 'ZIP' && (input.dueAt === null || input.timeLimitMinutes != null))
+      if (
+        (a.type === 'ZIP' || a.type === 'CODE') &&
+        (input.dueAt === null || input.timeLimitMinutes != null)
+      )
         throw new AssignmentException(422, 'INVALID_ASSIGNMENT_CONFIG');
       await m.query(
         `UPDATE assignments SET title=$2,description=$3,due_at=$4,time_limit_minutes=$5,revision=revision+1,updated_at=clock_timestamp() WHERE id=$1`,
@@ -250,7 +259,16 @@ export class AssignmentsService {
         );
         if (invalid.length) throw new AssignmentException(409, 'FILE_NOT_READY');
       }
-      if (a.type === 'QUIZ') {
+      if (a.type === 'CODE') {
+        const blockers = await loadCodeReadiness(m, id, a.revision);
+        const [first] = blockers;
+        if (first)
+          throw new AssignmentException(
+            first === 'CODE_REFERENCE_NOT_VALIDATED' ? 409 : 422,
+            first,
+            { blockers },
+          );
+      } else if (a.type === 'QUIZ') {
         const questions = await this.questionsWithKeys(m, id);
         if (!questions.length || questions.some((q) => q.options.length !== 4))
           throw new AssignmentException(422, 'QUIZ_QUESTIONS_REQUIRED');
@@ -295,6 +313,17 @@ export class AssignmentsService {
         'UPDATE assignment_finalization_jobs SET completed_at=clock_timestamp() WHERE submission_id IN (SELECT id FROM assignment_submissions WHERE assignment_id=$1) AND completed_at IS NULL',
         [id],
       );
+      if (a.type === 'CODE') {
+        // Queued/running code submissions are voided, never graded after archive.
+        await m.query(
+          "UPDATE code_submissions SET status='VOIDED',voided_reason='ASSIGNMENT_ARCHIVED',version=version+1,updated_at=clock_timestamp() WHERE assignment_id=$1 AND status IN ('QUEUED','RUNNING')",
+          [id],
+        );
+        await m.query(
+          'UPDATE code_judge_jobs SET completed_at=clock_timestamp(),updated_at=clock_timestamp() WHERE submission_id IN (SELECT id FROM code_submissions WHERE assignment_id=$1) AND completed_at IS NULL',
+          [id],
+        );
+      }
       return this.changed(m, a, actor.userId, 'ARCHIVE', input.reason);
     });
   }
@@ -310,6 +339,10 @@ export class AssignmentsService {
     });
   }
 
+  /** Active STUDENT/MENTOR check for endpoints not scoped to one session (e.g. the CODE library). */
+  async activeActor(m: EntityManager, actor: AuthenticatedUser): Promise<void> {
+    await this.access.actor(m, actor);
+  }
   async row(m: EntityManager, id: string, lock = false): Promise<AssignmentRow> {
     const rows: AssignmentRow[] = await m.query(
       `SELECT * FROM assignments WHERE id=$1 AND deleted_at IS NULL ${lock ? 'FOR UPDATE' : ''}`,
