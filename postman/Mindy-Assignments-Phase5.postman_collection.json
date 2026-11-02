@@ -136,7 +136,7 @@
           "mode": "raw",
           "raw": "{\n  \"expectedRevision\": 1,\n  \"questions\": [\n    { \"prompt\": \"Question one\", \"correctOption\": \"A\", \"options\": [{\"label\":\"A\",\"text\":\"One\"},{\"label\":\"B\",\"text\":\"Two\"},{\"label\":\"C\",\"text\":\"Three\"},{\"label\":\"D\",\"text\":\"Four\"}] },\n    { \"prompt\": \"Question two\", \"correctOption\": \"A\", \"options\": [{\"label\":\"A\",\"text\":\"One\"},{\"label\":\"B\",\"text\":\"Two\"},{\"label\":\"C\",\"text\":\"Three\"},{\"label\":\"D\",\"text\":\"Four\"}] }\n  ]\n}"
         },
-        "description": "Replace ALL questions, not append. 1..200 questions, JSON <=8MiB/8388608 bytes including UTF-8/escapes. For imports send the complete merged set with latest expectedRevision. Copy canonical IDs/order/revision from response. 422 INVALID_QUIZ_QUESTIONS: details[0].fields contains zero-based {path,code}; unknown names are $unknown, no rejected values. 409: refetch/reconcile. 413 INVALID_JSON_BODY: reduce serialized bytes. No raw-text parser."
+        "description": "Replace ALL questions, not append. 1..200 questions, JSON <=1MiB/1048576 bytes including UTF-8/escapes. For imports send the complete merged set with latest expectedRevision. Copy canonical IDs/order/revision from response. 422 INVALID_QUIZ_QUESTIONS: details[0].fields contains zero-based {path,code}; unknown names are $unknown, no rejected values. 409: refetch/reconcile. 413 INVALID_JSON_BODY: reduce serialized bytes. No raw-text parser."
       }
     },
     {

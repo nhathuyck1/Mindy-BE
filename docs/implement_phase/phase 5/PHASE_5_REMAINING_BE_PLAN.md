@@ -208,9 +208,9 @@ Công việc BE:
 
 - Giữ semantics replace-all; ghi rõ không phải append. Import bổ sung gửi toàn bộ
   bộ câu đã hợp nhất; expectedRevision ngăn ghi đè thay đổi từ người khác.
-- Parser JSON riêng cho đúng questions route, trần 8 MiB; giữ global 64 KiB
+- Parser JSON riêng cho đúng questions route, trần 1 MiB (điều chỉnh từ 8 MiB); giữ global 64 KiB
   và attendance recovery 256 KiB. Parser order đã kiểm thử local; cấu hình proxy
-  do môi trường triển khai quản lý, cần xác minh theo runbook trước rollout.
+  chuẩn mặc định 1m phù hợp trực tiếp với trần này.
 - Trần body byte độc lập với limit 200 câu và giới hạn từng field. UTF-8/JSON escaping
   có thể làm request vượt trần dù từng field hợp lệ; document 413 rõ ràng.
 - Giữ kiểm tra đúng 4 labels distinct, key thuộc options, prompt/options không trắng,

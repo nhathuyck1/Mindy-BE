@@ -127,6 +127,10 @@ export const environmentSchema = Joi.object({
   SEED_ADMIN_DISPLAY_NAME: Joi.string().allow('').default(''),
   SEED_ADMIN_CONFIRM: Joi.string().valid('YES', '').default(''),
   REDIS_ENABLED: Joi.boolean().default(false),
+  WHITEBOARD_ENABLED: Joi.boolean().default(false),
+  WHITEBOARD_WORKER_ENABLED: Joi.boolean().default(true),
+  WHITEBOARD_PDF_ENABLED: Joi.boolean().default(false),
+  WHITEBOARD_PDFTOPPM_PATH: Joi.string().min(1).default('pdftoppm'),
   REDIS_URL: Joi.string()
     .uri({ scheme: ['redis', 'rediss'] })
     .default('redis://localhost:6379'),

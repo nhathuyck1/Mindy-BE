@@ -60,6 +60,15 @@ export class TeachingReadService {
     return this.config.getOrThrow<string>('APP_TIME_ZONE');
   }
 
+  /** Public session-only FULL makeup participant; never grants the target class roster. */
+  async whiteboardGuestAccess(
+    m: EntityManager,
+    sessionId: string,
+    studentId: string,
+  ): Promise<boolean> {
+    return (await this.reservations.guestContext(m, sessionId, studentId)) !== null;
+  }
+
   /** Read participant for the operations backlog; no implicit calendar window or writer locks. */
   async incompleteSessions(
     m: EntityManager,
@@ -275,9 +284,13 @@ export class TeachingReadService {
     });
   }
 
-  async loadClass(m: EntityManager, id: string, lock = false): Promise<ClassEntity> {
+  async loadClass(
+    m: EntityManager,
+    id: string,
+    lock: boolean | 'read' = false,
+  ): Promise<ClassEntity> {
     const q = m.getRepository(ClassEntity).createQueryBuilder('c').where('c.id = :id', { id });
-    if (lock) q.setLock('pessimistic_write');
+    if (lock) q.setLock(lock === 'read' ? 'pessimistic_read' : 'pessimistic_write');
     const c = await q.getOne();
     if (!c) throw new ClassNotFoundException();
     return c;
@@ -286,7 +299,7 @@ export class TeachingReadService {
   async loadSession(
     m: EntityManager,
     id: string,
-    lock = false,
+    lock: boolean | 'read' = false,
   ): Promise<{ session: ClassSessionEntity; classEntity: ClassEntity }> {
     // Resolve ancestry, then lock Class -> Session. All writers use that order.
     const initial = await this.sessionQuery(m).where('s.id = :id', { id }).getOne();
@@ -300,7 +313,7 @@ export class TeachingReadService {
       .createQueryBuilder('s')
       .where('s.id = :id', { id });
     // Non-key writes must remain compatible with FK checks in concurrent conflict recording.
-    if (lock) q.setLock('for_no_key_update');
+    if (lock) q.setLock(lock === 'read' ? 'pessimistic_read' : 'for_no_key_update');
     const session = await q.getOne();
     if (!session) throw new ClassSessionNotFoundException();
     return { session, classEntity };

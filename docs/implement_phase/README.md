@@ -1,5 +1,15 @@
 # Implementation phases
 
+2026-11-02 — Phase7 BE local runtime implemented. `pnpm check`:724/724,82 suites; focused compiled HTTP/WS3/3. Full HTTP/FE acceptance in progress. [Progress7](../progress/phase%207/PHASE_7_PROGRESS.md). No deployment evidence.
+
+2026-11-02 — **Phase 7 Whiteboard: planning, chưa implement.** UI theo local
+miro-demo; sáu slice 7.0–7.5 từ UI → bảng lưu được → cộng tác → ảnh private →
+mốc lưu/restore/PNG → PDF/nghiệm thu. Không sửa FE/demo hoặc runtime.
+[Plan7](phase%207/PHASE_7_WHITEBOARD.md) ·
+[Flow7](../api_flow/PHASE_7_FLOW.md) ·
+[API proposal7](../api_flow/PHASE_7_flow-api-breakdown.md) ·
+[Progress7](../progress/phase%207/PHASE_7_PROGRESS.md).
+
 2026-10-26 — **Phase6 backend local acceptance complete39/39 AC**:8 slices PASS, dev16→32 migrations/repeat no-op; full check691/691, HTTP117/117 và restore/ops PASS. [Báo cáo hiện hành](../progress/phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26) có24 revoke barriers, contract/log harness và source fingerprint. FE/VPS/production IAM/load acceptance cần evidence riêng.
 
 

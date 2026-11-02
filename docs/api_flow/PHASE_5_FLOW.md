@@ -51,7 +51,7 @@ Earlier dated sections below describe previous partial slices.
 
 B1 of the [remaining backend plan](../implement_phase/phase%205/PHASE_5_REMAINING_BE_PLAN.md)
 is implemented locally. Mentor prepares the entire merged question set, then PUTs
-questions with expectedRevision. Up to200 questions and8MiB JSON are accepted;
+questions with expectedRevision. Up to 200 questions and 1MiB JSON are accepted;
 three parameterized batch INSERTs run in one transaction with revision/audit.
 Success returns canonical IDs/order/revision; any invalid question rolls back the
 whole replacement.422 details[0].fields gives zero-based field paths without rejected
@@ -59,7 +59,7 @@ values/private keys;409 requires refetch/reconcile;413 requires reducing JSON by
 No raw-text parser or FE changes. Existing global64KiB and attendance recovery256KiB
 parsers are preserved (the new plan initially misidentified the latter as chat).
 
-Local verification includes multilingual200-question import, exact8MiB/+1 byte,
+Local verification includes multilingual200-question import, exact 1MiB/+1 byte,
 parser isolation, duplicate/foreign IDs, ID/order retention, stale revision and
 audit-failure rollback. Scope/quiz grading/history remain unchanged. Runtime gates
 and measurements are in [progress](../progress/phase%205/PHASE_5_PROGRESS.md);

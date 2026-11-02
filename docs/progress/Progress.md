@@ -1,3 +1,18 @@
+## 2026-11-02 — Planning Phase 7 Whiteboard, UI theo miro-demo
+
+2026-11-02 — Phase7 BE local runtime implemented. `pnpm check`:724/724,82 suites; focused compiled HTTP/WS3/3. Full HTTP/FE acceptance in progress. [Progress7](phase%207/PHASE_7_PROGRESS.md). No deployment evidence.
+
+Đã tham khảo source/UI local `E:/Documents/WDP/miro-demo` và đối chiếu Mindy
+BE/FE2. Lập layout/responsive, giả định quyền theo session, sáu slice 7.0–7.5,
+durability/epoch, ảnh private, mốc lưu/restore/PNG rồi PDF và acceptance.
+[Plan7](../implement_phase/phase%207/PHASE_7_WHITEBOARD.md) ·
+[Flow7](../api_flow/PHASE_7_FLOW.md) ·
+[API proposal7](../api_flow/PHASE_7_flow-api-breakdown.md) ·
+[Progress7](phase%207/PHASE_7_PROGRESS.md).
+Chỉ tài liệu, chưa implement/API runtime/migration/deploy; không sửa FE hoặc demo.
+Đã xem UI màn hẹp; desktop đối chiếu CSS, chưa nghiệm thu realtime/browser/BE.
+Kiểm tra tài liệu/link/diff riêng, không ghi application tests đã chạy.
+
 ## 2026-11-02 — Student tự hủy đơn hàng
 
 - Thêm `POST /api/v1/me/orders/:orderId/cancel` (200 OrderDto), chỉ STUDENT ACTIVE sở hữu đơn; UUIDv4, 401/403/404, 409 ORDER_NOT_CANCELLABLE nếu đơn PAID/EXPIRED hoặc quá deadline.
@@ -24,8 +39,8 @@ FE, chạy migration development/production, deploy, commit hay push.
 ## 2026-11-02 — Assignment B1: bulk ABCD
 
 Đã đọc plan Assignment mới và triển khai slice B1 độc lập: PUT questions nhận
-JSON tối đa8MiB/200 câu; giữ global64KiB và attendance recovery256KiB. Thay1200
-INSERT tuần tự bằng3 batch INSERT trong cùng transaction; lỗi422 có vị trí câu/field,
+JSON tối đa 1MiB/200 câu (trước là 8MiB, đã điều chỉnh về 1MiB); giữ global 64KiB và attendance recovery 256KiB. Thay 1200
+INSERT tuần tự bằng 3 batch INSERT trong cùng transaction; lỗi 422 có vị trí câu/field,
 không phản chiếu đáp án/giá trị lỗi. Giữ replace-all, revision và quyền hiện tại.
 Đã cập nhật Swagger/Postman/flow/API/proxy runbook; B0/B2–B5 còn pending, ZIP vẫn
 bị chặn publish. `pnpm check` PASS:78 files/694 tests, lint/type-check/build32 migrations;

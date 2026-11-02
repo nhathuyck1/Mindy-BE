@@ -18,7 +18,7 @@ export function configureApp(app: NestExpressApplication): void {
   app.use(requestContextMiddleware);
   // Register before the global parser: consuming this stream there would apply 64 KiB.
   app.useBodyParser('json', {
-    limit: 8 * 1024 * 1024,
+    limit: 1 * 1024 * 1024,
     type: (req) =>
       req.method === 'PUT' &&
       /^\/api\/v1\/mentor\/assignments\/[^/]+\/questions\/?(?:\?|$)/i.test(req.url ?? '') &&

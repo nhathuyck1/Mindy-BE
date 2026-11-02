@@ -56,6 +56,13 @@ export interface StorageLocation {
 export type ContentDisposition = 'inline' | 'attachment';
 export const FILE_STORAGE = Symbol('FILE_STORAGE');
 export interface FileStorage {
+  put?(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    mimeType: string,
+    signal?: AbortSignal,
+  ): Promise<string>;
   deleteAllVersions?(bucket: string, key: string): Promise<void>;
   deleteVersion?(location: StorageLocation): Promise<void>;
   assertAvailable(): Promise<void>;

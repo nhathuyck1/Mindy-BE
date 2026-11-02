@@ -54,7 +54,7 @@ correctOption, score or isCorrect. OpenAPI has separate student metadata schemas
 Page payload: items,total,page,pageSize. Default page1/pageSize20, max100; stable
 created_at DESC,id ASC; scope/filters apply before count/pagination. Growable
 submission queues/history/report endpoints are described in section5.
-JSON is limited to64KiB except PUT mentor assignment questions (8MiB/8388608 bytes)
+JSON is limited to64KiB except PUT mentor assignment questions (1MiB/1048576 bytes)
 and POST attendance recovery (256KiB). The questions limit counts decoded HTTP-body
 bytes, including UTF-8 multibyte text, JSON escapes and whitespace, independently
 of the 200-question/field limits. Even valid individual fields can exceed the total
@@ -72,7 +72,7 @@ revision come from create/list/get. Re-fetch after409; never overwrite newer wor
 | GET /mentor/classes/:classId/assignments | Class tab, same filters |200 page; substitute sessions only. |
 | GET /mentor/assignments/:assignmentId | Edit/preview; ID from list |200 metadata plus questions/private correctOption; current scoped mentor only. |
 | PATCH /mentor/assignments/:assignmentId | expectedRevision>=1; title?,description?,dueAt? (explicit null removes QUIZ due date),timeLimitMinutes? (null disables QUIZ timer) |200 metadata/revision+1; DRAFT only. type/purpose/maxScore/maxAttempts immutable in this slice; published edits409. |
-| PUT /mentor/assignments/:assignmentId/questions | expectedRevision; questions1..200 [{id? UUIDv4,prompt1..5000 nonblank,options:[{label A/B/C/D,text1..2000 nonblank}] exactly4 unique labels,correctOption A/B/C/D}]; JSON <=8MiB |200 metadata + canonical questions/server IDs/revision+1. Atomic full replacement, existing IDs must belong to this draft; omitted IDs generated. |
+| PUT /mentor/assignments/:assignmentId/questions | expectedRevision; questions1..200 [{id? UUIDv4,prompt1..5000 nonblank,options:[{label A/B/C/D,text1..2000 nonblank}] exactly4 unique labels,correctOption A/B/C/D}]; JSON <=1MiB |200 metadata + canonical questions/server IDs/revision+1. Atomic full replacement, existing IDs must belong to this draft; omitted IDs generated. |
 | POST /mentor/assignments/:assignmentId/publish | expectedRevision; preview -> publish |200 PUBLISHED/revision+1. QUIZ requires>=1 valid question/key. ZIP requires ASSIGNMENT_ZIP_ENABLED and MINIO_ENABLED; disabled503. dueAt must be future. Bound instructions must be READY. Freezes content/config; ZIP extension has its own command. |
 | POST /mentor/assignments/:assignmentId/archive | expectedRevision,reason1..2000 nonblank |200 ARCHIVED/revision+1; PUBLISHED only; active attempts VOIDED, pending expiry jobs completed atomically. Graded results retained. |
 | DELETE /mentor/assignments/:assignmentId | JSON body expectedRevision; discard draft |204 soft delete/revision audit. DRAFT only. |
@@ -183,7 +183,7 @@ retry2..300s and terminal submissions are immutable at the database boundary.
 |422 IDEMPOTENCY_KEY_REQUIRED / INVALID_QUIZ_ANSWERS / SUBMISSION_INCOMPLETE|Supply UUID key/valid distinct answers/all required answers.|
 |400 path UUID /422 global DTO validation|Correct request fields; unexpected score/key injection is rejected.|
 |400 INVALID_JSON_BODY|Fix malformed JSON; no replacement committed.|
-|413 INVALID_JSON_BODY|Reduce JSON bytes; questions PUT8MiB, attendance recovery256KiB, global64KiB. Do not retry unchanged body.|
+|413 INVALID_JSON_BODY|Reduce JSON bytes; questions PUT 1MiB, attendance recovery 256KiB, global 64KiB. Do not retry unchanged body.|
 
 Error details follow existing AppHttpException array: details:[{missingQuestionIds:...}]
 or details:[{resultId:...}], not a new envelope. UI distinguishes loading/empty,
@@ -302,5 +302,6 @@ HTTP cookie/Origin/DTO/OpenAPI/40-question journey. Final gate results live in
 
 Bulk rollout: see [reverse proxy runbook](../core/VPS_DEPLOYMENT.md#3-reverse-proxy).
 The repository has no active Nginx/Caddy config to apply or verify. Ensure upstream
-body limits permit8MiB on this route before rollout; upstream413 can have a different
-error body. App-level boundaries are verified directly against compiled HTTP locally.
+body limits permit 1MiB on this route before rollout (standard reverse proxy default);
+upstream 413 can have a different error body. App-level boundaries are verified directly
+against compiled HTTP locally.

@@ -381,7 +381,7 @@ describe.skipIf(!separateTestUrl('phase5_http'))('Phase 5 compiled assignment HT
       correctOption: 'B',
     });
   });
-  it('enforces exactly 8 MiB on only the bulk PUT route, counting UTF-8/escaping and preserving parser isolation', async () => {
+  it('enforces exactly 1 MiB on only the bulk PUT route, counting UTF-8/escaping and preserving parser isolation', async () => {
     const draft = await json<AssignmentDto>(
       request(`/mentor/class-sessions/${sessionId}/assignments`, mentor, {
         purpose: 'TEST',
@@ -401,7 +401,7 @@ describe.skipIf(!separateTestUrl('phase5_http'))('Phase 5 compiled assignment HT
         },
       ],
     }).replaceAll('ệ', '\\u1ec7');
-    const limit = 8 * 1024 * 1024;
+    const limit = 1 * 1024 * 1024;
     const padded = `${raw}${' '.repeat(limit - Buffer.byteLength(raw))}`;
     expect(Buffer.byteLength(padded)).toBe(limit);
     async function send(body: string, route = path, method = 'PUT') {

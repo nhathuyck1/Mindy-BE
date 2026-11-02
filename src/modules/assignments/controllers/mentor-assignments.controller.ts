@@ -107,7 +107,7 @@ export class MentorAssignmentsController {
   @ApiOperation({
     summary: 'Atomically replace draft ABCD questions and private keys',
     description:
-      'Replace all questions (not append), 1–200 questions, JSON body up to 8 MiB (8388608 bytes). ' +
+      'Replace all questions (not append), 1–200 questions, JSON body up to 1 MiB (1048576 bytes). ' +
       'Send the complete merged set when importing additional questions. expectedRevision protects concurrent edits. ' +
       '422 INVALID_QUIZ_QUESTIONS details[0].fields contains {path,code} with zero-based question/option indexes; no rejected values. ' +
       '413 INVALID_JSON_BODY when the JSON byte limit is exceeded, including UTF-8 and JSON escaping.',

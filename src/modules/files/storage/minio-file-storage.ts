@@ -23,6 +23,20 @@ import type {
 
 @Injectable()
 export class MinioFileStorage implements FileStorage {
+  async put(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    mimeType: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const result = await this.internal.send(
+      new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: mimeType }),
+      { abortSignal: signal },
+    );
+    if (!result.VersionId || result.VersionId === 'null') throw new Error('FILE_VERSION_REQUIRED');
+    return result.VersionId;
+  }
   async deleteAllVersions(bucket: string, key: string): Promise<void> {
     let keyMarker: string | undefined;
     let versionMarker: string | undefined;

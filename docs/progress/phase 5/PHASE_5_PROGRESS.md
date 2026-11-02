@@ -82,9 +82,9 @@ Started the [remaining backend plan](../../implement_phase/phase%205/PHASE_5_REM
 with the independent B1 slice. B0/B2–B5 (ZIP schema/storage/submit/grades/reports)
 remain pending; ZIP publication still returns409 ZIP_PIPELINE_NOT_IMPLEMENTED.
 
-- PUT mentor assignment questions has its own8MiB JSON parser before the global
-  parser. Global64KiB and attendance recovery256KiB remain unchanged. Source review
-  corrected the plan's reference to a chat256KiB parser: chat uses global64KiB.
+- PUT mentor assignment questions has its own 1MiB JSON parser before the global
+  parser (adjusted from 8MiB to 1MiB). Global 64KiB and attendance recovery 256KiB remain unchanged. Source review
+  corrected the plan's reference to a chat 256KiB parser: chat uses global 64KiB.
 - Full replacement,1..200 questions, current mentor scope and expectedRevision
   semantics retained. UUID comparisons normalize case; duplicate/foreign IDs,
   repeated labels, missing keys and nested/unknown fields reject the whole set.
@@ -97,13 +97,12 @@ remain pending; ZIP publication still returns409 ZIP_PIPELINE_NOT_IMPLEMENTED.
   Local PostgreSQL measurement:22 total SQL queries,129.5ms for200 questions.
   This is a small local fixture, not a production latency benchmark.
 - Updated Swagger, Postman, flow/API breakdown and proxy rollout guidance. Repo
-  does not manage active reverse-proxy config; deployed8MiB acceptance remains
-  an environment check before rollout. App413 is INVALID_JSON_BODY; upstream413
-  may have a different envelope.
+  does not manage active reverse-proxy config; standard reverse-proxy defaults (1m)
+  now cover this route directly. App 413 is INVALID_JSON_BODY.
 
-Focused local evidence:17/17 domain+PostgreSQL tests and4/4 compiled assignment
-HTTP tests PASS. Covers40-question regression,200-question multilingual import
-above64KiB, exact8MiB and+1 byte, UTF-8/JSON escaping, parser isolation including
+Focused local evidence: 17/17 domain+PostgreSQL tests and 4/4 compiled assignment
+HTTP tests PASS. Covers 40-question regression, 200-question multilingual import
+above 64KiB, exact 1MiB and +1 byte (413), UTF-8/JSON escaping, parser isolation including
 attendance256KiB, field mapping/no private values, stale revisions, ID/order/key
 retention, replace-all removal and audit-failure rollback.
 
