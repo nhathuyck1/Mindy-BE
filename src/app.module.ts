@@ -11,6 +11,7 @@ import { ChatModule } from './modules/chat/chat.module.js';
 import { ClassesModule } from './modules/classes/classes.module.js';
 import { CommerceModule } from './modules/commerce/commerce.module.js';
 import { CourseBrowseModule } from './modules/course-browse/course-browse.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ManagerOperationsModule } from './modules/manager-operations/manager-operations.module.js';
@@ -44,6 +45,7 @@ import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
     }),
     ManagerOperationsModule,
     HealthModule,
+    DashboardModule,
     UsersModule,
     AuthModule,
     AttendanceModule,

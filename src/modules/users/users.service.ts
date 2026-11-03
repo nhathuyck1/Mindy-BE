@@ -16,6 +16,21 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+const SEARCH_ACCENTS = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ';
+const SEARCH_PLAIN = Array.from(SEARCH_ACCENTS, (letter) =>
+  letter === 'đ' ? 'd' : letter.normalize('NFD').replace(/\p{M}/gu, ''),
+).join('');
+
+export function userSearchPattern(value: string): string {
+  const folded = value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replaceAll('đ', 'd');
+  return `%${folded.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
 export function normalizeOptionalPhone(phone: string | undefined): string | null {
   const normalized = phone?.trim();
   return normalized === undefined || normalized.length === 0 ? null : normalized;
@@ -137,7 +152,21 @@ export class UsersService {
   }
 
   async listUsers(options: UserPageOptionsDto): Promise<{ items: UserEntity[]; total: number }> {
-    const query = this.users.createQueryBuilder('user').orderBy('user.createdAt', 'DESC');
+    const query = this.users
+      .createQueryBuilder('user')
+      .orderBy('user.createdAt', 'DESC')
+      .addOrderBy('user.id', 'ASC');
+
+    if (options.q?.trim()) {
+      query.andWhere(
+        "translate(lower(concat_ws(' ', user.displayName, user.email, user.phone)), :searchAccents, :searchPlain) LIKE :searchPattern",
+        {
+          searchAccents: SEARCH_ACCENTS,
+          searchPlain: SEARCH_PLAIN,
+          searchPattern: userSearchPattern(options.q),
+        },
+      );
+    }
 
     if (options.role !== undefined) {
       query.andWhere('user.role = :role', { role: options.role });

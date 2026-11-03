@@ -30,3 +30,12 @@ tài liệu active; report lịch sử12–128 mô tả baseline trước ngày 
   behavioral E2E, không mở rộng visual QA cho lượt này.
 - Chưa deploy/VPS. Runbook Manager/Files đã cập nhật6–128; cần release BE/FE mới
   để server áp dụng. Tiến độ tổng tại docs/progress/Progress.md.
+# User search — 2026-11-03
+
+Implemented optional q on existing managed-user list; see PHASE_1_flow-api-breakdown.md.
+FE starts searching at 2 characters after 250ms idle, resets pagination on a new term,
+preserves term on page/role/status changes and cancels superseded requests. Backend
+folds Vietnamese accents/case, escapes LIKE wildcards, filters before count/pagination
+and applies stable created_at DESC/id ASC ordering. No migration or write side effect.
+Local real-browser/API checks cover incremental search, out-of-page email, accentless
+name, wildcard literal and clearing. No deployment claimed.

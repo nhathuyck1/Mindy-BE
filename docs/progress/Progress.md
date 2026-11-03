@@ -1495,3 +1495,15 @@ Ubuntu 26.04 exceeded five minutes. Replaced apt provisioning with the existing
 lockfile-pinned ffprobe-static binary at /usr/bin/ffprobe after frozen install.
 Linux MP3/MP4 validator-flag smoke, lint and diff checks PASS; no API, application
 code or production image change. GitHub rerun pending; no deployment evidence.
+
+## 2026-11-03 — Dashboard theo vai trò
+
+- Created `codex/dashboard` from fetched `origin/dev` per user instruction; preserved original feature branches. Added read-only DashboardModule with role-specific Admin/Manager/Mentor endpoints, bounded periods and a single consistent PostgreSQL aggregation snapshot. No migrations, dependency additions or payment/enrollment writes.
+- Confirmed enrollment analytics use current ACTIVE/COMPLETED records and enrolled_at period; distinct students across classes; stable top-ten ranking; Vietnam daily zero-fill; mentor scope from authenticated primary assignment only. See [flow](../api_flow/DASHBOARD_FLOW.md) and [FE API breakdown](../api_flow/DASHBOARD_flow-api-breakdown.md).
+- Local verification: 14 Dashboard unit/policy tests PASS; 3 isolated PostgreSQL aggregation integration tests PASS; 4 compiled Nest HTTP contract/DI/authorization/validation tests PASS. Type-check/build PASS (36 migration artifacts verified); lint has no errors and reports 11 existing warnings outside Dashboard. Full `pnpm test`: 332 tests PASS, 475 skipped; six existing materials/files suites cannot initialize without their dedicated TEST_DATABASE_URL/MinIO stack. This is not a fully green repository-wide integration run.
+- FE2 implemented by the user's explicit FE+BE authorization despite this repository's general read-only FE guideline. FE quality evidence is recorded in FE2 docs/progress.md. No deployment, production account acceptance, real payment, commit or push claimed.
+- Follow-up local runtime verification: existing local DB preserved, 26 pending dev migrations applied (36 total). BE localhost:3000 + FE localhost:3003 use real local API and authentication, without mocks. Added a local Manager account; original demo Admin/Mentor credentials/assignments unchanged. Independent DB checks PASS for three roles × three periods; totals 44 registrations/44 students center-wide and 20/20 for frontend Mentor. No payment, email or background jobs run. FE charts changed to Recharts at user's request; desktop/320px live browser checks recorded in FE progress and Dashboard flow.
+## 2026-11-03 — User search
+
+- Added optional q to managed-user list, 2–100 trimmed characters, accent/case-insensitive name/email/phone substring with escaped wildcard literals; filters/count/page and stable ordering are server-side. API and flow updated under Phase 1. No migration. FE incremental search begins at 2 characters with 250ms debounce.
+- Local verification: BE build/type-check and 3 user unit tests PASS; actual FE/API checks PASS for two-character then longer input, Vietnamese accentless search, wildcard literals, clear and full-dataset result. No deploy or production data operation.

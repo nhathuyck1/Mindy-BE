@@ -1,11 +1,32 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 import { UserRole } from '../user-role.enum.js';
 import { UserStatus } from '../user-status.enum.js';
 
 export class UserPageOptionsDto {
+  @ApiPropertyOptional({
+    type: String,
+    maxLength: 100,
+    description: 'Substring of name, email or phone; case/accent insensitive',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  readonly q?: string;
+
   @ApiPropertyOptional({ type: Number, minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)

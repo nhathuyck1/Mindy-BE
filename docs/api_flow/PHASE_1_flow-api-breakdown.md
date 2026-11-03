@@ -66,3 +66,20 @@ không dùng route này tạo Manager. Password5/129 trả422 HTTP_ERROR; dữ l
 hiện ở form. Loading khi submit, success hướng dẫn kiểm tra email; không tự retry
 POST vô hạn hoặc suy đã đăng nhập. Rule/side effects public không thay. Toàn
 identity/session tiếp tục theo controller/docs hiện hành; không thêm API mới.
+## Managed-user search addition — 2026-11-03
+
+Implemented: GET `/api/v1/admin/users?q=nguyen&page=1&pageSize=10`, active ADMIN/MANAGER
+with existing access_token cookie. Optional q is trimmed, string 2–100 characters;
+omitted means all users. Existing role/status/page/pageSize bounds unchanged. No body.
+Matches substrings in display name/email/phone case/accent insensitively; `%`, `_`,
+and backslash are literal. Bound parameters prevent SQL injection. Response remains
+200 `{items,page,pageSize,total}` with safe UserDto fields; total counts all matches
+before pagination. Stable sorting createdAt DESC then ID ASC. No extra student PII
+fields or changed authorization. No write, polling or idempotency key.
+
+FE debounce 250ms, minimum two characters, suppress composition requests, reset to page
+1 on committed term, preserve term on pagination/filters. No results uses existing
+empty state; failed requests use existing retry. Clearing omits q. 401/403 retain
+existing session/role behavior; 422 invalid q uses normal validation response; proxy
+uses INVALID_QUERY and rejects duplicate/unsupported keys. Local verified through
+real FE and API; remote deployment remains pending. See PHASE_1_FLOW.md.
