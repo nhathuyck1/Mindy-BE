@@ -1,5 +1,11 @@
 ## 2026-11-03 — compiler PR validation
 
+## 2026-11-04 — Portable FE/BE realtime
+
+- Nhánh codex/portable-backend từ origin/dev: thêm endpoint guarded POST auth/realtime-ticket và ký/verify vé có typ/origin/channel/session riêng, handshake tối đa60s, không mở quyền REST. Hai gateway giữ kiểm session/resource và cookie fallback cũ; chuẩn hóa chat path không trailing slash. Không thêm migration/dependency, không đổi cookie.
+- HTTP/Socket.IO thật với fixture domain/session memory: issue/role/Origin/strict DTO, cookie-free chat+board join, sai kênh/origin và session revoke PASS. Unit crypto/expiry/token separation PASS. Build/type-check PASS. FE có browser production smoke cùng build tại hai origin khác nhau, cả chat/bảng online và xin vé mới khi reconnect; fixture memory không thay bằng chứng DB/production.
+- API contract/flow cập nhật Phase1/6/7. Chưa deploy/commit/push; cần deploy BE trước FE và cấu hình CORS_ORIGINS chính xác.
+
 CODE backend on `compiler` includes both env examples, tests, contracts and runbooks.
 `pnpm check`:790/790 PASS with lint/type-check/build; compiled HTTP/WS125/125 PASS;
 36 migrations apply cleanly and repeat is a no-op. Existing Materials worker timing

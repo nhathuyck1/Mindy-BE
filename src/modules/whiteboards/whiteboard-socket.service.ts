@@ -69,14 +69,11 @@ export class WhiteboardSocketService implements OnApplicationBootstrap, OnApplic
     });
     this.server.use(async (s, next) => {
       try {
-        const token = s.handshake.headers.cookie
-          ?.split(';')
-          .map((p) => p.trim())
-          .find((p) => p.startsWith('access_token='))
-          ?.slice(13);
-        if (!token) boardError(401, 'AUTHENTICATION_REQUIRED');
-        const { principal, expiresAt } = this.tokens.verifyAccessTokenWithExpiry(
-          decodeURIComponent(token),
+        const { principal, expiresAt } = this.tokens.verifySocketIdentity(
+          s.handshake.auth,
+          s.handshake.headers.cookie,
+          s.handshake.headers.origin,
+          'whiteboards',
         );
         await this.auth.assertAccessPrincipalValid(principal);
         if ([...this.peers.values()].filter((p) => p.actor.userId === principal.userId).length >= 5)

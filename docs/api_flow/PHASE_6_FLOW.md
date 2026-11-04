@@ -1,5 +1,9 @@
 # Phase 6 — Flow chat realtime và notification
 
+## 04/11/2026 — Kết nối realtime trực tiếp BE
+
+Source hỗ trợ vé từ POST /api/v1/auth/realtime-ticket để browser không phụ thuộc proxy WebSocket ở host FE. Origin/channel/session kiểm ở gateway, permissions nghiệp vụ giữ nguyên; cookie client cũ vẫn hỗ trợ. Chat path chuẩn hóa /socket.io không trailing slash, bảng /ws/whiteboards. Reconnect cần vé mới; xem PHASE_1_FLOW.md và PHASE_1_flow-api-breakdown.md. Local transport/browser fixtures PASS; chưa deploy.
+
 ## Kiểm tra môi trường integration test — 2026-10-27
 
 Đã tái hiện6 suites Files/Materials failed tại setup vì thiếu TEST_DATABASE_URL.

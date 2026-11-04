@@ -1,5 +1,9 @@
 # Phase 7 — API proposal bảng vẽ
 
+## 04/11/2026 — Xác thực socket portable
+
+Ngoài cookie same-origin hiện hữu, gateway nhận Socket.IO auth:{ticket}. Xin vé qua POST /api/v1/auth/realtime-ticket trước mỗi kết nối/reconnect; handshake dùng đúng Origin và channel chat/whiteboards. Hạn vé60s, socket không vượt access expiry và luôn kiểm session/quyền. Không gửi token trong query hoặc persistent storage. Chi tiết request/response/errors/deploy ở PHASE_1_flow-api-breakdown.md; đây là source local, chưa deploy.
+
 > Cập nhật implementation 02/11/2026: Runtime BE local đã implement. Tham chiếu [runbook hiện hành](../PHASE_7_WHITEBOARD_RUNBOOK.md) cho protocol/limits/deviations. Assets: POST /whiteboards/:boardId/assets với {filename,mimeType,sizeBytes,pages?}; POST assets/:assetId/complete + Idempotency-Key; GET assets/:assetId; POST assets/:assetId/access. READY ID bind trực tiếp, không có endpoint bind riêng. PDF import trả assets qua status IMPORTED. Context GET board có envelope {board,context,capabilities}; control/reset/restore trả metadata trực tiếp. POST reset/restore trả 201. Các đoạn proposal bên dưới là baseline, không thay contract hiện hành này.
 
 **02/11/2026 — PLANNED, CHƯA IMPLEMENT/DEPLOY.** Paths/DTO/events dưới đây là
