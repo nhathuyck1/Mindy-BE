@@ -1476,3 +1476,7 @@ Ubuntu 26.04 exceeded five minutes. Replaced apt provisioning with the existing
 lockfile-pinned ffprobe-static binary at /usr/bin/ffprobe after frozen install.
 Linux MP3/MP4 validator-flag smoke, lint and diff checks PASS; no API, application
 code or production image change. GitHub rerun pending; no deployment evidence.
+
+## 04/11/2026 — Kiểm tra trạng thái ZIP (read-only runtime review)
+
+Đã đối chiếu controller, file service/worker, validator và submit: pipeline draft → upload intent → storage PUT → complete/PROCESSING → worker READY → attach → submit đã có trong source Feat/Miro. Chạy lại5 validator tests PASS; Swagger live có endpoint ZIP/file. Local env bật ASSIGNMENT_ZIP_ENABLED, ASSIGNMENT_FILE_JOB_ENABLED và MINIO_ENABLED; đây không phải bằng chứng runtime production. Không có TEST_DATABASE_URL nên không chạy lại integration PostgreSQL/MinIO hoặc upload/nộp production. Evidence integration cũ giữ nguyên. Ghi nhận DTO AssignmentUploadInput khai max25MiB, service áp ZIP20MiB; chưa sửa contract/code trong lượt review.
