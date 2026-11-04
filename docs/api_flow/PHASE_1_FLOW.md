@@ -1,5 +1,13 @@
 # Phase 1 — Account creation: password policy correction
 
+## 04/11/2026 — Vé realtime độc lập domain FE
+
+Đã implement source local: POST /api/v1/auth/realtime-ticket, dùng phiên access HttpOnly hiện hữu và Origin allowlist. MENTOR/STUDENT xin vé channel chat hoặc whiteboards → proxy FE bổ sung URL runtime → browser mở Socket.IO trực tiếp BE. Không chuyển access/refresh token sang JS; không đổi auth cookie/login, migration hay business permission.
+
+Vé typ mindy-realtime+jwt ký RSA, ràng buộc origin/channel/session, handshake tối đa60s và không vượt access expiry. Socket tiếp tục dùng session/quyền hiện có và ngắt ở access expiry; reconnect xin vé mới qua API/refresh chung. Vé stateless có thể dùng lại trong hạn60s, không phải single-use; không dùng được cho HTTP REST hoặc kênh khác. Không log/persist/query-string vé.
+
+Kiểm chứng local: unit crypto/scope/expiry/token separation, HTTP guard/DTO/Origin/role và hai gateway thật qua tools/realtime-smoke.mjs. Domain/session lookup dùng fixture memory; không phải nghiệm thu DB hay production. FE cùng build chạy hai origin và kiểm online/update/reconnect cả chat/bảng bằng browser. Chưa deploy. Xem breakdown cùng phase để tích hợp.
+
 Cập nhật2026-10-12. [API breakdown](PHASE_1_flow-api-breakdown.md).
 Theo user, mọi role dùng cùng password **6–128 ký tự khi tạo tài khoản**.
 Baseline bị lệch: public RegisterDto6–128 nhưng CreateUserDto cho admin12–128.

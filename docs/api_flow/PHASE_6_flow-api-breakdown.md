@@ -1,5 +1,9 @@
 ## Kiểm tra môi trường integration test — 2026-10-27
 
+## 04/11/2026 — Xác thực socket portable
+
+Ngoài cookie same-origin hiện hữu, gateway nhận Socket.IO auth:{ticket}. Xin vé qua POST /api/v1/auth/realtime-ticket trước mỗi kết nối/reconnect; handshake dùng đúng Origin và channel chat/whiteboards. Hạn vé60s, socket không vượt access expiry và luôn kiểm session/quyền. Không gửi token trong query hoặc persistent storage. Chi tiết request/response/errors/deploy ở PHASE_1_flow-api-breakdown.md; đây là source local, chưa deploy.
+
 Sáu suites Files/Materials failed vì thiếu TEST_DATABASE_URL tại beforeAll;
 đã chạy lại PASS117 tests với PostgreSQL/MinIO và DB test riêng. Full pnpm check
 PASS691/691,78 suites,0 skipped,lint/type-check/build PASS32 migration artifacts;
