@@ -31,6 +31,7 @@ import { UserEntity } from '../../src/modules/users/user.entity.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { UserStatus } from '../../src/modules/users/user-status.enum.js';
 import { fileConfig } from '../helpers/files-fixture.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture } from '../helpers/payment-fixture.js';
 
 describe('Phase 3.3.3 Review/publication + PostgreSQL', () => {
@@ -601,9 +602,9 @@ describe('Phase 3.3.3 Review/publication + PostgreSQL', () => {
       ]),
     ).rejects.toThrow('Immutable material identity/approval');
     const before = await service.detail(manager, created.id);
-    await db.undoLastMigration();
+    await rehearseMigration(db, new MaterialPublicationWithdrawal1791853200000(), 'down');
     expect(await service.detail(manager, created.id)).toEqual(before);
-    expect(await db.runMigrations()).toHaveLength(1);
+    await rehearseMigration(db, new MaterialPublicationWithdrawal1791853200000(), 'up');
     expect(await service.detail(manager, created.id)).toEqual(before);
     expect(
       (await service.review(manager, created.id, { action: 'UNPUBLISH', expectedRevision: 1 }))

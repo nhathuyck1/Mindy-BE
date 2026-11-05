@@ -28,6 +28,7 @@ import { WhiteboardMediaWorker } from '../../src/modules/whiteboards/whiteboard-
 import { WhiteboardsService } from '../../src/modules/whiteboards/whiteboards.service.js';
 import { CHAT_MIGRATIONS } from '../helpers/chat-migrations.js';
 import { fileConfig, storageFixture, upload } from '../helpers/files-fixture.js';
+import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 function sticky(doc: Y.Doc, text = 'Tiếng Việt') {
@@ -498,12 +499,14 @@ describe.skipIf(!separateTestUrl('whiteboards'))(
       await db.query(
         'TRUNCATE whiteboard_exports,whiteboard_assets,whiteboard_snapshots,whiteboard_receipts,whiteboard_updates,whiteboards',
       );
-      await db.undoLastMigration();
-      await db.undoLastMigration();
+      await rehearseMigration(db, new WhiteboardShapes1793664000001(), 'down');
+      await rehearseMigration(db, new Whiteboards1793664000000(), 'down');
       expect(
         await db.query("SELECT 1 FROM information_schema.tables WHERE table_name='whiteboards'"),
       ).toHaveLength(0);
-      expect(await db.runMigrations()).toHaveLength(2);
+      await rehearseMigration(db, new Whiteboards1793664000000(), 'up');
+      await rehearseMigration(db, new WhiteboardShapes1793664000001(), 'up');
+      expect(await db.runMigrations()).toHaveLength(0);
     });
   },
 );

@@ -4,6 +4,11 @@ import { MaterialContentType } from '../entities/material.entity.js';
 import { StudentMaterialFileDto } from './student-material.dto.js';
 
 export class ManagerMaterialDto {
+  @ApiProperty({ type: String, nullable: true }) lastSeenAt!: Date | null;
+  @ApiProperty() trackingStartedAt!: Date;
+  @ApiProperty() isUnseen!: boolean;
+  @ApiProperty({ description: 'Bytes in distinct related files; shared files included' })
+  relatedSizeBytes!: string;
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) courseUnitId!: string;
   @ApiProperty({ enum: MaterialContentType }) contentType!: MaterialContentType;

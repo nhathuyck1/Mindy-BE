@@ -262,6 +262,7 @@ export class ChatAttachmentsService implements OnApplicationShutdown {
     actor: AuthenticatedUser,
     id: string,
     messageId: string,
+    disposition: 'attachment' | 'inline' = 'attachment',
   ): Promise<{ url: string; expiresAt: string }> {
     this.enabled();
     const a = await this.access.authorize(this.db.manager, actor, id);
@@ -281,13 +282,15 @@ export class ChatAttachmentsService implements OnApplicationShutdown {
     const file = await this.load(this.db.manager, id, message.file_object_id);
     if (file.status !== 'READY' || !file.object_key || !file.object_version_id)
       throw new ChatException(404, 'CHAT_NOT_FOUND');
+    if (disposition === 'inline' && file.kind !== 'IMAGE')
+      throw new ChatException(422, 'CHAT_INVALID_INPUT');
     let url: string;
     try {
       url = await this.storage.presignGet(
         { bucket: file.bucket, key: file.object_key, versionId: file.object_version_id },
         file.original_name,
         60,
-        'attachment',
+        disposition,
       );
     } catch {
       throw new ChatException(503, 'CHAT_STORAGE_UNAVAILABLE');

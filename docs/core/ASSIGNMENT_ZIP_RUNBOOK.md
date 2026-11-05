@@ -1,5 +1,13 @@
 # Assignment ZIP — rollout, jobs and retention
 
+## Schema update — 2026-11-05
+
+Assignment hiện còn 10 bảng riêng. Audit/receipt đã chuyển sang tracking chung;
+file binding, trạng thái điểm và danh sách bản sao file đã được gộp.
+Đọc [schema và hướng dẫn migration](ASSIGNMENT_CONSOLIDATION.md) trước khi rollout.
+Các phần có ngày cũ bên dưới ghi lại rollout trước khi consolidation.
+
+
 2026-11-02. Backend local implementation; this task does not deploy or migrate
 development/production. [API](../api_flow/PHASE_5_flow-api-breakdown.md#5-zip-instruction-files-grading-and-reporting--implemented)
 · [Flow](../api_flow/PHASE_5_FLOW.md) · [Progress](../progress/phase%205/PHASE_5_PROGRESS.md).

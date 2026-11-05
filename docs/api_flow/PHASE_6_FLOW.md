@@ -210,3 +210,8 @@ Các slice6.0–6.7 và acceptance matrix nằm trong plan; tiến độ theo pr
 | [6.5](../implement_phase/phase%206/PHASE_6_5_NOTIFICATION_INBOX.md) | Durable fanout→generic inbox; conversation-read→notifications-read | 6.4; notification read không nâng conversation cursor. |
 | [6.6](../implement_phase/phase%206/PHASE_6_6_CHAT_ATTACHMENTS.md) | Scoped intent→PUT→validate→READY→FILE/IMAGE send→authorized download/cleanup | 6.5 + Files; mở canAttach sau gates. |
 | [6.7](../implement_phase/phase%206/PHASE_6_7_HANDOFF_OPERATIONS.md) | Full local gates→harness/Postman/runbook→gói handoff | Tất cả trên; VPS/FE browser evidence theo thực chạy, không suy từ local. |
+
+
+## Cập nhật BE Change — 05/11/2026
+
+Lịch tuần/min3/swap, nghỉ cả ngày hai chế độ, materials tracking/bulk/cleanup và chat inline được ghi trong [flow tích hợp](PHASE_BE_CHANGE_FLOW.md) và [contract](PHASE_BE_CHANGE_flow-api-breakdown.md). Source BE/FE2 đã triển khai; DB/storage và deployment chưa nghiệm thu. Xem [evidence/giới hạn](../progress/BE_CHANGE_PROGRESS.md). Contract mới bổ sung vào phase hiện hữu, không thay thế lịch sử nghiệm thu cũ.

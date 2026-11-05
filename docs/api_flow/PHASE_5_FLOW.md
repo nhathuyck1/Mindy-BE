@@ -1,5 +1,11 @@
 # Phase 5 — Assignment: QUIZ / ZIP backend
 
+## Schema consolidation — 2026-11-05
+
+Schema hiện tại có 10 bảng assignment; audit/receipt dùng chung `audit_events` và
+`mutation_receipts`. Các luồng HTTP giữ nguyên. Xem [schema và rollout hiện tại](../core/ASSIGNMENT_CONSOLIDATION.md).
+Các phần có ngày cũ bên dưới mô tả các giai đoạn triển khai trước khi gộp.
+
 ## ZIP completion — 2026-11-02
 
 B0/B2–B5 implemented: isolated additive ZIP/file/grade schema, durable validation/

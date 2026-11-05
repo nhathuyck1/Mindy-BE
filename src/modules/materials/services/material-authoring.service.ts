@@ -65,6 +65,28 @@ export interface MentorMaterialScope {
 
 @Injectable()
 export class MaterialAuthoringService {
+  async assertOpenAccess(
+    principal: AuthenticatedUser,
+    material: MaterialEntity,
+    classId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    const refs = await this.refs(material.id, manager);
+    const summaries = await this.files.readSummaries(
+      [...(material.fileObjectId ? [material.fileObjectId] : []), ...refs.map((r) => r.fileId)],
+      manager,
+      true,
+    );
+    const actor = await this.policy.actor(principal, manager);
+    const context = await this.mentorReadContext(
+      principal,
+      material.courseUnitId,
+      { classId },
+      manager,
+    );
+    if (!canPreviewMaterial(this.snapshot(material, summaries, refs), actor, context))
+      throw new MaterialPolicyException('MATERIAL_ACCESS_DENIED');
+  }
   constructor(
     private readonly db: DataSource,
     private readonly policy: MaterialPolicyService,
@@ -338,6 +360,8 @@ export class MaterialAuthoringService {
         .createQueryBuilder('material')
         .where('material.deletedAt IS NULL');
       if (unitId) query.andWhere('material.courseUnitId = :unitId', { unitId });
+      if (options.unseen !== undefined)
+        query.andWhere('material.isUnseen=:unseen', { unseen: options.unseen === 'true' });
       if (options.contentType)
         query.andWhere('material.contentType = :type', { type: options.contentType });
       if (options.reviewStatus)
@@ -371,12 +395,24 @@ export class MaterialAuthoringService {
         materials.flatMap((material) => (material.fileObjectId ? [material.fileObjectId] : [])),
         manager,
       );
+      const listRefs: MaterialFileReferenceEntity[] = materials.length
+        ? await manager
+            .getRepository(MaterialFileReferenceEntity)
+            .createQueryBuilder('r')
+            .where('r.material_id=ANY(:ids::uuid[])', { ids: materials.map((m) => m.id) })
+            .getMany()
+        : [];
+      const refSummaries = await this.files.readSummaries(
+        listRefs.map((r) => r.fileId),
+        manager,
+      );
+      for (const [id, file] of refSummaries) summaries.set(id, file);
       return {
         items: materials.map((material) =>
           this.view(
             material,
             summaries,
-            [],
+            listRefs.filter((r) => r.materialId === material.id),
             false,
             !scope ||
               (context?.mentorReadScope !== 'SESSION' &&
@@ -803,6 +839,18 @@ export class MaterialAuthoringService {
   ) {
     const file = material.fileObjectId ? summaries.get(material.fileObjectId) : undefined;
     const summary = {
+      lastSeenAt: material.lastSeenAt,
+      trackingStartedAt: material.trackingStartedAt,
+      isUnseen: material.isUnseen,
+      relatedSizeBytes: [
+        ...new Set(
+          [material.fileObjectId, ...refs.map((r) => r.fileId)].filter(
+            (id): id is string => id !== null,
+          ),
+        ),
+      ]
+        .reduce((total, id) => total + BigInt(summaries.get(id)?.sizeBytes ?? 0), 0n)
+        .toString(),
       id: material.id,
       courseUnitId: material.courseUnitId,
       contentType: material.contentType,

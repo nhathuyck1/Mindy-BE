@@ -8,6 +8,7 @@ import { TypedManagerMaterials1791849600000 } from '../../src/database/migration
 import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migrations/1791856800000-class-unit-release-audit.js';
 import { TeachingNotes1792627200000 } from '../../src/database/migrations/1792627200000-teaching-notes.js';
 import { ConsolidateTracking1792627200002 } from '../../src/database/migrations/1792627200002-consolidate-tracking.js';
+import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
 import { TrackingService } from '../../src/modules/tracking/tracking.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
@@ -24,6 +25,7 @@ describe.skipIf(!separateTestUrl('tracking'))('Consolidated tracking PostgreSQL'
         TypedManagerMaterials1791849600000,
         ClassUnitReleaseAudit1791856800000,
         TeachingNotes1792627200000,
+        AssignmentsQuiz1792713600000,
       ],
     });
   }, 30000);

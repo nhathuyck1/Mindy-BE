@@ -15,6 +15,8 @@ export const TRACKING_SOURCES = [
   'class_unit_release_audit',
   'session_meeting_audits',
   'attendance_recovery_audits',
+  'assignment_audits',
+  'assignment_zip_audits',
 ] as const;
 export class TrackingQueryDto extends PageOptionsDto {
   @ApiPropertyOptional({ enum: TRACKING_SOURCES })

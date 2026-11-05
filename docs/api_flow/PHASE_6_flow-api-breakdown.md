@@ -448,3 +448,8 @@ implemented phải có source/HTTP/socket evidence. R1 đánh read notifications
 message creation sequence khi6.5 mở; delayed fanout không tạo unread trở lại cho
 message đã nằm trước cursor. Job completion riêng theo consumer để realtime
 dispatch không vô tình tiêu mất notification work.
+
+
+## Cập nhật BE Change — 05/11/2026
+
+Lịch tuần/min3/swap, nghỉ cả ngày hai chế độ, materials tracking/bulk/cleanup và chat inline được ghi trong [flow tích hợp](PHASE_BE_CHANGE_FLOW.md) và [contract](PHASE_BE_CHANGE_flow-api-breakdown.md). Source BE/FE2 đã triển khai; DB/storage và deployment chưa nghiệm thu. Xem [evidence/giới hạn](../progress/BE_CHANGE_PROGRESS.md). Contract mới bổ sung vào phase hiện hữu, không thay thế lịch sử nghiệm thu cũ.

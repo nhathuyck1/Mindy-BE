@@ -46,6 +46,7 @@ import {
   SessionAssignmentRequiredException,
   TeachingConflictException,
 } from '../exceptions/teaching.exceptions.js';
+import { readClassStartEligibilities } from './class-opening.service.js';
 
 @Injectable()
 export class TeachingReadService {
@@ -419,7 +420,13 @@ export class TeachingReadService {
         )
       ).map((u) => [u.id, u.displayName]),
     );
+    const eligibility = await readClassStartEligibilities(m, classes);
     return classes.map((c) => ({
+      minStudents: 3,
+      activeStudentCount: eligibility.get(c.id)?.activeStudentCount ?? 0,
+      scheduledStartAt: eligibility.get(c.id)?.scheduledStartAt ?? null,
+      startEligibility: eligibility.get(c.id)?.startEligibility ?? 'NOT_OPEN',
+      startIneligibilityReason: eligibility.get(c.id)?.startIneligibilityReason ?? null,
       id: c.id,
       name: c.name,
       code: c.code,

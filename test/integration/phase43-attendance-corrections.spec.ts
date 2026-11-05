@@ -1,5 +1,6 @@
 import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -68,7 +69,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
     attendance = new AttendanceService(
       db,
       teaching,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       new MentorConflictService(),
       f.enrollments,
       f.users,

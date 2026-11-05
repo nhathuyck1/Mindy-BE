@@ -37,7 +37,8 @@ export class MinioFileStorage implements FileStorage {
     if (!result.VersionId || result.VersionId === 'null') throw new Error('FILE_VERSION_REQUIRED');
     return result.VersionId;
   }
-  async deleteAllVersions(bucket: string, key: string): Promise<void> {
+  async deleteAllVersions(bucket: string, key: string): Promise<number> {
+    let bytes = 0;
     let keyMarker: string | undefined;
     let versionMarker: string | undefined;
     do {
@@ -50,12 +51,15 @@ export class MinioFileStorage implements FileStorage {
         }),
       );
       for (const version of [...(page.Versions ?? []), ...(page.DeleteMarkers ?? [])]) {
-        if (version.Key === key && version.VersionId)
+        if (version.Key === key && version.VersionId) {
           await this.deleteVersion({ bucket, key, versionId: version.VersionId });
+          if ('Size' in version && typeof version.Size === 'number') bytes += version.Size;
+        }
       }
       keyMarker = page.IsTruncated ? page.NextKeyMarker : undefined;
       versionMarker = page.IsTruncated ? page.NextVersionIdMarker : undefined;
     } while (keyMarker);
+    return bytes;
   }
   async deleteVersion(location: StorageLocation): Promise<void> {
     await this.internal.send(

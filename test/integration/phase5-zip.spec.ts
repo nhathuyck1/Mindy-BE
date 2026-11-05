@@ -4,14 +4,12 @@ import type { ConfigService } from '@nestjs/config';
 import { PDFDocument } from 'pdf-lib';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
-import { AssignmentZip1793577600000 } from '../../src/database/migrations/1793577600000-assignment-zip.js';
+import { ConsolidateAssignments1793836800002 } from '../../src/database/migrations/1793836800002-consolidate-assignments.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentFilesService } from '../../src/modules/assignments/services/assignment-files.service.js';
 import { AssignmentHistoryService } from '../../src/modules/assignments/services/assignment-history.service.js';
 import { AssignmentReportingService } from '../../src/modules/assignments/services/assignment-reporting.service.js';
 import { AssignmentsService } from '../../src/modules/assignments/services/assignments.service.js';
-import { QuizAttemptsService } from '../../src/modules/assignments/services/quiz-attempts.service.js';
 import { ZipAccessService } from '../../src/modules/assignments/services/zip-access.service.js';
 import { ZipReceiptsService } from '../../src/modules/assignments/services/zip-receipts.service.js';
 import { ZipSubmissionsService } from '../../src/modules/assignments/services/zip-submissions.service.js';
@@ -21,6 +19,7 @@ import { TeachingReadService } from '../../src/modules/classes/services/teaching
 import { validateBinary } from '../../src/modules/files/validation/binary-validation.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import { fileConfig, storageFixture, upload, zipBuffer } from '../helpers/files-fixture.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
@@ -39,9 +38,8 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
       reporting: AssignmentReportingService;
     beforeAll(async () => {
       db = await paymentDatabase('phase5_zip', {
-        migrations: [AssignmentsQuiz1792713600000, AssignmentZip1793577600000],
+        migrations: ASSIGNMENT_MIGRATIONS,
       });
-      await rehearseMigration(db, new AssignmentZip1793577600000(), 'down');
       config = fileConfig({ ASSIGNMENT_ZIP_ENABLED: true, ASSIGNMENT_FILE_JOB_ENABLED: false });
       remote = await storageFixture(config);
       f = paymentFixture(db);
@@ -54,60 +52,6 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
       const access = new AssignmentAccessService(teaching, f.users, f.enrollments),
         zipAccess = new ZipAccessService(access, config),
         receipts = new ZipReceiptsService();
-      // Exercise upgrade over a real graded QUIZ, not just an empty schema.
-      const legacy = new AssignmentsService(db, access, f.workspace, f.enrollments),
-        legacyQuiz = new QuizAttemptsService(db, access, legacy, teaching, f.enrollments);
-      const order = await f.order(),
-        classId = order.classIds[0] ?? '',
-        detail = await f.read.getDetail(classId),
-        sid = detail.units[0]?.sessions[0]?.id ?? '';
-      const mentor: AuthenticatedUser = {
-          userId: order.mentor.id,
-          role: UserRole.MENTOR,
-          sessionId: randomUUID(),
-        },
-        student: AuthenticatedUser = {
-          userId: order.student.id,
-          role: UserRole.STUDENT,
-          sessionId: randomUUID(),
-        };
-      await db.query(
-        "UPDATE enrollments SET status='ACTIVE',enrolled_at=clock_timestamp() WHERE class_id=$1",
-        [classId],
-      );
-      const a = await legacy.create(mentor, sid, {
-        purpose: 'TEST',
-        type: 'QUIZ',
-        title: 'Legacy graded quiz',
-        maxScore: '10',
-      });
-      const authored = await legacy.replaceQuestions(mentor, a.id, {
-        expectedRevision: 1,
-        questions: [
-          {
-            prompt: '2 + 2?',
-            correctOption: 'A',
-            options: (['A', 'B', 'C', 'D'] as const).map((label) => ({ label, text: label })),
-          },
-        ],
-      });
-      const published = await legacy.publish(mentor, a.id, authored.revision),
-        attempt = await legacyQuiz.start(student, a.id, published.revision, randomUUID());
-      const graded = await legacyQuiz.save(
-        student,
-        attempt.attempt.attemptId,
-        {
-          expectedVersion: 1,
-          answers: attempt.attempt.questions.map((q) => ({
-            questionId: q.id,
-            selectedOption: 'A',
-          })),
-        },
-        randomUUID(),
-        true,
-      );
-      await rehearseMigration(db, new AssignmentZip1793577600000(), 'up');
-      expect((await legacyQuiz.get(student, graded.attemptId, true)).result).toEqual(graded.result);
       assignments = new AssignmentsService(db, access, f.workspace, f.enrollments, config);
       zip = new ZipSubmissionsService(db, zipAccess, receipts);
       files = new AssignmentFilesService(
@@ -239,11 +183,14 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
         db.query('UPDATE assignment_zip_submissions SET version=999 WHERE id=$1', [a.id]),
       ).rejects.toMatchObject({ code: '23514' });
       await expect(
-        db.query('DELETE FROM assignment_zip_submission_files WHERE submission_id=$1', [a.id]),
+        db.query(
+          'UPDATE assignment_zip_submissions SET file_id=NULL,object_version_id=NULL WHERE id=$1',
+          [a.id],
+        ),
       ).rejects.toMatchObject({ code: '23514' });
-      await expect(rehearseMigration(db, new AssignmentZip1793577600000(), 'down')).rejects.toThrow(
-        'Export ZIP history',
-      );
+      await expect(
+        rehearseMigration(db, new ConsolidateAssignments1793836800002(), 'down'),
+      ).rejects.toThrow('forward migration');
     });
     it('keeps draft grades private, releases immutable revisions and requires reason/stale-release protection', async () => {
       const s = await setup(),
@@ -547,6 +494,16 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
         status: 'FAILED',
         error_code: 'FILE_ACCESS_REVOKED',
       });
+      const copies = await db.query(
+        "SELECT copy_candidates FROM assignment_file_jobs WHERE file_id=$1 AND kind='VALIDATE'",
+        [intent.fileId],
+      );
+      expect(copies[0].copy_candidates).toEqual([
+        {
+          token: recovered.lease_token,
+          object_key: `assignment-verified/${intent.fileId}/${recovered.lease_token}`,
+        },
+      ]);
       await files.maintenance();
       expect((await zip.get(s.student, draft.id)).status).toBe('VOIDED');
       const keep = await setup(),
@@ -573,6 +530,8 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
       expect((await files.load(db.manager, intent.fileId)).status).toBe('DELETED');
       const tombstone = await files.load(db.manager, intent.fileId);
       await expect(remote.storage.head(tombstone.bucket, tombstone.staging_key)).rejects.toThrow();
+      for (const candidate of copies[0].copy_candidates)
+        await expect(remote.storage.head(tombstone.bucket, candidate.object_key)).rejects.toThrow();
       // Simulate an already issued PUT finishing after cleanup. Tombstones are swept again daily.
       await upload(intent.uploadUrl, 'application/zip', bytes);
       await db.query(
@@ -605,7 +564,7 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
       const key = randomUUID(),
         input = { expectedVersion: 2 };
       await db.query(
-        `CREATE FUNCTION test_zip_audit_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='SUBMIT' THEN RAISE EXCEPTION 'test zip audit failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER test_zip_audit BEFORE INSERT ON assignment_zip_audits FOR EACH ROW EXECUTE FUNCTION test_zip_audit_fail()`,
+        `CREATE FUNCTION test_zip_audit_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.source='assignment_zip_audits' AND NEW.data->>'action'='SUBMIT' THEN RAISE EXCEPTION 'test zip audit failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER test_zip_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_zip_audit_fail()`,
       );
       try {
         await expect(zip.submit(s.student, draft.id, input, key)).rejects.toThrow(
@@ -614,11 +573,11 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
         expect((await zip.get(s.student, draft.id)).status).toBe('DRAFT');
       } finally {
         await db.query(
-          'DROP TRIGGER test_zip_audit ON assignment_zip_audits;DROP FUNCTION test_zip_audit_fail()',
+          'DROP TRIGGER test_zip_audit ON audit_events;DROP FUNCTION test_zip_audit_fail()',
         );
       }
       await db.query(
-        `CREATE FUNCTION test_zip_receipt_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.route LIKE 'submit:%' THEN RAISE EXCEPTION 'test zip receipt failure'; END IF; RETURN NEW; END $$;CREATE TRIGGER test_zip_receipt BEFORE INSERT ON assignment_zip_receipts FOR EACH ROW EXECUTE FUNCTION test_zip_receipt_fail()`,
+        `CREATE FUNCTION test_zip_receipt_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.namespace='assignment_zip' AND NEW.route LIKE 'submit:%' THEN RAISE EXCEPTION 'test zip receipt failure'; END IF; RETURN NEW; END $$;CREATE TRIGGER test_zip_receipt BEFORE INSERT ON mutation_receipts FOR EACH ROW EXECUTE FUNCTION test_zip_receipt_fail()`,
       );
       try {
         await expect(zip.submit(s.student, draft.id, input, key)).rejects.toThrow(
@@ -627,12 +586,12 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
         expect((await zip.get(s.student, draft.id)).status).toBe('DRAFT');
       } finally {
         await db.query(
-          'DROP TRIGGER test_zip_receipt ON assignment_zip_receipts;DROP FUNCTION test_zip_receipt_fail()',
+          'DROP TRIGGER test_zip_receipt ON mutation_receipts;DROP FUNCTION test_zip_receipt_fail()',
         );
       }
       expect((await zip.submit(s.student, draft.id, input, key)).attemptNumber).toBe(1);
       const audits = await db.query(
-        "SELECT count(*)::int AS count FROM assignment_zip_audits WHERE submission_id=$1 AND action='SUBMIT'",
+        "SELECT count(*)::int AS count FROM audit_events WHERE source='assignment_zip_audits' AND (data->>'submission_id')::uuid=$1 AND data->>'action'='SUBMIT'",
         [draft.id],
       );
       expect(audits[0].count).toBe(1);
