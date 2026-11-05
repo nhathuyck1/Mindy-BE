@@ -291,9 +291,12 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
         },
       ],
     };
+    // Prepare the actor before starting either operation so allSettled attaches
+    // rejection handlers immediately, even when recovery rejects before payment.
+    const manager = await f.user(UserRole.MANAGER);
     const results = await Promise.allSettled([
       attendance.recover(a.sessionId, body, staff, key),
-      f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount),
+      f.cash.confirm(manager.id, a.order.id, a.order.totalAmount),
     ]);
     expect(results[1]?.status).toBe('fulfilled');
     if (results[0]?.status === 'rejected')
