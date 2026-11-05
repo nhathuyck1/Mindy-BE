@@ -39,6 +39,7 @@ import {
 import {
   CodeLibraryQueryDto,
   CodeReviewQueryDto,
+  CodeRunInput,
   CodeSignaturePreviewInput,
   ExtendCodeAssignmentInput,
   GenerateCodeOutputsInput,
@@ -56,6 +57,7 @@ import {
   MentorCodeSubmissionDto,
   MentorCodeSubmissionPageDto,
 } from '../dtos/code-review.dto.js';
+import { CodeRunResultDto } from '../dtos/code-student.dto.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { CodeAuthoringService } from '../services/code-authoring.service.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
@@ -174,6 +176,22 @@ export class MentorCodeAssignmentsController {
     @Body() input: GenerateCodeOutputsInput,
   ): Promise<CodeGenerateResultDto> {
     return this.code.generateOutputs(actor, id, input);
+  }
+
+  @Post('assignments/:assignmentId/code-runs')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({
+    summary:
+      'Mentor demo: run code on the sample tests or one custom input (draft or published); not stored, rate limited',
+  })
+  @ApiOkResponse({ type: CodeRunResultDto })
+  mentorRun(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('assignmentId', uuid) id: string,
+    @Body() input: CodeRunInput,
+  ): Promise<CodeRunResultDto> {
+    return this.code.mentorRun(actor, id, input);
   }
 
   @Put('assignments/:assignmentId/code-tests')

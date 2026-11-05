@@ -227,6 +227,58 @@ describe.skipIf(!separateTestUrl('phase7'))('Phase 7 CODE authoring PostgreSQL',
     ).rejects.toMatchObject({ response: { code: 'ASSIGNMENT_CONTENT_FROZEN' } });
   });
 
+  it('lets the mentor run demo code on samples and custom input after publishing, storing nothing', async () => {
+    const s = await draft();
+    const authored = await author(s);
+    executor.answer = twoSum;
+    await code.validate(s.mentor, s.created.id, authored.assignment.revision);
+    await assignments.publish(s.mentor, s.created.id, authored.assignment.revision);
+    const before = await db.query('SELECT count(*)::int AS n FROM code_runs');
+
+    const samples = await code.mentorRun(s.mentor, s.created.id, {
+      languageKey: 'javascript',
+      sourceCode: 'function twoSum(nums, target) { return [0, 1]; }',
+    });
+    expect(samples.compileStatus).toBe('OK');
+    expect(samples.tests).toEqual([
+      expect.objectContaining({ kind: 'SAMPLE', position: 1, status: 'PASSED', actual: [0, 1] }),
+    ]);
+    expect(executor.requests.at(-1)?.priority).toBe('interactive');
+
+    executor.answer = () => [9, 9];
+    const wrong = await code.mentorRun(s.mentor, s.created.id, {
+      languageKey: 'java21',
+      sourceCode: 'class Solution {}',
+    });
+    expect(wrong.tests[0]?.status).toBe('WRONG_ANSWER');
+
+    executor.answer = twoSum;
+    const custom = await code.mentorRun(s.mentor, s.created.id, {
+      languageKey: 'javascript',
+      sourceCode: 'function twoSum() {}',
+      customArgs: [[1, 5], 6],
+    });
+    expect(custom.tests).toEqual([
+      expect.objectContaining({
+        kind: 'CUSTOM',
+        position: null,
+        status: 'COMPLETED',
+        actual: [0, 1],
+      }),
+    ]);
+    await expect(
+      code.mentorRun(s.mentor, s.created.id, {
+        languageKey: 'javascript',
+        sourceCode: 'x',
+        customArgs: ['not an array', 6],
+      }),
+    ).rejects.toMatchObject({ status: 422, response: { code: 'CODE_CUSTOM_INPUT_INVALID' } });
+    await expect(
+      code.mentorRun(s.student, s.created.id, { languageKey: 'javascript', sourceCode: 'x' }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(await db.query('SELECT count(*)::int AS n FROM code_runs')).toEqual(before);
+  });
+
   it('any edit after validation requires validating again', async () => {
     const s = await draft();
     const authored = await author(s);

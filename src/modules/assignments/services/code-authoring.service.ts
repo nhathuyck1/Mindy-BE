@@ -14,12 +14,14 @@ import type {
 } from '../assignment.types.js';
 import { buildSource, parseProgramOutput, stdinFor } from '../domain/code-driver.js';
 import { type CompareOptions, judgeTest, runnerLimits } from '../domain/code-grading.js';
+import { runStatus } from '../domain/code-judge.js';
 import {
   assertTestMatchesSignature,
   CODE_LANGUAGE_KEYS,
   CodeDomainError,
   type CodeLanguageKey,
   type CodeSignature,
+  describeArgs,
   matchesType,
   parseSignature,
   starterCode,
@@ -41,6 +43,7 @@ import {
 } from '../dtos/code.dto.js';
 import type {
   CodeLibraryQueryDto,
+  CodeRunInput,
   CodeSignaturePreviewInput,
   CodeTestItemInput,
   ExtendCodeAssignmentInput,
@@ -52,6 +55,7 @@ import type {
   UpsertCodeReferenceInput,
   UpsertCodeTestInput,
 } from '../dtos/code-input.dto.js';
+import type { CodeRunResultDto, CodeRunTestDto } from '../dtos/code-student.dto.js';
 import { AssignmentException } from '../exceptions/assignment.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { AssignmentsService } from './assignments.service.js';
@@ -67,6 +71,23 @@ import { loadCodeReadiness } from './code-readiness.query.js';
 const MAX_SOURCE_BYTES = 65536;
 const MAX_TEST_JSON_BYTES = 65536;
 const STDERR_EXCERPT = 2000;
+/** "Mentor làm mẫu" runs: per mentor, per API instance; nothing is stored. */
+const MENTOR_RUNS_PER_MINUTE = 20;
+const mentorRunTimes = new Map<string, number[]>();
+
+function mentorRateLimit(userId: string, now = Date.now()): void {
+  const recent = (mentorRunTimes.get(userId) ?? []).filter((t) => now - t < 60_000);
+  if (recent.length >= MENTOR_RUNS_PER_MINUTE) {
+    const waitMs = (recent[0] ?? now) + 60_000 - now;
+    mentorRunTimes.set(userId, recent);
+    throw new AssignmentException(429, 'CODE_RUN_RATE_LIMITED', {
+      scope: 'MINUTE',
+      retryAfterSeconds: Math.min(60, Math.max(1, Math.ceil(waitMs / 1000))),
+    });
+  }
+  recent.push(now);
+  mentorRunTimes.set(userId, recent);
+}
 
 function domain<T>(fn: () => T): T {
   try {
@@ -620,6 +641,109 @@ export class CodeAuthoringService {
       await this.assignments.audit(m, row, actor.userId, 'CODE_EXTENDED', input.reason);
       return new AssignmentDto(row);
     });
+  }
+
+  /**
+   * "Mentor làm mẫu": runs the mentor's scratch code on the sample tests or one custom input, in
+   * DRAFT and after publishing. Same judging as the student "Chạy thử"; nothing is stored or graded.
+   */
+  async mentorRun(
+    actor: AuthenticatedUser,
+    id: string,
+    input: CodeRunInput,
+  ): Promise<CodeRunResultDto> {
+    if (bytes(input.sourceCode) > MAX_SOURCE_BYTES)
+      throw new AssignmentException(422, 'CODE_SOURCE_TOO_LARGE');
+    const plan = await this.db.transaction('REPEATABLE READ', async (m) => {
+      const a = await this.assignments.authorized(m, actor, id);
+      this.mentorCode(actor, a);
+      const problem = await this.requireProblem(m, id);
+      const allowed = (await this.problemLanguages(m, id)).map((l) => l.language_key);
+      if (!allowed.includes(input.languageKey))
+        throw new AssignmentException(422, 'CODE_LANGUAGE_NOT_ALLOWED');
+      const rows: { time_multiplier: string }[] = await m.query(
+        'SELECT time_multiplier FROM code_languages WHERE key=$1',
+        [input.languageKey],
+      );
+      const samples: { position: number; input_args: unknown[]; expected: unknown }[] =
+        input.customArgs === undefined
+          ? await m.query(
+              "SELECT position,input_args,expected FROM code_test_cases WHERE assignment_id=$1 AND visibility='SAMPLE' ORDER BY position",
+              [id],
+            )
+          : [];
+      return { problem, samples, multiplier: Number(rows[0]?.time_multiplier ?? 1) };
+    });
+    const signature = parseSignature(plan.problem.signature);
+    const custom = input.customArgs;
+    if (
+      custom !== undefined &&
+      (custom.length !== signature.params.length ||
+        signature.params.some((p, i) => !matchesType(p.type, custom[i])) ||
+        bytes(JSON.stringify(custom)) > MAX_TEST_JSON_BYTES)
+    )
+      throw new AssignmentException(422, 'CODE_CUSTOM_INPUT_INVALID');
+    mentorRateLimit(actor.userId);
+    const cases =
+      custom === undefined
+        ? plan.samples.map((t) => ({
+            kind: 'SAMPLE' as const,
+            id: `s${t.position}`,
+            position: t.position,
+            args: t.input_args,
+            expected: t.expected,
+          }))
+        : [
+            {
+              kind: 'CUSTOM' as const,
+              id: 'c1',
+              position: null,
+              args: custom,
+              expected: undefined,
+            },
+          ];
+    const nonce = randomBytes(12).toString('hex');
+    const report = await this.run(
+      input.languageKey,
+      signature,
+      input.sourceCode,
+      nonce,
+      plan.problem,
+      plan.multiplier,
+      cases,
+    );
+    const compiled = report.compile.status === 'OK' || report.compile.status === 'SKIPPED';
+    const compare: CompareOptions = {
+      mode: plan.problem.compare_mode,
+      ...(plan.problem.float_epsilon === null
+        ? {}
+        : { epsilon: Number(plan.problem.float_epsilon) }),
+    };
+    const tests: CodeRunTestDto[] = compiled
+      ? cases.map((t) => {
+          const r = report.tests.find((x) => x.id === t.id);
+          if (!r) throw new AssignmentException(503, 'CODE_RUNNER_UNAVAILABLE');
+          const outcome = judgeTest(r, t.expected, nonce, compare);
+          return {
+            kind: t.kind,
+            position: t.position,
+            display: describeArgs(signature, t.args),
+            ...(t.kind === 'SAMPLE' ? { expected: t.expected } : {}),
+            actual: outcome.hasResult ? outcome.actual : null,
+            status: runStatus(t.kind, outcome.verdict, outcome.hasResult),
+            console: outcome.console.slice(0, STDERR_EXCERPT),
+            stderr: r.stderr.slice(0, STDERR_EXCERPT),
+            timeMs: r.timeMs,
+            memoryKb: r.memoryKb,
+          };
+        })
+      : [];
+    return {
+      compileStatus: compiled ? 'OK' : report.compile.status,
+      compileOutput: report.compile.output.slice(0, 8192),
+      runtimeVersion: report.runtimeVersion,
+      tests,
+    };
   }
 
   private async run(

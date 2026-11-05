@@ -1,4 +1,5 @@
 import { type BoardShape, boardError } from './board-document.js';
+import { CODE_SHAPE_PALETTE, codeLines } from './code-tokens.js';
 export interface BoardBounds {
   x: number;
   y: number;
@@ -63,6 +64,7 @@ export function boardSvg(
         return `<rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${s.fill}" stroke="${s.color}" stroke-width="${s.strokeWidth}"/>`;
       if (s.type === 'ellipse')
         return `<ellipse cx="${s.x + s.width / 2}" cy="${s.y + s.height / 2}" rx="${s.width / 2}" ry="${s.height / 2}" fill="${s.fill}" stroke="${s.color}" stroke-width="${s.strokeWidth}"/>`;
+      if (s.type === 'code') return codeSvg(s);
       const fontSize = s.type === 'text' ? (s.fontSize ?? 24) : 16,
         lineHeight = fontSize * 1.375;
       const lines = (s.text ?? '')
@@ -81,4 +83,26 @@ export function boardSvg(
     })
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(bounds.width * bounds.scale)}" height="${Math.ceil(bounds.height * bounds.scale)}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"><rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="white"/>${content}</svg>`;
+}
+
+/** Dark code card: header strip with the language, monospace lines coloured per token, clipped. */
+function codeSvg(s: BoardShape): string {
+  const fontSize = s.fontSize ?? 14,
+    lineHeight = Math.round(fontSize * 1.55),
+    header = Math.round(fontSize * 2),
+    pad = 14,
+    clip = `code-${s.id}`;
+  const rows = codeLines(s.text ?? '', s.language ?? 'javascript')
+    .slice(0, Math.max(1, Math.floor((s.height - header - pad) / lineHeight)))
+    .map((line, i) => {
+      const spans = line
+        .map(
+          (t) =>
+            `<tspan fill="${CODE_SHAPE_PALETTE[t.kind]}"${t.kind === 'comment' ? ' font-style="italic"' : ''}>${escapeXml(t.text)}</tspan>`,
+        )
+        .join('');
+      return `<text x="${s.x + pad}" y="${s.y + header + pad + fontSize + i * lineHeight}" xml:space="preserve">${spans}</text>`;
+    })
+    .join('');
+  return `<clipPath id="${clip}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" rx="10"/></clipPath><g clip-path="url(#${clip})" font-family="JetBrains Mono,Menlo,Consolas,monospace" font-size="${fontSize}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${CODE_SHAPE_PALETTE.bg}"/><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${header}" fill="${CODE_SHAPE_PALETTE.header}"/><text x="${s.x + pad}" y="${s.y + header / 2 + fontSize * 0.35}" fill="${CODE_SHAPE_PALETTE.muted}" font-size="${Math.round(fontSize * 0.85)}">${s.language === 'java21' ? 'Java' : 'JavaScript'}</text>${rows}</g>`;
 }
