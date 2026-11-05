@@ -1,4 +1,15 @@
+2026-10-27 — **Phase7 backend implemented local**: P1/P2 installation, token AEAD/HMAC, session revoke, atomic delivery fanout, worker FCM/retry và ops CLI đã có. [Progress7](../progress/phase%207/PHASE_7_PROGRESS.md) · [Runtime API7](../api_flow/PHASE_7_flow-api-breakdown.md) · [Runbook](../PHASE_7_FIREBASE_RUNBOOK.md). Flags mặc định tắt; FE SDK/SW, Firebase/IAM và browser/VPS acceptance còn pending. Planning logs dưới giữ lịch sử.
+
 # Implementation phases
+
+2026-10-27 — **Planning Phase7 notification bằng Firebase Cloud Messaging**:
+tái dùng inbox/Socket.IO Phase6, thêm web push CHAT_MESSAGE, registry token theo
+session, durable delivery/retry và FE service-worker handoff. [Plan7](phase%207/PHASE_7_FIREBASE_NOTIFICATIONS.md)
+có6 slices7.0–7.5/24 tasks/24 AC; [Flow7](../api_flow/PHASE_7_FLOW.md),
+[API proposal7](../api_flow/PHASE_7_flow-api-breakdown.md),
+[Progress7](../progress/phase%207/PHASE_7_PROGRESS.md). Tất cả PLANNED;
+chưa code/config Firebase/migrate/test runtime/deploy. Các loại notification nghiệp vụ
+khác là backlog cần chốt riêng.
 
 2026-10-26 — **Phase6 backend local acceptance complete39/39 AC**:8 slices PASS, dev16→32 migrations/repeat no-op; full check691/691, HTTP117/117 và restore/ops PASS. [Báo cáo hiện hành](../progress/phase%206/PHASE_6_PROGRESS.md#docker-acceptance-2026-10-26) có24 revoke barriers, contract/log harness và source fingerprint. FE/VPS/production IAM/load acceptance cần evidence riêng.
 

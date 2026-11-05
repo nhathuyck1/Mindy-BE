@@ -1,3 +1,19 @@
+## 2026-10-27 — Phase7 backend implementation
+
+Đã triển khai installation API/token crypto/session lifecycle, atomic inbox→push outbox, FCM worker/retry/fencing/current eligibility, maintenance CLI, Swagger/Postman và FE handoff/runbook.
+Migration additive1793059200000; Firebase Admin14.5.0 + ADC/HTTP v1 deadline; flags mặc định false.
+[Progress7 và evidence](phase%207/PHASE_7_PROGRESS.md) phân biệt local tests với FE/browser/Firebase/VPS còn pending. Không sửa repo FE, không migrate dev/production hoặc gửi Firebase thật. Planning record bên dưới giữ lịch sử.
+
+## 2026-10-27 — Planning Phase7 Firebase notification
+
+Đã lập [plan tổng và6 slices7.0–7.5](../implement_phase/phase%207/PHASE_7_FIREBASE_NOTIFICATIONS.md),
+[flow](../api_flow/PHASE_7_FLOW.md), [API proposal](../api_flow/PHASE_7_flow-api-breakdown.md)
+và [progress7](phase%207/PHASE_7_PROGRESS.md):24 tasks/24 AC, tất cả TODO.
+Đề xuất web FCM cho CHAT_MESSAGE trên inbox/Socket.IO Phase6; thêm installation/token
+theo session, atomic enqueue, worker retry/TTL/current-rights check, FE SW/click và
+rollout riêng. Planning only; chưa code/config Firebase/migrate/test runtime/deploy.
+Thông báo lịch/assignment/payment giữ backlog cần chốt event/recipient policy.
+
 ## 2026-10-27 — Kiểm tra sáu integration suites failed
 
 Tái hiện `pnpm test` khi thiếu TEST_DATABASE_URL:6 suites failed ở beforeAll,

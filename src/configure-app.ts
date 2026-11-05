@@ -16,6 +16,13 @@ export function configureApp(app: NestExpressApplication): void {
   app.use(cookieParser());
   app.use(requestContextMiddleware);
   app.useBodyParser('json', {
+    limit: '8kb',
+    type: (req) =>
+      req.method === 'PUT' &&
+      /^\/api\/v1\/notifications\/push\/installations\/[^/?]+\/?(?:\?|$)/.test(req.url ?? '') &&
+      /^application\/json(?:;|$)/i.test(req.headers['content-type'] ?? ''),
+  });
+  app.useBodyParser('json', {
     limit: '256kb',
     type: (req) =>
       req.method === 'POST' &&

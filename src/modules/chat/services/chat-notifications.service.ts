@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI token.
 import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
+// biome-ignore lint/style/useImportType: Nest DI token.
+import { PushOutbox } from '../../push-notifications/push-outbox.service.js';
 import type { ChatPage, NotificationQuery } from '../dtos/chat.dto.js';
 import { ChatException } from '../exceptions/chat.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest DI token.
@@ -38,6 +40,7 @@ export class ChatNotificationsService {
     private readonly db: DataSource,
     private readonly access: ChatAccessService,
     private readonly cursors: ChatCursorService,
+    @Optional() private readonly push?: PushOutbox,
   ) {}
   async fanout(job: ChatJob): Promise<void> {
     const rows: { conversation_id: string; message_id: string; actor_id: string; type: string }[] =
@@ -66,6 +69,7 @@ export class ChatNotificationsService {
           ON CONFLICT(user_id,type,message_id) DO NOTHING`,
           [id, event.actor_id, event.message_id],
         );
+        await this.push?.enqueue(m, event.message_id, id);
       }
     });
   }

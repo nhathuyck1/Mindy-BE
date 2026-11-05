@@ -1,3 +1,5 @@
+Phase7 (2026-10-27): [Mindy-Chat-Phase6.postman_collection.json](Mindy-Chat-Phase6.postman_collection.json) bổ sung nhóm **Phase7 Push installation lifecycle**, 2 routes PUT/DELETE. Điền installation_id UUIDv4; token FCM chỉ nhập vào local secret variable fcm_token, không export. PUT lưu generation cho DELETE. Origin phải đúng HTTPS frontend allowlist. Không có public send-test route; [API7](../docs/api_flow/PHASE_7_flow-api-breakdown.md), [local transport simulation](simulations/phase7-fcm.context.md).
+
 # Mindy Postman checks
 
 Admin tracking 22/10/2026: `Mindy-Admin-Tracking.postman_collection.json` requires

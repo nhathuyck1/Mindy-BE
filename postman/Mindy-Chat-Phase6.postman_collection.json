@@ -2,7 +2,7 @@
   "info": {
     "name": "Phase 6 — Chat / Notifications",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Phase6 backend local. Có5 nhóm test; mỗi nhóm có Login Student, Login Mentor và GET auth/me. Điền student_email/student_password/mentor_email/mentor_password trong Postman environment local. CHỌN MỘT login phù hợp rồi chạy API của nhóm; cookie jar theo host dùng actor đăng nhập gần nhất. Không chạy toàn collection như một kịch bản liên tục (login đổi actor, edit/delete cần cùng author, IDs/keys cần dữ liệu thực). CHAT_ENABLED/keyring/CHAT_JOB_ENABLED cần cấu hình; attachments thêm CHAT_ATTACHMENTS_ENABLED/private versioned MinIO. Giữ client_message_id/idempotency_key cho exact retry. Không lưu JWT/cookie/keyring trong variables, không export password. Xem docs/api_flow/PHASE_6_flow-api-breakdown.md."
+    "description": "Phase6 backend local. Có5 nhóm test; mỗi nhóm có Login Student, Login Mentor và GET auth/me. Điền student_email/student_password/mentor_email/mentor_password trong Postman environment local. CHỌN MỘT login phù hợp rồi chạy API của nhóm; cookie jar theo host dùng actor đăng nhập gần nhất. Không chạy toàn collection như một kịch bản liên tục (login đổi actor, edit/delete cần cùng author, IDs/keys cần dữ liệu thực). CHAT_ENABLED/keyring/CHAT_JOB_ENABLED cần cấu hình; attachments thêm CHAT_ATTACHMENTS_ENABLED/private versioned MinIO. Giữ client_message_id/idempotency_key cho exact retry. Không lưu JWT/cookie/keyring trong variables, không export password. Xem docs/api_flow/PHASE_6_flow-api-breakdown.md. Phase7: thêm nhóm installation push; PUSH_ENABLED và HTTPS frontend origin cần cấu hình. Raw fcm_token chỉ nhập trong local secret/environment, không export."
   },
   "variable": [
     {
@@ -68,6 +68,18 @@
       "key": "mentor_password",
       "value": "",
       "description": "Tài khoản mentor của bạn. Điền giá trị local trong Postman environment; không export password."
+    },
+    {
+      "key": "installation_id",
+      "value": ""
+    },
+    {
+      "key": "push_generation",
+      "value": ""
+    },
+    {
+      "key": "fcm_token",
+      "value": ""
     }
   ],
   "item": [
@@ -1069,6 +1081,73 @@
               }
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "Phase 7 — Push installation lifecycle",
+      "description": "Login STUDENT hoặc MENTOR trước qua nhóm auth hiện có. Cookie jar xác định owner/session. API không gửi thử FCM. Không export raw token.",
+      "item": [
+        {
+          "name": "P1 Register / refresh web installation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications/push/installations/{{installation_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"WEB\",\n  \"token\": \"{{fcm_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "200 redacted DTO; same token/session keeps generation. 409 foreign binding/quota, 429 + Retry-After, 503 disabled. UUIDv4 installation_id is client-generated. PUT never replays inbox history."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 installation DTO', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.generation).to.match(/^[1-9][0-9]*$/); pm.expect(body).not.to.have.property('token'); pm.collectionVariables.set('push_generation', body.generation); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "P2 Revoke current installation generation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications/push/installations/{{installation_id}}?generation={{push_generation}}",
+            "description": "204 idempotent for same binding. 404 foreign owner/session, 409 stale generation. Continue auth logout even if deregistration fails; Firebase deleteToken and local SW cleanup belong to FE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('204 revoked', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
         }
       ]
     }

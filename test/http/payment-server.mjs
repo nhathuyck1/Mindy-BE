@@ -26,6 +26,7 @@ const { AppModule } = await import('../../dist/app.module.js');
 const { configureApp } = await import('../../dist/configure-app.js');
 const { PayosAdapter } = await import('../../dist/modules/payments/adapters/payos.adapter.js');
 const { PAYOS_PROVIDER } = await import('../../dist/modules/payments/domain/payos-provider.js');
+const { PUSH_PROVIDER } = await import('../../dist/modules/push-notifications/fcm.adapter.js');
 const { UsersService } = await import('../../dist/modules/users/users.service.js');
 const { PasswordService } = await import('../../dist/modules/auth/services/password.service.js');
 const { CourseCategoriesService } = await import(
@@ -64,6 +65,8 @@ const provider = {
 const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
   .overrideProvider(PAYOS_PROVIDER)
   .useValue(provider)
+  .overrideProvider(PUSH_PROVIDER)
+  .useValue({ send: async () => 'projects/mindy-test/messages/http-fixture' })
   .compile();
 const app = moduleRef.createNestApplication({ logger: ['error'], bodyParser: false });
 configureApp(app);

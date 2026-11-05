@@ -1232,3 +1232,73 @@ Ref: chat_file_objects.conversation_id > chat_conversations.id
 Ref: chat_file_objects.owner_user_id > users.id
 Ref: chat_file_copies.file_id > chat_file_objects.id
 Ref: notifications.(conversation_id,message_id) > chat_messages.(conversation_id,id)
+
+// Phase 7 — executable constraints live in 1793059200000-push-notifications.ts.
+// Existing auth session snapshot, now referenced by the push registry.
+Table auth_sessions {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  identity_id uuid
+  authentication_method varchar(32) [not null, default: 'PASSWORD']
+  device_name varchar(150)
+  user_agent text
+  ip_address inet
+  last_seen_at timestamptz
+  expires_at timestamptz [not null]
+  revoked_at timestamptz
+  created_at timestamptz [not null]
+  indexes {
+    (user_id,revoked_at)
+    expires_at
+    identity_id
+  }
+}
+Table push_installations {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  session_id uuid [not null, ref: > auth_sessions.id]
+  platform varchar(8) [not null, default: 'WEB']
+  token_ciphertext bytea [not null]
+  nonce bytea [not null]
+  auth_tag bytea [not null]
+  key_version integer [not null]
+  token_fingerprint bytea [not null, unique]
+  generation bigint [not null, default: 1]
+  generation_started_at timestamptz [not null]
+  status varchar(8) [not null, default: 'ACTIVE', note: 'ACTIVE/REVOKED/INVALID/STALE']
+  last_seen_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  revoked_at timestamptz
+  indexes {
+    (user_id,status,last_seen_at)
+    (session_id,status)
+  }
+}
+Table push_mutation_events {
+  session_id uuid [not null, ref: > auth_sessions.id]
+  created_at timestamptz [not null]
+  indexes { (session_id,created_at) }
+  Note: 'Shared 20 mutations/min/session budget; bounded cleanup through push maintenance.'
+}
+Table notification_push_deliveries {
+  id uuid [pk]
+  notification_id uuid [not null, ref: > notifications.id]
+  installation_id uuid [not null, ref: > push_installations.id]
+  installation_generation bigint [not null]
+  status varchar(8) [not null, default: 'PENDING', note: 'PENDING/RUNNING/SENT/SKIPPED/DEAD']
+  attempts integer [not null, default: 0]
+  next_attempt_at timestamptz [not null]
+  lease_token uuid
+  lease_until timestamptz
+  expires_at timestamptz [not null]
+  provider_message_id varchar(256)
+  last_error_code varchar(64)
+  created_at timestamptz [not null]
+  completed_at timestamptz
+  indexes {
+    (notification_id,installation_id,installation_generation) [unique]
+    (status,next_attempt_at)
+    lease_until
+  }
+}

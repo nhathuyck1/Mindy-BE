@@ -30,6 +30,18 @@ const payosUrl = () =>
     });
 
 export const environmentSchema = Joi.object({
+  PUSH_ENABLED: Joi.boolean().default(false),
+  PUSH_WORKER_ENABLED: Joi.boolean().default(false),
+  PUSH_ACTIVATED_AT: Joi.string().allow('').default(''),
+  FIREBASE_PROJECT_ID: Joi.string().allow('').default(''),
+  GOOGLE_APPLICATION_CREDENTIALS: Joi.string().allow('').default(''),
+  PUSH_TOKEN_KEYRING: Joi.string().allow('').default(''),
+  PUSH_TOKEN_ACTIVE_KEY_VERSION: Joi.number().integer().positive().default(1),
+  PUSH_TOKEN_FINGERPRINT_KEY: Joi.string().allow('').default(''),
+  PUSH_WEB_INBOX_PATH: Joi.string()
+    .pattern(/^\/(?!\/)[^\\\s?#%]*$/)
+    .default('/notifications'),
+  PUSH_TTL_SECONDS: Joi.number().integer().min(60).max(3600).default(300),
   CHAT_ENABLED: Joi.boolean().default(false),
   CHAT_ATTACHMENTS_ENABLED: Joi.boolean().default(false),
   CHAT_JOB_ENABLED: Joi.boolean().default(false),

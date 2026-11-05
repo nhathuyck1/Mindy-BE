@@ -4,6 +4,7 @@ import { ClassesModule } from '../classes/classes.module.js';
 import { CommerceModule } from '../commerce/commerce.module.js';
 import { EnrollmentsModule } from '../enrollments/enrollments.module.js';
 import { FilesModule } from '../files/files.module.js';
+import { PushNotificationsModule } from '../push-notifications/push-notifications.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { ChatController, ClassChatController } from './controllers/chat.controller.js';
 import { ChatAttachmentsController } from './controllers/chat-attachments.controller.js';
@@ -17,13 +18,22 @@ import { ChatEventService } from './services/chat-event.service.js';
 import { ChatJobsService } from './services/chat-jobs.service.js';
 import { ChatLifecycleService } from './services/chat-lifecycle.service.js';
 import { ChatNotificationsService } from './services/chat-notifications.service.js';
+import { ChatPushPolicy } from './services/chat-push-policy.service.js';
 import { ChatRateService } from './services/chat-rate.service.js';
 import { ChatReceiptService } from './services/chat-receipt.service.js';
 import { ChatSocketService } from './services/chat-socket.service.js';
 import { ChatWorkerService } from './services/chat-worker.service.js';
 
 @Module({
-  imports: [AuthModule, ClassesModule, CommerceModule, EnrollmentsModule, UsersModule, FilesModule],
+  imports: [
+    AuthModule,
+    ClassesModule,
+    CommerceModule,
+    EnrollmentsModule,
+    UsersModule,
+    FilesModule,
+    PushNotificationsModule,
+  ],
   controllers: [
     ChatController,
     ClassChatController,
@@ -31,6 +41,7 @@ import { ChatWorkerService } from './services/chat-worker.service.js';
     ChatAttachmentsController,
   ],
   providers: [
+    ChatPushPolicy,
     ChatAttachmentsService,
     ChatNotificationsService,
     ChatSocketService,

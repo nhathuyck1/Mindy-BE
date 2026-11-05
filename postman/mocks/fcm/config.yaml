@@ -1,0 +1,11 @@
+version: 1
+id: 31fee93b-7027-4aee-b89d-9ee7328bfce9
+name: FCM contract
+slug: fcm-contract
+protocol: http
+port: 14970
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
+interceptRequests: true

@@ -304,8 +304,8 @@ describe.skipIf(!separateTestUrl('phase6_http'))('Phase 6 compiled HTTP and real
           .filter((method) => ['get', 'post', 'put', 'patch', 'delete'].includes(method))
           .map((method) => `${method} ${canonicalPath(path)}`),
       );
-    expect(documented).toHaveLength(19);
-    expect(new Set(documented).size).toBe(19);
+    expect(documented).toHaveLength(21);
+    expect(new Set(documented).size).toBe(21);
     expect(documented.sort()).toEqual(runtime.sort());
   });
   it('rejects missing/evil origins, enforces five sockets and expires passive verified tokens', async () => {
