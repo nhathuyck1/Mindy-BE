@@ -363,6 +363,47 @@ describe.skipIf(!separateTestUrl('whiteboards'))(
       await expect(send(s, doc)).rejects.toMatchObject({ status: 422 });
       doc.destroy();
     });
+    it('persists code blocks with language and renders them coloured; rejects unknown languages', async () => {
+      const s = await create(),
+        doc = new Y.Doc(),
+        id = randomUUID();
+      doc.transact(() => {
+        const shape = new Y.Map<unknown>();
+        const fields = {
+          id,
+          type: 'code',
+          x: 20,
+          y: 20,
+          width: 320,
+          height: 160,
+          color: '#1d5b57',
+          text: new Y.Text('/* tổng\n hai số */\nfunction sum(a, b) {\n  return a + b;\n}'),
+          fontSize: 14,
+          language: 'javascript',
+        };
+        for (const [k, v] of Object.entries(fields)) shape.set(k, v);
+        doc.getMap('shapes').set(id, shape);
+      });
+      await send(s, doc);
+      const snapshot = await boards.snapshot(s.mentor, s.board.id, randomUUID(), s.board.epoch);
+      expect(await boards.preview(s.mentor, s.board.id, snapshot.id)).toMatchObject({
+        projection: [
+          expect.objectContaining({ type: 'code', language: 'javascript', fontSize: 14 }),
+        ],
+      });
+      const svg = boardSvg(
+        projectBoard(doc),
+        { x: 0, y: 0, width: 400, height: 220, scale: 1 },
+        {},
+      );
+      expect(svg).toContain('JavaScript');
+      expect(svg).toContain('>function</tspan>');
+      expect(svg).toContain('font-style="italic"> hai số */</tspan>');
+      doc.getMap<Y.Map<unknown>>('shapes').get(id)?.set('language', 'python');
+      await expect(send(s, doc)).rejects.toMatchObject({ status: 422 });
+      doc.destroy();
+    });
+
     it('rechecks cancelled enrollment and active role for every sync', async () => {
       const s = await create();
       await boards.sync(s.student, s.board.id);

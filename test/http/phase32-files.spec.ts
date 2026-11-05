@@ -186,11 +186,19 @@ describe('Phase 3.2 built-app HTTP + real MinIO', () => {
     };
   }
   async function invokeWorker(fileId: string) {
-    const processed = new Promise<{ processed: string | null }>((resolve) =>
-      server.once('message', (message) => resolve(message as { processed: string | null })),
-    );
-    server.send('files-process');
-    expect((await processed).processed).toBe(fileId);
+    // A freshly scheduled job can be slightly ahead of PostgreSQL's clock.
+    await expect
+      .poll(
+        async () => {
+          const processed = new Promise<{ processed: string | null }>((resolve) =>
+            server.once('message', (message) => resolve(message as { processed: string | null })),
+          );
+          server.send('files-process');
+          return (await processed).processed;
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(fileId);
   }
   it('enforces cookie roles, DTO fields and UUID v4', async () => {
     expect((await request('/files/upload-intents', undefined, declaration())).status).toBe(401);

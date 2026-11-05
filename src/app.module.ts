@@ -46,6 +46,7 @@ import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
     }),
     ManagerOperationsModule,
     HealthModule,
+    DashboardModule,
     UsersModule,
     AuthModule,
     AttendanceModule,

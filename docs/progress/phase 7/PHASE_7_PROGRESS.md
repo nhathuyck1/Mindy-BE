@@ -1,5 +1,14 @@
 # Phase 7 — Implementation progress
 
+## CODE coexistence — 02/11/2026
+
+Whiteboard runtime and the existing Whiteboard API document remain unchanged.
+CODE documentation lives in [separate progress](PHASE_7_CODE_PROGRESS.md) and
+[API contract](../../api_flow/PHASE_7_CODE_flow-api-breakdown.md). Combined local
+check: 790/790 tests, lint/type-check/build PASS; compiled HTTP/WS125/125 PASS,
+including Whiteboard3/3 HTTP/WS and14/14 integration. No new deployment/browser
+or load acceptance. Earlier Whiteboard evidence/planning below is retained.
+
 02/11/2026: BE runtime local implemented: migration1793664000000, context/lazy create, Yjs durable checkpoints and receipts, authenticated WS, object policy, control, snapshots/epoch reset/restore, private image/PDF assets, leased workers, PNG/PDF exports, seven-day reference-aware cleanup. Runbook: [current protocol/limits/deviations](../../PHASE_7_WHITEBOARD_RUNBOOK.md).
 
 Local gates: `pnpm check` PASS — 82 files / 724 tests, lint/type-check/build, no skips; isolated PostgreSQL17 at loopback15437 and MinIO test buckets. Focused HTTP/WS 3/3 PASS; full HTTP regression running. Feature integration10/10 PASS. Full executable migration catalog34, repeat no-op and last migration down/up covered on disposable DB. No dev/VPS database migration, deployment, commit/push or real payment.

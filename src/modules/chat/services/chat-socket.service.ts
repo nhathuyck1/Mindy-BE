@@ -75,6 +75,7 @@ export class ChatSocketService implements OnApplicationBootstrap, OnApplicationS
       .filter(Boolean);
     this.server = new Server(this.http.httpAdapter.getHttpServer() as HttpServer, {
       path: '/socket.io',
+      addTrailingSlash: false,
       transports: ['websocket'],
       maxHttpBufferSize: 32768,
       cors: { origin: origins, credentials: true },
@@ -84,15 +85,11 @@ export class ChatSocketService implements OnApplicationBootstrap, OnApplicationS
     const namespace = this.server.of('/chat');
     namespace.use(async (socket, next) => {
       try {
-        const cookie = socket.handshake.headers.cookie ?? '';
-        const token = cookie
-          .split(';')
-          .map((x) => x.trim())
-          .find((x) => x.startsWith('access_token='))
-          ?.slice('access_token='.length);
-        if (!token) throw new ChatException(401, 'AUTHENTICATION_REQUIRED');
-        const { principal, expiresAt } = this.tokens.verifyAccessTokenWithExpiry(
-          decodeURIComponent(token),
+        const { principal, expiresAt } = this.tokens.verifySocketIdentity(
+          socket.handshake.auth,
+          socket.handshake.headers.cookie,
+          socket.handshake.headers.origin,
+          'chat',
         );
         if (!['MENTOR', 'STUDENT'].includes(principal.role))
           throw new ChatException(401, 'AUTHENTICATION_REQUIRED');

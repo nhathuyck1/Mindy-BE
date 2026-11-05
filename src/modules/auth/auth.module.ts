@@ -10,6 +10,7 @@ import { AuthSessionEntity } from './auth-session.entity.js';
 import { EmailVerificationTokenEntity } from './email-verification-token.entity.js';
 import { AccessTokenGuard } from './guards/access-token.guard.js';
 import { RolesGuard } from './guards/roles.guard.js';
+import { RealtimeTicketController } from './realtime-ticket.controller.js';
 import { RefreshTokenEntity } from './refresh-token.entity.js';
 import { RegistrationIntentEntity } from './registration-intent.entity.js';
 import { GoogleOidcService } from './services/google-oidc.service.js';
@@ -32,7 +33,7 @@ import { UserIdentityEntity } from './user-identity.entity.js';
       EmailVerificationTokenEntity,
     ]),
   ],
-  controllers: [AuthController, UsersController],
+  controllers: [AuthController, UsersController, RealtimeTicketController],
   providers: [
     AuthService,
     RegistrationService,

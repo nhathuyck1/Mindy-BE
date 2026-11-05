@@ -100,6 +100,100 @@ export class TokenService {
     };
   }
 
+  signRealtimeTicket(
+    user: AuthenticatedUser,
+    accessExpiresAt: Date,
+    origin: string,
+    channel: 'chat' | 'whiteboards',
+  ) {
+    const now = Math.floor(Date.now() / 1000);
+    const sessionExpiresAt = Math.floor(accessExpiresAt.getTime() / 1000);
+    if (sessionExpiresAt <= now) throw new Error('Access token expired');
+    const expiresAt = Math.min(now + 60, sessionExpiresAt);
+    const unsigned = [
+      encodePart({ alg: 'RS256', typ: 'mindy-realtime+jwt' }),
+      encodePart({
+        sub: user.userId,
+        sid: user.sessionId,
+        role: user.role,
+        origin,
+        channel,
+        iat: now,
+        exp: expiresAt,
+        sessionExpiresAt,
+      }),
+    ].join('.');
+    const signer = createSign('RSA-SHA256');
+    signer.update(unsigned);
+    signer.end();
+    return {
+      ticket: `${unsigned}.${signer.sign(this.privateKey()).toString('base64url')}`,
+      expiresAt: new Date(expiresAt * 1000).toISOString(),
+    };
+  }
+
+  verifyRealtimeTicket(
+    ticket: string,
+    origin: string,
+    channel: 'chat' | 'whiteboards',
+  ): { principal: AuthenticatedUser; expiresAt: Date } {
+    if (ticket.length > 4096) throw new Error('Invalid ticket');
+    const parts = ticket.split('.');
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2])
+      throw new Error('Invalid ticket');
+    const header = decodePart(parts[0]);
+    if (header.alg !== 'RS256' || header.typ !== 'mindy-realtime+jwt')
+      throw new Error('Invalid ticket type');
+    const verifier = createVerify('RSA-SHA256');
+    verifier.update(`${parts[0]}.${parts[1]}`);
+    verifier.end();
+    if (!verifier.verify(this.publicKey(), Buffer.from(parts[2], 'base64url')))
+      throw new Error('Invalid ticket signature');
+    const payload = decodePart(parts[1]);
+    const now = Math.floor(Date.now() / 1000);
+    if (
+      typeof payload.sub !== 'string' ||
+      typeof payload.sid !== 'string' ||
+      !isUserRole(payload.role) ||
+      !Number.isSafeInteger(payload.exp) ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= now ||
+      !Number.isSafeInteger(payload.iat) ||
+      typeof payload.iat !== 'number' ||
+      payload.iat > now ||
+      payload.exp - payload.iat > 60 ||
+      !Number.isSafeInteger(payload.sessionExpiresAt) ||
+      typeof payload.sessionExpiresAt !== 'number' ||
+      payload.sessionExpiresAt < payload.exp ||
+      payload.origin !== origin ||
+      payload.channel !== channel
+    )
+      throw new Error('Invalid ticket claims');
+    return {
+      principal: { userId: payload.sub, sessionId: payload.sid, role: payload.role },
+      expiresAt: new Date(payload.sessionExpiresAt * 1000),
+    };
+  }
+
+  verifySocketIdentity(
+    auth: Record<string, unknown>,
+    cookie: string | undefined,
+    origin: string | undefined,
+    channel: 'chat' | 'whiteboards',
+  ) {
+    if (auth.ticket !== undefined) {
+      if (typeof auth.ticket !== 'string' || !origin) throw new Error('Invalid realtime ticket');
+      return this.verifyRealtimeTicket(auth.ticket, origin, channel);
+    }
+    const token = cookie
+      ?.split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith('access_token='))
+      ?.slice(13);
+    if (!token) throw new Error('Authentication required');
+    return this.verifyAccessTokenWithExpiry(decodeURIComponent(token));
+  }
+
   private privateKey(): ReturnType<typeof createPrivateKey> {
     const encoded = this.config.getOrThrow<string>('JWT_PRIVATE_KEY_BASE64');
     if (encoded.length === 0) {

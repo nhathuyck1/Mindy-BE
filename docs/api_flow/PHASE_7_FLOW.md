@@ -1,5 +1,14 @@
 # Phase 7 — Flow bảng vẽ
 
+## 04/11/2026 — Kết nối realtime trực tiếp BE
+
+Source hỗ trợ vé từ POST /api/v1/auth/realtime-ticket để browser không phụ thuộc proxy WebSocket ở host FE. Origin/channel/session kiểm ở gateway, permissions nghiệp vụ giữ nguyên; cookie client cũ vẫn hỗ trợ. Chat path chuẩn hóa /socket.io không trailing slash, bảng /ws/whiteboards. Reconnect cần vé mới; xem PHASE_1_FLOW.md và PHASE_1_flow-api-breakdown.md. Local transport/browser fixtures PASS; chưa deploy.
+
+02/11/2026 integration: giữ nguyên runtime Whiteboard trên `dev`, bổ sung CODE
+assignments theo [flow riêng](PHASE_7_CODE_FLOW.md). Các đoạn planning dưới đây
+là lịch sử; trạng thái runtime/evidence hiện hành ở progress và Whiteboard runbook.
+Không đổi protocol, quyền hoặc route Whiteboard trong lượt gộp backend này.
+
 **02/11/2026 — PLANNED, chưa có runtime/API triển khai hoặc deployment evidence.**
 
 [Plan](../implement_phase/phase%207/PHASE_7_WHITEBOARD.md) ·

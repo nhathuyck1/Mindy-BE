@@ -26,9 +26,9 @@ export class CreateAssignmentInput {
   @IsIn(['TEST', 'HOMEWORK'])
   readonly purpose!: 'TEST' | 'HOMEWORK';
 
-  @ApiProperty({ enum: ['QUIZ', 'ZIP'] })
-  @IsIn(['QUIZ', 'ZIP'])
-  readonly type!: 'QUIZ' | 'ZIP';
+  @ApiProperty({ enum: ['QUIZ', 'ZIP', 'CODE'] })
+  @IsIn(['QUIZ', 'ZIP', 'CODE'])
+  readonly type!: 'QUIZ' | 'ZIP' | 'CODE';
 
   @ApiProperty({ maxLength: 250 })
   @IsString()
@@ -61,11 +61,15 @@ export class CreateAssignmentInput {
   @Max(240)
   readonly timeLimitMinutes?: number | null;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 10, default: 1 })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 50,
+    description: 'QUIZ = 1, ZIP 1..10 (default 1), CODE 1..50 (default 10)',
+  })
   @ValidateIf((_o, v) => v !== undefined)
   @IsInt()
   @Min(1)
-  @Max(10)
+  @Max(50)
   readonly maxAttempts?: number;
 }
 
@@ -177,10 +181,10 @@ export class SaveAnswersInput {
   readonly answers!: QuizAnswerInput[];
 }
 export class AssignmentQueryDto extends PageOptionsDto {
-  @ApiPropertyOptional({ enum: ['QUIZ', 'ZIP'] })
+  @ApiPropertyOptional({ enum: ['QUIZ', 'ZIP', 'CODE'] })
   @ValidateIf((_o, v) => v !== undefined)
-  @IsIn(['QUIZ', 'ZIP'])
-  readonly type?: 'QUIZ' | 'ZIP';
+  @IsIn(['QUIZ', 'ZIP', 'CODE'])
+  readonly type?: 'QUIZ' | 'ZIP' | 'CODE';
   @ApiPropertyOptional({ enum: ['TEST', 'HOMEWORK'] })
   @ValidateIf((_o, v) => v !== undefined)
   @IsIn(['TEST', 'HOMEWORK'])

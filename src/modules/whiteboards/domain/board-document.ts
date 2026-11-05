@@ -1,6 +1,7 @@
 import { isUUID } from 'class-validator';
 import * as Y from 'yjs';
 import { AppHttpException } from '../../../common/http/app-http.exception.js';
+import { CODE_SHAPE_LANGUAGES, type CodeShapeLanguage } from './code-tokens.js';
 
 export const BOARD_LIMITS = {
   elements: 2000,
@@ -10,7 +11,7 @@ export const BOARD_LIMITS = {
 };
 export interface BoardShape {
   id: string;
-  type: 'sticky' | 'stroke' | 'image' | 'rectangle' | 'ellipse' | 'text';
+  type: 'sticky' | 'stroke' | 'image' | 'rectangle' | 'ellipse' | 'text' | 'code';
   x: number;
   y: number;
   width: number;
@@ -22,6 +23,7 @@ export interface BoardShape {
   assetId?: string;
   fill?: string;
   fontSize?: number;
+  language?: CodeShapeLanguage;
 }
 export function boardError(status: number, code: string): never {
   throw new AppHttpException(status, code, code);
@@ -47,6 +49,7 @@ export function projectBoard(doc: Y.Doc): BoardShape[] {
     const fields: Record<string, string[]> = {
       sticky: ['text'],
       text: ['text', 'fontSize'],
+      code: ['text', 'fontSize', 'language'],
       stroke: ['points', 'strokeWidth'],
       image: ['assetId'],
       rectangle: ['strokeWidth', 'fill'],
@@ -65,7 +68,9 @@ export function projectBoard(doc: Y.Doc): BoardShape[] {
     if (
       Object.keys(v).some((k) => !allowed.includes(k)) ||
       v.id !== id ||
-      !['sticky', 'stroke', 'image', 'rectangle', 'ellipse', 'text'].includes(String(v.type)) ||
+      !['sticky', 'stroke', 'image', 'rectangle', 'ellipse', 'text', 'code'].includes(
+        String(v.type),
+      ) ||
       !finite(v.x) ||
       !finite(v.y) ||
       !finite(v.width, 1, 10000) ||
@@ -75,11 +80,17 @@ export function projectBoard(doc: Y.Doc): BoardShape[] {
     )
       boardError(422, 'BOARD_SCHEMA_INVALID');
     if (
-      ['sticky', 'text'].includes(String(v.type)) &&
+      ['sticky', 'text', 'code'].includes(String(v.type)) &&
       (!(shape.get('text') instanceof Y.Text) || typeof v.text !== 'string' || v.text.length > 5000)
     )
       boardError(422, 'BOARD_SCHEMA_INVALID');
     if (v.type === 'text' && !finite(v.fontSize, 12, 96)) boardError(422, 'BOARD_SCHEMA_INVALID');
+    if (
+      v.type === 'code' &&
+      (!finite(v.fontSize, 10, 32) ||
+        !CODE_SHAPE_LANGUAGES.includes(v.language as CodeShapeLanguage))
+    )
+      boardError(422, 'BOARD_SCHEMA_INVALID');
     if (
       ['rectangle', 'ellipse'].includes(String(v.type)) &&
       (!finite(v.strokeWidth, 1, 48) ||

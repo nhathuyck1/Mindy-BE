@@ -1,6 +1,44 @@
+## 2026-11-06 — Merge dev into Feat/Miro
+
+Resolved six conflicting files, retaining consolidated assignment audit/receipt storage,
+CODE authoring/judging and role-specific Manager/Mentor dashboards. CODE submissions
+now use mutation_receipts with the existing assignment_quiz namespace so migrated
+idempotency receipts remain replayable. CODE integration fixtures use the consolidated
+schema; compiled Dashboard HTTP tests exercise each role's actual service method.
+
+Validation on isolated local PostgreSQL/MinIO: 17 focused suites / 119 tests PASS;
+3 compiled HTTP suites / 6 tests PASS; lint PASS with 11 existing warnings;
+type-check/build PASS. Compiled rollout applies all 39 migrations on a clean test DB;
+repeat applies zero, none pending. No dev/production database migration or deployment.
+
 ## 2026-11-05 — BE Change implementation (local, chưa deploy)
 
 Đã triển khai lịch tuần/khai giảng min3/worker cutoff, swap mentor, dashboard theo vai trò, materials UNSEEN/bulk/cleanup và chat inline/emoji cùng FE2. Resume06/11: PostgreSQL/MinIO test, migration clean38/upgrade35→38, HTTP và E2E đã chạy; kết quả chính xác và giới hạn tại [Progress](BE_CHANGE_PROGRESS.md). Cleanup mặc định OFF; chưa migrate dev/production, commit/push/deploy. [Flow](../api_flow/PHASE_BE_CHANGE_FLOW.md) · [API breakdown](../api_flow/PHASE_BE_CHANGE_flow-api-breakdown.md).
+
+## 2026-11-03 — compiler PR validation
+
+## 2026-11-04 — Portable FE/BE realtime
+
+- Nhánh codex/portable-backend từ origin/dev: thêm endpoint guarded POST auth/realtime-ticket và ký/verify vé có typ/origin/channel/session riêng, handshake tối đa60s, không mở quyền REST. Hai gateway giữ kiểm session/resource và cookie fallback cũ; chuẩn hóa chat path không trailing slash. Không thêm migration/dependency, không đổi cookie.
+- HTTP/Socket.IO thật với fixture domain/session memory: issue/role/Origin/strict DTO, cookie-free chat+board join, sai kênh/origin và session revoke PASS. Unit crypto/expiry/token separation PASS. Build/type-check PASS. FE có browser production smoke cùng build tại hai origin khác nhau, cả chat/bảng online và xin vé mới khi reconnect; fixture memory không thay bằng chứng DB/production.
+- API contract/flow cập nhật Phase1/6/7. Chưa deploy/commit/push; cần deploy BE trước FE và cấu hình CORS_ORIGINS chính xác.
+
+CODE backend on `compiler` includes both env examples, tests, contracts and runbooks.
+`pnpm check`:790/790 PASS with lint/type-check/build; compiled HTTP/WS125/125 PASS;
+36 migrations apply cleanly and repeat is a no-op. Existing Materials worker timing
+and attendance fixture timezone assumptions are stabilized; production rules unchanged.
+[Details](phase%207/PHASE_7_CODE_PROGRESS.md). FE companion targets main; Flutter deferred.
+No production migration or deployment; local checks use isolated test resources.
+
+## 2026-11-02 — Backend ZIP/Whiteboard + CODE integration
+
+Resolved all six stash conflicts, preserving existing ZIP/Whiteboard behavior and
+adding CODE. Shared reports count CODE once per student; CODE docs now have their
+own paths. Local `pnpm check`: 91 suites / 790 tests, lint/type-check/build PASS
+(36 migration artifacts); compiled HTTP/WS: 14 suites / 125 tests PASS, no skips.
+[Integration details](phase%207/PHASE_7_CODE_PROGRESS.md#backend-integration--02112026).
+Only isolated test databases/buckets were used; no FE edits, dev/VPS migration,
+deployment, commit or push. Earlier entries below retain their original evidence.
 
 ## 2026-11-02 — Planning Phase 7 Whiteboard, UI theo miro-demo
 
@@ -1501,3 +1539,15 @@ Findings chưa sửa:
 - P3: hai file seed mới chưa qua Biome format; gate lint chưa đạt.
 
 Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:admin + seed:standard như một chuỗi, chưa xác nhận merge vào DB có dữ liệu nghiệp vụ, chưa deploy hoặc giao dịch thật. Giá nhỏ, payment/webhook giả và không gửi mail là chủ ý fixture theo README, không phải evidence thanh toán thật.
+
+## 2026-11-03 — Dashboard theo vai trò
+
+- Created `codex/dashboard` from fetched `origin/dev` per user instruction; preserved original feature branches. Added read-only DashboardModule with role-specific Admin/Manager/Mentor endpoints, bounded periods and a single consistent PostgreSQL aggregation snapshot. No migrations, dependency additions or payment/enrollment writes.
+- Confirmed enrollment analytics use current ACTIVE/COMPLETED records and enrolled_at period; distinct students across classes; stable top-ten ranking; Vietnam daily zero-fill; mentor scope from authenticated primary assignment only. See [flow](../api_flow/DASHBOARD_FLOW.md) and [FE API breakdown](../api_flow/DASHBOARD_flow-api-breakdown.md).
+- Local verification: 14 Dashboard unit/policy tests PASS; 3 isolated PostgreSQL aggregation integration tests PASS; 4 compiled Nest HTTP contract/DI/authorization/validation tests PASS. Type-check/build PASS (36 migration artifacts verified); lint has no errors and reports 11 existing warnings outside Dashboard. Full `pnpm test`: 332 tests PASS, 475 skipped; six existing materials/files suites cannot initialize without their dedicated TEST_DATABASE_URL/MinIO stack. This is not a fully green repository-wide integration run.
+- FE2 implemented by the user's explicit FE+BE authorization despite this repository's general read-only FE guideline. FE quality evidence is recorded in FE2 docs/progress.md. No deployment, production account acceptance, real payment, commit or push claimed.
+- Follow-up local runtime verification: existing local DB preserved, 26 pending dev migrations applied (36 total). BE localhost:3000 + FE localhost:3003 use real local API and authentication, without mocks. Added a local Manager account; original demo Admin/Mentor credentials/assignments unchanged. Independent DB checks PASS for three roles × three periods; totals 44 registrations/44 students center-wide and 20/20 for frontend Mentor. No payment, email or background jobs run. FE charts changed to Recharts at user's request; desktop/320px live browser checks recorded in FE progress and Dashboard flow.
+## 2026-11-03 — User search
+
+- Added optional q to managed-user list, 2–100 trimmed characters, accent/case-insensitive name/email/phone substring with escaped wildcard literals; filters/count/page and stable ordering are server-side. API and flow updated under Phase 1. No migration. FE incremental search begins at 2 characters with 250ms debounce.
+- Local verification: BE build/type-check and 3 user unit tests PASS; actual FE/API checks PASS for two-character then longer input, Vietnamese accentless search, wildcard literals, clear and full-dataset result. No deploy or production data operation.

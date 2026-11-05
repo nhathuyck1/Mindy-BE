@@ -50,7 +50,7 @@ export class AssignmentDto {
   @ApiProperty() readonly id: string;
   @ApiProperty() readonly sessionId: string;
   @ApiProperty({ enum: ['TEST', 'HOMEWORK'] }) readonly purpose: string;
-  @ApiProperty({ enum: ['QUIZ', 'ZIP'] }) readonly type: string;
+  @ApiProperty({ enum: ['QUIZ', 'ZIP', 'CODE'] }) readonly type: string;
   @ApiProperty() readonly title: string;
   @ApiProperty() readonly description: string;
   @ApiProperty() readonly maxScore: string;

@@ -1,5 +1,12 @@
 # Phase 5 — Assignment API: QUIZ / ZIP backend
 
+02/11/2026 integration: ZIP/QUIZ contracts below remain in place alongside
+[CODE assignments](PHASE_7_CODE_flow-api-breakdown.md). Class metrics and
+assignmentSummary include non-VOIDED CODE submissions once per assignment/student;
+any surviving GRADED attempt counts as released without a separate release command.
+CODE detail/history/summary use their feature-specific routes. Full CODE and ZIP
+migrations are prerequisites for the combined reports.
+
 2026-11-02 — B0–B5 implemented locally, migration1793577600000. ZIP/file features
 default OFF; deployment and environment smoke are separate. The current ZIP contract
 is in section5 below; earlier dated restoration entries describe previous slices.

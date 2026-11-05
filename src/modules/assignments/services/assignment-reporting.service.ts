@@ -30,8 +30,14 @@ export class AssignmentReportingService {
         SELECT DISTINCT ON(z.assignment_id,z.student_id) z.assignment_id,z.student_id,z.current_version,z.released_version
         FROM assignment_zip_submissions z JOIN scoped a ON a.id=z.assignment_id
         WHERE z.status='SUBMITTED' AND ($4::uuid IS NULL OR z.student_id=$4) ORDER BY z.assignment_id,z.student_id,z.attempt_number DESC),
+      code AS (
+        SELECT cs.assignment_id,cs.student_id,bool_or(cs.status='GRADED') AS graded
+        FROM code_submissions cs JOIN scoped a ON a.id=cs.assignment_id
+        WHERE cs.status<>'VOIDED' AND ($4::uuid IS NULL OR cs.student_id=$4)
+        GROUP BY cs.assignment_id,cs.student_id),
       submitted AS (SELECT assignment_id,student_id,true AS graded,true AS released,false AS pending_release FROM assignment_submissions q WHERE q.status='GRADED' AND ($4::uuid IS NULL OR q.student_id=$4)
-        UNION ALL SELECT assignment_id,student_id,COALESCE(current_version,0)>0,released_version IS NOT NULL,COALESCE(current_version,0)>COALESCE(released_version,0) FROM latest),
+        UNION ALL SELECT assignment_id,student_id,COALESCE(current_version,0)>0,released_version IS NOT NULL,COALESCE(current_version,0)>COALESCE(released_version,0) FROM latest
+        UNION ALL SELECT assignment_id,student_id,graded,graded,false FROM code),
       eligible AS (SELECT a.id AS assignment_id,e.student_id,a.due_at FROM scoped a JOIN enrollments e ON e.class_id=$1 JOIN users u ON u.id=e.student_id
         WHERE a.status='PUBLISHED' AND a.class_status IN ('OPEN','IN_PROGRESS') AND a.session_status<>'CANCELLED'
         AND e.status='ACTIVE' AND u.status='ACTIVE' AND u.role='STUDENT' AND ($4::uuid IS NULL OR e.student_id=$4))

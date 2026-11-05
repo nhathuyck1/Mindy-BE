@@ -80,6 +80,12 @@ jobs:
             echo "Using the provisioned Files Compose override."
           fi
 
+          # Retain the internal runner network once CODE execution is provisioned.
+          if grep -Eq '^CODE_RUNNER_URL=.+$' .env.production; then
+            compose+=(-f compose.code-runner.yaml)
+            echo "Using the provisioned compiler Compose override."
+          fi
+
           # Quiet validation avoids printing interpolated production secrets.
           "${compose[@]}" config --quiet
           docker build --target runtime -t "mindy-center-api:$IMAGE_TAG" .
@@ -145,6 +151,10 @@ jobs:
 
           if [[ -f .env.minio.production ]]; then
             compose+=(-f compose.files-production.yaml)
+          fi
+
+          if grep -Eq '^CODE_RUNNER_URL=.+$' .env.production; then
+            compose+=(-f compose.code-runner.yaml)
           fi
 
           # Do not print container config or expanded Compose/environment secrets.
