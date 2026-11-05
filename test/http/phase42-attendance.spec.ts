@@ -183,7 +183,27 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     );
     const session = sessions[0];
     if (!order || !session) throw new Error('Missing staff fixture order/session');
+    // This is a later session of an established class, with a new unpaid cash hold.
+    // Initial admission of three paid students is covered by be-change-plan.spec.ts.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [detail.id]);
     return { mentor, student, manager, order, session, day, path: `/class-sessions/${session.id}` };
+  }
+
+  async function reachSessionDay(sessionId: string): Promise<string> {
+    await db.query(
+      `UPDATE class_sessions SET
+        starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
+        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        WHERE id=$1`,
+      [sessionId],
+    );
+    const rows: { day: string }[] = await db.query(
+      "SELECT to_char(starts_at AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYY-MM-DD') AS day FROM class_sessions WHERE id=$1",
+      [sessionId],
+    );
+    const day = rows[0]?.day;
+    if (!day) throw new Error('Missing session day');
+    return day;
   }
 
   it('validates/authenticates attendance and runs start, mark, finalize and replay over real cookies', async () => {
@@ -227,6 +247,8 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       receivedAmount: order.totalAmount,
     });
     expect(confirmed.status).toBe(200);
+    // Exercise attendance in an established class with a one-student current roster.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
     await db.query(
       `UPDATE class_sessions SET
         starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
@@ -237,7 +259,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     const key = randomUUID(),
       input = { expectedVersion: s.version };
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as {
       session: { version: number; editableUntil: string };
       totals: { unmarked: number };
@@ -371,6 +393,8 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     expect(
       (await request(`${a.path}/start`, a.mentor.cookie, base, 'POST', randomUUID())).status,
     ).toBe(409);
+    // Recovery still respects the scheduled start. Advance the fixture, not runtime clocks.
+    const scheduledDay = await reachSessionDay(a.session.id);
     const opened = await request(
       `${a.path}/start`,
       a.manager.cookie,
@@ -378,12 +402,12 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const opening = (await opened.json()) as {
       session: { version: number; actualStartedAt: string; editableUntil: string };
       totals: { eligible: number };
     };
-    const day = new Date(`${a.day}T00:00:00Z`);
+    const day = new Date(`${scheduledDay}T00:00:00Z`);
     day.setUTCDate(day.getUTCDate() + 2);
     expect(opening.session.editableUntil).toBe(
       new Date(`${day.toISOString().slice(0, 10)}T00:00:00+07:00`).toISOString(),
@@ -491,6 +515,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
 
   it('admits committed cash after finalization only for Staff with a reason and replays the admission once', async () => {
     const a = await staffFixture();
+    await reachSessionDay(a.session.id);
     const opened = await request(
       `${a.path}/start`,
       a.manager.cookie,
@@ -502,7 +527,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as { session: { version: number } };
     const finalized = await request(
       `${a.path}/finalize`,
