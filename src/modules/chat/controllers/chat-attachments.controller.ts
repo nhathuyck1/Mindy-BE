@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -20,7 +21,7 @@ import { AccessTokenGuard } from '../../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { UserRole } from '../../users/user-role.enum.js';
 // biome-ignore lint/style/useImportType: Nest DTO reflection.
-import { ChatUploadInput } from '../dtos/chat.dto.js';
+import { ChatFileAccessQuery, ChatUploadInput } from '../dtos/chat.dto.js';
 import { ApiChat } from '../dtos/chat-openapi.js';
 import { ChatException } from '../exceptions/chat.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest DI token.
@@ -77,7 +78,8 @@ export class ChatAttachmentsController {
     @CurrentUser() actor: AuthenticatedUser,
     @Param('conversationId', new ParseUUIDPipe({ version: '4' })) id: string,
     @Param('messageId', new ParseUUIDPipe({ version: '4' })) messageId: string,
+    @Query() query: ChatFileAccessQuery,
   ): ReturnType<ChatAttachmentsService['sign']> {
-    return this.files.sign(actor, id, messageId);
+    return this.files.sign(actor, id, messageId, query.disposition);
   }
 }

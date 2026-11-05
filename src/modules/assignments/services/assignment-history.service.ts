@@ -48,10 +48,10 @@ export class AssignmentHistoryService {
       }
       const student = actor.role === UserRole.STUDENT ? actor.userId : (query.studentId ?? null);
       const from = `FROM (SELECT 'ZIP'::text AS type,z.id,z.student_id,z.attempt_number,z.submitted_at,
-          ${actor.role === UserRole.MENTOR ? "CASE WHEN g.released_version IS NOT NULL THEN 'RELEASED' WHEN COALESCE(g.current_version,0)>0 THEN 'GRADED' ELSE 'UNGRADED' END" : "CASE WHEN g.released_version IS NOT NULL THEN 'RELEASED' ELSE 'SUBMITTED' END"} AS status,
+          ${actor.role === UserRole.MENTOR ? "CASE WHEN z.released_version IS NOT NULL THEN 'RELEASED' WHEN COALESCE(z.current_version,0)>0 THEN 'GRADED' ELSE 'UNGRADED' END" : "CASE WHEN z.released_version IS NOT NULL THEN 'RELEASED' ELSE 'SUBMITTED' END"} AS status,
           row_number() OVER(PARTITION BY z.student_id ORDER BY z.attempt_number DESC) AS rank,
-          COALESCE(g.current_version,0)>COALESCE(g.released_version,0) AS pending_release,COALESCE(g.current_version,0)>0 AS graded
-          FROM assignment_zip_submissions z LEFT JOIN assignment_zip_grades g ON g.submission_id=z.id WHERE z.assignment_id=$1 AND z.status='SUBMITTED'
+          COALESCE(z.current_version,0)>COALESCE(z.released_version,0) AS pending_release,COALESCE(z.current_version,0)>0 AS graded
+          FROM assignment_zip_submissions z WHERE z.assignment_id=$1 AND z.status='SUBMITTED'
           UNION ALL SELECT 'QUIZ',q.id,q.student_id,q.attempt_number,q.submitted_at,'RELEASED',1,false,true FROM assignment_submissions q WHERE q.assignment_id=$1 AND q.status='GRADED') t
         WHERE ($2::uuid IS NULL OR t.student_id=$2) AND ($3::boolean OR rank=1) AND ($4::integer IS NULL OR attempt_number=$4)
         AND ($5::text IS NULL OR $5='SUBMITTED' OR status=$5 OR ($5='UNRELEASED' AND pending_release) OR ($5='GRADED' AND graded))`;
@@ -112,7 +112,7 @@ export class AssignmentHistoryService {
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const a = await this.zipAccess.assignment(m, actor, id);
       const from = `FROM enrollments e JOIN users u ON u.id=e.student_id JOIN class_sessions s ON s.class_id=e.class_id JOIN classes c ON c.id=e.class_id
-        LEFT JOIN LATERAL(SELECT z.id,g.current_version,g.released_version FROM assignment_zip_submissions z LEFT JOIN assignment_zip_grades g ON g.submission_id=z.id
+        LEFT JOIN LATERAL(SELECT z.id,z.current_version,z.released_version FROM assignment_zip_submissions z
           WHERE z.assignment_id=$1 AND z.student_id=e.student_id AND z.status='SUBMITTED' ORDER BY z.attempt_number DESC LIMIT 1) z ON true
         LEFT JOIN assignment_submissions q ON q.assignment_id=$1 AND q.student_id=e.student_id AND q.status='GRADED'
         WHERE s.id=$2 AND e.status='ACTIVE' AND u.status='ACTIVE' AND u.role='STUDENT' AND c.status IN ('OPEN','IN_PROGRESS') AND s.status<>'CANCELLED'

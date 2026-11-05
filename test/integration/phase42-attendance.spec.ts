@@ -1,5 +1,6 @@
 import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -47,7 +48,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     attendance = new AttendanceService(
       db,
       teaching,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       new MentorConflictService(),
       f.enrollments,
       f.users,
@@ -1041,7 +1042,7 @@ describe.skipIf(!separateTestUrl('attendance'))('Phase 4.2 attendance (PostgreSQ
     const service = new AttendanceService(
       db,
       teaching,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       conflicts,
       f.enrollments,
       f.users,

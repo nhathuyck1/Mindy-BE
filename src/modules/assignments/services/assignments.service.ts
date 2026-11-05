@@ -25,6 +25,7 @@ import type { QuestionFieldError } from '../validation/questions-validation.js';
 import type { InstructionFile } from '../zip.types.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { AssignmentAccessService } from './assignment-access.service.js';
+import { writeAssignmentAudit } from './assignment-audit.js';
 import { loadCodeReadiness } from './code-readiness.query.js';
 
 @Injectable()
@@ -191,47 +192,27 @@ export class AssignmentsService {
           fields.push({ path: `questions.${index}.correctOption`, code: 'OPTION_REQUIRED' });
       }
       if (fields.length) throw new AssignmentException(422, 'INVALID_QUIZ_QUESTIONS', { fields });
-      await m.query(
-        'DELETE FROM assignment_answer_keys WHERE question_id IN (SELECT id FROM assignment_questions WHERE assignment_id=$1)',
-        [id],
-      );
-      await m.query(
-        'DELETE FROM assignment_question_options WHERE question_id IN (SELECT id FROM assignment_questions WHERE assignment_id=$1)',
-        [id],
-      );
       await m.query('DELETE FROM assignment_questions WHERE assignment_id=$1', [id]);
       const questions = input.questions.map((q, index) => ({
         ...q,
         id: q.id?.toLowerCase() ?? randomUUID(),
         position: index + 1,
       }));
-      // Three bounded parameterized writes, rather than six round trips per question.
+      // Questions, choices and keys are replaced in one bounded write.
       await m.query(
-        `INSERT INTO assignment_questions(id,assignment_id,position,prompt)
-        SELECT q.id,$1,q.position,q.prompt
-        FROM jsonb_to_recordset($2::jsonb) AS q(id uuid,position integer,prompt text)`,
+        `INSERT INTO assignment_questions(id,assignment_id,position,prompt,correct_option,options)
+        SELECT q.id,$1,q.position,q.prompt,q.correct_option,q.options
+        FROM jsonb_to_recordset($2::jsonb) AS q(id uuid,position integer,prompt text,correct_option text,options jsonb)`,
         [
           id,
-          JSON.stringify(questions.map(({ id, position, prompt }) => ({ id, position, prompt }))),
-        ],
-      );
-      await m.query(
-        `INSERT INTO assignment_question_options(question_id,label,text)
-        SELECT o.question_id,o.label,o.text
-        FROM jsonb_to_recordset($1::jsonb) AS o(question_id uuid,label text,text text)`,
-        [
           JSON.stringify(
-            questions.flatMap((q) => q.options.map((o) => ({ question_id: q.id, ...o }))),
-          ),
-        ],
-      );
-      await m.query(
-        `INSERT INTO assignment_answer_keys(question_id,correct_option)
-        SELECT k.question_id,k.correct_option
-        FROM jsonb_to_recordset($1::jsonb) AS k(question_id uuid,correct_option text)`,
-        [
-          JSON.stringify(
-            questions.map((q) => ({ question_id: q.id, correct_option: q.correctOption })),
+            questions.map(({ id, position, prompt, correctOption, options }) => ({
+              id,
+              position,
+              prompt,
+              correct_option: correctOption,
+              options: [...options].sort((a, b) => a.label.localeCompare(b.label)),
+            })),
           ),
         ],
       );
@@ -303,12 +284,24 @@ export class AssignmentsService {
         "UPDATE assignment_submissions SET status='VOIDED',version=version+1,updated_at=clock_timestamp() WHERE assignment_id=$1 AND status='IN_PROGRESS'",
         [id],
       );
-      if (a.type === 'ZIP')
-        await m.query(
+      if (a.type === 'ZIP') {
+        const voided: { id: string; version: number }[] = await m.query(
           `WITH voided AS (UPDATE assignment_zip_submissions SET status='VOIDED',version=version+1,updated_at=clock_timestamp() WHERE assignment_id=$1 AND status='DRAFT' RETURNING *)
-          INSERT INTO assignment_zip_audits(assignment_id,submission_id,actor_id,action,version,reason) SELECT assignment_id,id,$2,'VOID',version,$3 FROM voided`,
-          [id, actor.userId, input.reason],
+          SELECT id,version FROM voided`,
+          [id],
         );
+        for (const s of voided)
+          await writeAssignmentAudit(
+            m,
+            'assignment_zip_audits',
+            id,
+            actor.userId,
+            'VOID',
+            s.version,
+            input.reason,
+            s.id,
+          );
+      }
       await m.query(
         'UPDATE assignment_finalization_jobs SET completed_at=clock_timestamp() WHERE submission_id IN (SELECT id FROM assignment_submissions WHERE assignment_id=$1) AND completed_at IS NULL',
         [id],
@@ -367,8 +360,7 @@ export class AssignmentsService {
   }
   async questions(m: EntityManager, id: string): Promise<QuizQuestion[]> {
     return m.query(
-      `SELECT q.id,q.position,q.prompt,jsonb_agg(jsonb_build_object('label',o.label,'text',o.text) ORDER BY o.label) AS options
-      FROM assignment_questions q JOIN assignment_question_options o ON o.question_id=q.id WHERE q.assignment_id=$1 GROUP BY q.id ORDER BY q.position`,
+      'SELECT id,position,prompt,options FROM assignment_questions WHERE assignment_id=$1 ORDER BY position',
       [id],
     );
   }
@@ -378,12 +370,12 @@ export class AssignmentsService {
   ): Promise<(QuizQuestion & { correctOption: OptionLabel })[]> {
     const questions = await this.questions(m, id);
     const keys: { question_id: string; correct_option: OptionLabel }[] = await m.query(
-      'SELECT k.* FROM assignment_answer_keys k JOIN assignment_questions q ON q.id=k.question_id WHERE q.assignment_id=$1',
+      'SELECT id AS question_id,correct_option FROM assignment_questions WHERE assignment_id=$1',
       [id],
     );
     return questions.map((q) => {
       const key = keys.find((k) => k.question_id === q.id);
-      if (!key) throw new Error('QUIZ_KEY_INVARIANT');
+      if (!key?.correct_option) throw new Error('QUIZ_KEY_INVARIANT');
       return { ...q, correctOption: key.correct_option };
     });
   }
@@ -402,9 +394,15 @@ export class AssignmentsService {
     submissionId: string | null = null,
     version = a.revision,
   ): Promise<void> {
-    await m.query(
-      'INSERT INTO assignment_audits(assignment_id,submission_id,actor_id,action,version,reason) VALUES($1,$2,$3,$4,$5,$6)',
-      [a.id, submissionId, actorId, action, version, reason],
+    await writeAssignmentAudit(
+      m,
+      'assignment_audits',
+      a.id,
+      actorId,
+      action,
+      version,
+      reason,
+      submissionId,
     );
   }
   private revision(a: AssignmentRow, revision: number): void {

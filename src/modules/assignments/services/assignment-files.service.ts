@@ -288,7 +288,7 @@ export class AssignmentFilesService implements OnApplicationShutdown {
       const s = await this.access.submission(m, actor, f.zip_submission_id);
       if (s.status === 'DRAFT' && f.owner_user_id === actor.userId) return;
       const bound = await m.query(
-        'SELECT 1 FROM assignment_zip_submission_files WHERE submission_id=$1 AND file_id=$2 AND object_version_id=$3',
+        'SELECT 1 FROM assignment_zip_submissions WHERE id=$1 AND file_id=$2 AND object_version_id=$3',
         [s.id, f.id, f.object_version_id],
       );
       if (!bound.length) throw new AssignmentException(404, 'FILE_SCOPE_MISMATCH');
@@ -464,7 +464,8 @@ export class AssignmentFilesService implements OnApplicationShutdown {
         }
         const key = `assignment-verified/${file.id}/${job.lease_token}`;
         await this.db.query(
-          'INSERT INTO assignment_file_copies(file_id,token,object_key) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
+          `UPDATE assignment_file_jobs SET copy_candidates=copy_candidates || jsonb_build_array(jsonb_build_object('token',$2::uuid,'object_key',$3::text))
+          WHERE file_id=$1 AND kind='VALIDATE' AND NOT copy_candidates @> jsonb_build_array(jsonb_build_object('token',$2::uuid))`,
           [file.id, job.lease_token, key],
         );
         const version = await this.storage.copy(
@@ -539,7 +540,7 @@ export class AssignmentFilesService implements OnApplicationShutdown {
     const rows = await m.query(
       `SELECT 1 FROM assignment_instruction_files WHERE file_id=$1 UNION ALL
       SELECT 1 FROM assignment_zip_instruction_snapshots WHERE file_id=$1 UNION ALL
-      SELECT 1 FROM assignment_zip_submission_files b JOIN assignment_zip_submissions s ON s.id=b.submission_id WHERE b.file_id=$1 AND s.status IN ('DRAFT','SUBMITTED') LIMIT 1`,
+      SELECT 1 FROM assignment_zip_submissions s WHERE s.file_id=$1 AND s.status IN ('DRAFT','SUBMITTED') LIMIT 1`,
       [id],
     );
     return rows.length > 0;
@@ -563,7 +564,7 @@ export class AssignmentFilesService implements OnApplicationShutdown {
         throw new Error('Assignment storage cleanup unavailable');
       await this.storage.deleteAllVersions(file.bucket, file.staging_key);
       const copies: { object_key: string }[] = await this.db.query(
-        'SELECT object_key FROM assignment_file_copies WHERE file_id=$1',
+        "SELECT c->>'object_key' AS object_key FROM assignment_file_jobs j CROSS JOIN LATERAL jsonb_array_elements(j.copy_candidates) c WHERE j.file_id=$1 AND j.kind='VALIDATE'",
         [file.id],
       );
       for (const copy of copies) await this.storage.deleteAllVersions(file.bucket, copy.object_key);
@@ -590,7 +591,7 @@ export class AssignmentFilesService implements OnApplicationShutdown {
         AND (j.status IN ('PENDING','RUNNING','FAILED') OR j.run_after>clock_timestamp()))
       AND NOT EXISTS(SELECT 1 FROM assignment_instruction_files b WHERE b.file_id=f.id)
       AND NOT EXISTS(SELECT 1 FROM assignment_zip_instruction_snapshots b WHERE b.file_id=f.id)
-      AND NOT EXISTS(SELECT 1 FROM assignment_zip_submission_files b JOIN assignment_zip_submissions s ON s.id=b.submission_id WHERE b.file_id=f.id AND s.status IN ('DRAFT','SUBMITTED'))
+      AND NOT EXISTS(SELECT 1 FROM assignment_zip_submissions s WHERE s.file_id=f.id AND s.status IN ('DRAFT','SUBMITTED'))
       ORDER BY f.created_at LIMIT 50 ON CONFLICT(file_id,kind) DO UPDATE SET status='PENDING',attempts=0,run_after=clock_timestamp()
       WHERE assignment_file_jobs.status='DONE'`,
       [grace],
@@ -631,7 +632,11 @@ export class AssignmentFilesService implements OnApplicationShutdown {
         FROM assignments a,class_sessions s,classes c,enrollments e,users u
         WHERE z.id=$1 AND z.status='DRAFT' AND a.id=z.assignment_id AND s.id=a.session_id AND c.id=s.class_id AND e.id=z.enrollment_id AND u.id=z.student_id
         AND (a.status<>'PUBLISHED' OR s.status='CANCELLED' OR c.status IN ('CANCELLED','COMPLETED') OR e.status<>'ACTIVE' OR u.status<>'ACTIVE' OR u.role<>'STUDENT') RETURNING z.*)
-        INSERT INTO assignment_zip_audits(assignment_id,submission_id,action,version) SELECT assignment_id,id,'VOID',version FROM voided`,
+        INSERT INTO audit_events(source,id,actor_id,occurred_at,data)
+        SELECT 'assignment_zip_audits',event.id,NULL,event.created_at,jsonb_build_object(
+          'id',event.id,'assignment_id',v.assignment_id,'submission_id',v.id,'actor_id',NULL,
+          'action','VOID','version',v.version,'created_at',event.created_at)
+        FROM voided v CROSS JOIN LATERAL (SELECT gen_random_uuid() AS id,clock_timestamp() AS created_at WHERE v.id IS NOT NULL) event`,
           [row.id],
         );
       });

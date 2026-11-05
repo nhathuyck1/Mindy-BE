@@ -693,3 +693,8 @@ See [flow audit](PHASE_4_4_FLOW.md#2026-10-22--mentor-api-gap-audit-planning-onl
 [API proposal5](PHASE_5_flow-api-breakdown.md). Proposal5 đã đổi từ TEXT/FILE draft
 sang QUIZ ABCD/ZIP theo user; purpose TEST/HOMEWORK riêng; quiz timer optional,
 ZIP deadline ngày giờ. Chưa triển khai route/DTO/schema nào từ các proposal này.
+
+
+## Cập nhật BE Change — 05/11/2026
+
+Lịch tuần/min3/swap, nghỉ cả ngày hai chế độ, materials tracking/bulk/cleanup và chat inline được ghi trong [flow tích hợp](PHASE_BE_CHANGE_FLOW.md) và [contract](PHASE_BE_CHANGE_flow-api-breakdown.md). Source BE/FE2 đã triển khai; DB/storage và deployment chưa nghiệm thu. Xem [evidence/giới hạn](../progress/BE_CHANGE_PROGRESS.md). Contract mới bổ sung vào phase hiện hữu, không thay thế lịch sử nghiệm thu cũ.

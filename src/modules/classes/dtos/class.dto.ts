@@ -21,6 +21,11 @@ export class ClassMentorDto {
 
 /** Public class summary. Never carries the meeting URL. */
 export class ClassDto {
+  @ApiProperty({ minimum: 3 }) readonly minStudents: number;
+  @ApiProperty() readonly activeStudentCount: number;
+  @ApiProperty({ type: Date, nullable: true }) readonly scheduledStartAt: Date | null;
+  @ApiProperty() readonly startEligibility: string;
+  @ApiProperty({ type: String, nullable: true }) readonly startIneligibilityReason: string | null;
   @ApiProperty({ type: String, format: 'uuid' })
   readonly id: string;
 
@@ -54,6 +59,11 @@ export class ClassDto {
   constructor(view: ClassView) {
     const { classEntity } = view;
     this.id = classEntity.id;
+    this.minStudents = 3;
+    this.activeStudentCount = view.opening?.activeStudentCount ?? 0;
+    this.scheduledStartAt = view.opening?.scheduledStartAt ?? null;
+    this.startEligibility = view.opening?.startEligibility ?? 'NOT_OPEN';
+    this.startIneligibilityReason = view.opening?.startIneligibilityReason ?? null;
     this.courseId = classEntity.courseId;
     this.code = classEntity.code;
     this.name = classEntity.name;

@@ -1,6 +1,7 @@
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
@@ -62,7 +63,7 @@ describe.skipIf(!separateTestUrl('phase44a'))('Phase 4.4a session operations (Po
     attendance = new AttendanceService(
       db,
       read,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       new MentorConflictService(),
       f.enrollments,
       f.users,

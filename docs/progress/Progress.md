@@ -1,3 +1,20 @@
+## 2026-11-06 — Merge dev into Feat/Miro
+
+Resolved six conflicting files, retaining consolidated assignment audit/receipt storage,
+CODE authoring/judging and role-specific Manager/Mentor dashboards. CODE submissions
+now use mutation_receipts with the existing assignment_quiz namespace so migrated
+idempotency receipts remain replayable. CODE integration fixtures use the consolidated
+schema; compiled Dashboard HTTP tests exercise each role's actual service method.
+
+Validation on isolated local PostgreSQL/MinIO: 17 focused suites / 119 tests PASS;
+3 compiled HTTP suites / 6 tests PASS; lint PASS with 11 existing warnings;
+type-check/build PASS. Compiled rollout applies all 39 migrations on a clean test DB;
+repeat applies zero, none pending. No dev/production database migration or deployment.
+
+## 2026-11-05 — BE Change implementation (local, chưa deploy)
+
+Đã triển khai lịch tuần/khai giảng min3/worker cutoff, swap mentor, dashboard theo vai trò, materials UNSEEN/bulk/cleanup và chat inline/emoji cùng FE2. Resume06/11: PostgreSQL/MinIO test, migration clean38/upgrade35→38, HTTP và E2E đã chạy; kết quả chính xác và giới hạn tại [Progress](BE_CHANGE_PROGRESS.md). Cleanup mặc định OFF; chưa migrate dev/production, commit/push/deploy. [Flow](../api_flow/PHASE_BE_CHANGE_FLOW.md) · [API breakdown](../api_flow/PHASE_BE_CHANGE_flow-api-breakdown.md).
+
 ## 2026-11-03 — compiler PR validation
 
 ## 2026-11-04 — Portable FE/BE realtime
@@ -1501,6 +1518,27 @@ Ubuntu 26.04 exceeded five minutes. Replaced apt provisioning with the existing
 lockfile-pinned ffprobe-static binary at /usr/bin/ffprobe after frozen install.
 Linux MP3/MP4 validator-flag smoke, lint and diff checks PASS; no API, application
 code or production image change. GitHub rerun pending; no deployment evidence.
+
+## 04/11/2026 — Kiểm tra trạng thái ZIP (read-only runtime review)
+
+Đã đối chiếu controller, file service/worker, validator và submit: pipeline draft → upload intent → storage PUT → complete/PROCESSING → worker READY → attach → submit đã có trong source Feat/Miro. Chạy lại5 validator tests PASS; Swagger live có endpoint ZIP/file. Local env bật ASSIGNMENT_ZIP_ENABLED, ASSIGNMENT_FILE_JOB_ENABLED và MINIO_ENABLED; đây không phải bằng chứng runtime production. Không có TEST_DATABASE_URL nên không chạy lại integration PostgreSQL/MinIO hoặc upload/nộp production. Evidence integration cũ giữ nguyên. Ghi nhận DTO AssignmentUploadInput khai max25MiB, service áp ZIP20MiB; chưa sửa contract/code trong lượt review.
+
+## 06/11/2026 — Seed chuẩn thay bộ demo seed cũ
+
+`pnpm seed:data` = `seed:admin` + `seed:standard` (`src/database/seed/standard.ts`), dùng cho DB vừa migrate sạch. Có đủ lớp ở các trạng thái COMPLETED/IN_PROGRESS/OPEN/full/DRAFT, đơn hàng cash/payOS PAID, PENDING, EXPIRED, điểm danh, tiến độ, ARTICLE material, quiz đã chấm/đang mở; chi tiết ở README. Lịch học theo TEACHING_SLOTS kèm class_weekly_schedules. Script cũ (account/course-class/class-roster/course-images, demo-timetable) đã chuyển vào `_to_delete/seed/`. Local check: tsc pass; spec plan (`standard-plan.spec.ts`) pass 9/9 khi chạy bằng tsc + shim, chưa chạy qua vitest. Seed CHƯA được chạy trên PostgreSQL thật, chưa có bằng chứng VPS.
+
+## 06/11/2026 — Review standard seed so với policy và code rules
+
+Phạm vi: review `src/database/seed/standard.ts`, helper lịch và `seed-admin.ts`; chưa sửa implementation seed, không đổi API/schema. DB dev hiện không có 7 class code của standard seed; không chạy seed vào DB dev/VPS.
+
+Local evidence: `pnpm type-check` PASS; Vitest `src/database/seed/helpers/standard-plan.spec.ts` PASS 9/9. Chạy migrations hiện hành rồi `pnpm seed:standard` hai lần trên PostgreSQL 17.11 trong DB tách biệt có hậu tố `_test`: PASS, 30 users (không chạy admin), 7 classes; rerun bỏ qua toàn bộ lớp. Đã xóa các DB review sau kiểm chứng. Biome scoped seed FAIL vì format ở `standard.ts` và `standard-plan.spec.ts`; chưa chạy full `pnpm check`/HTTP suites trong lượt review.
+
+Findings chưa sửa:
+- P2: lịch sử khai giảng không khớp cutoff policy. Ba decision STARTED lưu lần lượt 8/12/8 học viên, nhưng chạy đúng điều kiện cutoff của ClassOpeningService trả 0/0/0: trigger enrollment ghi effective_at tại lúc seed, sau mốc khai giảng lịch sử. Cần dựng historical enrollment event nhất quán cho fixture, giữ nguyên trigger runtime.
+- P2: seed ghi trực tiếp trạng thái kết thúc mà không tạo audit tương ứng: 22 COMPLETED sessions, 208 attendance records, 8 GRADED submissions nhưng lifecycle/attendance/assignment/material audit đều 0. Tracking và lịch sử của bộ demo không phản ánh các thao tác đã mô phỏng; cần thêm audit seed nhất quán với các service/policy hiện hành.
+- P3: hai file seed mới chưa qua Biome format; gate lint chưa đạt.
+
+Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:admin + seed:standard như một chuỗi, chưa xác nhận merge vào DB có dữ liệu nghiệp vụ, chưa deploy hoặc giao dịch thật. Giá nhỏ, payment/webhook giả và không gửi mail là chủ ý fixture theo README, không phải evidence thanh toán thật.
 
 ## 2026-11-03 — Dashboard theo vai trò
 

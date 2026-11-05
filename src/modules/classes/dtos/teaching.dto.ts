@@ -66,6 +66,11 @@ export class TeachingSessionDto {
 }
 
 export class TeachingClassDto {
+  @ApiProperty({ minimum: 3 }) readonly minStudents!: number;
+  @ApiProperty() readonly activeStudentCount!: number;
+  @ApiProperty({ type: Date, nullable: true }) readonly scheduledStartAt!: Date | null;
+  @ApiProperty() readonly startEligibility!: string;
+  @ApiProperty({ type: String, nullable: true }) readonly startIneligibilityReason!: string | null;
   @ApiProperty({ type: String, format: 'uuid' })
   readonly id!: string;
 

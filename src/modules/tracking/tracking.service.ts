@@ -23,6 +23,8 @@ const NORMALIZED = `WITH raw_events AS (
       WHEN 'mentor_leave_audits' THEN 'LEAVE_UPDATE' WHEN 'makeup_placement_audits' THEN 'PLACEMENT_STATUS_CHANGE'
       WHEN 'class_unit_release_audit' THEN 'LEGACY_UNIT_RELEASE' WHEN 'attendance_recovery_audits' THEN 'RECOVER' ELSE 'UPDATE' END) AS action,
     CASE WHEN e.source='material_audit_events' THEN 'material'
+      WHEN e.source IN ('assignment_audits','assignment_zip_audits') THEN
+        CASE WHEN e.data->>'submission_id' IS NOT NULL THEN 'assignment_submission' ELSE 'assignment' END
       WHEN e.source='attendance_audits' THEN 'attendance'
       WHEN e.source='guest_attendance_audits' THEN 'guest_attendance'
       WHEN e.source='makeup_placement_audits' THEN 'makeup_placement'
@@ -30,7 +32,7 @@ const NORMALIZED = `WITH raw_events AS (
       WHEN e.source='class_unit_release_audit' THEN 'class_unit'
       WHEN e.source='teaching_assignment_audits' AND e.data->>'session_id' IS NULL THEN 'class'
       ELSE 'session' END AS entity_type,
-    COALESCE((e.data->>'material_id')::uuid,(e.data->>'attendance_id')::uuid,
+    COALESCE((e.data->>'submission_id')::uuid,(e.data->>'assignment_id')::uuid,(e.data->>'material_id')::uuid,(e.data->>'attendance_id')::uuid,
       (e.data->>'placement_id')::uuid,(e.data->>'request_id')::uuid,
       (e.data->>'class_unit_id')::uuid,(e.data->>'session_id')::uuid,(e.data->>'class_id')::uuid) AS entity_id,
     COALESCE((e.data->>'class_id')::uuid,u.class_id,material.created_in_class_id) AS class_id,
@@ -41,7 +43,8 @@ const NORMALIZED = `WITH raw_events AS (
   LEFT JOIN attendance_records a ON e.source='attendance_audits' AND a.id=(e.data->>'attendance_id')::uuid
   LEFT JOIN guest_attendance_records g ON e.source='guest_attendance_audits' AND g.id=(e.data->>'attendance_id')::uuid
   LEFT JOIN makeup_placements p ON e.source='makeup_placement_audits' AND p.id=(e.data->>'placement_id')::uuid
-  LEFT JOIN class_sessions s ON s.id=COALESCE((e.data->>'session_id')::uuid,a.session_id,g.session_id,p.target_session_id)
+  LEFT JOIN assignments assignment ON e.source IN ('assignment_audits','assignment_zip_audits') AND assignment.id=(e.data->>'assignment_id')::uuid
+  LEFT JOIN class_sessions s ON s.id=COALESCE((e.data->>'session_id')::uuid,a.session_id,g.session_id,p.target_session_id,assignment.session_id)
   LEFT JOIN class_units u ON u.id=s.class_unit_id
   LEFT JOIN materials material ON e.source='material_audit_events' AND material.id=(e.data->>'material_id')::uuid
 )`;

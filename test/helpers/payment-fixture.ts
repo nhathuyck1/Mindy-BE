@@ -14,6 +14,7 @@ import { PayosPayments1791158400000 } from '../../src/database/migrations/179115
 import { RestoreManagerRole1791504000000 } from '../../src/database/migrations/1791504000000-restore-manager-role.js';
 import { PrepareReleaseUnitConstraint1791849599999 } from '../../src/database/migrations/1791849599999-prepare-release-unit-constraint.js';
 import { SessionMentorAssignment1791849600000 } from '../../src/database/migrations/1791849600000-session-mentor-assignment.js';
+import { TypedManagerMaterials1791849600000 } from '../../src/database/migrations/1791849600000-typed-manager-materials.js';
 import { SessionAttendance1791849600001 } from '../../src/database/migrations/1791849600001-session-attendance.js';
 import { CalendarAttendanceDeadline1791849600002 } from '../../src/database/migrations/1791849600002-calendar-attendance-deadline.js';
 import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
@@ -22,6 +23,8 @@ import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migration
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
 import { MentorLeave1792195200000 } from '../../src/database/migrations/1792195200000-mentor-leave.js';
+import { ClassOpening1793836800000 } from '../../src/database/migrations/1793836800000-class-opening.js';
+import { MaterialRetention1793836800001 } from '../../src/database/migrations/1793836800001-material-retention.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -38,6 +41,7 @@ import { ClassSessionEntity } from '../../src/modules/classes/entities/class-ses
 import { ClassUnitEntity } from '../../src/modules/classes/entities/class-unit.entity.js';
 import { DeliveryMode } from '../../src/modules/classes/enums/delivery-mode.enum.js';
 import { ClassOffersService } from '../../src/modules/classes/services/class-offers.service.js';
+import { ClassOpeningService } from '../../src/modules/classes/services/class-opening.service.js';
 import { ClassReadService } from '../../src/modules/classes/services/class-read.service.js';
 import { ClassScheduleService } from '../../src/modules/classes/services/class-schedule.service.js';
 import { ClassesService } from '../../src/modules/classes/services/classes.service.js';
@@ -147,6 +151,10 @@ export async function paymentDatabase(
         CalendarAttendanceDeadline1791849600002,
         AttendanceRecoveryEvidence1791849600003,
         CrossClassMakeup1792022400001,
+        ClassOpening1793836800000,
+        ...(extra.migrations?.includes(TypedManagerMaterials1791849600000)
+          ? [MaterialRetention1793836800001]
+          : []),
         // Release and attendance must use the same compatibility bridges as the CLI catalog.
         ...(extra.migrations?.includes(ClassUnitReleaseAudit1791856800000)
           ? [
@@ -233,6 +241,7 @@ export function paymentFixture(db: DataSource) {
     users,
     new ClassScheduleService(config, new ScheduleReservationsService()),
     read,
+    new ClassOpeningService(db),
   );
   const expiry = new OrderExpiryService(db, enrollments);
   const cart = new CartService(db, offers);
@@ -297,7 +306,11 @@ export function paymentFixture(db: DataSource) {
         startsAt: `${slot}T08:00:00+07:00`,
         endsAt: `${slot}T09:00:00+07:00`,
       });
-      await classes.open(view.classEntity.id);
+      // Low-capacity legacy classes remain useful payment-race fixtures. New opening rules
+      // are exercised separately with capacity >= 3 rather than bypassed in production.
+      if (view.classEntity.maxStudents < 3)
+        await db.query("UPDATE classes SET status='OPEN' WHERE id=$1", [view.classEntity.id]);
+      else await classes.open(view.classEntity.id);
       await cart.addItem(student.id, view.classEntity.id);
       classIds.push(view.classEntity.id);
     }

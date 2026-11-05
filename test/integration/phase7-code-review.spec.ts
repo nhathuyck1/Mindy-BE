@@ -2,8 +2,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
-import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import {
   codeServices,
   FakeCodeExecutor,
@@ -17,7 +16,7 @@ describe.skipIf(!separateTestUrl('phase7r'))('Phase 7 CODE mentor review Postgre
   const executor = new FakeCodeExecutor();
   beforeAll(async () => {
     db = await paymentDatabase('phase7r', {
-      migrations: [AssignmentsQuiz1792713600000, CodeAssignments1792886400000],
+      migrations: ASSIGNMENT_MIGRATIONS,
     });
     f = paymentFixture(db);
     s = codeServices(db, f, executor);
@@ -105,7 +104,7 @@ describe.skipIf(!separateTestUrl('phase7r'))('Phase 7 CODE mentor review Postgre
       response: { code: 'CODE_REJUDGE_NOT_ALLOWED' },
     });
     const audits: { action: string }[] = await db.query(
-      'SELECT action FROM assignment_audits WHERE assignment_id=$1 ORDER BY created_at',
+      "SELECT data->>'action' AS action FROM audit_events WHERE source='assignment_audits' AND ref_assignment_id=$1 ORDER BY occurred_at",
       [p.a.id],
     );
     expect(audits.map((x) => x.action)).toContain('CODE_REJUDGE');

@@ -14,6 +14,7 @@ import { FileProcessingService } from './services/file-processing.service.js';
 import { FileProcessingWorker } from './services/file-processing.worker.js';
 import { FileUploadPolicyService } from './services/file-upload-policy.service.js';
 import { FilesService } from './services/files.service.js';
+import { MaterialFileCleanupService } from './services/material-file-cleanup.service.js';
 import { MinioFileStorage } from './storage/minio-file-storage.js';
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { MinioFileStorage } from './storage/minio-file-storage.js';
   ],
   controllers: [FilesController],
   providers: [
+    MaterialFileCleanupService,
     FileUploadPolicyService,
     FilesService,
     FileProcessingService,
@@ -34,6 +36,12 @@ import { MinioFileStorage } from './storage/minio-file-storage.js';
     { provide: FILE_STORAGE, useExisting: MinioFileStorage },
     { provide: BINARY_VALIDATOR, useExisting: BinaryValidationService },
   ],
-  exports: [FileUploadPolicyService, FilesService, FILE_STORAGE, BINARY_VALIDATOR],
+  exports: [
+    MaterialFileCleanupService,
+    FileUploadPolicyService,
+    FilesService,
+    FILE_STORAGE,
+    BINARY_VALIDATOR,
+  ],
 })
 export class FilesModule {}

@@ -5,6 +5,8 @@ import { CalendarAttendanceDeadline1791849600002 } from '../../src/database/migr
 import { AttendanceRecoveryEvidence1791849600003 } from '../../src/database/migrations/1791849600003-attendance-recovery-evidence.js';
 import { SessionScheduleOperations1792022400000 } from '../../src/database/migrations/1792022400000-session-schedule-operations.js';
 import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/1792022400001-cross-class-makeup.js';
+import { ClassOpening1793836800000 } from '../../src/database/migrations/1793836800000-class-opening.js';
+import { ClassOpeningService } from '../../src/modules/classes/services/class-opening.service.js';
 import { MentorConflictService } from '../../src/modules/classes/services/mentor-conflict.service.js';
 import { TeachingAssignmentService } from '../../src/modules/classes/services/teaching-assignment.service.js';
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
@@ -157,6 +159,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         CalendarAttendanceDeadline1791849600002,
         AttendanceRecoveryEvidence1791849600003,
         CrossClassMakeup1792022400001,
+        ClassOpening1793836800000,
       ],
     });
     await dataSource.initialize();
@@ -184,6 +187,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       usersService,
       new ClassScheduleService(config, new ScheduleReservationsService()),
       readService,
+      new ClassOpeningService(dataSource),
     );
     const offersService = new ClassOffersService(
       dataSource,
@@ -280,7 +284,11 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       title: 'Session 1',
       ...sessionSlot(),
     });
-    await classesService.open(draft.classEntity.id);
+    if (draft.classEntity.maxStudents < 3)
+      await dataSource.query("UPDATE classes SET status='OPEN' WHERE id=$1", [
+        draft.classEntity.id,
+      ]);
+    else await classesService.open(draft.classEntity.id);
     return { classId: draft.classEntity.id, courseId, mentorId };
   }
 
@@ -521,9 +529,9 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
         'CLASS_NOT_EDITABLE',
       );
       expect((await readService.getOpenDetail(classId)).classEntity.id).toBe(classId);
-      expect((await classesService.start(classId)).classEntity.status).toBe(
-        ClassStatus.IN_PROGRESS,
-      );
+      expect(await rejectionCode(classesService.start(classId))).toBe('CLASS_START_INELIGIBLE');
+      // Completion regression starts with an already-opened legacy class.
+      await dataSource.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
       expect(await rejectionCode(readService.getOpenDetail(classId))).toBe('CLASS_NOT_FOUND');
       expect(await rejectionCode(classesService.complete(classId))).toBe('SESSION_STATE_CONFLICT');
       // Legacy lifecycle fixture explicitly resolves scheduled work before class completion.
@@ -1177,7 +1185,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       expect(item?.offer.priceAmount).toBe(900_000);
       expect(item?.offer.isPurchasable).toBe(true);
 
-      await classesService.start(classId);
+      await dataSource.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
       const [closed] = await cartService.getCart(student.id);
       expect(closed?.offer.isPurchasable).toBe(false);
       expect(await rejectionCode(checkoutService.checkout(student.id, PaymentType.PAYOS))).toBe(

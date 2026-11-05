@@ -10,6 +10,10 @@ export enum MaterialContentType {
 
 @Entity('materials')
 export class MaterialEntity extends TimestampedEntity {
+  @Column({ name: 'last_seen_at', type: 'timestamptz', nullable: true }) lastSeenAt!: Date | null;
+  @Column({ name: 'tracking_started_at', type: 'timestamptz', default: () => 'clock_timestamp()' })
+  trackingStartedAt!: Date;
+  @Column({ name: 'is_unseen', type: 'boolean', default: false }) isUnseen!: boolean;
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ name: 'course_unit_id', type: 'uuid' }) courseUnitId!: string;
   @Column({ name: 'file_object_id', type: 'uuid', nullable: true }) fileObjectId!: string | null;

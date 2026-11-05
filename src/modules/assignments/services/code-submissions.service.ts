@@ -390,7 +390,7 @@ export class CodeSubmissionsService {
         `assignment:${actor.userId}:${route}:${key.toLowerCase()}`,
       ]);
       const receipts: { request_hash: string; resource_id: string }[] = await m.query(
-        'SELECT request_hash,resource_id FROM assignment_receipts WHERE actor_id=$1 AND route=$2 AND idempotency_key=$3',
+        "SELECT payload_hash AS request_hash,outcome->>'resourceId' AS resource_id FROM mutation_receipts WHERE namespace='assignment_quiz' AND actor_id=$1 AND route=$2 AND key=$3",
         [actor.userId, route, key],
       );
       const receipt = receipts[0];
@@ -437,7 +437,7 @@ export class CodeSubmissionsService {
       if (!row) throw new Error('CODE_SUBMISSION_INSERT_INVARIANT');
       await m.query('INSERT INTO code_judge_jobs(submission_id) VALUES($1)', [row.id]);
       await m.query(
-        'INSERT INTO assignment_receipts(actor_id,route,idempotency_key,request_hash,resource_id) VALUES($1,$2,$3,$4,$5)',
+        "INSERT INTO mutation_receipts(namespace,actor_id,route,key,payload_hash,outcome) VALUES('assignment_quiz',$1,$2,$3,$4,jsonb_build_object('resourceId',$5::uuid))",
         [actor.userId, route, key, requestHash, row.id],
       );
       return { created: true, submission: submissionDto(row) };

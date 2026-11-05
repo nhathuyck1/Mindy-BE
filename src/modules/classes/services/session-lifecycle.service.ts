@@ -9,11 +9,16 @@ import { ClassStatus } from '../enums/class-status.enum.js';
 import { SessionStatus } from '../enums/session-status.enum.js';
 import { ClassSessionLocalTimeInvalidException } from '../exceptions/class.exceptions.js';
 import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { ClassOpeningService } from './class-opening.service.js';
 
 /** Public transaction participant. Caller holds Class -> Session locks. */
 @Injectable()
 export class SessionLifecycleService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly opening: ClassOpeningService,
+  ) {}
 
   async start(
     m: EntityManager,
@@ -31,6 +36,12 @@ export class SessionLifecycleService {
         'SESSION_STATE_CONFLICT',
         'Start requires an open/in-progress class and scheduled session',
       );
+    if (at < s.startsAt)
+      throw new TeachingConflictException(
+        'SESSION_START_TOO_EARLY',
+        'Session cannot start before its scheduled time',
+      );
+    if (c.status === ClassStatus.OPEN) await this.opening.assertCanStart(m, c);
     const old = s.status;
     s.status = SessionStatus.IN_PROGRESS;
     s.actualStartedAt = at;

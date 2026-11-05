@@ -63,7 +63,7 @@ export interface FileStorage {
     mimeType: string,
     signal?: AbortSignal,
   ): Promise<string>;
-  deleteAllVersions?(bucket: string, key: string): Promise<void>;
+  deleteAllVersions?(bucket: string, key: string): Promise<number> | Promise<void>;
   deleteVersion?(location: StorageLocation): Promise<void>;
   assertAvailable(): Promise<void>;
   presignPut(bucket: string, key: string, mimeType: string, ttl: number): Promise<string>;

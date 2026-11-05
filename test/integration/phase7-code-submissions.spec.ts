@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
-import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
 import { RESULT_PREFIX } from '../../src/modules/assignments/domain/code-driver.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentsService } from '../../src/modules/assignments/services/assignments.service.js';
@@ -22,6 +20,7 @@ import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
 const actor = (userId: string, role: UserRole): AuthenticatedUser => ({
@@ -83,7 +82,7 @@ describe.skipIf(!separateTestUrl('phase7s'))('Phase 7 CODE submissions PostgreSQ
   const pushed: string[] = [];
   beforeAll(async () => {
     db = await paymentDatabase('phase7s', {
-      migrations: [AssignmentsQuiz1792713600000, CodeAssignments1792886400000],
+      migrations: ASSIGNMENT_MIGRATIONS,
     });
     f = paymentFixture(db);
     const teaching = new TeachingReadService(

@@ -24,10 +24,13 @@ describe('Compiled Dashboard HTTP contract', () => {
   let app: INestApplication;
   let base: string;
   const overview = vi.fn().mockResolvedValue({ summary: {}, courses: [], mentors: [] });
+  const manager = vi.fn().mockResolvedValue({ summary: { collectedAmount: '0' } });
+  const mentor = vi.fn().mockResolvedValue({ summary: { assignedSessions: 0 }, upcoming: [] });
+  const services = { admin: overview, manager, mentor };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [DashboardController],
-      providers: [{ provide: DashboardService, useValue: { overview } }],
+      providers: [{ provide: DashboardService, useValue: { overview, manager, mentor } }],
     })
       .overrideGuard(AccessTokenGuard)
       .useValue({
@@ -69,15 +72,17 @@ describe('Compiled Dashboard HTTP contract', () => {
     expect((await fetch(`${base}/api/v1/admin/dashboard`)).status).toBe(401);
     expect(overview).not.toHaveBeenCalled();
   });
-  it.each(['admin', 'manager', 'mentor'])(
+  it.each(['admin', 'manager', 'mentor'] as const)(
     'validates query, role and production wiring for %s',
     async (role) => {
-      overview.mockClear();
+      const service = services[role];
+      service.mockClear();
       const headers = { 'x-test-role': role.toUpperCase() };
       const response = await fetch(`${base}/api/v1/${role}/dashboard?days=30`, { headers });
       expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(await service.mock.results[0]?.value);
       expect(response.headers.get('cache-control')).toBe('private, no-store');
-      expect(overview).toHaveBeenCalledWith(
+      expect(service).toHaveBeenCalledWith(
         expect.objectContaining({ role: role.toUpperCase() }),
         30,
       );

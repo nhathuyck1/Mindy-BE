@@ -10,6 +10,7 @@ import { UserRole } from '../users/user-role.enum.js';
 import { DashboardDto, DashboardQueryDto } from './dashboard.dto.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { DashboardService } from './dashboard.service.js';
+import { ManagerDashboardDto, MentorDashboardDto } from './role-dashboard.dto.js';
 
 @ApiTags('dashboard')
 @ApiCookieAuth('access_token')
@@ -33,26 +34,26 @@ export class DashboardController {
   @Get('manager/dashboard')
   @Roles(UserRole.MANAGER)
   @Header('Cache-Control', 'private, no-store')
-  @ApiOperation({ summary: 'Center-wide enrollment analytics for managers' })
-  @ApiOkResponse({ type: DashboardDto })
+  @ApiOperation({ summary: 'Collected revenue, pending collection and opening alerts' })
+  @ApiOkResponse({ type: ManagerDashboardDto })
   manager(
     @CurrentUser() actor: AuthenticatedUser,
     @Query() query: DashboardQueryDto,
-  ): Promise<DashboardDto> {
-    return this.dashboard.overview(actor, query.days);
+  ): Promise<ManagerDashboardDto> {
+    return this.dashboard.manager(actor, query.days);
   }
 
   @Get('mentor/dashboard')
   @Roles(UserRole.MENTOR)
   @Header('Cache-Control', 'private, no-store')
   @ApiOperation({
-    summary: 'Enrollment analytics limited to the authenticated primary mentor classes',
+    summary: 'Teaching workload and upcoming sessions in the authenticated mentor scope',
   })
-  @ApiOkResponse({ type: DashboardDto })
+  @ApiOkResponse({ type: MentorDashboardDto })
   mentor(
     @CurrentUser() actor: AuthenticatedUser,
     @Query() query: DashboardQueryDto,
-  ): Promise<DashboardDto> {
-    return this.dashboard.overview(actor, query.days);
+  ): Promise<MentorDashboardDto> {
+    return this.dashboard.mentor(actor, query.days);
   }
 }

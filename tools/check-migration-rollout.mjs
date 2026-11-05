@@ -39,6 +39,31 @@ try {
       'ConsolidateTracking1792627200002',
     ]);
     if (applied.rowCount !== 1) throw new Error('Tracking migration was not applied exactly once.');
+    const assignmentsApplied = await check.query('SELECT 1 FROM migrations WHERE name=$1', [
+      'ConsolidateAssignments1793836800002',
+    ]);
+    if (assignmentsApplied.rowCount !== 1)
+      throw new Error('Assignment consolidation was not applied exactly once.');
+    const assignmentTables = await check.query(`SELECT table_name FROM information_schema.tables
+      WHERE table_schema='public' AND table_type='BASE TABLE'
+      AND (table_name='assignments' OR starts_with(table_name,'assignment_')) ORDER BY table_name`);
+    const expectedAssignmentTables = [
+      'assignment_file_jobs',
+      'assignment_files',
+      'assignment_finalization_jobs',
+      'assignment_instruction_files',
+      'assignment_questions',
+      'assignment_submissions',
+      'assignment_zip_grade_revisions',
+      'assignment_zip_instruction_snapshots',
+      'assignment_zip_submissions',
+      'assignments',
+    ];
+    if (
+      JSON.stringify(assignmentTables.rows.map((row) => row.table_name)) !==
+      JSON.stringify(expectedAssignmentTables)
+    )
+      throw new Error('Expected exactly ten consolidated assignment tables.');
     const relations = await check.query(`SELECT c.relname,c.relkind FROM pg_class c
       JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'
       AND c.relname IN ('audit_events','mutation_receipts','teaching_note_audits','teaching_note_receipts')`);

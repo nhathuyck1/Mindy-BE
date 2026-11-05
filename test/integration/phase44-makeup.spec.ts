@@ -1,3 +1,4 @@
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -58,7 +59,7 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
     attendance = new AttendanceService(
       db,
       teaching,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       new MentorConflictService(),
       f.enrollments,
       f.users,
@@ -125,7 +126,10 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
         startsAt: `${day}T08:00:00+07:00`,
         endsAt: `${day}T09:00:00+07:00`,
       });
-      await f.classes.open(c.classEntity.id);
+      // Preserve pre-existing low-capacity placement fixtures; new opening policy has its own suite.
+      if (maxStudents < 3)
+        await db.query("UPDATE classes SET status='OPEN' WHERE id=$1", [c.classEntity.id]);
+      else await f.classes.open(c.classEntity.id);
       const t = (await f.read.getDetail(c.classEntity.id)).units[0]?.sessions[0];
       if (!t) throw new Error('Missing target');
       return { c: c.classEntity, t, mentor };
@@ -567,7 +571,7 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
         randomUUID(),
       ),
     ).rejects.toMatchObject({ response: { code: 'SESSION_HAS_MAKEUP_PLACEMENTS' } });
-    await f.classes.start(a.sourceClassId);
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [a.sourceClassId]);
     await db.query("UPDATE class_sessions SET status='COMPLETED' WHERE id=$1", [a.source.id]);
     await expect(f.classes.complete(a.sourceClassId)).rejects.toMatchObject({
       response: { code: 'CLASS_HAS_UNRESOLVED_MAKEUPS' },
@@ -646,6 +650,7 @@ describe.skipIf(!separateTestUrl('phase44b'))('Phase 4.4b cross-class makeup (Po
     if (session.status === 'IN_PROGRESS') expect(guests).toHaveLength(0);
     else {
       expect(guests).toHaveLength(1);
+      vi.setSystemTime(a.target.t.startsAt);
       const opened = await attendance.start(
         a.target.t.id,
         { expectedVersion: session.version },

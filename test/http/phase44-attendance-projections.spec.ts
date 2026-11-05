@@ -187,9 +187,12 @@ describe.skipIf(!separateTestUrl('phase44c_http'))('Phase 4.4c built-app HTTP', 
         })
       ).status,
     ).toBe(200);
+    // Attendance projections concern a later session in an established class.
+    // Initial paid-at-cutoff admission is covered by be-change-plan.spec.ts.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
     // Bring the fixture to today's calendar; all API clocks, role checks and writes remain real.
     await db.query(
-      "UPDATE class_sessions SET starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'+interval '8 hours',ends_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'+interval '9 hours' WHERE id=$1",
+      "UPDATE class_sessions SET starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh' WHERE id=$1",
       [sourceId],
     );
     const prefix = `/class-sessions/${sourceId}`;
@@ -200,7 +203,7 @@ describe.skipIf(!separateTestUrl('phase44c_http'))('Phase 4.4c built-app HTTP', 
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const roster = (await (await request(`${prefix}/attendance`, mentor)).json()) as {
       items: { enrollmentId: string }[];
       session: { version: number };

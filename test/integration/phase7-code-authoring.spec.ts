@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
 import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
 import { RESULT_PREFIX } from '../../src/modules/assignments/domain/code-driver.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
@@ -18,6 +17,7 @@ import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
@@ -69,7 +69,7 @@ describe.skipIf(!separateTestUrl('phase7'))('Phase 7 CODE authoring PostgreSQL',
   const executor = new FakeExecutor();
   beforeAll(async () => {
     db = await paymentDatabase('phase7', {
-      migrations: [AssignmentsQuiz1792713600000, CodeAssignments1792886400000],
+      migrations: ASSIGNMENT_MIGRATIONS,
     });
     await rehearseMigration(db, new CodeAssignments1792886400000(), 'down');
     await rehearseMigration(db, new CodeAssignments1792886400000(), 'up');

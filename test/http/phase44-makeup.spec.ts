@@ -207,7 +207,7 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
         deliveryMode: 'ONLINE',
         startDate: day,
         endDate: day,
-        maxStudents: 2,
+        maxStudents: 3,
         meetingUrl: 'https://meet.example.test/makeup-http',
       });
       expect(created.status).toBe(201);
@@ -302,9 +302,12 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
     });
   });
   it('marks/finalizes guest attendance through guards and cancels credit without deleting the snapshot', async () => {
+    // A later session of an established receiving class can have only a makeup guest.
+    // Initial paid-at-cutoff admission is covered by be-change-plan.spec.ts.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [targetClassId]);
     // Fixture brings the already-reserved target onto today's calendar; runtime clocks remain real.
     await db.query(
-      "UPDATE class_sessions SET starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'+interval '8 hours',ends_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh'+interval '9 hours' WHERE id=$1",
+      "UPDATE class_sessions SET starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh' WHERE id=$1",
       [targetId],
     );
     const versions: { version: number }[] = await db.query(
@@ -339,7 +342,7 @@ describe.skipIf(!separateTestUrl('phase44b_http'))('Phase 4.4b built-app HTTP', 
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const open = (await opened.json()) as { session: { version: number } };
     const roster = await request(`${prefix}/attendance`, targetMentor);
     expect(roster.status).toBe(200);

@@ -25,6 +25,7 @@ import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
 
 @Module({
   imports: [
+    DashboardModule,
     WhiteboardsModule,
     ChatModule,
     AssignmentsModule,
