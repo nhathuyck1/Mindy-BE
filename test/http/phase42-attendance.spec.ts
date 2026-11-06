@@ -247,12 +247,12 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       receivedAmount: order.totalAmount,
     });
     expect(confirmed.status).toBe(200);
-    // Exercise attendance in an established class with a one-student current roster.
+    // Exercise an early start in an established class with a one-student current roster.
     await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
     await db.query(
       `UPDATE class_sessions SET
-        starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
-        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        starts_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh',
+        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day') AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id=$1`,
       [s.id],
     );
@@ -261,9 +261,17 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);
     expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as {
-      session: { version: number; editableUntil: string };
+      session: {
+        version: number;
+        editableUntil: string;
+        actualStartedAt: string;
+        startsAt: string;
+      };
       totals: { unmarked: number };
     };
+    expect(Date.parse(start.session.actualStartedAt)).toBeLessThan(
+      Date.parse(start.session.startsAt),
+    );
     expect(start.totals.unmarked).toBe(1);
     expect(await (await request(`${path}/start`, mentorCookie, input, 'POST', key)).json()).toEqual(
       start,
@@ -393,7 +401,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     expect(
       (await request(`${a.path}/start`, a.mentor.cookie, base, 'POST', randomUUID())).status,
     ).toBe(409);
-    // Recovery still respects the scheduled start. Advance the fixture, not runtime clocks.
+    // Set the scheduled day used by the attendance deadline assertions below.
     const scheduledDay = await reachSessionDay(a.session.id);
     const opened = await request(
       `${a.path}/start`,

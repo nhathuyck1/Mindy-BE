@@ -44,7 +44,7 @@ Các ClassDto/TeachingClassDto thêm `minStudents=3`, `activeStudentCount`, `sch
 
 `POST /admin/classes/:classId/open` hiện hữu: 200 detail, thêm 409 CLASS_CAPACITY_TOO_SMALL nếu maxStudents<3. Không bắt đủ học viên ở DRAFT→OPEN.
 
-`POST /admin/classes/:classId/start` hiện hữu: 200 detail nếu đến mốc và đủ người tại cutoff; 409 CLASS_START_INELIGIBLE với lý do. Không đánh dấu session hay tạo attendance. Các start session hiện hữu cũng dùng guard; SESSION_START_TOO_EARLY nếu session chưa đến giờ. Worker 15s có cùng semantics, lưu STARTED/BLOCKED; manager dùng lịch tuần dời mốc khi bị chặn. Cần migrations và CLASS_OPENING_JOB_ENABLED=true. Không có public API cho worker.
+`POST /admin/classes/:classId/start` hiện hữu: 200 detail nếu đến mốc và đủ người tại cutoff; 409 CLASS_START_INELIGIBLE với lý do. Không đánh dấu session hay tạo attendance. `POST /api/v1/class-sessions/:sessionId/start` cho mentor bắt đầu sớm trong ngày lịch, không cần flag. Nếu lớp OPEN, kiểm đủ 3 học viên PAID/ACTIVE tại mốc sớm hơn giữa giờ thực tế và giờ khai giảng trên lịch; thiếu người trả 409 CLASS_START_INELIGIBLE. Giữ request/response, quyền, lịch và deadline điểm danh. Worker 15s tiếp tục chạy theo giờ lịch, lưu STARTED/BLOCKED; manager dùng lịch tuần dời mốc khi bị chặn. Worker cần CLASS_OPENING_JOB_ENABLED=true và không có public API.
 
 ## 4. Nghỉ cả ngày
 

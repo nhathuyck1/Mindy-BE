@@ -36,12 +36,8 @@ export class SessionLifecycleService {
         'SESSION_STATE_CONFLICT',
         'Start requires an open/in-progress class and scheduled session',
       );
-    if (at < s.startsAt)
-      throw new TeachingConflictException(
-        'SESSION_START_TOO_EARLY',
-        'Session cannot start before its scheduled time',
-      );
-    if (c.status === ClassStatus.OPEN) await this.opening.assertCanStart(m, c);
+    if (c.status === ClassStatus.OPEN)
+      await this.opening.assertCanStart(m, c, { allowEarlyStart: true });
     const old = s.status;
     s.status = SessionStatus.IN_PROGRESS;
     s.actualStartedAt = at;

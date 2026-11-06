@@ -1,3 +1,13 @@
+## 2026-11-06 — Bắt đầu buổi học trước giờ lịch
+
+Mentor có thể bắt đầu buổi SCHEDULED trước giờ trong ngày đã xếp lịch. Nếu lớp
+còn OPEN, vẫn cần đủ 3 học viên PAID/ACTIVE tại mốc bắt đầu sớm. Worker và API
+khai giảng lớp riêng vẫn theo giờ lịch. Không thêm biến môi trường hoặc migration.
+Kiểm local trên PostgreSQL riêng: 49 unit/integration và 3 HTTP pass, gồm start
+trước giờ, roster và idempotency. Type-check/build pass; lint có 11 warning cũ.
+Chưa deploy. [Flow](../api_flow/PHASE_BE_CHANGE_FLOW.md) ·
+[API](../api_flow/PHASE_BE_CHANGE_flow-api-breakdown.md).
+
 ## 2026-11-06 — Merge dev into Feat/Miro
 
 Resolved six conflicting files, retaining consolidated assignment audit/receipt storage,
