@@ -24,6 +24,7 @@ import { TeachingReadService } from '../../classes/services/teaching-read.servic
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { AttendancePaymentEvidenceService } from '../../payments/services/attendance-payment-evidence.service.js';
+import { sessionStartTimeEnforced } from '../../system-settings/system-settings.js';
 import { UserRole } from '../../users/user-role.enum.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { UsersService } from '../../users/users.service.js';
@@ -375,7 +376,12 @@ export class AttendanceService {
       throw new ClassMentorNotEligibleException(HttpStatus.UNPROCESSABLE_ENTITY);
     // An advisory lock wait can cross midnight. Decide the day, cutoff and deadline only after it.
     const now = new Date();
-    if (!recovery && !isAttendanceStartDay(now, s.startsAt, s.endsAt, this.teaching.timeZone()))
+    const enforceTime = await sessionStartTimeEnforced(m);
+    if (
+      enforceTime &&
+      !recovery &&
+      !isAttendanceStartDay(now, s.startsAt, s.endsAt, this.teaching.timeZone())
+    )
       throw new AttendanceConflictException(
         'ATTENDANCE_START_DAY_CLOSED',
         'Use staff recovery outside the session calendar days',
@@ -765,6 +771,7 @@ export class AttendanceService {
     ctx: SessionContext,
     actor: AuthenticatedUser,
     now: Date,
+    enforceTime = true,
   ): AttendancePermissionsDto {
     const s = ctx.session;
     const writable =
@@ -776,7 +783,7 @@ export class AttendanceService {
       canStart:
         s.status === SessionStatus.SCHEDULED &&
         [ClassStatus.OPEN, ClassStatus.IN_PROGRESS].includes(ctx.classEntity.status) &&
-        isAttendanceStartDay(now, s.startsAt, s.endsAt, this.teaching.timeZone()),
+        (!enforceTime || isAttendanceStartDay(now, s.startsAt, s.endsAt, this.teaching.timeZone())),
       canEditAttendance:
         writable &&
         (s.status === SessionStatus.IN_PROGRESS ||
@@ -803,7 +810,9 @@ export class AttendanceService {
   ): Promise<AttendanceSessionDto> {
     const session = (await this.teaching.sessionViews(m, [ctx.session], now))[0];
     if (!session) throw new Error('Missing session view');
-    return { ...session, permissions: this.permissions(ctx, actor, now) };
+    const enforceTime =
+      ctx.session.status !== SessionStatus.SCHEDULED || (await sessionStartTimeEnforced(m));
+    return { ...session, permissions: this.permissions(ctx, actor, now, enforceTime) };
   }
 
   private async totals(m: EntityManager, id: string): Promise<AttendanceTotalsDto> {

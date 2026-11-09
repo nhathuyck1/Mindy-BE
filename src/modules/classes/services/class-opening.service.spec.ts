@@ -7,6 +7,26 @@ import { ClassOpeningService } from './class-opening.service.js';
 
 describe('Class opening cutoff policy', () => {
   it.each([2, 3, 4])(
+    'demo waives time but preserves the minimum paid active students (%i)',
+    async (count) => {
+      const db = new DataSource({ type: 'postgres' });
+      vi.spyOn(db.manager, 'query').mockResolvedValue([
+        {
+          classId: 'class',
+          activeStudentCount: count,
+          cutoffCount: count,
+          scheduledStartAt: new Date('2026-11-05T02:30:00Z'),
+          now: new Date('2026-11-04T02:30:00Z'),
+          blocked: false,
+        },
+      ]);
+      const c = Object.assign(new ClassEntity(), { id: 'class', status: ClassStatus.OPEN });
+      const start = new ClassOpeningService(db).assertCanStart(db.manager, c, true);
+      if (count < 3) await expect(start).rejects.toThrow('TOO_EARLY');
+      else await expect(start).resolves.toBeUndefined();
+    },
+  );
+  it.each([2, 3, 4])(
     'requires at least 3 paid active students at scheduled start (%i)',
     async (count) => {
       const db = new DataSource({ type: 'postgres' });

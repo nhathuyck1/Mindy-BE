@@ -113,8 +113,11 @@ export class ClassOpeningService {
     return started;
   }
 
-  async assertCanStart(m: EntityManager, c: ClassEntity): Promise<void> {
+  async assertCanStart(m: EntityManager, c: ClassEntity, skipTime = false): Promise<void> {
     const e = await this.eligibility(m, c);
+    // Waive only the future schedule; the paid active minimum still applies.
+    if (skipTime && e.startEligibility === 'TOO_EARLY' && e.activeStudentCount >= e.minStudents)
+      return;
     if (e.startEligibility !== 'ELIGIBLE')
       throw new TeachingConflictException(
         'CLASS_START_INELIGIBLE',

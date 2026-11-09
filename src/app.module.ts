@@ -18,6 +18,7 @@ import { ManagerOperationsModule } from './modules/manager-operations/manager-op
 import { MaterialsModule } from './modules/materials/materials.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module.js';
 import { TeachingOperationsModule } from './modules/teaching-operations/teaching-operations.module.js';
 import { TrackingModule } from './modules/tracking/tracking.module.js';
 import { UsersModule } from './modules/users/users.module.js';
@@ -25,6 +26,7 @@ import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
 
 @Module({
   imports: [
+    SystemSettingsModule,
     DashboardModule,
     WhiteboardsModule,
     ChatModule,
