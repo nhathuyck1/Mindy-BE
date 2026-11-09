@@ -57,14 +57,14 @@ describe('System rules', () => {
     const query = vi
       .spyOn(db.manager, 'query')
       .mockResolvedValueOnce([{ version: 1, value: true }])
-      .mockResolvedValueOnce([{ key: SESSION_START_TIME_RULE, version: 2, value: false }])
+      .mockResolvedValueOnce([[{ key: SESSION_START_TIME_RULE, version: 2, value: false }], 1])
       .mockResolvedValueOnce([]);
     const result = await new SystemRulesService(db).update(
       SESSION_START_TIME_RULE,
       { value: false, expectedVersion: 1, reason: 'Demo' },
       'admin',
     );
-    expect(result.value).toBe(false);
+    expect(result).toMatchObject({ key: SESSION_START_TIME_RULE, value: false, version: 2 });
     expect(query.mock.calls[2]?.[1]).toEqual([
       SESSION_START_TIME_RULE,
       true,

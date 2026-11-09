@@ -285,6 +285,11 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     const disabled = await updateRule(false, rule.version, adminCookie);
     expect(disabled.status, await disabled.clone().text()).toBe(200);
     const disabledRule = (await disabled.json()) as { version: number };
+    expect(disabledRule).toMatchObject({
+      key: rule.key,
+      value: false,
+      version: rule.version + 1,
+    });
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);
     expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as {

@@ -37,7 +37,8 @@ export class SystemRulesService {
       if (!old) throw new NotFoundException('Unknown system rule');
       if (old.version !== input.expectedVersion)
         throw new ConflictException('Rule changed; reload before editing');
-      const updated: SystemRule[] = await m.query(
+      // PostgreSQL UPDATE returns [rows, affectedCount] through TypeORM's raw query API.
+      const [updated]: [SystemRule[], number] = await m.query(
         `UPDATE system_rules SET value=$2,version=version+1,updated_at=clock_timestamp(),updated_by=$3 WHERE key=$1 RETURNING ${columns}`,
         [key, input.value, actorId],
       );
