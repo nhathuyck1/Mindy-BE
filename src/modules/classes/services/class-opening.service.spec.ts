@@ -21,11 +21,16 @@ describe('Class opening cutoff policy', () => {
         },
       ]);
       const c = Object.assign(new ClassEntity(), { id: 'class', status: ClassStatus.OPEN });
+      const save = vi.spyOn(db.manager.getRepository(ClassEntity), 'save').mockResolvedValue(c);
       const start = new ClassOpeningService(db).assertCanStart(db.manager, c, {
         allowEarlyStart: true,
       });
       if (count < 3) await expect(start).rejects.toThrow('RESCHEDULE_REQUIRED');
-      else await expect(start).resolves.toBeUndefined();
+      else {
+        await expect(start).resolves.toBeUndefined();
+        expect(save).toHaveBeenCalledWith(c);
+        expect(c.status).toBe(ClassStatus.IN_PROGRESS);
+      }
     },
   );
   it.each([2, 3, 4])(
