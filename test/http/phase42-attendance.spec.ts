@@ -258,6 +258,38 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     );
     const key = randomUUID(),
       input = { expectedVersion: s.version };
+    const blocked = await request(`${path}/start`, mentorCookie, input, 'POST', randomUUID());
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({ code: 'SESSION_START_TOO_EARLY' });
+    const rulesResponse = await request('/admin/system-rules', adminCookie);
+    expect(rulesResponse.status).toBe(200);
+    const rules = (await rulesResponse.json()) as {
+      key: string;
+      value: boolean;
+      version: number;
+    }[];
+    const rule = rules.find((item) => item.key === 'session_start_time_enforced');
+    if (!rule) throw new Error('Missing session time rule');
+    expect(rule.value).toBe(true);
+    const updateRule = (value: boolean, expectedVersion: number, cookie: string) =>
+      fetch(`${url}/admin/system-rules/${rule.key}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          origin: 'http://localhost:3001',
+          cookie,
+        },
+        body: JSON.stringify({ value, expectedVersion, reason: 'HTTP early start rehearsal' }),
+      });
+    expect((await updateRule(false, rule.version, mentorCookie)).status).toBe(403);
+    const disabled = await updateRule(false, rule.version, adminCookie);
+    expect(disabled.status, await disabled.clone().text()).toBe(200);
+    const disabledRule = (await disabled.json()) as { version: number };
+    expect(disabledRule).toMatchObject({
+      key: rule.key,
+      value: false,
+      version: rule.version + 1,
+    });
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);
     expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as {
@@ -273,6 +305,8 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       Date.parse(start.session.startsAt),
     );
     expect(start.totals.unmarked).toBe(1);
+    const restored = await updateRule(true, disabledRule.version, adminCookie);
+    expect(restored.status, await restored.clone().text()).toBe(200);
     expect(await (await request(`${path}/start`, mentorCookie, input, 'POST', key)).json()).toEqual(
       start,
     );

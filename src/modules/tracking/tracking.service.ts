@@ -23,6 +23,7 @@ const NORMALIZED = `WITH raw_events AS (
       WHEN 'mentor_leave_audits' THEN 'LEAVE_UPDATE' WHEN 'makeup_placement_audits' THEN 'PLACEMENT_STATUS_CHANGE'
       WHEN 'class_unit_release_audit' THEN 'LEGACY_UNIT_RELEASE' WHEN 'attendance_recovery_audits' THEN 'RECOVER' ELSE 'UPDATE' END) AS action,
     CASE WHEN e.source='material_audit_events' THEN 'material'
+      WHEN e.source='system_rule_audits' THEN 'system_rule'
       WHEN e.source IN ('assignment_audits','assignment_zip_audits') THEN
         CASE WHEN e.data->>'submission_id' IS NOT NULL THEN 'assignment_submission' ELSE 'assignment' END
       WHEN e.source='attendance_audits' THEN 'attendance'
@@ -48,7 +49,7 @@ const NORMALIZED = `WITH raw_events AS (
   LEFT JOIN class_units u ON u.id=s.class_unit_id
   LEFT JOIN materials material ON e.source='material_audit_events' AND material.id=(e.data->>'material_id')::uuid
 )`;
-const FIELDS = `e.id,e.source,e.action,CASE WHEN e.actor_id IS NULL THEN NULL ELSE jsonb_build_object('id',e.actor_id,'displayName',actor.display_name) END AS actor,
+const FIELDS = `e.id,e.source,e.action,CASE WHEN e.actor_id IS NULL THEN NULL ELSE jsonb_build_object('id',e.actor_id,'displayName',actor.display_name,'role',actor.role) END AS actor,
   e.entity_type AS "entityType",e.entity_id AS "entityId",e.class_id AS "classId",e.session_id AS "sessionId",
   e.version,e.reason,e.occurred_at AS "occurredAt"`;
 
@@ -75,6 +76,7 @@ export class TrackingService {
       };
       if (query.source) filter('e.source=?', query.source);
       if (query.actorId) filter('e.actor_id=?::uuid', query.actorId);
+      if (query.actorRole) filter('actor.role=?', query.actorRole);
       if (query.entityId) filter('e.entity_id=?::uuid', query.entityId);
       if (query.classId) {
         params.push(query.classId);
@@ -89,7 +91,7 @@ export class TrackingService {
       if (query.to) filter('e.occurred_at<?::timestamptz', query.to);
       const predicate = where.length ? `WHERE ${where.join(' AND ')}` : '';
       const counts: { total: number }[] = await m.query(
-        `${NORMALIZED} SELECT count(*)::int AS total FROM events e ${predicate}`,
+        `${NORMALIZED} SELECT count(*)::int AS total FROM events e LEFT JOIN users actor ON actor.id=e.actor_id ${predicate}`,
         params,
       );
       const items: TrackingEventDto[] = await m.query(

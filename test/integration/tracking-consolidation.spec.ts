@@ -9,6 +9,8 @@ import { ClassUnitReleaseAudit1791856800000 } from '../../src/database/migration
 import { TeachingNotes1792627200000 } from '../../src/database/migrations/1792627200000-teaching-notes.js';
 import { ConsolidateTracking1792627200002 } from '../../src/database/migrations/1792627200002-consolidate-tracking.js';
 import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
+import { ConsolidateSystemRuleAudits1794182400001 } from '../../src/database/migrations/1794182400001-consolidate-system-rule-audits.js';
+import { SystemRulesService } from '../../src/modules/system-settings/system-rules.service.js';
 import { TrackingService } from '../../src/modules/tracking/tracking.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
@@ -158,5 +160,53 @@ describe.skipIf(!separateTestUrl('tracking'))('Consolidated tracking PostgreSQL'
     expect(
       (await tracking.list(admin, { page: 1, pageSize: 20, from: '2099-01-01T00:00:00Z' })).total,
     ).toBe(0);
+    // Preserve existing rule history and the legacy write contract during consolidation.
+    const settings = new SystemRulesService(db);
+    await settings.update(
+      'session_start_time_enforced',
+      { value: false, expectedVersion: 1, reason: 'Demo before consolidation' },
+      admin.userId,
+    );
+    await rehearseMigration(db, new ConsolidateSystemRuleAudits1794182400001(), 'up');
+    await settings.update(
+      'session_start_time_enforced',
+      { value: true, expectedVersion: 2, reason: 'Restore schedule rule' },
+      admin.userId,
+    );
+    const ruleHistory = await tracking.list(admin, {
+      page: 1,
+      pageSize: 1,
+      source: 'system_rule_audits',
+      actorRole: UserRole.ADMIN,
+    });
+    expect(ruleHistory.total).toBe(2);
+    expect(ruleHistory.items).toHaveLength(1);
+    expect(ruleHistory.items[0]?.actor?.role).toBe(UserRole.ADMIN);
+    expect(ruleHistory.items[0]?.entityType).toBe('system_rule');
+    const ruleEvent = ruleHistory.items[0];
+    if (!ruleEvent) throw new Error('Missing rule event');
+    const ruleDetail = await tracking.detail(admin, ruleEvent.source, ruleEvent.id);
+    expect(ruleDetail.data).toMatchObject({
+      rule_key: 'session_start_time_enforced',
+      old_value: false,
+      new_value: true,
+      version: 3,
+    });
+    expect(
+      (
+        await tracking.list(admin, {
+          page: 1,
+          pageSize: 20,
+          source: 'system_rule_audits',
+          actorRole: UserRole.MENTOR,
+        })
+      ).total,
+    ).toBe(0);
+    await expect(db.query('DELETE FROM system_rule_audits')).rejects.toMatchObject({
+      code: '23514',
+    });
+    await expect(
+      db.query("UPDATE audit_events SET data='{}' WHERE source='system_rule_audits'"),
+    ).rejects.toMatchObject({ code: '23514' });
   });
 });

@@ -1,8 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsISO8601, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsIn,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { PageOptionsDto } from '../../common/dtos/page-options.dto.js';
+import { UserRole } from '../users/user-role.enum.js';
 
 export const TRACKING_SOURCES = [
+  'system_rule_audits',
   'material_audit_events',
   'teaching_assignment_audits',
   'session_lifecycle_audits',
@@ -19,6 +30,10 @@ export const TRACKING_SOURCES = [
   'assignment_zip_audits',
 ] as const;
 export class TrackingQueryDto extends PageOptionsDto {
+  @ApiPropertyOptional({ enum: UserRole, description: 'Current role of the event actor' })
+  @IsOptional()
+  @IsEnum(UserRole)
+  readonly actorRole?: UserRole;
   @ApiPropertyOptional({ enum: TRACKING_SOURCES })
   @IsOptional()
   @IsIn(TRACKING_SOURCES)
@@ -48,7 +63,7 @@ export class TrackingEventDto {
     nullable: true,
     description: 'Current actor display name; null for system events',
   })
-  readonly actor!: { id: string; displayName: string | null } | null;
+  readonly actor!: { id: string; displayName: string | null; role: UserRole | null } | null;
   @ApiProperty() readonly entityType!: string;
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly entityId!: string | null;
   @ApiProperty({ type: String, format: 'uuid', nullable: true }) readonly classId!: string | null;

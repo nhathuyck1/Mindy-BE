@@ -70,6 +70,28 @@ Giữ CORS_ORIGINS là danh sách origin FE thật, không wildcard; MinIO nhậ
 allowlist từ override. Dùng secret chỉ gồm chữ/số giúp tránh lỗi quoting env.
 Bucket mới không có policy public; versioning sẽ bật bằng provisioning.
 
+### FE localhost dùng storage trên VPS
+
+FE local có thể gọi API trên VPS nhưng ảnh vẫn PUT trực tiếp tới storage. Nếu
+preview hiện mà Gửi bị khóa, kiểm preflight bằng script đọc-only:
+
+```bash
+node tools/minio/check-browser-cors.mjs https://storage.quanh123.id.vn/mindy-center http://localhost:3001
+```
+
+HTTP 204 thiếu `Access-Control-Allow-Origin` vẫn bị browser chặn. Thêm chính xác
+`http://localhost:3001` vào danh sách `CORS_ORIGINS` trong `.env.production` trên
+VPS, giữ các origin đang có. Compose truyền danh sách này qua
+`MINIO_API_CORS_ALLOW_ORIGIN`; cần recreate MinIO để áp dụng env mới:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml -f compose.files-production.yaml up -d --no-deps --force-recreate minio
+```
+
+Chạy lại script, rồi thử upload ảnh không kèm chữ từ FE. Việc sửa file env local
+hoặc restart Next.js không thay CORS trên storage VPS. Không dùng wildcard hoặc
+đổi bucket thành public.
+
 ## 2. Dựng storage và tạo bucket/tài khoản
 
 Định nghĩa function trong shell đang dùng (chạy lại nếu mở shell mới):

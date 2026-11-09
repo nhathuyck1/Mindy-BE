@@ -86,7 +86,7 @@ describe.skipIf(!separateTestUrl('be_dashboard'))(
       expect(result.summary.students).toBe(1);
       expect(result.summary.primaryClasses).toBe(0);
       await db.query(
-        "UPDATE class_sessions SET status='COMPLETED', teaching_mentor_id=$2, starts_at=clock_timestamp()-interval '2 hours', ends_at=clock_timestamp()-interval '1 hour', actual_started_at=clock_timestamp()-interval '2 hours', actual_ended_at=clock_timestamp()-interval '30 minutes' WHERE id=$1",
+        "UPDATE class_sessions SET status='COMPLETED', teaching_mentor_id=$2, starts_at=statement_timestamp()-interval '2 hours', ends_at=statement_timestamp()-interval '1 hour', actual_started_at=statement_timestamp()-interval '2 hours', actual_ended_at=statement_timestamp()-interval '30 minutes' WHERE id=$1",
         [session.id, substitute.id],
       );
       await db.query('UPDATE classes SET mentor_id=$2 WHERE id=$1', [

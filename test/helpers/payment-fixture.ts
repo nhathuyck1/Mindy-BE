@@ -25,6 +25,7 @@ import { CrossClassMakeup1792022400001 } from '../../src/database/migrations/179
 import { MentorLeave1792195200000 } from '../../src/database/migrations/1792195200000-mentor-leave.js';
 import { ClassOpening1793836800000 } from '../../src/database/migrations/1793836800000-class-opening.js';
 import { MaterialRetention1793836800001 } from '../../src/database/migrations/1793836800001-material-retention.js';
+import { SystemRules1794182400000 } from '../../src/database/migrations/1794182400000-system-rules.js';
 import { AuthSessionEntity } from '../../src/modules/auth/auth-session.entity.js';
 import { EmailVerificationTokenEntity } from '../../src/modules/auth/email-verification-token.entity.js';
 import { RefreshTokenEntity } from '../../src/modules/auth/refresh-token.entity.js';
@@ -152,6 +153,7 @@ export async function paymentDatabase(
         AttendanceRecoveryEvidence1791849600003,
         CrossClassMakeup1792022400001,
         ClassOpening1793836800000,
+        SystemRules1794182400000,
         ...(extra.migrations?.includes(TypedManagerMaterials1791849600000)
           ? [MaterialRetention1793836800001]
           : []),
