@@ -21,8 +21,10 @@ describe('Class opening cutoff policy', () => {
         },
       ]);
       const c = Object.assign(new ClassEntity(), { id: 'class', status: ClassStatus.OPEN });
-      const start = new ClassOpeningService(db).assertCanStart(db.manager, c, true);
-      if (count < 3) await expect(start).rejects.toThrow('TOO_EARLY');
+      const start = new ClassOpeningService(db).assertCanStart(db.manager, c, {
+        allowEarlyStart: true,
+      });
+      if (count < 3) await expect(start).rejects.toThrow('RESCHEDULE_REQUIRED');
       else await expect(start).resolves.toBeUndefined();
     },
   );

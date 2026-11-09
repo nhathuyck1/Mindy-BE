@@ -67,11 +67,16 @@ describe.skipIf(!separateTestUrl('be_changes'))('BE change plan PostgreSQL contr
       startEligibility: 'TOO_EARLY',
     });
   });
-  it.each([2, 3])(
-    'enforces the real opening policy when a mentor starts a session with %i paid students',
-    async (count) => {
+  it.each([
+    [2, false],
+    [3, false],
+    [2, true],
+    [3, true],
+  ] as const)(
+    'requires three paid students to start a session (%i paid, before scheduled time: %s)',
+    async (count, early) => {
       const a = await paidClass(count);
-      await reachStart(a.id);
+      if (!early) await reachStart(a.id);
       const lifecycle = new SessionLifecycleService(f.config, opening);
       const start = () =>
         db.transaction(async (m) => {
@@ -88,11 +93,24 @@ describe.skipIf(!separateTestUrl('be_changes'))('BE change plan PostgreSQL contr
         expect((await f.read.getDetail(a.id)).units[0]?.sessions[0]?.actualStartedAt).toBeNull();
       } else {
         await start();
-        expect((await f.read.getDetail(a.id)).classEntity.status).toBe('IN_PROGRESS');
-        expect((await f.read.getDetail(a.id)).units[0]?.sessions[0]).toMatchObject({
+        const detail = await f.read.getDetail(a.id);
+        expect(detail.classEntity.status).toBe('IN_PROGRESS');
+        const session = detail.units[0]?.sessions[0];
+        expect(session).toMatchObject({
           status: 'IN_PROGRESS',
           teachingMentorId: a.mentor.id,
         });
+        if (early) {
+          expect(session?.actualStartedAt?.getTime()).toBeLessThan(
+            session?.startsAt.getTime() ?? 0,
+          );
+          expect(
+            await db.query(
+              'SELECT outcome, active_student_count FROM class_opening_decisions WHERE class_id=$1',
+              [a.id],
+            ),
+          ).toEqual([{ outcome: 'STARTED', active_student_count: 3 }]);
+        }
       }
     },
   );

@@ -28,7 +28,7 @@ Implementation và evidence: [progress](progress/BE_CHANGE_PROGRESS.md), [flow](
 - Thiếu người thì giữ `OPEN`, tạo cảnh báo bền vững cho manager gồm lớp, giờ khai giảng, số người hiện có và số còn thiếu.
 - Sau lần khai giảng bị chặn, không tự mở lớp vì có người thanh toán muộn. Manager phải dời lịch sang mốc mới.
 - Worker chạy mỗi 15 giây, xử lý lại khi khởi động và an toàn khi chạy nhiều replica. Quyết định khai giảng dùng dữ liệu thanh toán tại mốc đã lên lịch.
-- Các đường hiện có như API start lớp và mentor bắt đầu buổi học phải dùng chung guard; không được bỏ qua ngưỡng 3 người hoặc bắt đầu sớm.
+- API start lớp và worker dùng giờ khai giảng đã xếp. Cập nhật 06/11/2026 cho demo: mentor có thể bắt đầu buổi trước giờ trong ngày lịch; lớp OPEN vẫn phải đủ 3 học viên hợp lệ tại thời điểm bắt đầu sớm.
 - API lớp bổ sung `minStudents`, `activeStudentCount`, `scheduledStartAt`, `startEligibility` và lý do chưa thể khai giảng.
 
 ## 3. Đổi lịch và hoán đổi hai buổi

@@ -43,7 +43,8 @@ export class SessionLifecycleService {
         'SESSION_START_TOO_EARLY',
         'Session cannot start before its scheduled time',
       );
-    if (c.status === ClassStatus.OPEN) await this.opening.assertCanStart(m, c, !enforceTime);
+    if (c.status === ClassStatus.OPEN)
+      await this.opening.assertCanStart(m, c, { allowEarlyStart: !enforceTime });
     const old = s.status;
     s.status = SessionStatus.IN_PROGRESS;
     s.actualStartedAt = at;
