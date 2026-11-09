@@ -68,27 +68,41 @@ describe.skipIf(!separateTestUrl('be_changes'))('BE change plan PostgreSQL contr
     });
   });
   it.each([
-    [2, false],
-    [3, false],
-    [2, true],
-    [3, true],
+    [2, false, true],
+    [3, false, true],
+    [2, true, true],
+    [3, true, true],
+    [2, false, false],
+    [3, false, false],
+    [2, true, false],
+    [3, true, false],
   ] as const)(
-    'requires three paid students to start a session (%i paid, before scheduled time: %s)',
-    async (count, early) => {
+    'enforces the schedule rule and paid minimum (%i paid, early: %s, rule enabled: %s)',
+    async (count, early, enforceTime) => {
       const a = await paidClass(count);
       if (!early) await reachStart(a.id);
       const lifecycle = new SessionLifecycleService(f.config, opening);
       const start = () =>
         db.transaction(async (m) => {
+          // Keep the rule change scoped to this test transaction, including failed starts.
+          await m.query('UPDATE system_rules SET value=$1 WHERE key=$2', [
+            enforceTime,
+            'session_start_time_enforced',
+          ]);
           const c = await m.getRepository(ClassEntity).findOneByOrFail({ id: a.id });
           const s = await m.getRepository(ClassSessionEntity).findOneByOrFail({
             classUnitId: (await f.read.getDetail(a.id)).units[0]?.unit.id ?? '',
           });
           await lifecycle.start(m, c, s, a.mentor.id, new Date());
+          await m.query(
+            "UPDATE system_rules SET value=true WHERE key='session_start_time_enforced'",
+          );
         });
-      if (count < 3) {
+      if ((early && enforceTime) || count < 3) {
         await expect(start()).rejects.toMatchObject({
-          response: { code: 'CLASS_START_INELIGIBLE' },
+          response: {
+            code: early && enforceTime ? 'SESSION_START_TOO_EARLY' : 'CLASS_START_INELIGIBLE',
+          },
         });
         expect((await f.read.getDetail(a.id)).units[0]?.sessions[0]?.actualStartedAt).toBeNull();
       } else {
