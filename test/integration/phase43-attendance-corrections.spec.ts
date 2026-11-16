@@ -1,5 +1,6 @@
 import { GuestAttendanceService } from '../../src/modules/attendance/services/guest-attendance.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -68,7 +69,7 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
     attendance = new AttendanceService(
       db,
       teaching,
-      new SessionLifecycleService(f.config),
+      new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
       new MentorConflictService(),
       f.enrollments,
       f.users,
@@ -290,9 +291,12 @@ describe.skipIf(!separateTestUrl('phase43'))('Phase 4.3 corrections/recovery (Po
         },
       ],
     };
+    // Prepare the actor before starting either operation so allSettled attaches
+    // rejection handlers immediately, even when recovery rejects before payment.
+    const manager = await f.user(UserRole.MANAGER);
     const results = await Promise.allSettled([
       attendance.recover(a.sessionId, body, staff, key),
-      f.cash.confirm((await f.user(UserRole.MANAGER)).id, a.order.id, a.order.totalAmount),
+      f.cash.confirm(manager.id, a.order.id, a.order.totalAmount),
     ]);
     expect(results[1]?.status).toBe('fulfilled');
     if (results[0]?.status === 'rejected')

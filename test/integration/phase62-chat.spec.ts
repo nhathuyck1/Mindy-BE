@@ -29,6 +29,7 @@ import { validateBinary } from '../../src/modules/files/validation/binary-valida
 import { PayosPaymentDetailEntity } from '../../src/modules/payments/entities/payos-payment-detail.entity.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import { chatDatabase } from '../helpers/chat-fixture.js';
 import { fileConfig } from '../helpers/files-fixture.js';
 import { paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
@@ -44,6 +45,12 @@ describe.skipIf(!separateTestUrl('phase6'))(
       jobs: ChatJobsService;
     beforeAll(async () => {
       db = await chatDatabase();
+      // This journey invokes AssignmentsService, so it needs its current audit schema too.
+      for (const Migration of ASSIGNMENT_MIGRATIONS) {
+        if (!db.migrations.some((m) => m.constructor.name === Migration.name))
+          db.migrations.push(new Migration());
+      }
+      await db.runMigrations();
       f = paymentFixture(db);
       const config = new ConfigService({
         CHAT_ENABLED: true,

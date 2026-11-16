@@ -21,6 +21,7 @@ import type {
   ZipRow,
   ZipView,
 } from '../zip.types.js';
+import { writeAssignmentAudit } from './assignment-audit.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { ZipAccessService } from './zip-access.service.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
@@ -51,9 +52,16 @@ export class ZipSubmissionsService {
     gradeId: string | null = null,
     reason: string | null = null,
   ): Promise<void> {
-    await m.query(
-      'INSERT INTO assignment_zip_audits(assignment_id,actor_id,action,version,submission_id,grade_id,reason) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [assignmentId, actorId, action, version, submissionId, gradeId, reason],
+    await writeAssignmentAudit(
+      m,
+      'assignment_zip_audits',
+      assignmentId,
+      actorId,
+      action,
+      version,
+      reason,
+      submissionId,
+      gradeId,
     );
   }
   async replaceInstructions(
@@ -218,12 +226,8 @@ export class ZipSubmissionsService {
       if (f.status !== 'READY' || !f.object_version_id)
         throw new AssignmentException(409, 'FILE_NOT_READY');
       await m.query(
-        'INSERT INTO assignment_zip_submission_files(submission_id,assignment_id,student_id,file_id,object_version_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(submission_id) DO UPDATE SET file_id=EXCLUDED.file_id,object_version_id=EXCLUDED.object_version_id',
-        [s.id, s.assignment_id, s.student_id, f.id, f.object_version_id],
-      );
-      await m.query(
-        'UPDATE assignment_zip_submissions SET version=version+1,updated_at=clock_timestamp() WHERE id=$1',
-        [s.id],
+        'UPDATE assignment_zip_submissions SET file_id=$2,object_version_id=$3,version=version+1,updated_at=clock_timestamp() WHERE id=$1',
+        [s.id, f.id, f.object_version_id],
       );
       await this.audit(m, s.assignment_id, actor.userId, 'ATTACH', s.version + 1, s.id);
       const outcome = await this.view(m, { ...s, version: s.version + 1 }, actor);
@@ -260,8 +264,8 @@ export class ZipSubmissionsService {
       const { assignment: a } = await this.access.work(m, actor, s.assignment_id);
       const attempt = await this.attemptLimit(m, a, actor.userId);
       const files: AssignmentFileRow[] = await m.query(
-        `SELECT f.* FROM assignment_zip_submission_files b JOIN assignment_files f ON f.id=b.file_id
-        WHERE b.submission_id=$1 AND f.status='READY' AND b.object_version_id=f.object_version_id FOR UPDATE OF f`,
+        `SELECT f.* FROM assignment_zip_submissions b JOIN assignment_files f ON f.id=b.file_id
+        WHERE b.id=$1 AND f.status='READY' AND b.object_version_id=f.object_version_id FOR UPDATE OF f`,
         [s.id],
       );
       if (files.length !== 1) throw new AssignmentException(409, 'FILE_NOT_READY');
@@ -306,12 +310,8 @@ export class ZipSubmissionsService {
       const route = `grade:${s.id}`;
       const replay = await this.receipts.replay<ZipView>(m, actor.userId, route, receiptKey, input);
       if (replay) return replay;
-      await m.query(
-        'INSERT INTO assignment_zip_grades(submission_id) VALUES($1) ON CONFLICT DO NOTHING',
-        [s.id],
-      );
       const grades: { id: string; current_version: number }[] = await m.query(
-        'SELECT * FROM assignment_zip_grades WHERE submission_id=$1 FOR UPDATE',
+        'SELECT grade_id AS id,current_version FROM assignment_zip_submissions WHERE id=$1 FOR UPDATE',
         [s.id],
       );
       const g = grades[0];
@@ -327,7 +327,7 @@ export class ZipSubmissionsService {
         'INSERT INTO assignment_zip_grade_revisions(grade_id,version,score,feedback,actor_id,reason) VALUES($1,$2,$3,$4,$5,$6)',
         [g.id, version, input.score, input.feedback, actor.userId, input.reason ?? null],
       );
-      await m.query('UPDATE assignment_zip_grades SET current_version=$2 WHERE id=$1', [
+      await m.query('UPDATE assignment_zip_submissions SET current_version=$2 WHERE grade_id=$1', [
         g.id,
         version,
       ]);
@@ -361,9 +361,10 @@ export class ZipSubmissionsService {
       const replay = await this.receipts.replay<ZipView>(m, actor.userId, route, receiptKey, input);
       if (replay) return replay;
       const grades: { id: string; current_version: number; released_version: number | null }[] =
-        await m.query('SELECT * FROM assignment_zip_grades WHERE submission_id=$1 FOR UPDATE', [
-          s.id,
-        ]);
+        await m.query(
+          'SELECT grade_id AS id,current_version,released_version FROM assignment_zip_submissions WHERE id=$1 FOR UPDATE',
+          [s.id],
+        );
       const g = grades[0];
       if (
         !g ||
@@ -372,7 +373,7 @@ export class ZipSubmissionsService {
         g.released_version === g.current_version
       )
         throw new AssignmentException(409, 'GRADE_VERSION_CONFLICT');
-      await m.query('UPDATE assignment_zip_grades SET released_version=$2 WHERE id=$1', [
+      await m.query('UPDATE assignment_zip_submissions SET released_version=$2 WHERE grade_id=$1', [
         g.id,
         input.gradeVersion,
       ]);
@@ -391,21 +392,21 @@ export class ZipSubmissionsService {
     return this.db.transaction('REPEATABLE READ', async (m) => {
       const s = await this.access.submission(m, actor, id);
       const counts: { total: number }[] = await m.query(
-        'SELECT count(*)::int AS total FROM assignment_zip_grade_revisions r JOIN assignment_zip_grades g ON g.id=r.grade_id WHERE g.submission_id=$1',
+        'SELECT count(*)::int AS total FROM assignment_zip_grade_revisions r JOIN assignment_zip_submissions g ON g.grade_id=r.grade_id WHERE g.id=$1',
         [s.id],
       );
       const items: GradeRevision[] = await m.query(
         `SELECT r.version,r.score,r.feedback,r.actor_id AS "actorId",r.reason,r.created_at AS "createdAt"
-        FROM assignment_zip_grade_revisions r JOIN assignment_zip_grades g ON g.id=r.grade_id WHERE g.submission_id=$1 ORDER BY r.version DESC LIMIT $2 OFFSET $3`,
+        FROM assignment_zip_grade_revisions r JOIN assignment_zip_submissions g ON g.grade_id=r.grade_id WHERE g.id=$1 ORDER BY r.version DESC LIMIT $2 OFFSET $3`,
         [s.id, page.pageSize, (page.page - 1) * page.pageSize],
       );
       const audits = await m.query(
-        `SELECT action,version,actor_id AS "actorId",reason,created_at AS "createdAt" FROM assignment_zip_audits
-        WHERE submission_id=$1 AND action IN ('GRADE','RELEASE') ORDER BY created_at DESC,id LIMIT $2 OFFSET $3`,
+        `SELECT data->>'action' AS action,(data->>'version')::integer AS version,actor_id AS "actorId",data->>'reason' AS reason,occurred_at AS "createdAt" FROM audit_events
+        WHERE source='assignment_zip_audits' AND (data->>'submission_id')::uuid=$1 AND data->>'action' IN ('GRADE','RELEASE') ORDER BY occurred_at DESC,id LIMIT $2 OFFSET $3`,
         [s.id, page.pageSize, (page.page - 1) * page.pageSize],
       );
       const auditCount: { total: number }[] = await m.query(
-        "SELECT count(*)::int AS total FROM assignment_zip_audits WHERE submission_id=$1 AND action IN ('GRADE','RELEASE')",
+        "SELECT count(*)::int AS total FROM audit_events WHERE source='assignment_zip_audits' AND (data->>'submission_id')::uuid=$1 AND data->>'action' IN ('GRADE','RELEASE')",
         [s.id],
       );
       return {
@@ -420,7 +421,7 @@ export class ZipSubmissionsService {
   async view(m: EntityManager, s: ZipRow, actor: AuthenticatedUser): Promise<ZipView> {
     const files: NonNullable<ZipView['file']>[] = await m.query(
       `SELECT f.id,f.original_name AS "originalFilename",f.declared_mime_type AS "mimeType",f.declared_size_bytes AS "sizeBytes"
-      FROM assignment_zip_submission_files b JOIN assignment_files f ON f.id=b.file_id WHERE b.submission_id=$1`,
+      FROM assignment_zip_submissions b JOIN assignment_files f ON f.id=b.file_id WHERE b.id=$1`,
       [s.id],
     );
     const mentor = actor.role === UserRole.MENTOR;
@@ -432,7 +433,7 @@ export class ZipSubmissionsService {
       feedback: string;
     }[] = await m.query(
       `SELECT g.current_version,g.released_version,r.version,r.score,r.feedback
-      FROM assignment_zip_grades g LEFT JOIN assignment_zip_grade_revisions r ON r.grade_id=g.id AND r.version=${mentor ? 'g.current_version' : 'g.released_version'} WHERE g.submission_id=$1`,
+      FROM assignment_zip_submissions g LEFT JOIN assignment_zip_grade_revisions r ON r.grade_id=g.grade_id AND r.version=${mentor ? 'g.current_version' : 'g.released_version'} WHERE g.id=$1`,
       [s.id],
     );
     const g = grades[0];

@@ -312,3 +312,7 @@ The repository has no active Nginx/Caddy config to apply or verify. Ensure upstr
 body limits permit 1MiB on this route before rollout (standard reverse proxy default);
 upstream 413 can have a different error body. App-level boundaries are verified directly
 against compiled HTTP locally.
+
+## 04/11/2026 — Kiểm tra trạng thái ZIP (read-only runtime review)
+
+Đã đối chiếu controller, file service/worker, validator và submit: pipeline draft → upload intent → storage PUT → complete/PROCESSING → worker READY → attach → submit đã có trong source Feat/Miro. Chạy lại5 validator tests PASS; Swagger live có endpoint ZIP/file. Local env bật ASSIGNMENT_ZIP_ENABLED, ASSIGNMENT_FILE_JOB_ENABLED và MINIO_ENABLED; đây không phải bằng chứng runtime production. Không có TEST_DATABASE_URL nên không chạy lại integration PostgreSQL/MinIO hoặc upload/nộp production. Evidence integration cũ giữ nguyên. Ghi nhận DTO AssignmentUploadInput khai max25MiB, service áp ZIP20MiB; chưa sửa contract/code trong lượt review.

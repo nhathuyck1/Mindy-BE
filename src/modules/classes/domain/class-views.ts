@@ -4,12 +4,14 @@ import type { UserEntity } from '../../users/user.entity.js';
 import type { ClassEntity } from '../entities/class.entity.js';
 import type { ClassSessionEntity } from '../entities/class-session.entity.js';
 import type { ClassUnitEntity } from '../entities/class-unit.entity.js';
+import type { ClassStartEligibility } from '../services/class-opening.service.js';
 
 /** A class together with the read-side data every listing needs. */
 export interface ClassView {
   readonly classEntity: ClassEntity;
   readonly mentorName: string | null;
   readonly occupiedSeats: number;
+  readonly opening?: ClassStartEligibility;
 }
 
 export interface ClassUnitView {

@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import {
   Inject,
   Injectable,
+  Logger,
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
@@ -20,12 +21,26 @@ import {
   BINARY_VALIDATOR,
   type BinaryValidator,
 } from '../files/services/binary-validation.service.js';
+import { fileProcessingDiagnostics } from '../files/services/file-processing-diagnostics.js';
 import { BOARD_RENDERER, type BoardRenderer } from './board-renderer.service.js';
 import type { BoardAssetRow, BoardExportRow } from './whiteboard-media.service.js';
 
 const exec = promisify(execFile);
+type MediaStage =
+  | 'CREATE_SCRATCH'
+  | 'READ_ASSETS'
+  | 'VALIDATE_ASSET'
+  | 'IMPORT_PDF'
+  | 'WRITE_IMAGE'
+  | 'PREPARE_RENDER'
+  | 'RENDER'
+  | 'READ_OUTPUT'
+  | 'STORE_OUTPUT'
+  | 'SAVE_RESULT';
+type ReportStage = (stage: MediaStage) => void;
 @Injectable()
 export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicationShutdown {
+  private readonly logger = new Logger(WhiteboardMediaWorker.name);
   private timer?: ReturnType<typeof setInterval>;
   private task?: Promise<void>;
   private active?: AbortController;
@@ -48,7 +63,12 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
     this.timer = setInterval(() => {
       if (!this.task && !this.stopping) {
         this.task = this.tick()
-          .catch(() => {})
+          .catch((error: unknown) => {
+            this.logger.error({
+              event: 'WHITEBOARD_WORKER_ERROR',
+              ...fileProcessingDiagnostics(error),
+            });
+          })
           .finally(() => {
             this.task = undefined;
           });
@@ -66,7 +86,7 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
     );
     const asset = assets[0];
     if (asset) {
-      await this.process('whiteboard_assets', asset, () => this.asset(asset));
+      await this.process('whiteboard_assets', asset, (stage) => this.asset(asset, stage));
       return;
     }
     const [jobs]: [BoardExportRow[], number] = await this.db.query(
@@ -76,7 +96,7 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
       [token],
     );
     const job = jobs[0];
-    if (job) await this.process('whiteboard_exports', job, () => this.export(job));
+    if (job) await this.process('whiteboard_exports', job, (stage) => this.export(job, stage));
     else if (Date.now() - this.lastCleanup > 60000) {
       this.lastCleanup = Date.now();
       await this.cleanup();
@@ -119,16 +139,30 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
   private async process(
     table: 'whiteboard_assets' | 'whiteboard_exports',
     job: BoardAssetRow | BoardExportRow,
-    action: () => Promise<void>,
+    action: (reportStage: ReportStage) => Promise<void>,
   ): Promise<void> {
     const controller = new AbortController();
     this.active = controller;
     const timeout = setTimeout(() => controller.abort(), 150000);
     timeout.unref();
+    let stage: MediaStage = 'CREATE_SCRATCH';
     try {
       if (job.attempts > 3) throw new Error('Attempts exhausted');
-      await action();
-    } catch {
+      await action((value) => {
+        stage = value;
+      });
+    } catch (error: unknown) {
+      const errorCode =
+        table === 'whiteboard_exports' ? `BOARD_EXPORT_${stage}_FAILED` : 'BOARD_MEDIA_FAILED';
+      this.logger.warn({
+        event: job.attempts >= 3 ? 'WHITEBOARD_MEDIA_FAILED' : 'WHITEBOARD_MEDIA_RETRY',
+        jobId: job.id,
+        boardId: job.board_id,
+        attempt: job.attempts,
+        stage,
+        errorCode,
+        ...fileProcessingDiagnostics(error),
+      });
       // Failures are durable. No payload/parser/storage details are exposed to clients.
       await this.db.query(
         `UPDATE ${table} SET status=$3,error_code=$4,lease_until=NULL
@@ -137,7 +171,7 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
           job.id,
           job.lease_token,
           job.attempts >= 3 ? 'FAILED' : table === 'whiteboard_assets' ? 'PROCESSING' : 'QUEUED',
-          job.attempts >= 3 ? 'BOARD_MEDIA_FAILED' : null,
+          errorCode,
         ],
       );
     } finally {
@@ -221,18 +255,21 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
       size: png.data.length,
     };
   }
-  private async asset(a: BoardAssetRow): Promise<void> {
+  private async asset(a: BoardAssetRow, stage: ReportStage): Promise<void> {
     await this.scratch(async (directory) => {
+      stage('READ_ASSETS');
       const bytes = await this.bytes(a),
         source = join(directory, 'source');
       if (bytes.length !== a.size_bytes) throw new Error('Size mismatch');
       await writeFile(source, bytes);
+      stage('VALIDATE_ASSET');
       await this.validator.validate(
         source,
         { filename: a.filename, mimeType: a.mime_type, sizeBytes: a.size_bytes },
         this.signal(),
       );
       if (a.mime_type === 'application/pdf') {
+        stage('IMPORT_PDF');
         if (!this.config.get<boolean>('WHITEBOARD_PDF_ENABLED', false))
           throw new Error('PDF disabled');
         const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false });
@@ -297,6 +334,7 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
           );
         });
       } else {
+        stage('WRITE_IMAGE');
         const img = await this.writeImage(a, a.id, bytes);
         await this.db.query(
           `UPDATE whiteboard_assets SET status='READY',object_key=$3,object_version=$4,width=$5,height=$6,mime_type='image/png',lease_until=NULL
@@ -306,8 +344,9 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
       }
     });
   }
-  private async export(e: BoardExportRow): Promise<void> {
+  private async export(e: BoardExportRow, stage: ReportStage): Promise<void> {
     await this.scratch(async (directory) => {
+      stage('READ_ASSETS');
       const images: Record<string, string> = {};
       const ids = [...new Set(e.projection.flatMap((s) => (s.assetId ? [s.assetId] : [])))];
       if (ids.length) {
@@ -324,17 +363,21 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
           images[a.id] = `data:image/png;base64,${bytes.toString('base64')}`;
         }
       }
+      stage('PREPARE_RENDER');
       const input = join(directory, 'render.json'),
         output = join(directory, 'result');
       await writeFile(
         input,
         JSON.stringify({ shapes: e.projection, bounds: e.viewport, images, format: e.format }),
       );
+      stage('RENDER');
       await this.renderer.render(input, output, this.signal());
+      stage('READ_OUTPUT');
       const bytes = await readFile(output);
       if (bytes.length > 52428800 || !this.storage.put) throw new Error('Export quota');
       const bucket = this.config.getOrThrow<string>('MINIO_BUCKET'),
         key = `whiteboards/${e.board_id}/exports/${e.id}/${e.lease_token}`;
+      stage('STORE_OUTPUT');
       const version = await this.storage.put(
         bucket,
         key,
@@ -342,8 +385,9 @@ export class WhiteboardMediaWorker implements OnApplicationBootstrap, OnApplicat
         e.format === 'PNG' ? 'image/png' : 'application/pdf',
         this.signal(),
       );
+      stage('SAVE_RESULT');
       await this.db.query(
-        `UPDATE whiteboard_exports SET status='COMPLETED',bucket=$3,object_key=$4,object_version=$5,
+        `UPDATE whiteboard_exports SET status='COMPLETED',error_code=NULL,bucket=$3,object_key=$4,object_version=$5,
         completed_at=clock_timestamp(),lease_until=NULL WHERE id=$1 AND lease_token=$2 AND lease_until>clock_timestamp()`,
         [e.id, e.lease_token, bucket, key, version],
       );

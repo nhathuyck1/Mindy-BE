@@ -118,41 +118,26 @@ pnpm seed:data
 ```
 
 Configure `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_DISPLAY_NAME`
-and `SEED_ACCOUNT_PASSWORD` in `.env` first. `seed:data` runs admin → accounts →
-course/class → course images → class rosters, stopping if a step fails. It creates one admin,
-two mentors, three students, three categories, six courses with Unsplash images,
-27 course units, seven standard classes with 47 sessions, plus three current
-demo classes with ten upcoming Tuesday/Saturday sessions each (Vietnam time):
-HTML/CSS ONLINE 15:00–17:00 (five units), JavaScript ONLINE 15:00–17:00 (six units,
-different mentor), and Python OFFLINE 09:00–11:00 in Lab 2 (four units).
-Demo class codes are `<course-code>-10S-YYYYMMDD`, using the first session date.
-All ten sessions are distributed across each course's units in syllabus order.
-On 2026-10-12 all three demos run from 2026-10-13 to 2026-11-14; slots that have
-already started are skipped.
+and `SEED_ACCOUNT_PASSWORD` in `.env` first. `seed:data` runs admin → `seed:standard` on a freshly migrated DB. All dates are
+relative to the current Vietnam week; sessions use the teaching slots and every class
+has a saved weekly schedule. Every account uses `SEED_ACCOUNT_PASSWORD`:
 
-Rerunning does not duplicate rows. The existing admin is preserved; demo account
-passwords are reset to `SEED_ACCOUNT_PASSWORD` by the account seed. Course/class
-data and existing images are preserved; missing demo course images are filled.
-Use `pnpm seed:course-images` to fill images only, without seeding accounts/classes.
-Rerunning preserves a current demo cohort of each course until its end date, avoiding overlapping
-copies for the same mentor. Once it finishes, a new cohort gets a new date suffix.
-The three original students still need checkout/enrollment to see their personal calendar.
-The roster seed tops up `HTML-CSS-101-ON1` and `JS-101-ON1` to 20 occupied seats each,
-counting existing ACTIVE and PENDING_PAYMENT enrollments. Empty classes get up to
-40 distinct demo students with ACTIVE enrollments in total.
-Emails are `demo.html.01@example.com` through `demo.html.20@example.com` and
-`demo.js.01@example.com` through `demo.js.20@example.com`. New accounts use
-`SEED_ACCOUNT_PASSWORD`; existing accounts and effective enrollments are preserved.
-Each enrollment includes a demo PAID cash order, matching SUCCEEDED transaction,
-and NOT_STARTED progress for every class unit. These are fixtures, not real payments;
-the seed does not call payOS or send email. Their existing class timetables appear
-in the students' calendars. After accounts/classes exist, run only
-`pnpm seed:class-roster` to fill these two rosters. Both rosters commit atomically;
-incompatible accounts cause a rollback, and reruns create
-no duplicate accounts, orders, enrollments or progress. Other enrollments are retained,
-so existing real students count toward the target. Full classes and classes already
-at/above 20 are skipped; a lower capacity caps the target. No existing students are removed.
-The image seed stores fixed Unsplash CDN URLs; it does not fetch images at runtime.
+- Staff: `manager.ops@example.com`, `manager.sales@example.com`,
+  `mentor.frontend|backend|python@example.com`.
+- Students: `student.an|binh|chi@example.com`, `student.s01`…`student.s21@example.com`,
+  plus `student.suspended@example.com` (SUSPENDED).
+- Catalog: 3 categories, 6 courses (TS-201 inactive), 27 units, one published ARTICLE
+  material per active unit (no MinIO needed).
+- Classes: HTML-CSS-101-K01 COMPLETED; JS-101-K01 and PY-101-K01 IN_PROGRESS with
+  taught sessions, attendance and progress; REACT-201-K01 OPEN with a pending cash hold
+  and a cart item; NODE-201-K01 OPEN and full (5/5); HTML-CSS-101-K02 OPEN with two
+  students (below the 3-student opening minimum) and an expired payOS order;
+  JS-101-K02 DRAFT.
+- JS-101-K01 also has a graded quiz, an upcoming published quiz and a mentor material
+  waiting for review.
+
+Paid orders alternate manager-confirmed cash and settled payOS evidence; nothing calls
+payOS or sends email. Reruns reset seed passwords and skip classes whose code exists.
 
 For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`
 and `SEED_DEMO_CONFIRM=YES` to run the full demo seed.

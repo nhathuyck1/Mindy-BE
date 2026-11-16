@@ -24,6 +24,12 @@ export class ChatPageQuery {
   readonly limit: number = 20;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(2048) readonly cursor?: string;
 }
+export class ChatFileAccessQuery {
+  @ApiPropertyOptional({ enum: ['attachment', 'inline'], default: 'attachment' })
+  @IsOptional()
+  @IsIn(['attachment', 'inline'])
+  readonly disposition: 'attachment' | 'inline' = 'attachment';
+}
 export class ConversationQuery extends ChatPageQuery {
   @ApiPropertyOptional({ enum: ['GROUP', 'DIRECT'] })
   @IsOptional()

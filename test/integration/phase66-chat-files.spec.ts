@@ -144,6 +144,10 @@ describe.skipIf(!separateTestUrl('phase6'))(
       const link = await s.attachments.sign(f.mentor, f.id, sent.message.id);
       expect(new URL(link.url).searchParams.get('X-Amz-Expires')).toBe('60');
       expect(Buffer.from(await (await fetch(link.url)).arrayBuffer()).equals(bytes)).toBe(true);
+      const inline = await s.attachments.sign(f.mentor, f.id, sent.message.id, 'inline');
+      const response = await fetch(inline.url);
+      expect(response.headers.get('content-disposition')).toMatch(/^inline/);
+      expect(Buffer.from(await response.arrayBuffer()).equals(bytes)).toBe(true);
       await db.query("UPDATE classes SET status='COMPLETED' WHERE id=$1", [f.classId]);
       expect((await s.attachments.sign(f.mentor, f.id, sent.message.id)).url).toBeTruthy();
       await expect(
@@ -159,21 +163,29 @@ describe.skipIf(!separateTestUrl('phase6'))(
       ).toHaveLength(0);
       const pdf = await PDFDocument.create();
       pdf.addPage([100, 100]);
-      expect(
-        (
-          await ready(
-            f.student,
-            f.id,
-            Buffer.from(await pdf.save()),
-            'document.pdf',
-            'application/pdf',
-          )
-        ).status.status,
-      ).toBe('READY');
+      const pdfFile = await ready(
+        f.student,
+        f.id,
+        Buffer.from(await pdf.save()),
+        'document.pdf',
+        'application/pdf',
+      );
+      expect(pdfFile.status.status).toBe('READY');
+      const pdfMessage = await s.chat.send(f.student, f.id, {
+        clientMessageId: randomUUID(),
+        type: 'FILE',
+        fileObjectId: pdfFile.intent.fileId,
+      });
+      await expect(
+        s.attachments.sign(f.mentor, f.id, pdfMessage.message.id, 'inline'),
+      ).rejects.toMatchObject({ status: 422 });
       await s.chat.mutate(f.student, f.id, sent.message.id, randomUUID(), 1, null);
       await expect(s.attachments.sign(f.mentor, f.id, sent.message.id)).rejects.toMatchObject({
         status: 404,
       });
+      await expect(
+        s.attachments.sign(f.mentor, f.id, sent.message.id, 'inline'),
+      ).rejects.toMatchObject({ status: 404 });
     });
     it('rejects MIME spoofing, foreign files, cross-conversation scope and completed uploads', async () => {
       const f = await setup(),

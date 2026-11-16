@@ -244,7 +244,7 @@ public static class MindyMain
 - `dtos/code.dto.ts`, `dtos/code-student.dto.ts`: thay các `enum: ['javascript', 'java21']` bằng `enum: CODE_LANGUAGE_KEYS`; `CodeStarterPreviewDto` thêm `python3`, `csharp`.
 - Controllers đã dùng `CODE_LANGUAGE_KEYS` cho `ParseEnumPipe`, không cần sửa.
 
-### B4. Migration `src/database/migrations/1793750400000-code-languages-python-csharp.ts`
+### B4. Migration `src/database/migrations/1794787200000-code-languages-python-csharp.ts`
 ```sql
 INSERT INTO code_languages(key, display_name, runtime_version, editor_mode, time_multiplier, enabled) VALUES
   ('python3', 'Python', 'Python 3.13', 'python', 3, false),

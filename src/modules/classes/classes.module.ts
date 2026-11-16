@@ -17,12 +17,16 @@ import { SessionContextController } from './controllers/session-context.controll
 import { SessionOperationsController } from './controllers/session-operations.controller.js';
 import { StudentClassesController } from './controllers/student-classes.controller.js';
 import { TeachingManagementController } from './controllers/teaching-management.controller.js';
+import { WeeklyScheduleController } from './controllers/weekly-schedule.controller.js';
 import { ClassEntity } from './entities/class.entity.js';
 import { ClassSessionEntity } from './entities/class-session.entity.js';
 import { ClassUnitEntity } from './entities/class-unit.entity.js';
 import { ClassUnitReleaseAuditEntity } from './entities/class-unit-release-audit.entity.js';
+import { CalendarValidationService } from './services/calendar-validation.service.js';
 import { ClassContentContextService } from './services/class-content-context.service.js';
 import { ClassOffersService } from './services/class-offers.service.js';
+import { ClassOpeningService } from './services/class-opening.service.js';
+import { ClassOpeningWorker } from './services/class-opening.worker.js';
 import { ClassReadService } from './services/class-read.service.js';
 import { ClassScheduleService } from './services/class-schedule.service.js';
 import { ClassesService } from './services/classes.service.js';
@@ -37,6 +41,7 @@ import { StudentClassService } from './services/student-class.service.js';
 import { TeachingAssignmentService } from './services/teaching-assignment.service.js';
 import { TeachingReadService } from './services/teaching-read.service.js';
 import { UnitContentService } from './services/unit-content.service.js';
+import { WeeklyScheduleService } from './services/weekly-schedule.service.js';
 
 /** Class management: the class aggregate (class, units, sessions) and its lifecycle. */
 @Module({
@@ -56,6 +61,7 @@ import { UnitContentService } from './services/unit-content.service.js';
     ]),
   ],
   controllers: [
+    WeeklyScheduleController,
     MentorSessionMeetingController,
     MentorWorkspaceController,
     AdminClassesController,
@@ -67,6 +73,10 @@ import { UnitContentService } from './services/unit-content.service.js';
     SessionOperationsController,
   ],
   providers: [
+    CalendarValidationService,
+    WeeklyScheduleService,
+    ClassOpeningService,
+    ClassOpeningWorker,
     SessionMeetingService,
     MentorProgressService,
     MentorWorkspaceService,

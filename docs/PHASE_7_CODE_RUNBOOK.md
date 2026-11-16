@@ -24,7 +24,7 @@ Kế hoạch mở rộng ngày 16/11/2026 có thứ tự phát hành riêng.
 
 3. Chạy smoke bốn ngôn ngữ từ container trong mạng runner. Sau khi smoke
    thành công, triển khai BE và chạy migration
-   `1793750400000-code-languages-python-csharp`. Kiểm tra DB có hai hàng mới với
+   `1794787200000-code-languages-python-csharp`. Kiểm tra DB có hai hàng mới với
    `enabled=false`. Có thể chạy round-trip qua runner thật với
    `CODE_RUNNER_URL` và `CODE_RUNNER_TOKEN` đã cấu hình bằng
    `pnpm test test/integration/phase7-code-runner-round-trip.spec.ts`.

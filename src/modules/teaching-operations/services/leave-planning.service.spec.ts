@@ -116,7 +116,10 @@ describe('Flexible leave makeup planning', () => {
     const query = vi
       .fn()
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ total: '1' }]);
+      .mockResolvedValueOnce([{ total: '1' }])
+      .mockResolvedValueOnce([
+        { sourceSessionId: 'source', studentId: 'student', conflictingSessionId: 'conflict' },
+      ]);
     await expect(
       planning.validate(
         { query } as unknown as EntityManager,

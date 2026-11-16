@@ -970,3 +970,8 @@ Evidence local cuối16/10: pnpm check615/615; HTTP77/77, Files42/42 gồm DOCX
 full review/release/access/withdraw. Không tạo API/type WORD mới; frontend dùng
 file picker accept .docx, MIME Office Word, contentType FILE, file.kind DOCUMENT.
 Chưa deploy hoặc sửa FE. Không sinh file Word docs/word từ yêu cầu này.
+
+
+## Cập nhật BE Change — 05/11/2026
+
+Lịch tuần/min3/swap, nghỉ cả ngày hai chế độ, materials tracking/bulk/cleanup và chat inline được ghi trong [flow tích hợp](PHASE_BE_CHANGE_FLOW.md) và [contract](PHASE_BE_CHANGE_flow-api-breakdown.md). Source BE/FE2 đã triển khai; DB/storage và deployment chưa nghiệm thu. Xem [evidence/giới hạn](../progress/BE_CHANGE_PROGRESS.md). Contract mới bổ sung vào phase hiện hữu, không thay thế lịch sử nghiệm thu cũ.

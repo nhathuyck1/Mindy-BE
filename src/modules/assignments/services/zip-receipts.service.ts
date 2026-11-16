@@ -36,7 +36,7 @@ export class ZipReceiptsService {
     // Callers lock class/session/assignment before this lock. Includes upload quotas across assignments.
     await m.query('SELECT pg_advisory_xact_lock(hashtextextended($1,45))', [actor]);
     const rows: { request_hash: string; outcome: T }[] = await m.query(
-      'SELECT request_hash,outcome FROM assignment_zip_receipts WHERE actor_id=$1 AND route=$2 AND key=$3',
+      "SELECT payload_hash AS request_hash,outcome FROM mutation_receipts WHERE namespace='assignment_zip' AND actor_id=$1 AND route=$2 AND key=$3",
       [actor, route, key],
     );
     const row = rows[0];
@@ -53,7 +53,7 @@ export class ZipReceiptsService {
     outcome: unknown,
   ): Promise<void> {
     await m.query(
-      'INSERT INTO assignment_zip_receipts(actor_id,route,key,request_hash,outcome) VALUES($1,$2,$3,$4,$5)',
+      "INSERT INTO mutation_receipts(namespace,actor_id,route,key,payload_hash,outcome) VALUES('assignment_zip',$1,$2,$3,$4,$5)",
       [actor, route, key, this.hash(input), JSON.stringify(outcome)],
     );
   }

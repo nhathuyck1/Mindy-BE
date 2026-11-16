@@ -27,8 +27,8 @@ export class AssignmentReportingService {
       WHERE s.class_id=$1 AND a.deleted_at IS NULL AND a.status IN ('PUBLISHED','ARCHIVED') AND ($2::uuid[] IS NULL OR s.id=ANY($2))
       AND ($3::uuid IS NULL OR s.class_unit_id=$3) AND ($5::text IS NULL OR a.type=$5) AND ($6::text IS NULL OR a.purpose=$6)),
       latest AS (
-        SELECT DISTINCT ON(z.assignment_id,z.student_id) z.assignment_id,z.student_id,g.current_version,g.released_version
-        FROM assignment_zip_submissions z JOIN scoped a ON a.id=z.assignment_id LEFT JOIN assignment_zip_grades g ON g.submission_id=z.id
+        SELECT DISTINCT ON(z.assignment_id,z.student_id) z.assignment_id,z.student_id,z.current_version,z.released_version
+        FROM assignment_zip_submissions z JOIN scoped a ON a.id=z.assignment_id
         WHERE z.status='SUBMITTED' AND ($4::uuid IS NULL OR z.student_id=$4) ORDER BY z.assignment_id,z.student_id,z.attempt_number DESC),
       code AS (
         SELECT cs.assignment_id,cs.student_id,bool_or(cs.status='GRADED') AS graded

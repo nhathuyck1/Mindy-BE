@@ -23,6 +23,7 @@ import {
   ClassNotFoundException,
   ClassStudentNotFoundException,
 } from '../exceptions/class.exceptions.js';
+import { readClassStartEligibilities } from './class-opening.service.js';
 
 export interface OpenClassFilter {
   readonly courseId?: string;
@@ -339,7 +340,9 @@ export class ClassReadService {
       manager,
     );
 
+    const eligibility = await readClassStartEligibilities(manager, classes);
     return classes.map((classEntity) => ({
+      opening: eligibility.get(classEntity.id),
       classEntity,
       mentorName: mentorNames.get(classEntity.mentorId) ?? null,
       occupiedSeats: occupied.get(classEntity.id) ?? 0,

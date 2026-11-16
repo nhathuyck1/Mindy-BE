@@ -97,6 +97,41 @@ describe.skipIf(!separateTestUrl('leave'))('Phase4.4 mentor leave PostgreSQL', (
     return rows[0];
   }
 
+  it('rejects Monday to Thursday full-day mapping when Thursday is already occupied and preserves both sessions', async () => {
+    const a = await fixture();
+    const targetDate = shiftDate(a.date, 3);
+    await db.getRepository(ClassEntity).update(a.c.id, { endDate: targetDate });
+    const startsAt = new Date(a.s.startsAt.getTime() + 3 * 86400000),
+      endsAt = new Date(a.s.endsAt.getTime() + 3 * 86400000);
+    const second = await db.getRepository(ClassSessionEntity).save(
+      db.getRepository(ClassSessionEntity).create({
+        classUnitId: a.s.classUnitId,
+        sessionNumber: 2,
+        title: 'Existing Thursday session',
+        startsAt,
+        endsAt,
+        status: a.s.status,
+      }),
+    );
+    const before = await db.query(
+      'SELECT id,starts_at,ends_at,status FROM class_sessions WHERE id=ANY($1::uuid[]) ORDER BY id',
+      [[a.s.id, second.id]],
+    );
+    await expect(
+      leaves.create(
+        { ...a.input, dayMappings: [{ sourceDate: a.date, targetDate }] },
+        a.mentor,
+        randomUUID(),
+      ),
+    ).rejects.toMatchObject({ response: { code: 'LEAVE_TARGET_CONFLICT' } });
+    expect(
+      await db.query(
+        'SELECT id,starts_at,ends_at,status FROM class_sessions WHERE id=ANY($1::uuid[]) ORDER BY id',
+        [[a.s.id, second.id]],
+      ),
+    ).toEqual(before);
+  });
+
   it('rehearses migration down/up and retains leave history across the UTC/local date boundary', async () => {
     await rehearseMigration(db, new MentorLeave1792195200000(), 'down');
     await rehearseMigration(db, new MentorLeave1792195200000(), 'up');

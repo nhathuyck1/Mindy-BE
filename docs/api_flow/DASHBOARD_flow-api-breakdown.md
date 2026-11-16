@@ -1,5 +1,11 @@
 # Dashboard API breakdown — 03/11/2026
 
+> Current contract — 2026-11-06: Admin keeps enrollment analytics below.
+> Manager returns collected/pending revenue and opening alerts; Mentor returns
+> teaching workload, upcoming sessions and leave requests, including session overrides.
+> See [current role dashboard contract](PHASE_BE_CHANGE_flow-api-breakdown.md).
+> The shared enrollment response described below is the earlier contract for Manager/Mentor.
+
 Implemented source contract; see [flow](DASHBOARD_FLOW.md). Local implementation does
 not imply the endpoints have been deployed on the configured FE upstream.
 

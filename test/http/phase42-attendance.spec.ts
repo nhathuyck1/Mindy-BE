@@ -183,7 +183,27 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     );
     const session = sessions[0];
     if (!order || !session) throw new Error('Missing staff fixture order/session');
+    // This is a later session of an established class, with a new unpaid cash hold.
+    // Initial admission of three paid students is covered by be-change-plan.spec.ts.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [detail.id]);
     return { mentor, student, manager, order, session, day, path: `/class-sessions/${session.id}` };
+  }
+
+  async function reachSessionDay(sessionId: string): Promise<string> {
+    await db.query(
+      `UPDATE class_sessions SET
+        starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
+        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        WHERE id=$1`,
+      [sessionId],
+    );
+    const rows: { day: string }[] = await db.query(
+      "SELECT to_char(starts_at AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYY-MM-DD') AS day FROM class_sessions WHERE id=$1",
+      [sessionId],
+    );
+    const day = rows[0]?.day;
+    if (!day) throw new Error('Missing session day');
+    return day;
   }
 
   it('validates/authenticates attendance and runs start, mark, finalize and replay over real cookies', async () => {
@@ -227,22 +247,66 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       receivedAmount: order.totalAmount,
     });
     expect(confirmed.status).toBe(200);
+    // Exercise an early start in an established class with a one-student current roster.
+    await db.query("UPDATE classes SET status='IN_PROGRESS' WHERE id=$1", [classId]);
     await db.query(
       `UPDATE class_sessions SET
-        starts_at=date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh',
-        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        starts_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day'-interval '1 millisecond') AT TIME ZONE 'Asia/Ho_Chi_Minh',
+        ends_at=(date_trunc('day',now() AT TIME ZONE 'Asia/Ho_Chi_Minh')+interval '1 day') AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id=$1`,
       [s.id],
     );
     const key = randomUUID(),
       input = { expectedVersion: s.version };
+    const blocked = await request(`${path}/start`, mentorCookie, input, 'POST', randomUUID());
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({ code: 'SESSION_START_TOO_EARLY' });
+    const rulesResponse = await request('/admin/system-rules', adminCookie);
+    expect(rulesResponse.status).toBe(200);
+    const rules = (await rulesResponse.json()) as {
+      key: string;
+      value: boolean;
+      version: number;
+    }[];
+    const rule = rules.find((item) => item.key === 'session_start_time_enforced');
+    if (!rule) throw new Error('Missing session time rule');
+    expect(rule.value).toBe(true);
+    const updateRule = (value: boolean, expectedVersion: number, cookie: string) =>
+      fetch(`${url}/admin/system-rules/${rule.key}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          origin: 'http://localhost:3001',
+          cookie,
+        },
+        body: JSON.stringify({ value, expectedVersion, reason: 'HTTP early start rehearsal' }),
+      });
+    expect((await updateRule(false, rule.version, mentorCookie)).status).toBe(403);
+    const disabled = await updateRule(false, rule.version, adminCookie);
+    expect(disabled.status, await disabled.clone().text()).toBe(200);
+    const disabledRule = (await disabled.json()) as { version: number };
+    expect(disabledRule).toMatchObject({
+      key: rule.key,
+      value: false,
+      version: rule.version + 1,
+    });
     const opened = await request(`${path}/start`, mentorCookie, input, 'POST', key);
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as {
-      session: { version: number; editableUntil: string };
+      session: {
+        version: number;
+        editableUntil: string;
+        actualStartedAt: string;
+        startsAt: string;
+      };
       totals: { unmarked: number };
     };
+    expect(Date.parse(start.session.actualStartedAt)).toBeLessThan(
+      Date.parse(start.session.startsAt),
+    );
     expect(start.totals.unmarked).toBe(1);
+    const restored = await updateRule(true, disabledRule.version, adminCookie);
+    expect(restored.status, await restored.clone().text()).toBe(200);
     expect(await (await request(`${path}/start`, mentorCookie, input, 'POST', key)).json()).toEqual(
       start,
     );
@@ -371,6 +435,8 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
     expect(
       (await request(`${a.path}/start`, a.mentor.cookie, base, 'POST', randomUUID())).status,
     ).toBe(409);
+    // Set the scheduled day used by the attendance deadline assertions below.
+    const scheduledDay = await reachSessionDay(a.session.id);
     const opened = await request(
       `${a.path}/start`,
       a.manager.cookie,
@@ -378,12 +444,12 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const opening = (await opened.json()) as {
       session: { version: number; actualStartedAt: string; editableUntil: string };
       totals: { eligible: number };
     };
-    const day = new Date(`${a.day}T00:00:00Z`);
+    const day = new Date(`${scheduledDay}T00:00:00Z`);
     day.setUTCDate(day.getUTCDate() + 2);
     expect(opening.session.editableUntil).toBe(
       new Date(`${day.toISOString().slice(0, 10)}T00:00:00+07:00`).toISOString(),
@@ -491,6 +557,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
 
   it('admits committed cash after finalization only for Staff with a reason and replays the admission once', async () => {
     const a = await staffFixture();
+    await reachSessionDay(a.session.id);
     const opened = await request(
       `${a.path}/start`,
       a.manager.cookie,
@@ -502,7 +569,7 @@ describe.skipIf(!separateTestUrl('phase42_http'))('Phase 4.2 built-app HTTP E2E'
       'POST',
       randomUUID(),
     );
-    expect(opened.status).toBe(200);
+    expect(opened.status, await opened.clone().text()).toBe(200);
     const start = (await opened.json()) as { session: { version: number } };
     const finalized = await request(
       `${a.path}/finalize`,

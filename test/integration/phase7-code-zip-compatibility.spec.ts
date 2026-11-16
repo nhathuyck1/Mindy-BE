@@ -3,10 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
-import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
-import { AssignmentZip1793577600000 } from '../../src/database/migrations/1793577600000-assignment-zip.js';
 import { AssignmentReportingService } from '../../src/modules/assignments/services/assignment-reporting.service.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import {
   codeServices,
   FakeCodeExecutor,
@@ -21,11 +19,7 @@ describe.skipIf(!separateTestUrl('phase7_compat'))('QUIZ, ZIP and CODE compatibi
   const reporting = new AssignmentReportingService();
   beforeAll(async () => {
     db = await paymentDatabase('phase7_compat', {
-      migrations: [
-        AssignmentsQuiz1792713600000,
-        CodeAssignments1792886400000,
-        AssignmentZip1793577600000,
-      ],
+      migrations: ASSIGNMENT_MIGRATIONS,
     });
     f = paymentFixture(db);
     s = codeServices(db, f, executor, config);

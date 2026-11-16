@@ -1,6 +1,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CodeLanguagesPythonCsharp1793750400000 implements MigrationInterface {
+export class CodeLanguagesPythonCsharp1794787200000 implements MigrationInterface {
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       INSERT INTO code_languages(key, display_name, runtime_version, editor_mode, time_multiplier, enabled)

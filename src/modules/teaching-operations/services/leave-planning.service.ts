@@ -198,7 +198,7 @@ export class LeavePlanningService {
     const conflicts: unknown[] = await m.query(
       `WITH targets AS (
       SELECT * FROM jsonb_to_recordset($1::jsonb) AS t("sourceSessionId" uuid,"classId" uuid,"startsAt" timestamptz,"endsAt" timestamptz))
-      SELECT 1 FROM targets t WHERE
+      SELECT t."sourceSessionId" AS "sessionId",t."startsAt",t."endsAt" FROM targets t WHERE
       ${approvedLeaveOverlap('$2', 't."startsAt"', 't."endsAt"')} OR
       EXISTS(SELECT 1 FROM targets other WHERE other."sourceSessionId"<>t."sourceSessionId"
         AND other."startsAt"<t."endsAt" AND other."endsAt">t."startsAt") OR
@@ -213,12 +213,20 @@ export class LeavePlanningService {
       throw new LeaveException(
         'LEAVE_TARGET_CONFLICT',
         'Makeup overlaps a mentor, class or approved leave interval',
+        409,
+        conflicts,
       );
-    const students = await this.studentConflicts(m, targets, now);
+    const students = await this.studentConflicts(m, targets, now, { page: 1, pageSize: 100 });
     if (students.total)
       throw new LeaveException(
         'LEAVE_STUDENT_CONFLICT',
         'Makeup cannot overlap student timetables',
+        409,
+        students.items.map((i) => ({
+          ...i,
+          startsAt: targets.find((t) => t.sourceSessionId === i.sourceSessionId)?.startsAt,
+          endsAt: targets.find((t) => t.sourceSessionId === i.sourceSessionId)?.endsAt,
+        })),
       );
     return students;
   }

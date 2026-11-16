@@ -256,3 +256,8 @@ chưa code: [Phase4.6 mentor workspace](PHASE_4_6_FLOW.md) và
 [Phase5 assignment TEST/HOMEWORK, QUIZ/ZIP](PHASE_5_FLOW.md). Timer optional phút
 cho QUIZ; ZIP deadline ngày/giờ; quiz nộp toàn bài rồi BE chấm và trả đáp án.
 Danh sách draft audit phía trên không thay thế plan/contract mới này.
+
+
+## Cập nhật BE Change — 05/11/2026
+
+Lịch tuần/min3/swap, nghỉ cả ngày hai chế độ, materials tracking/bulk/cleanup và chat inline được ghi trong [flow tích hợp](PHASE_BE_CHANGE_FLOW.md) và [contract](PHASE_BE_CHANGE_flow-api-breakdown.md). Source BE/FE2 đã triển khai; DB/storage và deployment chưa nghiệm thu. Xem [evidence/giới hạn](../progress/BE_CHANGE_PROGRESS.md). Contract mới bổ sung vào phase hiện hữu, không thay thế lịch sử nghiệm thu cũ.

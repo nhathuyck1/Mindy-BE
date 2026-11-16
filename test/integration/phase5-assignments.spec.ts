@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
+import { ConsolidateAssignments1793836800002 } from '../../src/database/migrations/1793836800002-consolidate-assignments.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentsService } from '../../src/modules/assignments/services/assignments.service.js';
 import { QuizAttemptsService } from '../../src/modules/assignments/services/quiz-attempts.service.js';
@@ -10,6 +10,7 @@ import type { AuthenticatedUser } from '../../src/modules/auth/auth.types.js';
 import { TeachingReadService } from '../../src/modules/classes/services/teaching-read.service.js';
 import { ScheduleReservationsService } from '../../src/modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../src/modules/users/user-role.enum.js';
+import { ASSIGNMENT_MIGRATIONS } from '../helpers/assignment-migrations.js';
 import { rehearseMigration } from '../helpers/migration-rehearsal.js';
 import { paymentDatabase, paymentFixture, separateTestUrl } from '../helpers/payment-fixture.js';
 
@@ -24,9 +25,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
     assignments: AssignmentsService,
     attempts: QuizAttemptsService;
   beforeAll(async () => {
-    db = await paymentDatabase('phase5', { migrations: [AssignmentsQuiz1792713600000] });
-    await rehearseMigration(db, new AssignmentsQuiz1792713600000(), 'down');
-    await rehearseMigration(db, new AssignmentsQuiz1792713600000(), 'up');
+    db = await paymentDatabase('phase5', { migrations: ASSIGNMENT_MIGRATIONS });
     f = paymentFixture(db);
     const teaching = new TeachingReadService(
       db,
@@ -190,7 +189,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       result: { correctCount: 1, wrongCount: 39, score: '2.50' },
     });
     const count: { count: string }[] = await db.query(
-      "SELECT count(*) FROM assignment_audits WHERE submission_id=$1 AND action='TIMEOUT'",
+      "SELECT count(*) FROM audit_events WHERE source='assignment_audits' AND (data->>'submission_id')::uuid=$1 AND data->>'action'='TIMEOUT'",
       [id],
     );
     expect(count[0]?.count).toBe('1');
@@ -241,11 +240,14 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       ),
     ).rejects.toMatchObject({ status: 404 });
     await expect(
-      db.query('DELETE FROM assignment_audits WHERE assignment_id=$1', [s.published.id]),
+      db.query(
+        "DELETE FROM audit_events WHERE source='assignment_audits' AND ref_assignment_id=$1",
+        [s.published.id],
+      ),
     ).rejects.toThrow('append only');
-    await expect(rehearseMigration(db, new AssignmentsQuiz1792713600000(), 'down')).rejects.toThrow(
-      'Export assignment history',
-    );
+    await expect(
+      rehearseMigration(db, new ConsolidateAssignments1793836800002(), 'down'),
+    ).rejects.toThrow('forward migration');
   });
   it('blocks ZIP publication until storage and manual grading exist', async () => {
     const s = await setup();
@@ -318,10 +320,10 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       },
       key = randomUUID();
     await db.query(
-      `CREATE FUNCTION test_reject_assignment_submit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='SUBMIT' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`,
+      `CREATE FUNCTION test_reject_assignment_submit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.source='assignment_audits' AND NEW.data->>'action'='SUBMIT' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`,
     );
     await db.query(
-      'CREATE TRIGGER test_assignment_submit_failure BEFORE INSERT ON assignment_audits FOR EACH ROW EXECUTE FUNCTION test_reject_assignment_submit()',
+      'CREATE TRIGGER test_assignment_submit_failure BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_reject_assignment_submit()',
     );
     try {
       await expect(attempts.save(s.student, started.attemptId, input, key, true)).rejects.toThrow(
@@ -334,7 +336,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
         result: null,
       });
     } finally {
-      await db.query('DROP TRIGGER test_assignment_submit_failure ON assignment_audits');
+      await db.query('DROP TRIGGER test_assignment_submit_failure ON audit_events');
       await db.query('DROP FUNCTION test_reject_assignment_submit()');
     }
     expect(
@@ -432,7 +434,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
         sql.filter((query) =>
           /^INSERT INTO assignment_(questions|question_options|answer_keys)\b/.test(query),
         ),
-      ).toHaveLength(3);
+      ).toHaveLength(1);
       expect(sql.length).toBeLessThanOrEqual(30);
       console.info(
         `Bulk 200: ${sql.length} SQL queries, ${elapsed.toFixed(1)} ms (local PostgreSQL)`,
@@ -471,8 +473,8 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
     const counts = await db.query(
       `SELECT
       (SELECT count(*) FROM assignment_questions WHERE assignment_id=$1) AS questions,
-      (SELECT count(*) FROM assignment_question_options o JOIN assignment_questions q ON q.id=o.question_id WHERE q.assignment_id=$1) AS options,
-      (SELECT count(*) FROM assignment_answer_keys k JOIN assignment_questions q ON q.id=k.question_id WHERE q.assignment_id=$1) AS keys`,
+      (SELECT sum(jsonb_array_length(options)) FROM assignment_questions WHERE assignment_id=$1) AS options,
+      (SELECT count(correct_option) FROM assignment_questions WHERE assignment_id=$1) AS keys`,
       [draft.id],
     );
     expect(counts).toEqual([{ questions: '1', options: '4', keys: '1' }]);
@@ -534,10 +536,10 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
     });
     const before = await assignments.get(s.mentor, draft.id);
     await db.query(
-      `CREATE FUNCTION test_reject_questions() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='QUESTIONS' THEN RAISE EXCEPTION 'test questions audit failure'; END IF; RETURN NEW; END $$`,
+      `CREATE FUNCTION test_reject_questions() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.source='assignment_audits' AND NEW.data->>'action'='QUESTIONS' THEN RAISE EXCEPTION 'test questions audit failure'; END IF; RETURN NEW; END $$`,
     );
     await db.query(
-      'CREATE TRIGGER test_questions_failure BEFORE INSERT ON assignment_audits FOR EACH ROW EXECUTE FUNCTION test_reject_questions()',
+      'CREATE TRIGGER test_questions_failure BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_reject_questions()',
     );
     try {
       await expect(
@@ -554,7 +556,7 @@ describe.skipIf(!separateTestUrl('phase5'))('Phase 5 assignments PostgreSQL', ()
       ).rejects.toThrow('test questions audit failure');
       expect(await assignments.get(s.mentor, draft.id)).toEqual(before);
     } finally {
-      await db.query('DROP TRIGGER test_questions_failure ON assignment_audits');
+      await db.query('DROP TRIGGER test_questions_failure ON audit_events');
       await db.query('DROP FUNCTION test_reject_questions()');
     }
   });

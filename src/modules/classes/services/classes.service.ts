@@ -30,6 +30,8 @@ import {
   ClassNotFoundException,
 } from '../exceptions/class.exceptions.js';
 import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { ClassOpeningService } from './class-opening.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ClassReadService } from './class-read.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -47,6 +49,7 @@ export class ClassesService {
     private readonly usersService: UsersService,
     private readonly scheduleService: ClassScheduleService,
     private readonly readService: ClassReadService,
+    private readonly opening: ClassOpeningService,
   ) {}
 
   /** Creates a DRAFT class and copies the course's current units into it atomically. */
@@ -171,6 +174,11 @@ export class ClassesService {
   /** DRAFT -> OPEN: the class becomes visible and purchasable. */
   async open(classId: string): Promise<ClassDetailView> {
     return this.transition(classId, ClassStatus.OPEN, async (manager, classEntity) => {
+      if (classEntity.maxStudents < 3)
+        throw new TeachingConflictException(
+          'CLASS_CAPACITY_TOO_SMALL',
+          'An open class needs capacity for at least 3 students',
+        );
       const courses = await this.coursesService.findByIds([classEntity.courseId], manager);
       if (courses.get(classEntity.courseId)?.isActive !== true) {
         throw new ClassCourseInactiveException();
@@ -198,7 +206,12 @@ export class ClassesService {
 
   /** OPEN -> IN_PROGRESS: registration closes. */
   async start(classId: string): Promise<ClassDetailView> {
-    return this.transition(classId, ClassStatus.IN_PROGRESS);
+    return this.dataSource.transaction(async (manager) => {
+      const c = await this.lockClass(manager, classId);
+      assertClassTransition(c.status, ClassStatus.IN_PROGRESS);
+      await this.opening.assertCanStart(manager, c);
+      return this.readService.loadDetail(manager, c);
+    });
   }
 
   /** IN_PROGRESS -> COMPLETED: the class becomes read-only history. */

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { ConfigService } from '@nestjs/config';
 import type { EntityManager } from 'typeorm';
+import { sessionStartTimeEnforced } from '../../system-settings/system-settings.js';
 import { attendanceDeadline } from '../domain/class-calendar.js';
 import { ClassEntity } from '../entities/class.entity.js';
 import { ClassSessionEntity } from '../entities/class-session.entity.js';
@@ -9,11 +10,16 @@ import { ClassStatus } from '../enums/class-status.enum.js';
 import { SessionStatus } from '../enums/session-status.enum.js';
 import { ClassSessionLocalTimeInvalidException } from '../exceptions/class.exceptions.js';
 import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { ClassOpeningService } from './class-opening.service.js';
 
 /** Public transaction participant. Caller holds Class -> Session locks. */
 @Injectable()
 export class SessionLifecycleService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly opening: ClassOpeningService,
+  ) {}
 
   async start(
     m: EntityManager,
@@ -31,6 +37,14 @@ export class SessionLifecycleService {
         'SESSION_STATE_CONFLICT',
         'Start requires an open/in-progress class and scheduled session',
       );
+    const enforceTime = await sessionStartTimeEnforced(m);
+    if (enforceTime && at < s.startsAt)
+      throw new TeachingConflictException(
+        'SESSION_START_TOO_EARLY',
+        'Session cannot start before its scheduled time',
+      );
+    if (c.status === ClassStatus.OPEN)
+      await this.opening.assertCanStart(m, c, { allowEarlyStart: !enforceTime });
     const old = s.status;
     s.status = SessionStatus.IN_PROGRESS;
     s.actualStartedAt = at;
@@ -47,7 +61,13 @@ export class SessionLifecycleService {
       c.assignmentVersion += 1;
       await m.getRepository(ClassEntity).save(c);
     }
-    await this.save(m, s, actorId, old, reason);
+    await this.save(
+      m,
+      s,
+      actorId,
+      old,
+      enforceTime ? reason : `Schedule rule disabled. ${reason ?? ''}`.trim().slice(0, 1000),
+    );
   }
 
   async finalize(

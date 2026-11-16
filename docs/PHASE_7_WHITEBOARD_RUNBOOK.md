@@ -115,6 +115,31 @@ test DBs or an explicitly approved destructive rollback.
 
 ## Validation evidence
 
+### Export diagnostics — 2026-11-04
+
+- Worker retries now log `WHITEBOARD_MEDIA_RETRY` / `WHITEBOARD_MEDIA_FAILED`
+  with job ID, board ID, attempt, stage and safe filesystem/SDK identifiers.
+  Export `error_code` identifies the failing step, for example
+  `BOARD_EXPORT_RENDER_FAILED`, `BOARD_EXPORT_CREATE_SCRATCH_FAILED` or
+  `BOARD_EXPORT_STORE_OUTPUT_FAILED`. Messages, signed URLs and parser payloads
+  are not logged. Successful export retries clear the previous error code.
+- To check deployed scratch access and the actual isolated PNG/PDF subprocess,
+  run `node dist/operations/check-whiteboard-render.js` inside the API container.
+  This creates and removes only temporary files and does not start application
+  workers or modify database/storage data. It does not prove storage PUT access.
+- `pnpm build` then `pnpm exec vitest run --config vitest.http.config.ts
+  test/http/whiteboard-renderer.spec.ts` exercises the production subprocess with
+  Vietnamese text and an embedded image. Earlier feature integration tests used
+  an in-process renderer substitute and did not cover this runtime boundary.
+- Local subprocess checks pass. VPS blank PNG check returned `PNG_OK`; rendering
+  the latest failed PDF job also returned `RENDER_OK` (17,565 bytes). Its subsequent
+  storage PUT failed with `EPROTO` / `tls_get_more_records:packet length too long`,
+  indicating TLS was sent to an HTTP endpoint. For the bundled Compose MinIO use
+  `MINIO_ENDPOINT=minio`, `MINIO_PORT=9000`, `MINIO_USE_SSL=false`; keep the separate
+  browser-facing `MINIO_PUBLIC_URL` HTTPS. Recreate the API container to reload env,
+  then create a new export. Existing FAILED rows are retained; VPS success after
+  correcting the configuration has not yet been verified.
+
 Automated feature suites: `test/integration/phase7-whiteboards.spec.ts` and
 `test/http/phase7-whiteboards.spec.ts`. The former uses isolated PostgreSQL/MinIO,
 the latter boots the compiled app with real cookies and Socket.IO. Full gate counts

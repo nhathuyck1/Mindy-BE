@@ -1,4 +1,5 @@
 import { MentorAttendanceReportsService } from '../../src/modules/attendance/services/mentor-attendance-reports.service.js';
+import { LegacyAttendanceOpening } from '../helpers/legacy-attendance-opening.js';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { DataSource } from 'typeorm';
@@ -67,7 +68,7 @@ describe.skipIf(!separateTestUrl('phase44c'))(
       attendance = new AttendanceService(
         db,
         teaching,
-        new SessionLifecycleService(f.config),
+        new SessionLifecycleService(f.config, new LegacyAttendanceOpening(db)),
         new MentorConflictService(),
         f.enrollments,
         f.users,
