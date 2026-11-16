@@ -1,5 +1,8 @@
 # Phase 7 mở rộng — Thêm Python và C# cho bài tập CODE
 
+**v2 · 16/11/2026 · CODE XONG, CHỜ PHÁT HÀNH.** Nhánh `feat/phase7-python-csharp` ở Mindy-BE (đã merge `origin/dev`
+`a44d988`), Mindy-FE2, MindyFlutter và MindyMobile_Admin; `compiler-runner/` đã thành repo git riêng (chưa có remote). Chưa push, chưa deploy.
+
 **v1 · 16/11/2026 · PLAN.** Hiện có: `javascript` (Node 22), `java21` (Temurin 21), đã chạy trên production.
 Mục tiêu: thêm `python3` (Python 3.13) và `csharp` (.NET 10 LTS) cho cả mentor và học viên.
 
@@ -304,7 +307,7 @@ Xong khi: `npm test` runner + `go test` harness + test BE xanh; smoke 4 ngôn ng
 1. **Kiểm tra VPS**: `df -h` (image .NET SDK ~1 GB, Python ~60 MB), `free -m`.
 2. **Runner**: pull base image, build `judge-python`, `judge-csharp`, rebuild + `up -d runner`. Chạy `smoke-test.mjs` (4 ngôn ngữ). Thêm runner trước là vô hại vì BE chưa gửi key mới.
 3. **BE**: deploy + chạy migration (2 dòng `enabled = false`). Từ container BE, chạy round-trip qua runner production cho Python/C# (giống cách đã kiểm Java).
-4. **FE**: deploy bản đã nhận 4 ngôn ngữ.
+4. **FE + app**: deploy Mindy-FE2, phát hành MindyFlutter và MindyMobile_Admin (bản cũ không đọc được `python3`/`csharp`).
 5. **Bật**: `UPDATE code_languages SET enabled = true WHERE key IN ('python3','csharp');`
 6. **Nghiệm thu tay**: tạo bài nháp tick 4 ngôn ngữ → lời giải mẫu mỗi ngôn ngữ → validate → giao → tài khoản học viên chạy thử + nộp bằng Python và C#.
 
@@ -315,4 +318,4 @@ Xong khi: `npm test` runner + `go test` harness + test BE xanh; smoke 4 ngôn ng
 - C# compile nặng (csc ~1–3 s, ~300–400 MB RAM). VPS chạy `RUNNER_SLOTS_BATCH=2` → 2 bài C# cùng lúc có thể cần ~1 GB. Đo ở A2, chỉnh `minContainerMemoryMb` hoặc giảm slot.
 - Python chậm, `time_multiplier = 3` có thể vẫn chưa đủ cho đề nặng: mentor nên chạy validate đủ 4 ngôn ngữ trước khi giao.
 - Từ khóa mới trong `RESERVED` có thể chặn bài cũ (B0).
-- MindyFlutter / MindyMobile chưa kiểm tra có hiển thị bài code không; nếu có thì cần cập nhật riêng.
+- MindyFlutter có màn bài code và parse `languageKey` bằng enum chặt: đã thêm `python3`/`csharp` (nhánh `feat/phase7-python-csharp`). Bản app cũ vẫn lỗi ở bài có Python/C# → phát hành app trước khi bật. MindyMobile_Admin (RN) không có màn bài code nhưng có màn xem whiteboard với schema code block chặt: đã thêm 2 key (cùng tên nhánh), cũng cần phát hành trước khi bật.

@@ -2,6 +2,14 @@
 
 ## 16/11/2026 — Python 3.13 và C# .NET 10
 
+- Hoàn tất ở local (Claude): merge `origin/dev` (`a44d988`) vào nhánh
+  `feat/phase7-python-csharp`, gỡ conflict `Progress.md` và
+  `phase7-code-authoring.spec.ts`; migration đổi tên thành `1794787200000` để
+  đứng sau migration mới nhất của dev và thêm vào `ASSIGNMENT_MIGRATIONS`. Sau
+  merge: `tsc --noEmit` (src + test) sạch, 49 spec domain CODE pass; chưa chạy
+  lại biome, full vitest/HTTP trên máy dev. FE2, MindyFlutter và MindyMobile_Admin (schema code block whiteboard) cùng tên nhánh;
+  `compiler-runner/` được đưa vào git. Chưa push, chưa deploy.
+
 - Backend và runner nhận bốn key. API preview trả bốn starter, danh sách
   ngôn ngữ theo thứ tự JavaScript, Java, Python, C#. Migration thêm hai hàng
   ở trạng thái tắt. Kiểm tra B0 chỉ đọc trên production trả về 0 chữ ký vướng

@@ -28,7 +28,10 @@ Kế hoạch mở rộng ngày 16/11/2026 có thứ tự phát hành riêng.
    `enabled=false`. Có thể chạy round-trip qua runner thật với
    `CODE_RUNNER_URL` và `CODE_RUNNER_TOKEN` đã cấu hình bằng
    `pnpm test test/integration/phase7-code-runner-round-trip.spec.ts`.
-4. Triển khai frontend đã đọc được bốn key. Sau đó bật Python và C#.
+4. Triển khai Mindy-FE2 (nhánh `feat/phase7-python-csharp`) và phát hành bản
+   MindyFlutter, MindyMobile_Admin (whiteboard) cùng tên nhánh. Bản app cũ parse `languageKey` bằng enum hai giá
+   trị nên **không mở được** bài có Python/C#: chỉ bật khi bản app mới đã tới tay
+   người dùng (hoặc chấp nhận bản cũ lỗi ở các bài đó). Sau đó bật Python và C#.
 
    ```sql
    UPDATE code_languages SET enabled = true WHERE key IN ('python3', 'csharp');
