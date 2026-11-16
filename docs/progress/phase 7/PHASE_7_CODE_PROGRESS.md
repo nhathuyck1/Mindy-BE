@@ -1,5 +1,28 @@
 # Phase 7 progress — CODE assignments (bài tập lập trình chấm tự động)
 
+## 16/11/2026 — Python 3.13 và C# .NET 10
+
+- Backend và runner nhận bốn key. API preview trả bốn starter, danh sách
+  ngôn ngữ theo thứ tự JavaScript, Java, Python, C#. Migration thêm hai hàng
+  ở trạng thái tắt. Kiểm tra B0 chỉ đọc trên production trả về 0 chữ ký vướng
+  từ khóa mới.
+- Python/C# chạy driver với thread riêng và trả lỗi runtime khi lời giải ném
+  exception. Image C# dùng Roslyn với reference assemblies trong image.
+  Harness C# tăng giới hạn file riêng lên 64 MiB cho file nội bộ CoreCLR.
+- Local: 48 ca round-trip qua Docker cho 12 kiểu và bốn ngôn ngữ, thêm hai ca
+  đệ quy 100.000 tầng và exception. HTTP với runner thật qua luồng tạo bài,
+  xác thực reference, giao bài, chạy thử và nộp Python/C#. Type-check/build,
+  823 test BE, 17 test runner chạy với Docker và `go test` đều đạt.
+- Diễn tập nâng cấp từ mã production `a44d988` trên PostgreSQL local. Sau 41
+  migration của bản cũ, bản mới chỉ chạy migration Python/C# và tạo hai hàng
+  tắt. Chạy lần nữa không có migration chờ.
+- VPS: smoke cả bốn ngôn ngữ trên runner thử nghiệm riêng. Roslyn compile
+  Hello World trong 0,38 giây, peak RSS 96.588 KiB. Đợt thử 8 bài trộn bốn
+  ngôn ngữ với concurrency 2 đạt 8/8, p95 chờ kết quả 2,269 giây.
+- Production đang chờ triển khai runner và BE rồi phát hành FE tương thích
+  trước khi bật hai ngôn ngữ. [Flow](../../api_flow/PHASE_7_CODE_FLOW.md) ·
+  [Runbook](../../PHASE_7_CODE_RUNBOOK.md#phát-hành-python-và-c).
+
 ## 03/11/2026 — Validation for compiler PR
 
 - Both `.env.example` and `.env.production.example` now document CODE runner,

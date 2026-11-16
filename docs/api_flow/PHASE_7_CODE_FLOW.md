@@ -10,6 +10,19 @@ and production rules are unchanged; no deployment or new real-runner acceptance.
 [API contract](PHASE_7_CODE_flow-api-breakdown.md) ·
 [Progress](../progress/phase%207/PHASE_7_CODE_PROGRESS.md)
 
+## Python và C# — 16/11/2026
+
+Mentor xem trước starter của bốn ngôn ngữ từ cùng một chữ ký hàm. Sau khi bật
+Python và C#, mentor có thể chọn cả bốn khi ra đề, chạy lời giải mẫu và kiểm tra
+reference. Danh sách mentor và học viên theo thứ tự JavaScript, Java, Python, C#.
+Học viên dùng cùng luồng chạy mẫu, nộp bài và nhận điểm với hai ngôn ngữ mới.
+
+Đã kiểm tra hợp đồng API trên PostgreSQL test và runner Docker. Đã chạy smoke cả
+bốn ngôn ngữ trên runner thử nghiệm riêng ở VPS. Khi phát hành, triển khai runner
+trước, rồi triển khai BE và migration tạo hai ngôn ngữ ở trạng thái tắt. Bật hai key
+sau khi frontend đã cập nhật bộ đọc API. Xem [API contract](PHASE_7_CODE_flow-api-breakdown.md)
+và [runbook](../PHASE_7_CODE_RUNBOOK.md#phát-hành-python-và-c).
+
 ## Backend integration — 02/11/2026
 
 The existing `dev` ZIP/Whiteboard implementation is the integration baseline.

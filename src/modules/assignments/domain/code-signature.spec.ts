@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertTestMatchesSignature,
+  CODE_LANGUAGE_KEYS,
   CodeDomainError,
   describeArgs,
   matchesType,
@@ -35,6 +36,10 @@ describe('CODE function signatures', () => {
   it.each([
     ['reserved function name', { ...twoSum, functionName: 'class' }],
     ['driver name', { ...twoSum, functionName: 'Main' }],
+    ['Python keyword', { ...twoSum, functionName: 'def' }],
+    ['Python receiver', { ...twoSum, params: [{ name: 'self', type: 'int' }] }],
+    ['C# keyword', { ...twoSum, functionName: 'namespace' }],
+    ['C# driver name', { ...twoSum, functionName: 'MindyMain' }],
     ['bad identifier', { ...twoSum, functionName: '1x' }],
     ['unknown type', { ...twoSum, returnType: 'char' }],
     ['void return', { ...twoSum, returnType: 'void' }],
@@ -103,5 +108,23 @@ describe('CODE function signatures', () => {
 
   it('describes sample arguments', () => {
     expect(describeArgs(parseSignature(twoSum), [[2, 7], 9])).toBe('nums = [2,7], target = 9');
+  });
+
+  it('generates Python and C# starter code in the canonical language order', () => {
+    expect(CODE_LANGUAGE_KEYS).toEqual(['javascript', 'java21', 'python3', 'csharp']);
+    const signature = parseSignature({
+      functionName: 'group',
+      params: [
+        { name: 'grid', type: 'int[][]' },
+        { name: 'flags', type: 'boolean[]' },
+      ],
+      returnType: 'string[][]',
+    });
+    expect(starterCode('python3', signature)).toBe(
+      'class Solution:\n    def group(self, grid: list[list[int]], flags: list[bool]) -> list[list[str]]:\n        pass\n',
+    );
+    expect(starterCode('csharp', signature)).toBe(
+      'public class Solution\n{\n    public string[][] group(int[][] grid, bool[] flags)\n    {\n\n    }\n}\n',
+    );
   });
 });

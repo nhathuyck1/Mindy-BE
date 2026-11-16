@@ -1,10 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { CODE_LANGUAGE_KEYS } from '../domain/code-signature.js';
 import { CodeSignatureDto } from './code.dto.js';
 
 /** Student projections of CODE assignments: never include HIDDEN inputs/expected values or references. */
 
 export class StudentCodeLanguageDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly key!: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly key!: string;
   @ApiProperty() readonly displayName!: string;
   @ApiProperty() readonly runtimeVersion!: string;
   @ApiProperty() readonly editorMode!: string;
@@ -63,7 +64,7 @@ export class StudentCodeAssignmentDto {
 }
 
 export class CodeDraftDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey!: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey!: string;
   @ApiProperty() readonly sourceCode!: string;
   @ApiProperty({ description: '0 = not saved yet (starter code returned)' })
   readonly version!: number;
@@ -121,7 +122,7 @@ export class StudentCodeSubmissionDto {
   @ApiProperty({ format: 'uuid' }) readonly id!: string;
   @ApiProperty({ format: 'uuid' }) readonly assignmentId!: string;
   @ApiProperty() readonly attemptNumber!: number;
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey!: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey!: string;
   @ApiProperty({ type: String, nullable: true }) readonly runtimeVersion!: string | null;
   @ApiProperty({ enum: ['QUEUED', 'RUNNING', 'GRADED', 'FAILED', 'VOIDED'] })
   readonly status!: string;

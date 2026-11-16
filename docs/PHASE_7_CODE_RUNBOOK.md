@@ -6,6 +6,38 @@ runner: `../compiler-runner/README.md`.
 
 Trạng thái: **chưa deploy**. Các bước dưới đây do owner chạy trên VPS. Claude không đăng nhập VPS.
 
+## Phát hành Python và C#
+
+Kế hoạch mở rộng ngày 16/11/2026 có thứ tự phát hành riêng.
+
+1. Chạy kiểm tra chữ ký hiện có ở mục B0 trong
+   [kế hoạch Python/C#](implement_phase/phase%207/PHASE_7_PYTHON_CSHARP.md#b0-kiểm-tra-dữ-liệu-trước-bắt-buộc-chạy-trên-db-production)
+   trước khi triển khai. Lượt kiểm tra chỉ đọc ngày 16/11 trả về 0 dòng.
+2. Từ thư mục runner, build hai judge image và image runner. Giữ tag runner
+   đang phục vụ để có thể quay lại khi cần.
+
+   ```sh
+   docker compose -f compose.production.yaml --profile judge-images build judge-python judge-csharp
+   docker compose -f compose.production.yaml build runner
+   docker compose -f compose.production.yaml up -d --no-deps runner
+   ```
+
+3. Chạy smoke bốn ngôn ngữ từ container trong mạng runner. Sau khi smoke
+   thành công, triển khai BE và chạy migration
+   `1793750400000-code-languages-python-csharp`. Kiểm tra DB có hai hàng mới với
+   `enabled=false`. Có thể chạy round-trip qua runner thật với
+   `CODE_RUNNER_URL` và `CODE_RUNNER_TOKEN` đã cấu hình bằng
+   `pnpm test test/integration/phase7-code-runner-round-trip.spec.ts`.
+4. Triển khai frontend đã đọc được bốn key. Sau đó bật Python và C#.
+
+   ```sql
+   UPDATE code_languages SET enabled = true WHERE key IN ('python3', 'csharp');
+   ```
+
+5. Tạo đề với bốn ngôn ngữ, xác thực reference rồi giao bài. Kiểm tra học viên
+   chạy thử và nộp bằng Python, C#. Để tắt hai ngôn ngữ trong danh sách chọn và
+   giữ lịch sử, chạy cùng câu lệnh với `enabled = false`.
+
 ## 0. Thành phần và thứ tự
 
 ```text

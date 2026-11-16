@@ -4,7 +4,9 @@ import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AssignmentsQuiz1792713600000 } from '../../src/database/migrations/1792713600000-assignments-quiz.js';
 import { CodeAssignments1792886400000 } from '../../src/database/migrations/1792886400000-code-assignments.js';
+import { CodeLanguagesPythonCsharp1793750400000 } from '../../src/database/migrations/1793750400000-code-languages-python-csharp.js';
 import { RESULT_PREFIX } from '../../src/modules/assignments/domain/code-driver.js';
+import { CODE_LANGUAGE_KEYS } from '../../src/modules/assignments/domain/code-signature.js';
 import { AssignmentAccessService } from '../../src/modules/assignments/services/assignment-access.service.js';
 import { AssignmentsService } from '../../src/modules/assignments/services/assignments.service.js';
 import { CodeAuthoringService } from '../../src/modules/assignments/services/code-authoring.service.js';
@@ -69,10 +71,15 @@ describe.skipIf(!separateTestUrl('phase7'))('Phase 7 CODE authoring PostgreSQL',
   const executor = new FakeExecutor();
   beforeAll(async () => {
     db = await paymentDatabase('phase7', {
-      migrations: [AssignmentsQuiz1792713600000, CodeAssignments1792886400000],
+      migrations: [
+        AssignmentsQuiz1792713600000,
+        CodeAssignments1792886400000,
+        CodeLanguagesPythonCsharp1793750400000,
+      ],
     });
     await rehearseMigration(db, new CodeAssignments1792886400000(), 'down');
     await rehearseMigration(db, new CodeAssignments1792886400000(), 'up');
+    await rehearseMigration(db, new CodeLanguagesPythonCsharp1793750400000(), 'up');
     f = paymentFixture(db);
     const teaching = new TeachingReadService(
       db,
@@ -225,6 +232,43 @@ describe.skipIf(!separateTestUrl('phase7'))('Phase 7 CODE authoring PostgreSQL',
         expected: [0, 1],
       }),
     ).rejects.toMatchObject({ response: { code: 'ASSIGNMENT_CONTENT_FROZEN' } });
+  });
+
+  it('adds four languages in canonical order after opt-in and preserves rows on rollback', async () => {
+    const s = await draft();
+    const authored = await author(s);
+    const input = {
+      expectedRevision: authored.assignment.revision,
+      languages: [...CODE_LANGUAGE_KEYS].reverse().map((languageKey) => ({ languageKey })),
+    };
+    expect((await code.languages()).map(({ key }) => key)).toEqual(['javascript', 'java21']);
+    await expect(code.replaceLanguages(s.mentor, s.created.id, input)).rejects.toMatchObject({
+      response: { code: 'CODE_LANGUAGE_NOT_ALLOWED' },
+    });
+    await db.query("UPDATE code_languages SET enabled=true WHERE key IN ('python3','csharp')");
+    try {
+      const result = await code.replaceLanguages(s.mentor, s.created.id, input);
+      expect(result.availableLanguages.map(({ key }) => key)).toEqual(CODE_LANGUAGE_KEYS);
+      expect(result.languages.map(({ languageKey }) => languageKey)).toEqual(CODE_LANGUAGE_KEYS);
+      expect(result.languages[2]?.starterCode).toContain('def twoSum(');
+      expect(result.languages[3]?.starterCode).toContain('public int[] twoSum(');
+    } finally {
+      await rehearseMigration(db, new CodeLanguagesPythonCsharp1793750400000(), 'down');
+    }
+    expect(
+      (await code.get(s.mentor, s.created.id)).languages.map(({ languageKey }) => languageKey),
+    ).toEqual(['javascript', 'java21']);
+    await expect(
+      code.mentorRun(s.mentor, s.created.id, {
+        languageKey: 'python3',
+        sourceCode: 'class Solution: pass',
+      }),
+    ).rejects.toMatchObject({ response: { code: 'CODE_LANGUAGE_NOT_ALLOWED' } });
+    expect(
+      await db.query('SELECT language_key FROM code_problem_languages WHERE assignment_id=$1', [
+        s.created.id,
+      ]),
+    ).toHaveLength(4);
   });
 
   it('lets the mentor run demo code on samples and custom input after publishing, storing nothing', async () => {

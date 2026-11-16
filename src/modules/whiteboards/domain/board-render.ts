@@ -1,5 +1,5 @@
 import { type BoardShape, boardError } from './board-document.js';
-import { CODE_SHAPE_PALETTE, codeLines } from './code-tokens.js';
+import { CODE_SHAPE_LANGUAGE_LABELS, CODE_SHAPE_PALETTE, codeLines } from './code-tokens.js';
 export interface BoardBounds {
   x: number;
   y: number;
@@ -104,5 +104,5 @@ function codeSvg(s: BoardShape): string {
       return `<text x="${s.x + pad}" y="${s.y + header + pad + fontSize + i * lineHeight}" xml:space="preserve">${spans}</text>`;
     })
     .join('');
-  return `<clipPath id="${clip}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" rx="10"/></clipPath><g clip-path="url(#${clip})" font-family="JetBrains Mono,Menlo,Consolas,monospace" font-size="${fontSize}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${CODE_SHAPE_PALETTE.bg}"/><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${header}" fill="${CODE_SHAPE_PALETTE.header}"/><text x="${s.x + pad}" y="${s.y + header / 2 + fontSize * 0.35}" fill="${CODE_SHAPE_PALETTE.muted}" font-size="${Math.round(fontSize * 0.85)}">${s.language === 'java21' ? 'Java' : 'JavaScript'}</text>${rows}</g>`;
+  return `<clipPath id="${clip}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" rx="10"/></clipPath><g clip-path="url(#${clip})" font-family="JetBrains Mono,Menlo,Consolas,monospace" font-size="${fontSize}"><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${CODE_SHAPE_PALETTE.bg}"/><rect x="${s.x}" y="${s.y}" width="${s.width}" height="${header}" fill="${CODE_SHAPE_PALETTE.header}"/><text x="${s.x + pad}" y="${s.y + header / 2 + fontSize * 0.35}" fill="${CODE_SHAPE_PALETTE.muted}" font-size="${Math.round(fontSize * 0.85)}">${CODE_SHAPE_LANGUAGE_LABELS[s.language ?? 'javascript']}</text>${rows}</g>`;
 }

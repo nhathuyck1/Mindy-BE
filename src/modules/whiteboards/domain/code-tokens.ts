@@ -2,8 +2,15 @@
  * Syntax colouring for "code" shapes in board exports. Mirrors the FE editor tokenizer
  * (Mindy-FE2 src/lib/code-highlight.ts); keep both in step.
  */
-export type CodeShapeLanguage = 'javascript' | 'java21';
-export const CODE_SHAPE_LANGUAGES: readonly CodeShapeLanguage[] = ['javascript', 'java21'];
+export const CODE_SHAPE_LANGUAGES = ['javascript', 'java21', 'python3', 'csharp'] as const;
+export type CodeShapeLanguage = (typeof CODE_SHAPE_LANGUAGES)[number];
+
+export const CODE_SHAPE_LANGUAGE_LABELS: Record<CodeShapeLanguage, string> = {
+  javascript: 'JavaScript',
+  java21: 'Java',
+  python3: 'Python',
+  csharp: 'C#',
+};
 
 type TokenKind =
   | 'keyword'
@@ -47,14 +54,31 @@ const keywords: Record<CodeShapeLanguage, Set<string>> = {
   java21: words(
     'public private protected static final abstract class interface enum record extends implements new instanceof import package var void throws synchronized volatile transient native strictfp sealed permits assert',
   ),
+  python3: words(
+    'and as assert async class def del elif except from global import in is lambda nonlocal not or pass raise with match case',
+  ),
+  csharp: words(
+    'abstract as async base class const delegate enum event explicit extern fixed foreach implicit in interface internal is lock namespace new operator out override params private protected public readonly ref sealed sizeof stackalloc static struct this typeof unchecked unsafe using var virtual void',
+  ),
 };
 const literals: Record<CodeShapeLanguage, Set<string>> = {
   javascript: words('true false null undefined this super NaN Infinity arguments'),
   java21: words('true false null this super'),
+  python3: words('True False None self'),
+  csharp: words('true false null'),
 };
-const javaTypes = words('int long double float boolean char byte short');
-const pattern =
-  /(\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|("(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\[\s\S]|[^`\\])*`?)|((?:0[xX][\da-fA-F_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)[lLfFdDn]?(?![\w$]))|(@[A-Za-z_]\w*)|([A-Za-z_$][\w$]*)|(\s+)|([\s\S])/g;
+const types: Record<CodeShapeLanguage, Set<string>> = {
+  javascript: new Set(),
+  java21: words('int long double float boolean char byte short'),
+  python3: words('int float bool str list dict tuple set bytes'),
+  csharp: words(
+    'bool byte sbyte char decimal double float int uint long ulong object short ushort string',
+  ),
+};
+const tokens =
+  /|("(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\[\s\S]|[^`\\])*`?)|((?:0[xX][\da-fA-F_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)[lLfFdDn]?(?![\w$]))|(@[A-Za-z_]\w*)|([A-Za-z_$][\w$]*)|(\s+)|([\s\S])/;
+const slashComment = new RegExp(/(\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))/.source + tokens.source, 'g');
+const hashComment = new RegExp(/(#[^\n]*)/.source + tokens.source, 'g');
 
 export function codeTokens(
   source: string,
@@ -62,20 +86,21 @@ export function codeTokens(
 ): { kind: TokenKind; text: string }[] {
   const out: { kind: TokenKind; text: string }[] = [];
   let previous = '';
-  for (const m of source.matchAll(pattern)) {
+  for (const m of source.matchAll(language === 'python3' ? hashComment : slashComment)) {
     const text = m[0];
     let kind: TokenKind = 'plain';
     if (m[1] !== undefined) kind = 'comment';
     else if (m[2] !== undefined) kind = 'string';
     else if (m[3] !== undefined) kind = 'number';
-    else if (m[4] !== undefined) kind = language === 'java21' ? 'type' : 'plain';
+    else if (m[4] !== undefined)
+      kind = language === 'java21' || language === 'python3' ? 'type' : 'plain';
     else if (m[5] !== undefined) {
       const rest = source.slice((m.index ?? 0) + text.length);
       const next = rest.trimStart()[0] ?? '';
       if (control.has(text)) kind = 'control';
       else if (keywords[language].has(text)) kind = 'keyword';
       else if (literals[language].has(text)) kind = 'literal';
-      else if (language === 'java21' && javaTypes.has(text)) kind = 'type';
+      else if (types[language].has(text)) kind = 'type';
       else if (next === '(') kind = 'function';
       else if (previous === '.') kind = 'property';
       else if (/^[A-Z]/.test(text)) kind = 'type';

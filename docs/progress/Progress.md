@@ -1,3 +1,11 @@
+## 2026-11-16 — Phase 7 Python/C#
+
+Đã triển khai A–C cho backend và compiler-runner trong workspace. B0 trên
+production trả 0 dòng. Round-trip qua Docker 50/50, luồng bài CODE qua HTTP đạt,
+smoke bốn ngôn ngữ trên runner thử nghiệm VPS đạt. Bản phát hành production
+cần migration tạo hai key ở trạng thái tắt và FE hỗ trợ trước khi bật.
+[Chi tiết Phase 7](phase%207/PHASE_7_CODE_PROGRESS.md#16112026--python-313-và-c-net-10).
+
 ## 2026-11-03 — compiler PR validation
 
 ## 2026-11-04 — Portable FE/BE realtime

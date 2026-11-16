@@ -14,16 +14,40 @@ Prefix `/api/v1`, HttpOnly `access_token` cookie, MENTOR role for `/mentor`. Mut
 Every authoring mutation takes `expectedRevision` and bumps `assignments.revision` (409 `ASSIGNMENT_VERSION_CONFLICT` when stale,
 409 `ASSIGNMENT_CONTENT_FROZEN` after publish). CODE routes accept JSON bodies up to 256 KB (default 64 KB elsewhere).
 
+### Python and C# contract (16/11/2026)
+
+`languageKey` accepts `javascript`, `java21`, `python3` and `csharp` in CODE
+authoring, run, draft and submission routes. Mentor language settings
+(`availableLanguages` and `languages`) and student editor choices use that order.
+The registry returns enabled entries only. The migration inserts Python and C#
+disabled. Preview always returns four starter strings, even while two languages
+are disabled. For example, `{ "signature": { "functionName": "sum", "params":
+[{ "name": "a", "type": "int" }, { "name": "b", "type": "int" }],
+"returnType": "long" } }` produces a `Solution.sum` stub in all class-based languages.
+
+| Key | Display name | Runtime | Editor mode |
+| --- | --- | --- | --- |
+| `javascript` | JavaScript | Node.js 22 | `javascript` |
+| `java21` | Java | Java 21 | `java` |
+| `python3` | Python | Python 3.13 | `python` |
+| `csharp` | C# | .NET 10 | `csharp` |
+
+The editor reads enabled options before saving the draft languages. A stale UI
+selection for a disabled language yields 422 `CODE_LANGUAGE_NOT_ALLOWED` when
+configuring, running or validating that language. Refetch the language choices.
+C# uses a global `Solution` class and compiler diagnostics report one extra line
+for the implicit imports.
+
 ## 2. Routes
 
 | Status | Method | Route | Notes |
 | --- | --- | --- | --- |
 | Implemented (local) | POST | `/mentor/class-sessions/:sessionId/assignments` | `type=CODE`: `dueAt` required, no `timeLimitMinutes`, `maxAttempts` 1..50 (default 10) |
-| Implemented (local) | GET | `/mentor/code-languages` | `[{key,displayName,runtimeVersion,editorMode}]` — `javascript`, `java21` |
-| Implemented (local) | POST | `/mentor/code-signatures/preview` | `{signature}` → `{javascript, java21}` starter code |
+| Implemented (local) | GET | `/mentor/code-languages` | 200 `[{key,displayName,runtimeVersion,editorMode}]`, enabled languages in canonical order |
+| Implemented (local) | POST | `/mentor/code-signatures/preview` | `{signature}` → 200 `{javascript, java21, python3, csharp}` starter code, no revision or persistence |
 | Implemented (local) | GET | `/mentor/assignments/:id/code` | `MentorCodeAuthoringDto` incl. HIDDEN tests, references, `validatedRevision`, `publishBlockers` |
 | Implemented (local) | PUT | `/mentor/assignments/:id/code-problem` | statement, constraints, difficulty, signature, compareMode/floatEpsilon, scoringMode, cpuTimeLimitMs, memoryLimitMb |
-| Implemented (local) | PUT | `/mentor/assignments/:id/code-languages` | `{languages:[{languageKey, starterCode?}]}`; omitted starter = generated |
+| Implemented (local) | PUT | `/mentor/assignments/:id/code-languages` | `{expectedRevision,languages:[{languageKey,starterCode?}]}`, 1–4 unique enabled languages, omitted starter = generated |
 | Implemented (local) | GET | `/mentor/code-library?page&pageSize&q` | CODE assignments **created by this mentor** (any class), newest first: title, status, class code, session, testCount, languages |
 | Implemented (local) | POST | `/mentor/assignments/:id/code-import` | `{expectedRevision, sourceAssignmentId}` → copies problem, languages, tests, references into this DRAFT (replaces content); validation never copied. Source must be own work or within the mentor's scope |
 | Implemented (local) | POST | `/mentor/assignments/:id/code-tests/generate` | `{languageKey, sourceCode, inputs: inputArgs[] (1..30)}` → runs the (unsaved) reference via runner (`interactive`) → `{compileStatus, compileOutput, outputs:[{index,status,expected,console,stderr,timeMs,memoryKb}]}`; `status=OK` means `expected` is the reference return value. Nothing stored |
@@ -31,6 +55,7 @@ Every authoring mutation takes `expectedRevision` and bumps `assignments.revisio
 | Implemented (local) | PUT / DELETE | `/mentor/assignments/:id/code-tests/:position` | position 1..30; `{visibility, inputArgs, expected, weight?, explanationMd?}` |
 | Implemented (local) | PUT | `/mentor/assignments/:id/code-reference/:languageKey` | `{sourceCode}` (≤ 64 KiB) |
 | Implemented (local) | POST | `/mentor/assignments/:id/code-validate` | runs references on all tests via compiler-runner → `{validated, revision, results}` |
+| Implemented (local) | POST | `/mentor/assignments/:id/code-runs` | Mentor demo on draft or published CODE assignment in scope. `{languageKey,sourceCode,customArgs?}` → 200 `CodeRunResultDto`. Runs samples or a custom case on the interactive pool, no persistence |
 | Implemented (local) | POST | `/mentor/assignments/:id/publish` | CODE requires `publishBlockers = []` |
 | Implemented (local) | POST | `/mentor/assignments/:id/code-extension` | published only; `{dueAt?, maxAttempts?, reason}` forward-only |
 | Implemented (local) | POST | `/mentor/assignments/:id/archive` | also voids QUEUED/RUNNING code submissions |

@@ -18,6 +18,34 @@ const solution = `function twoSum(nums, target) {
       if (nums[i] + nums[j] === target) return [i, j];
   return [];
 }`;
+const languages = ['javascript', 'java21', 'python3', 'csharp'] as const;
+const solutions = {
+  javascript: solution,
+  java21: `class Solution {
+    public int[] twoSum(int[] nums, int target) {
+      for (int i = 0; i < nums.length; i++)
+        for (int j = i + 1; j < nums.length; j++)
+          if (nums[i] + nums[j] == target) return new int[] { i, j };
+      return new int[0];
+    }
+  }`,
+  python3: `class Solution:
+    def twoSum(self, nums, target):
+        for i in range(len(nums)):
+            for j in range(i + 1, len(nums)):
+                if nums[i] + nums[j] == target:
+                    return [i, j]
+        return []
+`,
+  csharp: `public class Solution {
+    public int[] twoSum(int[] nums, int target) {
+      for (int i = 0; i < nums.Length; i++)
+        for (int j = i + 1; j < nums.Length; j++)
+          if (nums[i] + nums[j] == target) return [i, j];
+      return [];
+    }
+  }`,
+};
 
 function twoSum(args: unknown[]): number[] {
   const [nums, target] = args as [number[], number];
@@ -222,7 +250,12 @@ describe.skipIf(!separateTestUrl('phase7_http'))('Phase 7 compiled CODE assignme
     const created = await request(create, mentor, body);
     expect(created.status).toBe(201);
     let a = await json<{ id: string; revision: number }>(created);
-    type Authoring = { assignment: { revision: number }; publishBlockers: string[] };
+    type Authoring = {
+      assignment: { revision: number };
+      publishBlockers: string[];
+      availableLanguages: { key: string }[];
+      languages: { languageKey: string }[];
+    };
     const put = async (path: string, payload: Record<string, unknown>) => {
       const res = await request(
         `/mentor/assignments/${a.id}${path}`,
@@ -235,22 +268,34 @@ describe.skipIf(!separateTestUrl('phase7_http'))('Phase 7 compiled CODE assignme
       a = { ...a, revision: dto.assignment.revision };
       return dto;
     };
+    const signature = {
+      functionName: 'twoSum',
+      params: [
+        { name: 'nums', type: 'int[]' },
+        { name: 'target', type: 'int' },
+      ],
+      returnType: 'int[]',
+    };
+    const preview = await request('/mentor/code-signatures/preview', mentor, { signature });
+    expect(preview.status).toBe(200);
+    expect(Object.keys(await json<Record<string, string>>(preview))).toEqual(languages);
+    const listLanguages = () => json<{ key: string }[]>(request('/mentor/code-languages', mentor));
+    expect((await listLanguages()).map(({ key }) => key)).toEqual(languages.slice(0, 2));
+    await db.query("UPDATE code_languages SET enabled=true WHERE key IN ('python3','csharp')");
+    expect((await listLanguages()).map(({ key }) => key)).toEqual(languages);
     await put('/code-problem', {
       statementMd: 'Two Sum',
-      signature: {
-        functionName: 'twoSum',
-        params: [
-          { name: 'nums', type: 'int[]' },
-          { name: 'target', type: 'int' },
-        ],
-        returnType: 'int[]',
-      },
+      signature,
       compareMode: 'EXACT',
       scoringMode: 'PER_TEST',
       cpuTimeLimitMs: 2000,
       memoryLimitMb: 256,
     });
-    await put('/code-languages', { languages: [{ languageKey: 'javascript' }] });
+    const configured = await put('/code-languages', {
+      languages: [...languages].reverse().map((languageKey) => ({ languageKey })),
+    });
+    expect(configured.availableLanguages.map(({ key }) => key)).toEqual(languages);
+    expect(configured.languages.map(({ languageKey }) => languageKey)).toEqual(languages);
     await put('/code-tests/1', {
       visibility: 'SAMPLE',
       inputArgs: [[2, 7, 11, 15], 9],
@@ -270,10 +315,10 @@ describe.skipIf(!separateTestUrl('phase7_http'))('Phase 7 compiled CODE assignme
       'PUT',
     );
     expect(big.status).toBe(422);
-    const ref = await put('/code-reference/javascript', {
-      sourceCode: solution,
-    });
-    expect(ref.publishBlockers).toEqual(['CODE_REFERENCE_NOT_VALIDATED']);
+    for (const language of languages) {
+      const ref = await put(`/code-reference/${language}`, { sourceCode: solutions[language] });
+      expect(ref.publishBlockers).toEqual(['CODE_REFERENCE_NOT_VALIDATED']);
+    }
     const validated = await request(`/mentor/assignments/${a.id}/code-validate`, mentor, {
       expectedRevision: a.revision,
     });
@@ -287,10 +332,13 @@ describe.skipIf(!separateTestUrl('phase7_http'))('Phase 7 compiled CODE assignme
     });
     expect(published.status).toBe(200);
 
-    const view = await json<{ samples: unknown[]; hiddenTestCount: number }>(
-      request(`/me/assignments/${a.id}/code`, student),
-    );
+    const view = await json<{
+      samples: unknown[];
+      hiddenTestCount: number;
+      languages: { key: string }[];
+    }>(request(`/me/assignments/${a.id}/code`, student));
     expect(view).toMatchObject({ hiddenTestCount: 1 });
+    expect(view.languages.map(({ key }) => key)).toEqual(languages);
     expect(JSON.stringify(view)).not.toContain('[3,2,4]');
     expect((await request(`/me/assignments/${a.id}/code`, other)).status).toBe(404);
     const run = await request(`/me/assignments/${a.id}/code-runs`, student, {
@@ -352,5 +400,31 @@ describe.skipIf(!separateTestUrl('phase7_http'))('Phase 7 compiled CODE assignme
         request(`/me/assignments/${a.id}/code`, student),
       ),
     ).toMatchObject({ attemptsUsed: 1, bestScore: null });
+
+    for (const languageKey of ['python3', 'csharp'] as const) {
+      const input = { languageKey, sourceCode: solutions[languageKey] };
+      const demo = await request(`/mentor/assignments/${a.id}/code-runs`, mentor, input);
+      expect(demo.status).toBe(200);
+      expect(await json(demo)).toMatchObject({
+        compileStatus: 'OK',
+        tests: [{ status: 'PASSED' }],
+      });
+      const sample = await request(`/me/assignments/${a.id}/code-runs`, student, input);
+      expect(sample.status).toBe(200);
+      expect(await json(sample)).toMatchObject({
+        compileStatus: 'OK',
+        tests: [{ status: 'PASSED' }],
+      });
+      const accepted = await request(submitPath, student, input, 'POST', randomUUID());
+      expect(accepted.status).toBe(202);
+      const { id } = await json<{ id: string }>(accepted);
+      let status = 'QUEUED';
+      for (let i = 0; i < 40 && ['QUEUED', 'RUNNING'].includes(status); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        detail = await json(request(`/me/code-submissions/${id}`, student));
+        status = detail.status;
+      }
+      expect(detail).toMatchObject({ status: 'GRADED', verdict: 'ACCEPTED', score: '10.00' });
+    }
   }, 60000);
 });

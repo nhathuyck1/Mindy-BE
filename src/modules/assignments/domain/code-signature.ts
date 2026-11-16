@@ -18,8 +18,8 @@ export const CODE_VALUE_TYPES = [
   'string[][]',
 ] as const;
 export type CodeValueType = (typeof CODE_VALUE_TYPES)[number];
-export type CodeLanguageKey = 'javascript' | 'java21';
-export const CODE_LANGUAGE_KEYS: readonly CodeLanguageKey[] = ['javascript', 'java21'];
+export const CODE_LANGUAGE_KEYS = ['javascript', 'java21', 'python3', 'csharp'] as const;
+export type CodeLanguageKey = (typeof CODE_LANGUAGE_KEYS)[number];
 
 export interface CodeParam {
   readonly name: string;
@@ -46,14 +46,16 @@ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
 const INT_MIN = -2147483648;
 const INT_MAX = 2147483647;
 const MAX_STRING = 65536;
-/** JS + Java reserved words, plus names the generated drivers use. */
+/** Reserved words across supported languages and names used by the generated drivers. */
 const RESERVED = new Set(
   (
     'abstract arguments assert await boolean break byte case catch char class const continue debugger default delete do ' +
     'double else enum eval export extends false final finally float for function goto if implements import in instanceof ' +
     'int interface let long native new null package private protected public return short static strictfp super switch ' +
     'synchronized this throw throws transient true try typeof var void volatile while with yield undefined NaN Infinity ' +
-    'Main Solution MindyJson main require process module exports String Object System Math'
+    'Main Solution MindyJson main require process module exports String Object System Math ' +
+    'False None True and as assert async await def del elif except from global is lambda nonlocal not or pass raise with self json sys threading ' +
+    'base bool checked decimal delegate event explicit extern fixed foreach implicit internal lock namespace object operator out override params readonly ref sbyte sealed sizeof stackalloc string struct uint ulong unchecked unsafe ushort using virtual MindyMain Console'
   ).split(' '),
 );
 
@@ -100,7 +102,7 @@ export function parseSignature(raw: unknown): CodeSignature {
   return { functionName, params: parsed, returnType };
 }
 
-/** True when a JSON value is representable as `type` in both JavaScript and Java. */
+/** True when a JSON value is representable as `type` across the supported languages. */
 export function matchesType(type: CodeValueType, value: unknown): boolean {
   if (type.endsWith('[]')) {
     const inner = type.slice(0, -2) as CodeValueType;
@@ -168,19 +170,51 @@ export function javaType(type: CodeValueType): string {
   return type.replace('string', 'String');
 }
 
+export function pythonType(type: CodeValueType): string {
+  if (type.endsWith('[]')) return `list[${pythonType(type.slice(0, -2) as CodeValueType)}]`;
+  switch (type) {
+    case 'long':
+      return 'int';
+    case 'double':
+      return 'float';
+    case 'boolean':
+      return 'bool';
+    case 'string':
+      return 'str';
+    default:
+      return type;
+  }
+}
+
+export function csharpType(type: CodeValueType): string {
+  return type.replace('boolean', 'bool');
+}
+
 /** Starter code shown in the editor before the student writes anything. */
 export function starterCode(language: CodeLanguageKey, s: CodeSignature): string {
-  if (language === 'javascript') {
-    const doc = [
-      '/**',
-      ...s.params.map((p) => ` * @param {${JS_DOC[p.type]}} ${p.name}`),
-      ` * @return {${JS_DOC[s.returnType]}}`,
-      ' */',
-    ];
-    return `${doc.join('\n')}\nfunction ${s.functionName}(${s.params.map((p) => p.name).join(', ')}) {\n\n}\n`;
+  switch (language) {
+    case 'javascript': {
+      const doc = [
+        '/**',
+        ...s.params.map((p) => ` * @param {${JS_DOC[p.type]}} ${p.name}`),
+        ` * @return {${JS_DOC[s.returnType]}}`,
+        ' */',
+      ];
+      return `${doc.join('\n')}\nfunction ${s.functionName}(${s.params.map((p) => p.name).join(', ')}) {\n\n}\n`;
+    }
+    case 'java21': {
+      const params = s.params.map((p) => `${javaType(p.type)} ${p.name}`).join(', ');
+      return `class Solution {\n    public ${javaType(s.returnType)} ${s.functionName}(${params}) {\n\n    }\n}\n`;
+    }
+    case 'python3': {
+      const params = s.params.map((p) => `${p.name}: ${pythonType(p.type)}`).join(', ');
+      return `class Solution:\n    def ${s.functionName}(self, ${params}) -> ${pythonType(s.returnType)}:\n        pass\n`;
+    }
+    case 'csharp': {
+      const params = s.params.map((p) => `${csharpType(p.type)} ${p.name}`).join(', ');
+      return `public class Solution\n{\n    public ${csharpType(s.returnType)} ${s.functionName}(${params})\n    {\n\n    }\n}\n`;
+    }
   }
-  const params = s.params.map((p) => `${javaType(p.type)} ${p.name}`).join(', ');
-  return `class Solution {\n    public ${javaType(s.returnType)} ${s.functionName}(${params}) {\n\n    }\n}\n`;
 }
 
 /** Human readable call arguments, e.g. `nums = [2,7], target = 9` (sample tests only). */

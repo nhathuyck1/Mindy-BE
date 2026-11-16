@@ -99,6 +99,11 @@ sau là `/api/v1/whiteboards/:boardId`. Command dùng Idempotency-Key/lỗi chun
 | POST `/restores` | `{snapshotId:UUID,expectedEpoch:UUID,expectedSequence:string,expectedControlVersion:string}` sau preview/xác nhận | 200 metadata epoch mới, BEFORE_RESET + restore nhất quán |
 | POST `/resets` | Như restores bỏ snapshotId, xác nhận xóa nội dung | 200 metadata epoch mới/rỗng, mốc BEFORE_RESET trước clear |
 
+Từ 16/11/2026, shape `type: "code"` trong update Yjs và projection snapshot
+chấp nhận `language: "javascript" | "java21" | "python3" | "csharp"`. Shape vẫn
+chứa `text` và `fontSize`. Server từ chối key không hợp lệ bằng 422 khi áp dụng
+update. Bản xuất SVG/PNG/PDF dùng nhãn và màu cú pháp của ngôn ngữ đã lưu.
+
 Reason MANUAL|SESSION_END|BEFORE_RESET. SESSION_END do durable lifecycle event,
 không nhận public reason tùy ý. Binary restore chỉ server đọc; large snapshot
 limits/download phải chốt trước code, không trả payload vô hạn. Preview không

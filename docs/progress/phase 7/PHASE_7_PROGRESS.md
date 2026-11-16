@@ -1,5 +1,11 @@
 # Phase 7 — Implementation progress
 
+## 16/11/2026 — Code block Python và C#
+
+Backend nhận, lưu và xuất code block `python3` và `csharp`. Snapshot giữ key,
+bản xuất dùng đúng nhãn và tô comment `#` hoặc `//` theo ngôn ngữ. Integration
+PostgreSQL/MinIO đạt 17 test, HTTP/WS đạt 3 test. [Flow](../../api_flow/PHASE_7_FLOW.md).
+
 ## CODE coexistence — 02/11/2026
 
 Whiteboard runtime and the existing Whiteboard API document remain unchanged.

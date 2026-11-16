@@ -8,6 +8,7 @@ import {
   type CodeLanguageKey,
   type CodeSignature,
   type CodeValueType,
+  csharpType,
   javaType,
 } from './code-signature.js';
 
@@ -25,9 +26,18 @@ export function buildSource(
   nonce: string,
 ): string {
   if (!NONCE.test(nonce)) throw new Error('CODE_DRIVER_NONCE_INVARIANT');
-  return language === 'javascript'
-    ? javascriptSource(signature, studentCode, nonce)
-    : javaSource(signature, studentCode, nonce);
+  switch (language) {
+    case 'javascript':
+      return javascriptSource(signature, studentCode, nonce);
+    case 'java21':
+      return javaSource(signature, studentCode, nonce);
+    case 'python3':
+      return pythonSource(signature, studentCode, nonce);
+    case 'csharp':
+      return csharpSource(signature, studentCode, nonce);
+    default:
+      throw new Error('CODE_DRIVER_LANGUAGE_INVARIANT');
+  }
 }
 
 function javascriptSource(s: CodeSignature, code: string, nonce: string): string {
@@ -37,6 +47,92 @@ function javascriptSource(s: CodeSignature, code: string, nonce: string): string
   const __mindyResult = ${s.functionName}(...__mindyArgs);
   process.stdout.write('\\n' + ${JSON.stringify(`${RESULT_PREFIX}${nonce}:`)} + JSON.stringify(__mindyResult === undefined ? null : __mindyResult) + '\\n');
 })();
+`;
+}
+
+function pythonSource(s: CodeSignature, code: string, nonce: string): string {
+  // Python mangles private names declared inside Solution.
+  const method =
+    s.functionName.startsWith('__') && !s.functionName.endsWith('__')
+      ? `_Solution${s.functionName}`
+      : s.functionName;
+  return `${code}
+
+def __mindy_main():
+    import json as _j, sys as _s
+    _args = _j.loads(_s.stdin.read())
+    _res = Solution().${method}(*_args)
+    try:
+        _out = _j.dumps(_res, separators=(",", ":"), allow_nan=False)
+    except ValueError:
+        _out = "null"
+    _s.stdout.flush()
+    _s.stdout.write("\\n" + ${JSON.stringify(`${RESULT_PREFIX}${nonce}:`)} + _out + "\\n")
+    _s.stdout.flush()
+
+if __name__ == "__main__":
+    import sys as _s, threading as _t, traceback as _tb
+    _s.setrecursionlimit(200000)
+    _t.stack_size(64 * 1024 * 1024)
+    _err = []
+    def _run():
+        try:
+            __mindy_main()
+        except BaseException:
+            _err.append(1)
+            _tb.print_exc()
+    _th = _t.Thread(target=_run)
+    _th.start()
+    _th.join()
+    _s.exit(1 if _err else 0)
+`;
+}
+
+function csharpSource(s: CodeSignature, code: string, nonce: string): string {
+  const reads = s.params
+    .map((p, i) => {
+      const type = csharpType(p.type);
+      return `        ${type} a${i} = System.Text.Json.JsonSerializer.Deserialize<${type}>(a[${i}]);`;
+    })
+    .join('\n');
+  const args = s.params.map((_p, i) => `a${i}`).join(', ');
+  // Keep the implicit usings to one line so source diagnostics are offset by one line.
+  return `using System; using System.Collections.Generic; using System.Linq; using System.Text;
+${code}
+
+public static class MindyMain
+{
+    public static int Main()
+    {
+        int exit = 0;
+        var thread = new System.Threading.Thread(() =>
+        {
+            try { Run(); }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                exit = 1;
+            }
+        }, 256 * 1024 * 1024);
+        thread.Start();
+        thread.Join();
+        return exit;
+    }
+
+    static void Run()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(Console.In.ReadToEnd());
+        var a = doc.RootElement;
+${reads}
+        ${csharpType(s.returnType)} result = new Solution().${s.functionName}(${args});
+        string json;
+        try { json = System.Text.Json.JsonSerializer.Serialize(result); }
+        catch (ArgumentException) { json = "null"; }
+        Console.Out.Flush();
+        Console.Out.Write("\\n" + ${JSON.stringify(`${RESULT_PREFIX}${nonce}:`)} + json + "\\n");
+        Console.Out.Flush();
+    }
+}
 `;
 }
 

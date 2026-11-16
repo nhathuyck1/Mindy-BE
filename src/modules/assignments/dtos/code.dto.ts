@@ -7,11 +7,15 @@ import type {
   CodeTestRow,
 } from '../assignment.types.js';
 import type { CodeReadinessBlocker } from '../domain/code-readiness.js';
-import { CODE_VALUE_TYPES, type CodeSignature } from '../domain/code-signature.js';
+import {
+  CODE_LANGUAGE_KEYS,
+  CODE_VALUE_TYPES,
+  type CodeSignature,
+} from '../domain/code-signature.js';
 import { AssignmentDto } from './assignment.dto.js';
 
 export class CodeLanguageDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly key: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly key: string;
   @ApiProperty() readonly displayName: string;
   @ApiProperty() readonly runtimeVersion: string;
   @ApiProperty({ description: 'Editor (Monaco/re_editor) language id' })
@@ -59,7 +63,7 @@ export class CodeProblemDto {
 }
 
 export class CodeProblemLanguageDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey: string;
   @ApiProperty() readonly starterCode: string;
   constructor(row: CodeProblemLanguageRow) {
     this.languageKey = row.language_key;
@@ -100,7 +104,7 @@ export class CodeValidationTestDto {
   @ApiProperty() readonly stderr!: string;
 }
 export class CodeValidationDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey!: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey!: string;
   @ApiProperty({ enum: ['OK', 'ERROR', 'TIMEOUT', 'SKIPPED'] }) readonly compileStatus!: string;
   @ApiProperty() readonly compileOutput!: string;
   @ApiProperty() readonly passed!: number;
@@ -110,7 +114,7 @@ export class CodeValidationDto {
 }
 
 export class CodeReferenceDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey: string;
   @ApiProperty() readonly sourceCode: string;
   @ApiProperty({ type: String, nullable: true }) readonly validatedAt: string | null;
   @ApiProperty({ type: CodeValidationDto, nullable: true }) readonly lastValidation: unknown;
@@ -150,6 +154,8 @@ export class CodeValidationResultDto {
 export class CodeStarterPreviewDto {
   @ApiProperty() readonly javascript!: string;
   @ApiProperty() readonly java21!: string;
+  @ApiProperty() readonly python3!: string;
+  @ApiProperty() readonly csharp!: string;
 }
 
 export class CodeGeneratedOutputDto {
@@ -177,7 +183,7 @@ export class CodeGeneratedOutputDto {
 }
 
 export class CodeGenerateResultDto {
-  @ApiProperty({ enum: ['javascript', 'java21'] }) readonly languageKey!: string;
+  @ApiProperty({ enum: CODE_LANGUAGE_KEYS }) readonly languageKey!: string;
   @ApiProperty({ enum: ['OK', 'ERROR', 'TIMEOUT'] }) readonly compileStatus!: string;
   @ApiProperty() readonly compileOutput!: string;
   @ApiProperty() readonly runtimeVersion!: string;

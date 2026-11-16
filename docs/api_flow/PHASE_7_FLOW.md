@@ -1,5 +1,11 @@
 # Phase 7 — Flow bảng vẽ
 
+## 16/11/2026 — Code block Python và C#
+
+Mentor có thể dùng `python3` và `csharp` cho code block. Backend giữ key khi nhận
+update, chiếu snapshot và tạo bản xuất. Bản xuất ghi nhãn Python hoặc C# và tô
+cú pháp theo ngôn ngữ. Xem [API bảng vẽ](PHASE_7_flow-api-breakdown.md).
+
 ## 04/11/2026 — Kết nối realtime trực tiếp BE
 
 Source hỗ trợ vé từ POST /api/v1/auth/realtime-ticket để browser không phụ thuộc proxy WebSocket ở host FE. Origin/channel/session kiểm ở gateway, permissions nghiệp vụ giữ nguyên; cookie client cũ vẫn hỗ trợ. Chat path chuẩn hóa /socket.io không trailing slash, bảng /ws/whiteboards. Reconnect cần vé mới; xem PHASE_1_FLOW.md và PHASE_1_flow-api-breakdown.md. Local transport/browser fixtures PASS; chưa deploy.

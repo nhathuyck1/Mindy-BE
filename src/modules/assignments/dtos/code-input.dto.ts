@@ -138,10 +138,10 @@ export class CodeLanguageInput {
 }
 
 export class ReplaceCodeLanguagesInput extends AssignmentRevisionInput {
-  @ApiProperty({ type: [CodeLanguageInput], minItems: 1, maxItems: 2 })
+  @ApiProperty({ type: [CodeLanguageInput], minItems: 1, maxItems: CODE_LANGUAGE_KEYS.length })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(2)
+  @ArrayMaxSize(CODE_LANGUAGE_KEYS.length)
   @ValidateNested({ each: true })
   @Type(() => CodeLanguageInput)
   readonly languages!: CodeLanguageInput[];

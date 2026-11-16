@@ -19,6 +19,7 @@ import { buildSource, stdinFor } from '../domain/code-driver.js';
 import { type CompareOptions, judgeTest, runnerLimits } from '../domain/code-grading.js';
 import { runnerTestId, runStatus } from '../domain/code-judge.js';
 import {
+  CODE_LANGUAGE_KEYS,
   type CodeLanguageKey,
   type CodeSignature,
   describeArgs,
@@ -493,8 +494,8 @@ export class CodeSubmissionsService {
     if (!problem) throw new Error('CODE_PROBLEM_INVARIANT');
     const languages: (CodeLanguageRow & { starter_code: string })[] = await m.query(
       `SELECT l.*,pl.starter_code FROM code_problem_languages pl JOIN code_languages l ON l.key=pl.language_key
-      WHERE pl.assignment_id=$1 AND l.enabled ORDER BY l.key DESC`,
-      [id],
+      WHERE pl.assignment_id=$1 AND l.enabled ORDER BY array_position($2::varchar[], l.key)`,
+      [id, CODE_LANGUAGE_KEYS],
     );
     return {
       a,

@@ -112,9 +112,10 @@ export class CodeAuthoringService {
     @Inject(CODE_EXECUTOR) private readonly executor: CodeExecutor,
   ) {}
 
-  async languages(): Promise<CodeLanguageDto[]> {
-    const rows: CodeLanguageRow[] = await this.db.query(
-      'SELECT * FROM code_languages WHERE enabled ORDER BY key',
+  async languages(manager = this.db.manager): Promise<CodeLanguageDto[]> {
+    const rows: CodeLanguageRow[] = await manager.query(
+      'SELECT * FROM code_languages WHERE enabled ORDER BY array_position($1::varchar[], key)',
+      [CODE_LANGUAGE_KEYS],
     );
     return rows.map((r) => new CodeLanguageDto(r));
   }
@@ -124,6 +125,8 @@ export class CodeAuthoringService {
     return {
       javascript: starterCode('javascript', signature),
       java21: starterCode('java21', signature),
+      python3: starterCode('python3', signature),
+      csharp: starterCode('csharp', signature),
     };
   }
 
@@ -207,7 +210,7 @@ export class CodeAuthoringService {
       const keys = input.languages.map((l) => l.languageKey);
       if (new Set(keys).size !== keys.length)
         throw new AssignmentException(422, 'CODE_LANGUAGE_DUPLICATE');
-      const enabled = new Set((await this.languages()).map((l) => l.key));
+      const enabled = new Set((await this.languages(m)).map((l) => l.key));
       if (keys.some((k) => !enabled.has(k)))
         throw new AssignmentException(422, 'CODE_LANGUAGE_NOT_ALLOWED');
       for (const l of input.languages)
@@ -560,8 +563,10 @@ export class CodeAuthoringService {
       if (!tests.length) throw new AssignmentException(422, 'CODE_TESTS_REQUIRED');
       if (!references.length) throw new AssignmentException(422, 'CODE_REFERENCE_REQUIRED');
       const multipliers: { key: CodeLanguageKey; time_multiplier: string }[] = await m.query(
-        'SELECT key,time_multiplier FROM code_languages',
+        'SELECT key,time_multiplier FROM code_languages WHERE enabled',
       );
+      if (references.some((ref) => !multipliers.some((lang) => lang.key === ref.language_key)))
+        throw new AssignmentException(422, 'CODE_LANGUAGE_NOT_ALLOWED');
       return { problem, tests, references, multipliers };
     });
 
@@ -869,9 +874,6 @@ export class CodeAuthoringService {
     const languages = await this.problemLanguages(m, a.id);
     const tests = await this.tests(m, a.id);
     const references = await this.references(m, a.id);
-    const available: CodeLanguageRow[] = await m.query(
-      'SELECT * FROM code_languages WHERE enabled ORDER BY key',
-    );
     return {
       assignment: new AssignmentDto(a),
       problem: problem ? new CodeProblemDto(problem, parseSignature(problem.signature)) : null,
@@ -880,7 +882,7 @@ export class CodeAuthoringService {
       references: references.map((r) => new CodeReferenceDto(r)),
       validatedRevision: problem?.validated_revision ?? null,
       publishBlockers: a.status === 'DRAFT' ? await loadCodeReadiness(m, a.id, a.revision) : [],
-      availableLanguages: available.map((l) => new CodeLanguageDto(l)),
+      availableLanguages: await this.languages(m),
     };
   }
 
@@ -898,7 +900,10 @@ export class CodeAuthoringService {
   }
   private problemLanguages(m: EntityManager, id: string): Promise<CodeProblemLanguageRow[]> {
     return m.query(
-      'SELECT language_key,starter_code FROM code_problem_languages WHERE assignment_id=$1 ORDER BY array_position($2::varchar[],language_key)',
+      `SELECT pl.language_key,pl.starter_code FROM code_problem_languages pl
+       JOIN code_languages l ON l.key=pl.language_key
+       WHERE pl.assignment_id=$1 AND l.enabled
+       ORDER BY array_position($2::varchar[], pl.language_key)`,
       [id, CODE_LANGUAGE_KEYS],
     );
   }

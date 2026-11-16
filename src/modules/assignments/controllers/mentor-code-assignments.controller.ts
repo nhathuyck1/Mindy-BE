@@ -89,7 +89,7 @@ export class MentorCodeAssignmentsController {
   @Post('code-signatures/preview')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Generate JavaScript/Java starter code from a function signature (not saved)',
+    summary: 'Generate starter code for all supported languages from a function signature',
   })
   @ApiOkResponse({ type: CodeStarterPreviewDto })
   preview(@Body() input: CodeSignaturePreviewInput): CodeStarterPreviewDto {

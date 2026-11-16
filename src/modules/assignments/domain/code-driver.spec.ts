@@ -6,7 +6,7 @@ import {
   RESULT_PREFIX,
   stdinFor,
 } from './code-driver.js';
-import { parseSignature } from './code-signature.js';
+import { type CodeLanguageKey, parseSignature } from './code-signature.js';
 
 const nonce = '0123456789abcdef0123';
 const sig = parseSignature({
@@ -41,6 +41,28 @@ describe('CODE driver', () => {
 
   it('refuses unsafe nonces', () => {
     expect(() => buildSource('javascript', sig, '', 'x"; process.exit(0); "')).toThrow();
+  });
+
+  it('appends Python driver code with the student function and nonce', () => {
+    const student = 'class Solution:\n    def twoSum(self, nums, target):\n        return nums';
+    const source = buildSource('python3', sig, student, nonce);
+    expect(source.startsWith(student)).toBe(true);
+    expect(source).toContain('Solution().twoSum(*_args)');
+    expect(source).toContain(nonce);
+  });
+
+  it('generates typed C# argument reads and calls the original function name', () => {
+    const source = buildSource('csharp', sig, 'public class Solution {}', nonce);
+    expect(source).toContain('Deserialize<int[]>(a[0])');
+    expect(source).toContain('Deserialize<int>(a[1])');
+    expect(source).toContain('new Solution().twoSum(a0, a1)');
+    expect(source).toContain(nonce);
+  });
+
+  it('rejects an unknown language without falling back to Java', () => {
+    expect(() => buildSource('ruby' as CodeLanguageKey, sig, '', nonce)).toThrow(
+      'CODE_DRIVER_LANGUAGE_INVARIANT',
+    );
   });
 
   it('demotes only the Solution class', () => {
