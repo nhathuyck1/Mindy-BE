@@ -1,3 +1,9 @@
+## 18/11/2026 — Whiteboard presenter viewport
+
+- Nhánh codex/whiteboard-viewport từ origin/dev a3001ad. Thêm board:viewport có epoch, world origin, CSS size/scale; chỉ canControl, strict finite/bounds, identity server và fanout reauthorize từng recipient. Ephemeral, giữ checkpoint/sequence/DB schema hiện hữu.
+- Đã kiểm local: socket tests 4/4, lint 0 errors (11 warnings sẵn có ở code assignments), type-check/build pass. Full suite có 375 tests pass, 559 skipped, 6 suites fail do thiếu TEST_DATABASE_URL/MinIO; chưa kiểm DB integration hoặc deploy.
+- FE dùng heartbeat 2 giây, throttle 150 ms và Student follow/pause/resume; protocol và giới hạn cập nhật tại docs/api_flow/PHASE_7_FLOW.md và PHASE_7_flow-api-breakdown.md.
+
 ## 2026-11-16 — Phase 7 Python/C#
 
 Đã triển khai A–C cho backend và compiler-runner trong workspace. B0 trên
