@@ -1,5 +1,15 @@
 # Phase 7 — API proposal bảng vẽ
 
+## 18/11/2026 — board:viewport (đã implement local, chưa deploy)
+
+- Transport: Socket.IO namespace /, websocket path /ws/whiteboards; Origin/CORS + cookie hoặc ticket như board:join. Phải join một board trước, ACK callback bắt buộc. canControl lấy qua boards.sync tại thời điểm gửi, không nhận role/userId từ client.
+- FE phát sau pan/zoom/resize; giữ góc world và tỷ lệ canvas giảng viên. Heartbeat 2 giây phục vụ late join. Cùng hạn 30 commands/giây/connection với các lệnh board khác; client throttle 150 ms cho viewport.
+- Request strict: {epoch:string UUIDv4,x:number,y:number,width:number,height:number,scale:number}. Tất cả bắt buộc và hữu hạn; x/y trong ±100000; width/height CSS pixel từ 1 tới 16384; scale 0.1–4. Ví dụ {epoch:'11111111-1111-4111-8111-111111111111',x:-500,y:250,width:1440,height:900,scale:1.5}. Góc world chuyển từ transform canvas qua x=-view.x/view.scale, y=-view.y/view.scale.
+- Success ACK: {ok:true,data:{accepted:true}}; không HTTP status và không persistence ACK. Server event cùng tên: payload request + connectionId + identity:{id,name}, hai field này do BE gắn. Chỉ tới peer khác cùng board, kiểm auth và sync quyền từng recipient trước gửi; recipient epoch mới không nhận viewport cũ.
+- Failure ACK: {ok:false,error:{statusCode,code}}. 422 BOARD_INVALID_INPUT cho chưa join/field lạ/số sai giới hạn; 403 BOARD_READ_ONLY cho không có canControl; 409 BOARD_EPOCH_CHANGED cho epoch cũ; 429 BOARD_RATE_LIMITED và lỗi auth/access/disabled theo các lệnh board hiện hữu. Command 401/403 ngắt sender; recipient mất quyền bị ngắt. Không retry bền vững FOV; đồng bộ lại board/epoch và dùng heartbeat mới.
+- Không đổi board sequence, checkpoint, Yjs binary, snapshots hay schema DB. Server không lưu/replay FOV; late join chờ heartbeat mới. Client Student mặc định follow, căn giữa đủ FOV theo tỷ lệ khung nhìn; pan/zoom/vừa nội dung dừng follow, nút Theo giảng viên bật lại. Dữ liệu presenter tách khỏi con trỏ/presence, hết hạn sau 6 giây im lặng hoặc xóa ngay khi offline/revoked/epoch đổi.
+- Kiểm chứng: 4 local socket tests (relay/board isolation, spoof và Student denial, bounds/epoch, revoke recipient) dùng Socket.IO thật và authorization doubles; chưa khẳng định DB integration, tải nhiều người hoặc production. FE E2E mock kiểm publish ban đầu/zoom/heartbeat và Student nhận/dừng/theo lại ở desktop/mobile. Xem [flow](PHASE_7_FLOW.md).
+
 ## 04/11/2026 — Xác thực socket portable
 
 Ngoài cookie same-origin hiện hữu, gateway nhận Socket.IO auth:{ticket}. Xin vé qua POST /api/v1/auth/realtime-ticket trước mỗi kết nối/reconnect; handshake dùng đúng Origin và channel chat/whiteboards. Hạn vé60s, socket không vượt access expiry và luôn kiểm session/quyền. Không gửi token trong query hoặc persistent storage. Chi tiết request/response/errors/deploy ở PHASE_1_flow-api-breakdown.md; đây là source local, chưa deploy.

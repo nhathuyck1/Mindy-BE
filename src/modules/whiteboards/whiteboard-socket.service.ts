@@ -184,6 +184,62 @@ export class WhiteboardSocketService implements OnApplicationBootstrap, OnApplic
       }),
     );
     s.on(
+      'board:viewport',
+      command(async (p) => {
+        if (
+          !peer.boardId ||
+          Object.keys(p).some(
+            (k) => !['epoch', 'x', 'y', 'width', 'height', 'scale'].includes(k),
+          ) ||
+          typeof p.epoch !== 'string' ||
+          !isUUID(p.epoch, '4') ||
+          !['x', 'y', 'width', 'height', 'scale'].every(
+            (k) => typeof p[k] === 'number' && Number.isFinite(p[k]),
+          ) ||
+          typeof p.x !== 'number' ||
+          typeof p.y !== 'number' ||
+          typeof p.width !== 'number' ||
+          typeof p.height !== 'number' ||
+          typeof p.scale !== 'number' ||
+          Math.abs(p.x) > 100000 ||
+          Math.abs(p.y) > 100000 ||
+          p.width < 1 ||
+          p.width > 16384 ||
+          p.height < 1 ||
+          p.height > 16384 ||
+          p.scale < 0.1 ||
+          p.scale > 4
+        )
+          boardError(422, 'BOARD_INVALID_INPUT');
+        const state = await this.boards.sync(peer.actor, peer.boardId);
+        if (!state.capabilities.canControl) boardError(403, 'BOARD_READ_ONLY');
+        if (p.epoch !== state.board.epoch) boardError(409, 'BOARD_EPOCH_CHANGED');
+        // Presentation is ephemeral. Identity and authority always come from the server.
+        for (const target of this.peers.values()) {
+          if (target === peer || target.boardId !== peer.boardId) continue;
+          try {
+            await this.valid(target);
+            await this.boards.sync(target.actor, peer.boardId, (current) => {
+              if (current.board.epoch !== p.epoch) return;
+              target.socket.emit('board:viewport', {
+                connectionId: s.id,
+                identity: state.identity,
+                epoch: p.epoch,
+                x: p.x,
+                y: p.y,
+                width: p.width,
+                height: p.height,
+                scale: p.scale,
+              });
+            });
+          } catch {
+            target.socket.disconnect(true);
+          }
+        }
+        return { accepted: true };
+      }),
+    );
+    s.on(
       'board:awareness',
       command(async (p) => {
         if (

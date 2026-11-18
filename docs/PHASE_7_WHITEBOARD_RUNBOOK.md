@@ -1,5 +1,11 @@
 # Phase 7 whiteboard local runtime
 
+## Presenter viewport — 18/11/2026 (local)
+
+- board:viewport client {epoch,x,y,width,height,scale}; x/y world origin, width/height CSS pixel 1–16384, zoom 0.1–4, finite và world origin ±100000. Unknown fields bị chặn. Join board trước, canControl và epoch đúng mới relay.
+- Server event thêm connectionId và identity do server xác định. Reauthorize từng peer cùng board trước gửi. ACK accepted không phải lưu document; không lưu DB/Yjs/sequence. Sai input 422, sai quyền 403, epoch cũ 409 BOARD_EPOCH_CHANGED, rate limit hiện hữu 30/s.
+- FE phát tối đa mỗi 150 ms và refresh 2 giây khi presenter đang hiện. Người vào sau nhận heartbeat kế tiếp. Student fit cùng FOV và con trỏ, có bật/tắt theo, tự pan/zoom dừng theo. Expire 6 giây, clear khi offline/revoked/epoch thay đổi. Cần deploy BE trước FE; không migration hoặc flag mới ngoài WHITEBOARD_ENABLED.
+
 Runtime is opt-in; no production deployment is implied. Apply the normal compiled
 migration catalog before enabling `WHITEBOARD_ENABLED=true`. Keep one API instance
 for collaboration. PostgreSQL owns checkpoints, command receipts, update receipts,
