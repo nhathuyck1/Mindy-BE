@@ -14,6 +14,8 @@ import type { FileSummary } from '../../files/files.contracts.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
 import { FilesService } from '../../files/services/files.service.js';
 import { UserRole } from '../../users/user-role.enum.js';
+// biome-ignore lint/style/useImportType: Nest DI runtime token.
+import { UsersService } from '../../users/users.service.js';
 import { articleInputHtml } from '../domain/article-input.js';
 import { sanitizeArticle } from '../domain/article-sanitizer.js';
 import { canManageOwnDraft, canPreviewMaterial } from '../domain/material-access.js';
@@ -33,6 +35,7 @@ import { MaterialPolicyError } from '../domain/material-policy.error.js';
 import type {
   ManagerMaterialDetailDto,
   ManagerMaterialDto,
+  ManagerMaterialListItemDto,
   ManagerMaterialPageDto,
 } from '../dtos/manager-material.dto.js';
 import type {
@@ -94,6 +97,7 @@ export class MaterialAuthoringService {
     private readonly courses: CoursesService,
     private readonly contexts: ClassContentContextService,
     private readonly mentorContexts: MentorContentContextService,
+    private readonly users: UsersService,
   ) {}
 
   async create(
@@ -408,25 +412,28 @@ export class MaterialAuthoringService {
       );
       for (const [id, file] of refSummaries) summaries.set(id, file);
       return {
-        items: materials.map((material) =>
-          this.view(
-            material,
-            summaries,
-            listRefs.filter((r) => r.materialId === material.id),
-            false,
-            !scope ||
-              (context?.mentorReadScope !== 'SESSION' &&
-                material.createdBy === principal.userId &&
-                material.createdInClassId === scope.classId &&
-                material.firstApprovedAt === null &&
-                [MaterialReviewStatus.DRAFT, MaterialReviewStatus.REJECTED].includes(
-                  material.reviewStatus,
-                )),
-            !scope ||
-              (context?.mentorReadScope !== 'SESSION' &&
-                material.createdBy === principal.userId &&
-                material.createdInClassId === scope.classId),
+        items: await this.listContext(
+          materials.map((material) =>
+            this.view(
+              material,
+              summaries,
+              listRefs.filter((r) => r.materialId === material.id),
+              false,
+              !scope ||
+                (context?.mentorReadScope !== 'SESSION' &&
+                  material.createdBy === principal.userId &&
+                  material.createdInClassId === scope.classId &&
+                  material.firstApprovedAt === null &&
+                  [MaterialReviewStatus.DRAFT, MaterialReviewStatus.REJECTED].includes(
+                    material.reviewStatus,
+                  )),
+              !scope ||
+                (context?.mentorReadScope !== 'SESSION' &&
+                  material.createdBy === principal.userId &&
+                  material.createdInClassId === scope.classId),
+            ),
           ),
+          manager,
         ),
         page: options.page,
         pageSize: options.pageSize,
@@ -811,6 +818,53 @@ export class MaterialAuthoringService {
     const file = summaries.get(id);
     if (!file) throw new MaterialPolicyException('FILE_NOT_READY');
     return file;
+  }
+
+  private async listContext(
+    materials: readonly ManagerMaterialDto[],
+    manager: EntityManager,
+  ): Promise<ManagerMaterialListItemDto[]> {
+    if (materials.length === 0) return [];
+    const units = await this.courses.findUnitsByIds(
+      [...new Set(materials.map((material) => material.courseUnitId))],
+      manager,
+    );
+    const courses = await this.courses.findByIds(
+      [...new Set([...units.values()].map((unit) => unit.courseId))],
+      manager,
+    );
+    // Include inactive creators: their historical materials still need attribution.
+    const creators = new Map(
+      (await this.users.findByIds([...new Set(materials.map((m) => m.createdBy))], manager)).map(
+        (user) => [user.id, user],
+      ),
+    );
+    const sessions = await this.contexts.findSessionSummariesByIds(
+      [
+        ...new Set(
+          materials.flatMap((material) => (material.sessionId ? [material.sessionId] : [])),
+        ),
+      ],
+      manager,
+    );
+    return materials.map((material) => {
+      const unit = units.get(material.courseUnitId);
+      const course = unit && courses.get(unit.courseId);
+      const creator = creators.get(material.createdBy);
+      if (!unit || !course || !creator) throw new MaterialPolicyException('MATERIAL_NOT_FOUND');
+      const session = material.sessionId ? sessions.get(material.sessionId) : undefined;
+      return {
+        ...material,
+        courseId: course.id,
+        courseTitle: course.title,
+        courseUnitTitle: unit.title,
+        courseUnitNumber: unit.unitNumber,
+        sessionTitle: session?.title ?? null,
+        sessionNumber: session?.sessionNumber ?? null,
+        createdByName: creator.displayName,
+        createdByRole: creator.role,
+      };
+    });
   }
 
   private view(

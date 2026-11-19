@@ -197,6 +197,50 @@ approved-leave conflicts roll the whole batch back and report session IDs. Run
 before the demo session starts. `SEED_DEMO_DATE` can select another dated batch;
 rerunning the same batch never shifts its timetable. No database reset is needed.
 
+### Add registration classes immediately, without CI/CD
+
+`tools/seed-open-registration.mjs` runs against the compiled modules in the already
+deployed API container; rebuilding or restarting the API is unnecessary. Copy this
+single file to `/tmp/seed-open-registration.mjs` on the VPS, then run from the
+existing VPS checkout:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec -T \
+  -e SEED_DEMO_CONFIRM=YES api node --input-type=module - \
+  < /tmp/seed-open-registration.mjs
+```
+
+It adds six OPEN classes with **0/25 students**, using existing active courses and
+mentors: HTML/CSS FE, JavaScript FE, React FE, JavaScript BE, Node.js BE and Python.
+Codes end in `REG-20261123`. The schedule starts in the week of 23/11, so these
+classes can be registered on 19/11 and 20/11. Python is OFFLINE; the others are
+ONLINE. All units/sessions and weekly schedules are created; existing course
+materials remain available through the usual enrollment policy. No users,
+passwords, orders or enrollments are modified or inserted by this script.
+
+Add `--dry-run` after the `-` to validate constraints/calendars and roll back;
+add `--plan` to print the plan without database access. A successful real run
+prints `COMMITTED` followed by six class codes; rerunning preserves existing
+classes. Calendar conflicts roll back all new rows. No password setting is needed.
+`SEED_REGISTRATION_START_DATE` can override the default future date.
+
+For offline registration under the frontend/backend mentors, run the same script
+with `--offline` (after the Node `-`). It inserts five additional OPEN/OFFLINE
+classes, each 0/25: HTML/CSS FE, JavaScript FE, React FE, JavaScript BE and Node BE.
+Codes contain `REG-OFF-20261123`, with rooms `Phòng Demo Frontend` / `Phòng Demo
+Backend`. Session meeting URLs are null. These classes use different teaching
+slots from the existing registration/demo classes. Existing online classes and
+the Python offline class are preserved; repeating the command skips existing codes.
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml exec -T \
+  -e SEED_DEMO_CONFIRM=YES api node --input-type=module - --offline \
+  < /tmp/seed-open-registration.mjs
+```
+
+Use the updated script file for this command; the original six-class script did
+not support `--offline`. Check the output for `COMMITTED` and `OPEN OFFLINE`.
+
 ## Manual API verification
 
 Start PostgreSQL, apply migrations, seed the local admin and run the API:

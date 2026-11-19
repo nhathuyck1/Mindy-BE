@@ -282,6 +282,51 @@ omitted status = mọi Material còn sống. FE queue gửi
 để chọn detail, không signed URLs. Không side effect; invalid filter 422.
 Refresh sau decision/PATCH/delete; empty = không có item khớp filter, không lỗi.
 
+#### 2026-11-19 — Nhãn ngữ cảnh trong list materials
+
+Đã implement local, chưa deploy. Mỗi item của `GET /api/v1/manager/materials`
+và `GET /api/v1/manager/course-units/:courseUnitId/materials` thêm các field
+sau, bên cạnh toàn bộ field hiện hữu:
+
+| Field | Kiểu | Ý nghĩa cho FE |
+| --- | --- | --- |
+| `courseId` | UUID | ID khóa học chứa chương của tài liệu |
+| `courseTitle` | string | Tên khóa học hiện tại |
+| `courseUnitTitle` | string | Tên chương/Course Unit hiện tại |
+| `courseUnitNumber` | integer | Số chương trong khóa học, không phải số thứ tự dòng |
+| `sessionTitle` | string hoặc null | Tên buổi học gắn qua `sessionId`; null nếu không gắn buổi |
+| `sessionNumber` | integer hoặc null | Số buổi trong Class Unit; null nếu không gắn buổi |
+| `createdByName` | string | Tên hiển thị hiện tại của người tạo tài liệu `createdBy` |
+| `createdByRole` | UserRole | Vai trò hiện tại của người tạo; không phải vai trò tại thời điểm gửi |
+
+Ví dụ phần dữ liệu bổ sung trong một item (các field hiện hữu được lược bỏ):
+
+```json
+{
+  "courseId": "11111111-1111-4111-8111-111111111111",
+  "courseTitle": "Lập trình Python",
+  "courseUnitTitle": "Vòng lặp",
+  "courseUnitNumber": 2,
+  "sessionTitle": "Thực hành vòng lặp",
+  "sessionNumber": 3,
+  "createdByName": "Nguyễn Lan",
+  "createdByRole": "MENTOR"
+}
+```
+
+Người tạo không đổi khi Manager chỉnh sửa/duyệt; tên và vai trò vẫn được trả
+khi tài khoản người tạo đã bị vô hiệu hóa. Không trả email, mật khẩu hoặc
+meeting URL. Course Unit là cấp chương hiện hữu; không có `chapterId` riêng.
+Buổi học là liên kết tùy chọn, không tự gán buổi từ Course Unit.
+
+Request/auth/filter, HTTP 200 `{items,page,pageSize,total}`, sort, lỗi và hành
+vi refetch giữ nguyên. FE cập nhật Zod list schema để giữ các field mới rồi
+hiển thị khóa/chương/buổi/người tạo; dùng “Toàn chương” hoặc tương đương khi
+`sessionId=null`. Không gọi thêm user detail cho mỗi dòng. Detail/mutation
+giữ DTO cũ. List Mentor dùng chung `ManagerMaterialPageDto` cũng thêm các
+field này, chỉ sau khi áp dụng đầy đủ điều kiện đọc hiện hữu. Tên/vai trò là
+metadata hiển thị, không dùng để quyết định quyền.
+
 ### GET `/api/v1/manager/materials/:materialId`
 
 Manager chọn item hoặc refetch sau 409/response mất; path materialId, không query/

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 // biome-ignore lint/style/useImportType: Nest DI needs the runtime constructor.
-import { DataSource, type EntityManager } from 'typeorm';
+import { DataSource, type EntityManager, In } from 'typeorm';
 
 import type { ClassContentContext } from '../domain/class-content-context.js';
 import { ClassEntity } from '../entities/class.entity.js';
@@ -16,6 +16,18 @@ import {
 @Injectable()
 export class ClassContentContextService {
   constructor(private readonly dataSource: DataSource) {}
+
+  async findSessionSummariesByIds(
+    ids: readonly string[],
+    manager: EntityManager,
+  ): Promise<Map<string, Pick<ClassSessionEntity, 'id' | 'title' | 'sessionNumber'>>> {
+    if (ids.length === 0) return new Map();
+    const sessions = await manager.getRepository(ClassSessionEntity).find({
+      select: { id: true, title: true, sessionNumber: true },
+      where: { id: In([...ids]) },
+    });
+    return new Map(sessions.map((session) => [session.id, session]));
+  }
 
   async getClass(classId: string, manager: EntityManager): Promise<ClassEntity> {
     const row = await manager.getRepository(ClassEntity).findOneBy({ id: classId });

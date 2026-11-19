@@ -106,6 +106,7 @@ describe('Material authoring, review and student delivery with PostgreSQL + MinI
       courses,
       contexts,
       new MentorContentContextService(db, fixture.workspace, fixture.users, courses, contexts),
+      fixture.users,
     );
     reads = new StudentMaterialsService(db, contexts, materials, files);
     units = new UnitContentService(db, fixture.workspace, contexts, fixture.users, courses);

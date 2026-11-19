@@ -92,6 +92,7 @@ describe('Phase 3.3.2 Mentor submission + PostgreSQL', () => {
       courses,
       contexts,
       pickers,
+      fixture.users,
     );
   }, 60000);
   afterAll(async () => {
