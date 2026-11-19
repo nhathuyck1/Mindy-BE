@@ -85,3 +85,11 @@ FE nâng Next.js/eslint-config-next lên 16.4.6 và sửa debounce giữ URL fil
 nhất, có regression desktop/mobile. Dockerfile FE được version control để build
 lại cùng cấu hình. Source Git và metadata commit được đồng bộ trên server;
 runtime nghiệm thu và backup được ghi riêng trong biên bản triển khai.
+
+
+## Owner chốt bật production — 19/11/2026 23:25:52 UTC+7
+
+- Owner yêu cầu dừng nghiệm thu và chỉ public Python/C# trên production; chấp nhận app mobile cũ lỗi với các bài dùng hai ngôn ngữ này.
+- Đã thực thi `UPDATE code_languages SET enabled = true WHERE key IN ('python3','csharp');` trên production và SELECT lại. Đủ 4 key đều enabled: javascript=1, java21=2, python3=3, csharp=2 (time_multiplier). Không xóa dòng hoặc sửa multiplier. Trạng thái trước bật: Python/C# false, JS/Java true.
+- Dừng kiểm tra giao diện theo chỉ đạo mới; chưa nghiệm thu toàn bộ tạo đề/lời giải/làm mẫu/nộp bài/verdict/rejudge/whiteboard/chat trong lượt này. Không ghi các luồng đó là PASS. Chưa tạo thành công bài thử, không có bài thử đã giao cần archive.
+- Lượt này chỉ thay cờ dữ liệu production; chưa mở/merge PR vào dev/main. Log trước/sau và timestamp ở server: `/home/mindycode/mindycoding/mindy-backups/final-python-csharp-20261119/`.

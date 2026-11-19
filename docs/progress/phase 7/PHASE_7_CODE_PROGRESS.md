@@ -227,3 +227,11 @@ Not run: new integration specs on PostgreSQL, `pnpm check`, `npm run check`.
 - Fresh backend gates: types/build PASS with 42 migration artifacts; lint zero errors/11 existing warnings; 911 unit/integration PASS, 50 real-runner driver cases skipped; all 131 compiled HTTP PASS.
 - FE updated Next.js/eslint-config-next from 16.4.1 to 16.4.6 following the official security advisories. Lint/format/types/build and 379 unit PASS. Full E2E exposed an Admin URL/debounce race; fixed the stale filter snapshot and added regression coverage. 565 distinct E2E scenarios PASS across the full run and the final 32-case Admin rerun, with 5 viewport skips.
 - Built new API/FE images for the integrated source. Production preflight validates existing database/storage volumes, private API binding, environment, 42 migration artifacts/zero pending, login 200 and protected API 401. Source commits are published before runtime cutover; final runtime/remote equality is recorded by the deployment evidence.
+
+
+## Owner chốt bật production — 19/11/2026 23:25:52 UTC+7
+
+- Owner yêu cầu dừng nghiệm thu và chỉ public Python/C# trên production; chấp nhận app mobile cũ lỗi với các bài dùng hai ngôn ngữ này.
+- Đã thực thi `UPDATE code_languages SET enabled = true WHERE key IN ('python3','csharp');` trên production và SELECT lại. Đủ 4 key đều enabled: javascript=1, java21=2, python3=3, csharp=2 (time_multiplier). Không xóa dòng hoặc sửa multiplier. Trạng thái trước bật: Python/C# false, JS/Java true.
+- Dừng kiểm tra giao diện theo chỉ đạo mới; chưa nghiệm thu toàn bộ tạo đề/lời giải/làm mẫu/nộp bài/verdict/rejudge/whiteboard/chat trong lượt này. Không ghi các luồng đó là PASS. Chưa tạo thành công bài thử, không có bài thử đã giao cần archive.
+- Lượt này chỉ thay cờ dữ liệu production; chưa mở/merge PR vào dev/main. Log trước/sau và timestamp ở server: `/home/mindycode/mindycoding/mindy-backups/final-python-csharp-20261119/`.
