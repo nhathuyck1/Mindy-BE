@@ -142,6 +142,61 @@ payOS or sends email. Reruns reset seed passwords and skip classes whose code ex
 For production, the existing seed guards require both `SEED_ADMIN_CONFIRM=YES`
 and `SEED_DEMO_CONFIRM=YES` to run the full demo seed.
 
+### Add demo data to the existing server database (20/11/2026, 09:20 +07)
+
+Use `pnpm seed:demo` in a source checkout, or the compiled command below on the
+server after deploying the image containing this change. This is a separate,
+additive batch; `seed:data` remains the fresh-database command and resets demo
+passwords. The additive command preserves existing users/passwords/statuses,
+catalog and classes. Missing accounts use `SEED_ACCOUNT_PASSWORD`; an existing
+account with an unexpected role/status stops the transaction for inspection.
+Set `SEED_ACCOUNT_PASSWORD` in the server's `.env.production` for missing accounts.
+The additive command does not run the admin seed and needs no `SEED_ADMIN_CONFIRM`.
+
+The new batch has seven classes with suffix `DEMO-20261120`:
+
+| Mentor / class | Demo data |
+| --- | --- |
+| `mentor.frontend@example.com` / `JS-101-FE-DEMO-20261120` | IN_PROGRESS, 8 paid students |
+| `mentor.backend@example.com` / `JS-101-BE-DEMO-20261120` | IN_PROGRESS, 12 paid students |
+| Frontend / HTML & CSS | COMPLETED, 8 paid students |
+| Frontend / React | OPEN, 4 paid + 1 pending CASH, cart item |
+| Backend / Node.js | OPEN, full: 4 paid + 1 pending CASH / 5 seats |
+| Frontend / HTML & CSS | OPEN, 2 paid students + expired payOS order |
+| Backend / JavaScript | DRAFT, empty roster |
+
+Both active JS classes have a SCHEDULED session **20/11, 09:20–10:50 Vietnam time**,
+separate rosters, taught sessions/attendance/progress, a graded quiz and an open
+quiz, plus mentor articles awaiting review. Regular sessions use teaching slots;
+only the demo-day session is moved 10 minutes earlier than slot 2. Missing seed
+ARTICLE materials are also added to existing course units without replacing their
+content. Cash/payOS records are fixtures; no provider calls or mail are sent.
+
+Run from the existing VPS checkout with the same image tag used for deployment.
+Preview first (executes database checks, then rolls the transaction back):
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml run --rm --no-deps \
+  -e SEED_DEMO_CONFIRM=YES -e SEED_DEMO_DATE=2026-11-20 \
+  migration node dist/database/seed/standard.js --demo --dry-run
+```
+
+The preview commits no seed rows; PostgreSQL sequence counters may still advance.
+
+Then add the data:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yaml run --rm --no-deps \
+  -e SEED_DEMO_CONFIRM=YES -e SEED_DEMO_DATE=2026-11-20 \
+  migration node dist/database/seed/standard.js --demo
+```
+
+The one-off seed process does not start API workers. Reruns reuse the dated codes
+and skip existing classes, preserving demo actions. Mentor/student calendar or
+approved-leave conflicts roll the whole batch back and report session IDs. Run
+before the demo session starts. `SEED_DEMO_DATE` can select another dated batch;
+rerunning the same batch never shifts its timetable. No database reset is needed.
+
 ## Manual API verification
 
 Start PostgreSQL, apply migrations, seed the local admin and run the API:

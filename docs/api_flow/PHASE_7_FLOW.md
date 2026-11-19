@@ -1,5 +1,14 @@
 # Phase 7 — Flow bảng vẽ
 
+## 18/11/2026 — Theo viewport giảng viên (đã implement local)
+
+1. Mentor và Student join board qua xác thực/ticket hiện có. Mentor có canControl phát board:viewport theo thay đổi pan/zoom/kích thước; FE throttle 150 ms và refresh 2 giây để người vào sau nhận cả khi Mentor đứng yên.
+2. BE validate payload, kiểm auth + board scope + canControl + epoch; chỉ relay đến socket cùng board sau khi kiểm quyền từng recipient, identity được gắn từ server. Student không thể làm presenter bằng dữ liệu client.
+3. Student dùng world origin, CSS dimensions và scale để fit toàn bộ FOV, con trỏ dùng board:awareness hiện có. Student có thể dừng/theo lại; tự pan/zoom dừng theo. FOV không cập nhật document/checkpoint/sequence, không cần migration. Nhiều presenter hợp lệ sử dụng FOV đến sau cùng.
+4. Sai epoch bị từ chối 409, payload lỗi 422, Student phát viewport bị 403 và ngắt theo command policy hiện hữu. Recipient mất quyền bị ngắt trước fanout. FE xóa presenter khi offline/revoked/đổi epoch và expire sau 6 giây im lặng.
+
+Chi tiết contract ở [API breakdown](PHASE_7_flow-api-breakdown.md). Local socket tests 4/4 qua Socket.IO thật + DI doubles, type-check/build pass. Full suite: 375 tests pass, 559 skipped; 6 suites thiếu TEST_DATABASE_URL/MinIO. Chưa deploy hoặc kiểm tài khoản thật.
+
 ## 16/11/2026 — Code block Python và C#
 
 Mentor có thể dùng `python3` và `csharp` cho code block. Backend giữ key khi nhận

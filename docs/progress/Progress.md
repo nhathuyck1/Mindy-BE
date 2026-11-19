@@ -5,6 +5,12 @@ Runner, BE và FE2 đã lên production. Migration Python/C# đã chạy,
 MindyMobile_Admin trước khi bật và nghiệm thu.
 [Chi tiết](phase%207/PHASE_7_CODE_PROGRESS.md).
 
+## 18/11/2026 — Whiteboard presenter viewport
+
+- Nhánh codex/whiteboard-viewport từ origin/dev a3001ad. Thêm board:viewport có epoch, world origin, CSS size/scale; chỉ canControl, strict finite/bounds, identity server và fanout reauthorize từng recipient. Ephemeral, giữ checkpoint/sequence/DB schema hiện hữu.
+- Đã kiểm local: socket tests 4/4, lint 0 errors (11 warnings sẵn có ở code assignments), type-check/build pass. Full suite có 375 tests pass, 559 skipped, 6 suites fail do thiếu TEST_DATABASE_URL/MinIO; chưa kiểm DB integration hoặc deploy.
+- FE dùng heartbeat 2 giây, throttle 150 ms và Student follow/pause/resume; protocol và giới hạn cập nhật tại docs/api_flow/PHASE_7_FLOW.md và PHASE_7_flow-api-breakdown.md.
+
 ## 2026-11-16 — Phase 7 Python/C#
 
 Đã triển khai A–C cho backend và compiler-runner trong workspace. B0 trên
@@ -1597,3 +1603,37 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
 - Explicitly authorized commit/push of all pending FE2/BE work on `feat/phase7-python-csharp`, including the production validation/auth/class/payment/ZIP fixes and removed obsolete seed files. Compiler source is published separately to private `Quanhpm/mindy-compiler-runner` on `main`.
 - Reused completed quality gates for unchanged application files; checked source parity, compiled runtime parity, whitespace and new secret signatures before publication. Markdown deployment/progress records are the only changes after the tested runtime snapshot. Server source metadata is synchronized with published commits while retaining verified application artifacts, production configuration, database/storage and rollback backups.
 - Phase flow and progress updated; no new API/schema or real payment/email operation. Publication evidence is recorded separately from the earlier deployment evidence.
+
+## 2026-11-19 — Seed thêm dữ liệu demo server ngày20/11 lúc09:20
+
+- Theo yêu cầu chỉ seed thêm vào server đang có data: thêm `seed:demo`, dùng chung
+  implementation standard với mode additive; không reset account/password/status
+  hoặc sửa lớp cũ. Account có role/status khác kỳ vọng sẽ dừng để kiểm tra. Mặc định
+  batch `DEMO-20261120`, anchor cố định theo `SEED_DEMO_DATE`, rerun cùng batch skip
+  các lớp đã có. Dùng advisory lock serialize các seed transaction.
+- 7 lớp mới: frontend JavaScript IN_PROGRESS8 PAID; backend JavaScript IN_PROGRESS12
+  PAID; HTML/CSS COMPLETED8; React OPEN4+1 CASH hold và cart; Node OPEN4+1 hold/5;
+  HTML/CSS OPEN2 và expired PAYOS; backend JS DRAFT. Hai lớp active có buổi20/11
+  09:20–10:50 +07, roster riêng; tái sử dụng attendance/progress/audits,2 quiz/lớp
+  (graded/open) và material pending review. Lịch tuần slot2, riêng demo-day dời sớm
+  10 phút. Không thay business rule, API, migrations hoặc FE.
+- Sửa tương thích DB cũ: reuse cart theo student; thêm ARTICLE seed bị thiếu trên
+  course unit hiện hữu, giữ nội dung đã có. Kiểm mentor/student/approved leave qua
+  CalendarValidationService; conflict rollback cả batch. `--dry-run` rollback để
+  kiểm constraints trước khi ghi thật (sequences PostgreSQL vẫn có thể tăng).
+- README và env examples có lệnh compiled seed qua one-off Docker production;
+  `SEED_DEMO_CONFIRM=YES`, password chỉ cấp cho account chưa tồn tại. Không gọi
+  provider/SMTP hoặc boot API workers. Lệnh standard/seed:data giữ behavior reset
+  password cũ nên không dùng để bổ sung vào server.
+- Local: test plan22/22 PASS; type-check PASS. PostgreSQL localhost5433 trả
+  ECONNREFUSED, Docker daemon chưa chạy; không có evidence seed/rerun/rollback
+  trên PostgreSQL cho thay đổi này. Chưa kết nối/chạy seed/dry-run/deploy lên server,
+  không có giao dịch thật.
+- Gate cuối: scoped Biome seed PASS, type-check PASS, build PASS (42 migration
+  artifacts). Compiled CLI smoke PASS3 guards: thiếu production confirmation,
+  thiếu password, ngày không hợp lệ; compiled plan xác nhận7 lớp/76 buổi.
+  `pnpm check` không xanh toàn bộ: lint0 errors/11 warnings có sẵn ngoài seed;
+  Vitest388 PASS/559 SKIPPED,6 suites files/materials FAIL ở setup do không có
+  TEST_DATABASE_URL/MinIO. Build được chạy riêng và PASS sau khi full gate dừng
+  ở bước test. Chưa chạy HTTP suite và không coi static/unit checks là evidence
+  PostgreSQL seed preservation/idempotency/dry-run trên server.

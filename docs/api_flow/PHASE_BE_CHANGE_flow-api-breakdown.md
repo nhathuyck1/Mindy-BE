@@ -85,3 +85,20 @@ FE preview trước gửi dùng object URL; gửi vẫn intent→PUT storage→c
 ## 06/11/2026 — Ghi chú review seed
 
 Không thêm/sửa endpoint hoặc DTO. Standard seed/rerun đã kiểm trên PostgreSQL test tách biệt, chưa seed dev/VPS. Fixture còn thiếu audit cho tracking/history và lệch historical enrollment cutoff so với quyết định khai giảng; không dùng các bản ghi demo này làm evidence nghiệm thu các API lịch sử/cutoff. Biome seed chưa pass; type-check và 9 test lịch pass. Xem [flow](PHASE_BE_CHANGE_FLOW.md) và `docs/progress/Progress.md` cho số liệu, giới hạn và các việc chưa sửa.
+
+## 19/11/2026 — Dữ liệu demo bổ sung trên server
+
+Không thêm/sửa API hoặc DTO. Dùng `seed:demo` / compiled seed `--demo` trong image
+mới để thêm batch `DEMO-20261120` vào DB hiện hữu, không reset dữ liệu hoặc mật khẩu.
+Hai account `mentor.frontend@example.com` và `mentor.backend@example.com` dùng
+credential hiện có; chỉ account mới nhận `SEED_ACCOUNT_PASSWORD`. Lớp để FE chọn:
+`JS-101-FE-DEMO-20261120` (8 PAID) và `JS-101-BE-DEMO-20261120` (12 PAID).
+Hai lớp đều IN_PROGRESS, buổi20/11 09:20–10:50 +07 còn SCHEDULED khi seed trước
+giờ demo, có quiz đã chấm/đang mở, điểm danh, progress và tài liệu theo policy cũ.
+Roster riêng nên hai mentor có thể demo đồng thời. Những lớp có suffix cùng batch
+còn lại phục vụ danh sách/checkout/capacity/trạng thái thiếu học viên/nháp.
+
+Server chưa được seed/deploy trong lượt này: chỉ chọn các lớp trên sau khi one-off
+seed thành công. `--dry-run` rollback cho phép kiểm constraint/conflict trước ghi
+thật; không phải một endpoint. Lệnh production và cấu hình nằm ở
+[README](../../README.md), flow/giới hạn ở [flow](PHASE_BE_CHANGE_FLOW.md).
