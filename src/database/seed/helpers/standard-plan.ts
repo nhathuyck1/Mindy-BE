@@ -25,6 +25,12 @@ export interface SeedClass {
   readonly expiredPayos?: readonly string[];
   /** Students who have this class in their cart. */
   readonly inCart?: readonly string[];
+  /** One-off timetable adjustment; the regular weekly slots remain unchanged. */
+  readonly sessionOverride?: {
+    readonly date: string;
+    readonly startsAt: Date;
+    readonly endsAt: Date;
+  };
 }
 
 const ONLINE = { deliveryMode: DeliveryMode.ONLINE, roomName: null } as const;
@@ -166,8 +172,19 @@ export function classSessions(
   now: Date,
 ): { startDate: string; times: { startsAt: Date; endsAt: Date }[] } {
   const startDate = addDays(weekStart(now), seed.startOffsetDays);
+  const times = weeklySchedule(
+    startDate,
+    seed.weeklySlots,
+    unitCount * SESSIONS_PER_UNIT,
+    TIME_ZONE,
+  );
+  const override = seed.sessionOverride;
   return {
     startDate,
-    times: weeklySchedule(startDate, seed.weeklySlots, unitCount * SESSIONS_PER_UNIT, TIME_ZONE),
+    times: times.map((time) =>
+      override && toLocalDate(time.startsAt, TIME_ZONE) === override.date
+        ? { startsAt: override.startsAt, endsAt: override.endsAt }
+        : time,
+    ),
   };
 }

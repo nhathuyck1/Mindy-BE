@@ -1575,3 +1575,37 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
 
 - Added optional q to managed-user list, 2–100 trimmed characters, accent/case-insensitive name/email/phone substring with escaped wildcard literals; filters/count/page and stable ordering are server-side. API and flow updated under Phase 1. No migration. FE incremental search begins at 2 characters with 250ms debounce.
 - Local verification: BE build/type-check and 3 user unit tests PASS; actual FE/API checks PASS for two-character then longer input, Vietnamese accentless search, wildcard literals, clear and full-dataset result. No deploy or production data operation.
+
+## 2026-11-19 — Seed thêm dữ liệu demo server ngày20/11 lúc09:20
+
+- Theo yêu cầu chỉ seed thêm vào server đang có data: thêm `seed:demo`, dùng chung
+  implementation standard với mode additive; không reset account/password/status
+  hoặc sửa lớp cũ. Account có role/status khác kỳ vọng sẽ dừng để kiểm tra. Mặc định
+  batch `DEMO-20261120`, anchor cố định theo `SEED_DEMO_DATE`, rerun cùng batch skip
+  các lớp đã có. Dùng advisory lock serialize các seed transaction.
+- 7 lớp mới: frontend JavaScript IN_PROGRESS8 PAID; backend JavaScript IN_PROGRESS12
+  PAID; HTML/CSS COMPLETED8; React OPEN4+1 CASH hold và cart; Node OPEN4+1 hold/5;
+  HTML/CSS OPEN2 và expired PAYOS; backend JS DRAFT. Hai lớp active có buổi20/11
+  09:20–10:50 +07, roster riêng; tái sử dụng attendance/progress/audits,2 quiz/lớp
+  (graded/open) và material pending review. Lịch tuần slot2, riêng demo-day dời sớm
+  10 phút. Không thay business rule, API, migrations hoặc FE.
+- Sửa tương thích DB cũ: reuse cart theo student; thêm ARTICLE seed bị thiếu trên
+  course unit hiện hữu, giữ nội dung đã có. Kiểm mentor/student/approved leave qua
+  CalendarValidationService; conflict rollback cả batch. `--dry-run` rollback để
+  kiểm constraints trước khi ghi thật (sequences PostgreSQL vẫn có thể tăng).
+- README và env examples có lệnh compiled seed qua one-off Docker production;
+  `SEED_DEMO_CONFIRM=YES`, password chỉ cấp cho account chưa tồn tại. Không gọi
+  provider/SMTP hoặc boot API workers. Lệnh standard/seed:data giữ behavior reset
+  password cũ nên không dùng để bổ sung vào server.
+- Local: test plan22/22 PASS; type-check PASS. PostgreSQL localhost5433 trả
+  ECONNREFUSED, Docker daemon chưa chạy; không có evidence seed/rerun/rollback
+  trên PostgreSQL cho thay đổi này. Chưa kết nối/chạy seed/dry-run/deploy lên server,
+  không có giao dịch thật.
+- Gate cuối: scoped Biome seed PASS, type-check PASS, build PASS (42 migration
+  artifacts). Compiled CLI smoke PASS3 guards: thiếu production confirmation,
+  thiếu password, ngày không hợp lệ; compiled plan xác nhận7 lớp/76 buổi.
+  `pnpm check` không xanh toàn bộ: lint0 errors/11 warnings có sẵn ngoài seed;
+  Vitest388 PASS/559 SKIPPED,6 suites files/materials FAIL ở setup do không có
+  TEST_DATABASE_URL/MinIO. Build được chạy riêng và PASS sau khi full gate dừng
+  ở bước test. Chưa chạy HTTP suite và không coi static/unit checks là evidence
+  PostgreSQL seed preservation/idempotency/dry-run trên server.

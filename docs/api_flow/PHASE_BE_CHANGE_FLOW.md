@@ -45,3 +45,30 @@ Emoji là Unicode trong body, dùng DTO/send/edit/realtime hiện có. FE chèn 
 Không đổi flow/API runtime. Review seed mới bằng PostgreSQL 17.11 tách biệt: migrations và standard seed/rerun PASS (30 users không gồm admin, 7 classes); DB review đã xóa. Type-check PASS, Vitest plan 9/9 PASS; Biome scoped seed FAIL format ở hai file mới. Chưa chạy full check/HTTP hoặc deploy.
 
 Còn lệch policy trong fixture: historical STARTED decisions lưu 8/12/8 trong khi cutoff query thực tế trả 0/0/0 vì enrollment event được trigger ghi ở thời điểm seed; 22 completed sessions/208 attendance records/8 graded submissions không có lifecycle/attendance/assignment/material audit. Tracking/history demo vì vậy chưa đủ để nghiệm thu. Chưa sửa implementation; chi tiết và giới hạn tại `docs/progress/Progress.md`. DB dev chưa có các standard class code khi kiểm read-only; không seed vào dev/VPS. API breakdown giữ nguyên: [contract](PHASE_BE_CHANGE_flow-api-breakdown.md).
+
+## 19/11/2026 — Seed bổ sung cho server demo 20/11 lúc 09:20
+
+Thêm `pnpm seed:demo` / compiled `node dist/database/seed/standard.js --demo`.
+Đây là batch mới gồm 7 lớp mang suffix `DEMO-20261120`, giữ ID/lịch/trạng thái của
+lớp cũ và mật khẩu/thông tin tài khoản có sẵn. Hai mentor frontend/backend có lớp
+JavaScript IN_PROGRESS riêng, 8/12 học viên PAID không trùng roster, buổi SCHEDULED
+20/11 09:20–10:50 +07. Lịch tuần dùng slot2, riêng ngày demo dời sớm10 phút.
+Các lớp còn lại phủ COMPLETED, OPEN còn chỗ/full/thiếu học viên, DRAFT; có đơn
+CASH/PAYOS, pending/expired, giỏ hàng, ARTICLE, quiz, điểm danh, tiến độ và audit
+qua implementation standard hiện tại. Tài liệu seed còn thiếu được bổ sung vào
+course unit cũ; giỏ hàng cũ được tái sử dụng thay vì insert trùng student.
+
+Mã lớp và anchor gắn `SEED_DEMO_DATE` (mặc định2026-11-20), không đổi theo ngày
+chạy lại. Chạy lặp bỏ qua lớp đã có để giữ thao tác demo. Account khác role/status
+kỳ vọng sẽ báo lỗi, không tự sửa. Kiểm lịch với CalendarValidationService hiện hữu
+gồm mentor/student và approved leave; lỗi rollback cả batch. Seed có advisory lock
+để serialize các lượt chạy. `--dry-run` thực hiện các insert/check trong transaction
+rồi rollback; PostgreSQL sequences có thể vẫn tăng. Production cần
+`SEED_DEMO_CONFIRM=YES`, `SEED_ACCOUNT_PASSWORD` cho account chưa có. Chạy bằng
+image đã build trên VPS theo [README](../../README.md); không dùng `seed:data`
+cho lượt bổ sung vì lệnh standard cũ vẫn reset password.
+
+Không đổi endpoint/DTO/business rule, không tự gọi payOS/SMTP hoặc boot worker.
+Test lịch local22/22 PASS và type-check PASS. Full gate/giới hạn runtime ghi tại
+[Progress](../progress/Progress.md). Chưa deploy/chạy seed hoặc dry-run trên server;
+PostgreSQL local không nghe5433 và Docker daemon chưa chạy.
