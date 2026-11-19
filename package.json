@@ -35,6 +35,7 @@
     "migration:revert:build": "typeorm -d dist/database/data-source.js migration:revert",
     "seed:admin": "tsx src/database/seed-admin.ts",
     "seed:standard": "tsx src/database/seed/standard.ts",
+    "seed:demo": "tsx src/database/seed/standard.ts --demo",
     "seed:data": "pnpm seed:admin && pnpm seed:standard",
     "check": "pnpm lint && pnpm type-check && pnpm test && pnpm build"
   },

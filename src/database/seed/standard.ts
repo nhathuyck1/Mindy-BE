@@ -8,12 +8,16 @@ import { PasswordService } from '../../modules/auth/services/password.service.js
 import { attendanceDeadline, toLocalDate } from '../../modules/classes/domain/class-calendar.js';
 import { ClassStatus } from '../../modules/classes/enums/class-status.enum.js';
 import { DeliveryMode } from '../../modules/classes/enums/delivery-mode.enum.js';
+import { CalendarValidationService } from '../../modules/classes/services/calendar-validation.service.js';
+import { MentorConflictService } from '../../modules/classes/services/mentor-conflict.service.js';
 import { sanitizeArticle } from '../../modules/materials/domain/article-sanitizer.js';
+import { ScheduleReservationsService } from '../../modules/schedule-reservations/schedule-reservations.service.js';
 import { UserRole } from '../../modules/users/user-role.enum.js';
 import { UserStatus } from '../../modules/users/user-status.enum.js';
 import { normalizeEmail } from '../../modules/users/users.service.js';
 import dataSource from '../data-source.js';
 import { COURSE_IMAGE_URLS } from './helpers/course-images.js';
+import { demoPlan } from './helpers/demo-plan.js';
 import {
   CLASSES,
   classSessions,
@@ -29,10 +33,17 @@ import {
  * (password reset), catalog by slug/code, and an existing class code skips that class.
  *
  *   pnpm seed:admin && pnpm seed:standard        (SEED_ACCOUNT_PASSWORD required)
+ *   pnpm seed:demo                              (add dated classes; preserve existing users)
  */
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
+
+class SeedDryRun extends Error {
+  constructor(readonly lines: string[]) {
+    super('Seed preview rolled back');
+  }
+}
 
 const STAFF: readonly [email: string, name: string, role: UserRole][] = [
   ['manager.ops@example.com', 'Lê Thu Hằng', UserRole.MANAGER],
@@ -241,9 +252,10 @@ async function upsertUser(
   role: UserRole,
   status: UserStatus,
   passwordHash: string,
+  preserveExisting = false,
 ): Promise<string> {
-  const rows: { id: string; role: string }[] = await m.query(
-    'SELECT id,role FROM users WHERE email=$1',
+  const rows: { id: string; role: string; status: string }[] = await m.query(
+    'SELECT id,role,status FROM users WHERE email=$1',
     [normalizeEmail(email)],
   );
   const existing = rows[0];
@@ -256,6 +268,11 @@ async function upsertUser(
       password_hash: passwordHash,
     });
   if (existing.role !== role) throw new Error(`${email} already exists with role ${existing.role}`);
+  if (preserveExisting) {
+    if (existing.status !== status)
+      throw new Error(`${email} has status ${existing.status}; demo seed preserves existing users`);
+    return existing.id;
+  }
   await m.query(
     'UPDATE users SET display_name=$2,status=$3,password_hash=$4,updated_at=now() WHERE id=$1',
     [existing.id, displayName, status, passwordHash],
@@ -270,29 +287,45 @@ async function seedCatalog(m: EntityManager, managerId: string, now: Date): Prom
       [slug, name, description],
     );
   for (const c of COURSES) {
-    const exists: unknown[] = await m.query('SELECT 1 FROM courses WHERE code=$1', [c.code]);
-    if (exists.length) continue;
-    const courseId = await ins(m, 'courses', {
-      category_id: (
-        await m.query('SELECT id FROM course_categories WHERE slug=$1', [c.category])
-      )[0].id,
-      code: c.code,
-      title: c.title,
-      description: `Khoá ${c.title} với ${c.units.length} chương, học qua dự án thực hành.`,
-      img_url: COURSE_IMAGE_URLS[c.code] ?? null,
-      price_amount: c.price,
-      is_active: c.active,
-    });
+    const [existing]: { id: string }[] = await m.query('SELECT id FROM courses WHERE code=$1', [
+      c.code,
+    ]);
+    const courseId =
+      existing?.id ??
+      (await ins(m, 'courses', {
+        category_id: (
+          await m.query('SELECT id FROM course_categories WHERE slug=$1', [c.category])
+        )[0].id,
+        code: c.code,
+        title: c.title,
+        description: `Khoá ${c.title} với ${c.units.length} chương, học qua dự án thực hành.`,
+        img_url: COURSE_IMAGE_URLS[c.code] ?? null,
+        price_amount: c.price,
+        is_active: c.active,
+      }));
+    if (!existing)
+      for (const [i, title] of c.units.entries()) {
+        await ins(m, 'course_units', {
+          course_id: courseId,
+          unit_number: i + 1,
+          title,
+          description: null,
+          required_score_percent: 80,
+        });
+      }
+    if (!c.active) continue;
     const reviewedAt = new Date(now.getTime() - 60 * DAY);
-    for (const [i, title] of c.units.entries()) {
-      const unitId = await ins(m, 'course_units', {
-        course_id: courseId,
-        unit_number: i + 1,
-        title,
-        description: null,
-        required_score_percent: 80,
-      });
-      if (!c.active) continue;
+    const units: { id: string; title: string }[] = await m.query(
+      'SELECT id,title FROM course_units WHERE course_id=$1 ORDER BY unit_number',
+      [courseId],
+    );
+    for (const { id: unitId, title } of units) {
+      // Older catalog seeds did not include articles. Add only a missing seed title.
+      const [material] = await m.query(
+        'SELECT 1 FROM materials WHERE course_unit_id=$1 AND title=$2 AND deleted_at IS NULL',
+        [unitId, `Tài liệu: ${title}`],
+      );
+      if (material) continue;
       // One approved, published article per unit: the student material path needs no MinIO.
       const materialId = await ins(m, 'materials', {
         course_unit_id: unitId,
@@ -328,6 +361,8 @@ async function seedCatalog(m: EntityManager, managerId: string, now: Date): Prom
 
 interface Ctx {
   readonly now: Date;
+  readonly scheduleAnchor: Date;
+  readonly additive: boolean;
   readonly users: ReadonlyMap<string, string>;
   readonly managerId: string;
 }
@@ -353,7 +388,7 @@ async function seedClass(m: EntityManager, seed: SeedClass, ctx: Ctx): Promise<s
     [course.id],
   );
   const mentorId = id(ctx.users, seed.mentorEmail);
-  const { startDate, times } = classSessions(seed, units.length, now);
+  const { startDate, times } = classSessions(seed, units.length, ctx.scheduleAnchor);
   const first = times[0];
   const last = times.at(-1);
   if (!first || !last) throw new Error(`${seed.code} has no sessions`);
@@ -557,7 +592,15 @@ async function seedClass(m: EntityManager, seed: SeedClass, ctx: Ctx): Promise<s
   for (const key of seed.expiredPayos ?? [])
     await buy(key, 'EXPIRED', 'PAYOS', new Date(now.getTime() - 3 * DAY));
   for (const key of seed.inCart ?? []) {
-    const cartId = await ins(m, 'carts', { student_id: id(ctx.users, key) });
+    const studentId = id(ctx.users, key);
+    await m.query('INSERT INTO carts(student_id) VALUES($1) ON CONFLICT(student_id) DO NOTHING', [
+      studentId,
+    ]);
+    const [cart]: { id: string }[] = await m.query('SELECT id FROM carts WHERE student_id=$1', [
+      studentId,
+    ]);
+    if (!cart) throw new Error(`Missing cart for ${key}`);
+    const cartId = cart.id;
     await ins(m, 'cart_details', { cart_id: cartId, class_id: classId, price_snapshot: price });
   }
 
@@ -599,6 +642,29 @@ async function seedClass(m: EntityManager, seed: SeedClass, ctx: Ctx): Promise<s
 
   if (seed.status === ClassStatus.IN_PROGRESS && seed.courseCode === 'JS-101')
     await seedQuizzes(m, sessions, enrollments, ctx, mentorId, classId, units[0]?.id);
+  if (ctx.additive && seed.status !== ClassStatus.COMPLETED) {
+    const calendar = new CalendarValidationService(
+      new MentorConflictService(),
+      new ScheduleReservationsService(),
+    );
+    await calendar.lock(m, classId, [mentorId]);
+    const conflicts = await calendar.conflicts(
+      m,
+      sessions
+        .filter((s) => !s.done)
+        .map((s) => ({
+          sessionId: s.id,
+          classId,
+          mentorId,
+          startsAt: s.startsAt,
+          endsAt: s.endsAt,
+        })),
+    );
+    if (conflicts.length)
+      throw new Error(
+        `${seed.code}: schedule conflicts; seed rolled back: ${JSON.stringify(conflicts)}`,
+      );
+  }
   return `${seed.code}: ${seed.status}, ${sessions.length} buổi (${sessions.filter((s) => s.done).length} đã dạy), ${enrollments.length} học viên`;
 }
 
@@ -736,42 +802,67 @@ async function main(): Promise<void> {
   if (!password) throw new Error('SEED_ACCOUNT_PASSWORD is required');
   const passwordHash = await new PasswordService().hashPassword(password);
   const now = new Date();
+  const additive = process.argv.includes('--demo');
+  const dryRun = process.argv.includes('--dry-run');
+  const plan = additive ? demoPlan(process.env.SEED_DEMO_DATE?.trim() || undefined) : null;
+  const classes = plan?.classes ?? CLASSES;
+  const scheduleAnchor = plan?.anchor ?? now;
 
   await dataSource.initialize();
   try {
-    const lines = await dataSource.transaction(async (m) => {
-      const users = new Map<string, string>();
-      for (const [email, name, role] of STAFF)
-        users.set(email, await upsertUser(m, email, name, role, UserStatus.ACTIVE, passwordHash));
-      for (const [key, name] of Object.entries(STUDENTS))
-        users.set(
-          key,
-          await upsertUser(
-            m,
-            `student.${key}@example.com`,
-            name,
-            UserRole.STUDENT,
-            UserStatus.ACTIVE,
-            passwordHash,
-          ),
+    const lines = await dataSource
+      .transaction(async (m) => {
+        // Serialize seed batches so concurrent reruns cannot duplicate classes/materials.
+        await m.query("SELECT pg_advisory_xact_lock(hashtextextended('mindy-demo-seed',0))");
+        const users = new Map<string, string>();
+        for (const [email, name, role] of STAFF)
+          users.set(
+            email,
+            await upsertUser(m, email, name, role, UserStatus.ACTIVE, passwordHash, additive),
+          );
+        for (const [key, name] of Object.entries(STUDENTS))
+          users.set(
+            key,
+            await upsertUser(
+              m,
+              `student.${key}@example.com`,
+              name,
+              UserRole.STUDENT,
+              UserStatus.ACTIVE,
+              passwordHash,
+              additive,
+            ),
+          );
+        await upsertUser(
+          m,
+          'student.suspended@example.com',
+          'Tài khoản bị khoá',
+          UserRole.STUDENT,
+          UserStatus.SUSPENDED,
+          passwordHash,
+          additive,
         );
-      await upsertUser(
-        m,
-        'student.suspended@example.com',
-        'Tài khoản bị khoá',
-        UserRole.STUDENT,
-        UserStatus.SUSPENDED,
-        passwordHash,
-      );
-      const ctx: Ctx = { now, users, managerId: id(users, 'manager.ops@example.com') };
-      await seedCatalog(m, ctx.managerId, now);
-      const result: string[] = [];
-      for (const seed of CLASSES) result.push(await seedClass(m, seed, ctx));
-      return result;
-    });
+        const ctx: Ctx = {
+          now,
+          scheduleAnchor,
+          additive,
+          users,
+          managerId: id(users, 'manager.ops@example.com'),
+        };
+        await seedCatalog(m, ctx.managerId, now);
+        const result: string[] = [];
+        for (const seed of classes) result.push(await seedClass(m, seed, ctx));
+        if (dryRun) throw new SeedDryRun(result);
+        return result;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof SeedDryRun) return error.lines;
+        throw error;
+      });
     console.log(
-      `Standard seed done (${STAFF.length} staff, ${Object.keys(STUDENTS).length + 1} students):\n  ${lines.join('\n  ')}`,
+      `${additive ? 'Additive demo' : 'Standard'} seed done (${STAFF.length} staff, ${Object.keys(STUDENTS).length + 1} students):\n  ${lines.join('\n  ')}`,
     );
+    if (dryRun) console.log('DRY RUN: transaction rolled back; no seed rows committed.');
   } finally {
     await dataSource.destroy();
   }
