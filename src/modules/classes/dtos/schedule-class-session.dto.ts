@@ -23,6 +23,7 @@ export class ScheduleClassSessionDto {
   @ApiProperty({ type: String, example: 'Buổi 1 — Giới thiệu', maxLength: 250 })
   @IsString()
   @Length(1, 250)
+  @Matches(/\S/, { message: 'title must contain at least one non-space character' })
   readonly title!: string;
 
   @ApiProperty({ type: String, format: 'date-time', example: '2026-11-02T19:00:00+07:00' })

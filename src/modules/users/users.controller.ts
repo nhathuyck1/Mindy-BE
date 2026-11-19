@@ -16,6 +16,8 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import { AccessTokenGuard } from '../auth/guards/access-token.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -79,7 +81,8 @@ export class UsersController {
   async updateStatus(
     @Param('userId', new ParseUUIDPipe()) userId: string,
     @Body() dto: UpdateUserStatusDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ): Promise<UserDto> {
-    return new UserDto(await this.usersService.updateStatus(userId, dto.status));
+    return new UserDto(await this.usersService.updateStatus(userId, dto.status, actor.userId));
   }
 }

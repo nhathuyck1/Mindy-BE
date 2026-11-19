@@ -73,7 +73,13 @@ describe.skipIf(!separateTestUrl('payments'))('Phase 2.2 payment transactions (P
       PAYOS_CANCEL_URL: 'https://example.test/cancel',
     });
     const adapter = new PayosAdapter(config);
-    const links = new PaymentLinksService(db, new OrderSettlementService(), config, adapter);
+    const links = new PaymentLinksService(
+      db,
+      new OrderSettlementService(),
+      config,
+      adapter,
+      f.offers,
+    );
     const spy = vi.spyOn(PayOS.prototype, 'request');
     spy.mockRejectedValueOnce(
       new APIError(

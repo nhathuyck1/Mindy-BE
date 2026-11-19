@@ -1,5 +1,20 @@
 # Phase 7 progress — CODE assignments (bài tập lập trình chấm tự động)
 
+## 16/11/2026 — Phát hành web và backend với hai ngôn ngữ tắt
+
+- Sau merge `origin/dev` tại `a44d988`, BE `pnpm check` đạt 880 test, HTTP
+  đạt 131 test và round-trip Docker đạt 50 test. HTTP local dùng thư mục
+  scratch tạm có quyền ghi trên Mac.
+- VPS chạy runner `20261116-python-csharp`, BE `a3001ad` và FE2 `b9600ea`.
+  Đã kiểm tra bản sao lưu PostgreSQL trước khi chạy migration
+  `CodeLanguagesPythonCsharp1794787200000`. Catalog còn 0 migration chờ.
+- Smoke runner production đạt cả 4 ngôn ngữ. Backend production round-trip
+  Python và C# đạt 12/12 kiểu mỗi ngôn ngữ. FE2 giữ alias Docker
+  `mindy-frontend` cho Cloudflare. Hai key mới đang `enabled=false`.
+- Flutter analyze sạch, 13 test CODE đạt. Bốn widget test Materials/lịch lỗi
+  giống commit cha. Admin mobile type-check đạt. Chờ phát hành cả hai app
+  mobile trước khi bật và nghiệm thu trên tài khoản mentor/học viên.
+
 ## 16/11/2026 — Python 3.13 và C# .NET 10
 
 - Hoàn tất ở local (Claude): merge `origin/dev` (`a44d988`) vào nhánh
@@ -198,3 +213,10 @@ Owner asked for an easier, standard way to write problems. BE: `code-tests/gener
 `POST code-import` (no schema change); D11 clarified to "at least one reference". FE2: 4-step wizard with templates and reuse.
 Details: plan §15.12. Checks: BE `tsc`; FE2 `tsc`/ESLint/Prettier on the owner's machine; FE2 unit tests via vitest shim.
 Not run: new integration specs on PostgreSQL, `pnpm check`, `npm run check`.
+
+## 2026-11-19 — Publish deployed sources to Git remotes
+
+- User explicitly requested both remote Git and server receive the latest sources, including uncommitted work. BE/FE2 publish on `feat/phase7-python-csharp`; compiler uses private `Quanhpm/mindy-compiler-runner` on `main`.
+- Application source matches the tested deployment `web-20261119T141416Z`. Verified 495 compiled API JavaScript files and 12 runner files against production containers, plus complete source-file checksums. Only Markdown records changed after deployment; existing test evidence remains applicable.
+- Local verification already completed for the same application source: BE 894 unit/integration and 131 HTTP pass; FE 376 unit and 553 distinct E2E scenarios pass across full run/recheck, with 5 viewport skips and one retry-passed flaky scenario. Production four-language execution smoke passed. This sync does not claim a fresh full test run or real payment/email acceptance.
+- No API, migration, data, feature-flag or runtime-secret changes. Server keeps its verified runtime artifacts and records the published commit mapping. Git publication does not enable Python/C# for older mobile clients.

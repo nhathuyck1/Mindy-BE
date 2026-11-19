@@ -68,8 +68,9 @@ export class RegistrationService {
         if (await users.exists({ where: { email } })) {
           return false;
         }
+        // Email stays silent against enumeration; a taken phone is reported so the user can fix it.
         if (phone !== null && (await users.exists({ where: { phone } }))) {
-          return false;
+          throw new UserPhoneAlreadyExistsException();
         }
 
         const user = await users.save(

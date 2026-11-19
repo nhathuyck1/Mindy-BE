@@ -4,6 +4,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 // biome-ignore lint/style/useImportType: Nest DI requires runtime constructor.
 import { DataSource } from 'typeorm';
+import { ClassStatus } from '../../classes/enums/class-status.enum.js';
+// biome-ignore lint/style/useImportType: Exported class provider.
+import { ClassOffersService } from '../../classes/services/class-offers.service.js';
 import { OrderStatus } from '../../commerce/enums/order-status.enum.js';
 import { PaymentType } from '../../commerce/enums/payment-type.enum.js';
 import { OrderNotFoundException } from '../../commerce/exceptions/commerce.exceptions.js';
@@ -27,6 +30,7 @@ export class PaymentLinksService {
     private readonly orders: OrderSettlementService,
     private readonly config: ConfigService,
     @Inject(PAYOS_PROVIDER) private readonly provider: PayosProvider,
+    private readonly classes: ClassOffersService,
   ) {}
 
   async resolveOrder(studentId: string, code: string): Promise<string> {
@@ -69,12 +73,19 @@ export class PaymentLinksService {
       throw new PaymentUnavailableException();
     const token = randomUUID();
     const reserved = await this.db.transaction(async (manager) => {
-      await this.orders.read(manager, orderId, studentId);
+      const snapshot = await this.orders.read(manager, orderId, studentId);
+      // Same lock order as cash confirmation and settlement: classes, then the order.
+      const offers = await this.classes.lockOffers(
+        manager,
+        snapshot.details.map((detail) => detail.classId),
+      );
       const order = await this.orders.lock(manager, orderId);
       if (
         order.paymentType !== PaymentType.PAYOS ||
         order.status !== OrderStatus.PENDING ||
-        order.expiresAt <= new Date()
+        order.expiresAt <= new Date() ||
+        // Settlement would send money for a cancelled class to review without access.
+        offers.some((offer) => offer.status === ClassStatus.CANCELLED)
       )
         throw new PaymentOrderInvalidException();
       if (

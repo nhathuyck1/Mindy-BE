@@ -1,3 +1,10 @@
+## 2026-11-16 — Phát hành Phase 7 web/backend
+
+Runner, BE và FE2 đã lên production. Migration Python/C# đã chạy,
+`python3=false` và `csharp=false`. Chờ phát hành MindyFlutter và
+MindyMobile_Admin trước khi bật và nghiệm thu.
+[Chi tiết](phase%207/PHASE_7_CODE_PROGRESS.md).
+
 ## 2026-11-16 — Phase 7 Python/C#
 
 Đã triển khai A–C cho backend và compiler-runner trong workspace. B0 trên
@@ -1569,3 +1576,24 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
 
 - Added optional q to managed-user list, 2–100 trimmed characters, accent/case-insensitive name/email/phone substring with escaped wildcard literals; filters/count/page and stable ordering are server-side. API and flow updated under Phase 1. No migration. FE incremental search begins at 2 characters with 250ms debounce.
 - Local verification: BE build/type-check and 3 user unit tests PASS; actual FE/API checks PASS for two-character then longer input, Vietnamese accentless search, wildcard literals, clear and full-dataset result. No deploy or production data operation.
+
+
+## 2026-11-19 — Full web business/validation audit (FE2 + BE)
+
+- Review-only: preserved business code/API and pre-existing changes. Detailed findings, reproduction and scope gaps: [full audit](../../../AUDIT_WEB_2026-11-19.md); [flow entry](../api_flow/BE_BUSINESS_OVERVIEW_VI.md).
+- 11 findings remain unfixed (3 P1, 8 P2); separate backend-implemented/web-missing workflow gaps. Isolated PostgreSQL/MinIO tests and real Docker judge runs; no deployment, production mutation, real payment/email, commit or push.
+- Verification: 880 BE unit/integration + 50 real-runner driver cases PASS; all 131 compiled HTTP cases passed across the initial run and rerun of 3 file-related suites with a writable process-only scratch path. CODE HTTP with real runner PASS when run without competing interactive tests. FE 376 unit, 553 E2E PASS, 5 viewport skips; FE lint/format/types/build PASS; BE types/build PASS, lint 11 existing warnings and no errors.
+
+## 2026-11-19 — Production deployment of latest local sources
+
+- Explicit user authorization: deployed FE2 and BE, including existing uncommitted changes, as `web-20261119T141416Z`; completed at 21:28 Vietnam time. Compiler sources match the already-running release byte for byte, so its healthy image was retained. Source snapshot for all three components is stored under `/home/mindycode/mindycoding/releases/web-20261119T141416Z`.
+- PostgreSQL custom-format backup and private runtime/configuration backups are retained under `/home/mindycode/mindycoding/mindy-backups/web-20261119T141416Z`. Existing database/storage volumes, production secrets, frontend network alias and private bindings were preserved. All 42 migration artifacts match production; migration command reports zero pending. No seed or database rollback was run.
+- Local gates: BE types/build PASS, lint zero errors/11 existing warnings, 894 unit/integration PASS and 50 real-runner cases skipped in this run; all 131 compiled HTTP PASS. FE lint/format/types/build and 376 unit PASS; 553 distinct E2E scenarios passed across the full run and focused rerun, with 5 viewport skips and one retry-passed flaky scenario. Two old E2E fixtures were updated for password confirmation and the new class start-date validation; no application behavior changed during deployment.
+- Live acceptance: API/FE/compiler/PostgreSQL/MinIO healthy; 10 internal/public HTTP checks passed, including public pages, category proxy, private endpoints returning 401 and database readiness. Real server-to-server compiler executions for JavaScript, Java, Python and C# all compiled and printed 42. No real payment/email or production account acceptance is claimed.
+- Two guarded attempts restored the previous application images before the final successful rollout: Cloudflare rejects Python's default User-Agent, and the C# smoke fixture initially used Program instead of the configured MindyMain entry point. Fixed the deployment checks; Cloudflare configuration and compiler behavior were preserved. Evidence and rollback details: [deployment record](../../../DEPLOYMENT_2026-11-19.md).
+
+## 2026-11-19 — Git/source synchronization after deployment
+
+- Explicitly authorized commit/push of all pending FE2/BE work on `feat/phase7-python-csharp`, including the production validation/auth/class/payment/ZIP fixes and removed obsolete seed files. Compiler source is published separately to private `Quanhpm/mindy-compiler-runner` on `main`.
+- Reused completed quality gates for unchanged application files; checked source parity, compiled runtime parity, whitespace and new secret signatures before publication. Markdown deployment/progress records are the only changes after the tested runtime snapshot. Server source metadata is synchronized with published commits while retaining verified application artifacts, production configuration, database/storage and rollback backups.
+- Phase flow and progress updated; no new API/schema or real payment/email operation. Publication evidence is recorded separately from the earlier deployment evidence.

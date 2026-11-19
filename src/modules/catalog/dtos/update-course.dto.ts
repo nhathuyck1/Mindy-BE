@@ -6,6 +6,7 @@ import {
   IsUrl,
   IsUUID,
   Length,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -24,6 +25,7 @@ export class UpdateCourseDto {
   @ValidateIf((_object, value) => value !== undefined)
   @IsString()
   @Length(1, 250)
+  @Matches(/\S/, { message: 'title must contain at least one non-space character' })
   readonly title?: string;
 
   @ApiPropertyOptional({
@@ -51,13 +53,13 @@ export class UpdateCourseDto {
 
   @ApiPropertyOptional({
     type: Number,
-    minimum: 0,
+    minimum: 1,
     maximum: MAX_PRICE_AMOUNT,
     description: 'Integer VND amount; applies to future checkouts only',
   })
   @ValidateIf((_object, value) => value !== undefined)
   @IsInt()
-  @Min(0)
+  @Min(1)
   @Max(MAX_PRICE_AMOUNT)
   readonly priceAmount?: number;
 }

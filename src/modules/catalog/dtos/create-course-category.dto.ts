@@ -5,6 +5,7 @@ export class CreateCourseCategoryDto {
   @ApiProperty({ type: String, example: 'Lập trình Web', minLength: 1, maxLength: 150 })
   @IsString()
   @Length(1, 150)
+  @Matches(/\S/, { message: 'name must contain at least one non-space character' })
   readonly name!: string;
 
   @ApiPropertyOptional({

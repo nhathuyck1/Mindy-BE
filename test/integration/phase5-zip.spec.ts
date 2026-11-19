@@ -436,6 +436,18 @@ describe.skipIf(!separateTestUrl('phase5_zip'))(
         zip.extend(
           s.mentor,
           s.assignment.id,
+          {
+            expectedRevision: extension.revision,
+            dueAt: new Date(Date.now() - 60000).toISOString(),
+            reason: 'past deadline',
+          },
+          randomUUID(),
+        ),
+      ).rejects.toMatchObject({ response: { code: 'INVALID_ASSIGNMENT_DEADLINE' } });
+      await expect(
+        zip.extend(
+          s.mentor,
+          s.assignment.id,
           { expectedRevision: extension.revision, maxAttempts: 1, reason: 'reduce' },
           randomUUID(),
         ),

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
 
+import { PHONE_MESSAGE, PHONE_PATTERN } from '../phone.js';
 import { UserRole } from '../user-role.enum.js';
 
 export class CreateUserDto {
@@ -13,6 +14,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   @Length(7, 32)
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
   readonly phone?: string;
 
   @ApiProperty({ type: String, format: 'password', minLength: 6, maxLength: 128 })
@@ -23,6 +25,7 @@ export class CreateUserDto {
   @ApiProperty({ type: String, example: 'Test Student', minLength: 1, maxLength: 150 })
   @IsString()
   @Length(1, 150)
+  @Matches(/\S/, { message: 'displayName must contain at least one non-space character' })
   readonly displayName!: string;
 
   @ApiProperty({ type: String, enum: UserRole, example: UserRole.STUDENT })

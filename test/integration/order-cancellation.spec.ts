@@ -86,6 +86,14 @@ describe.skipIf(!separateTestUrl('cancellation'))('Student order cancellation (P
     );
   });
 
+  it('refuses a payOS link once a class of the order is cancelled', async () => {
+    const o = await f.order();
+    await f.classes.cancel(o.classIds[0] ?? '');
+    await expect(f.links.create(o.student.id, o.order.id)).rejects.toMatchObject({
+      response: { code: 'PAYMENT_ORDER_INVALID' },
+    });
+  });
+
   it('serializes cancellation against payment and sends a late transfer to review', async () => {
     const o = await f.order();
     const payment = await f.links.create(o.student.id, o.order.id);

@@ -7,6 +7,7 @@ import {
   UserEmailAlreadyExistsException,
   UserNotFoundException,
   UserPhoneAlreadyExistsException,
+  UserSelfStatusChangeException,
 } from './exceptions/user.exceptions.js';
 import { UserEntity } from './user.entity.js';
 import { UserRole } from './user-role.enum.js';
@@ -184,7 +185,8 @@ export class UsersService {
     return { items, total };
   }
 
-  async updateStatus(id: string, status: UserStatus): Promise<UserEntity> {
+  async updateStatus(id: string, status: UserStatus, actorId?: string): Promise<UserEntity> {
+    if (actorId === id) throw new UserSelfStatusChangeException();
     const user = await this.findById(id);
     user.status = status;
     return this.users.save(user);

@@ -11,6 +11,8 @@ export interface ClassView {
   readonly classEntity: ClassEntity;
   readonly mentorName: string | null;
   readonly occupiedSeats: number;
+  /** Peak seats held by makeup guests in one upcoming session; checkout counts them as taken. */
+  readonly guestSeats?: number;
   readonly opening?: ClassStartEligibility;
 }
 

@@ -8,6 +8,8 @@ import { CoursesService } from '../../catalog/services/courses.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { EnrollmentsService } from '../../enrollments/services/enrollments.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { ScheduleReservationsService } from '../../schedule-reservations/schedule-reservations.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { UsersService } from '../../users/users.service.js';
 import { toLocalDate } from '../domain/class-calendar.js';
 import { isClassOpenForPurchase } from '../domain/class-lifecycle.js';
@@ -95,6 +97,7 @@ export class ClassReadService {
     private readonly coursesService: CoursesService,
     private readonly usersService: UsersService,
     private readonly enrollmentsService: EnrollmentsService,
+    private readonly reservations: ScheduleReservationsService,
   ) {}
 
   async listForMentor(
@@ -335,10 +338,10 @@ export class ClassReadService {
       manager,
     );
     const mentorNames = new Map(mentors.map((mentor) => [mentor.id, mentor.displayName]));
-    const occupied = await this.enrollmentsService.countOccupiedSeats(
-      classes.map((classEntity) => classEntity.id),
-      manager,
-    );
+    const ids = classes.map((classEntity) => classEntity.id);
+    const occupied = await this.enrollmentsService.countOccupiedSeats(ids, manager);
+    // Same seat rule as checkout (ClassOffersService.assertPurchasable): makeup guests hold seats too.
+    const guests = await this.reservations.guestPeak(manager, ids);
 
     const eligibility = await readClassStartEligibilities(manager, classes);
     return classes.map((classEntity) => ({
@@ -346,6 +349,7 @@ export class ClassReadService {
       classEntity,
       mentorName: mentorNames.get(classEntity.mentorId) ?? null,
       occupiedSeats: occupied.get(classEntity.id) ?? 0,
+      guestSeats: guests.get(classEntity.id) ?? 0,
     }));
   }
 

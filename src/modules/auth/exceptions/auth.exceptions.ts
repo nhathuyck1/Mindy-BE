@@ -8,6 +8,17 @@ export class InvalidCredentialsException extends AppHttpException {
   }
 }
 
+export class LoginTooManyAttemptsException extends AppHttpException {
+  constructor(retryAfterSeconds: number) {
+    super(
+      HttpStatus.TOO_MANY_REQUESTS,
+      'LOGIN_TOO_MANY_ATTEMPTS',
+      'Too many failed login attempts; try again later',
+      [{ retryAfterSeconds }],
+    );
+  }
+}
+
 export class InvalidRefreshTokenException extends AppHttpException {
   constructor() {
     super(HttpStatus.UNAUTHORIZED, 'INVALID_REFRESH_TOKEN', 'The refresh session is invalid');

@@ -19,3 +19,13 @@ export class UserNotFoundException extends AppHttpException {
     super(HttpStatus.NOT_FOUND, 'USER_NOT_FOUND', 'The user was not found');
   }
 }
+
+export class UserSelfStatusChangeException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'USER_SELF_STATUS_CHANGE_FORBIDDEN',
+      'You cannot change the status of your own account',
+    );
+  }
+}

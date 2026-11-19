@@ -18,9 +18,10 @@ reference. Danh sách mentor và học viên theo thứ tự JavaScript, Java, P
 Học viên dùng cùng luồng chạy mẫu, nộp bài và nhận điểm với hai ngôn ngữ mới.
 
 Đã kiểm tra hợp đồng API trên PostgreSQL test và runner Docker. Đã chạy smoke cả
-bốn ngôn ngữ trên runner thử nghiệm riêng ở VPS. Khi phát hành, triển khai runner
-trước, rồi triển khai BE và migration tạo hai ngôn ngữ ở trạng thái tắt. Bật hai key
-sau khi frontend đã cập nhật bộ đọc API. Xem [API contract](PHASE_7_CODE_flow-api-breakdown.md)
+bốn ngôn ngữ trên runner production. BE production đã chạy migration tạo hai
+ngôn ngữ ở trạng thái tắt và kiểm tra round-trip Python/C# qua runner mới.
+FE2 tương thích đã được phát hành. Bật hai key sau khi MindyFlutter và
+MindyMobile_Admin tương thích đã phát hành. Xem [API contract](PHASE_7_CODE_flow-api-breakdown.md)
 và [runbook](../PHASE_7_CODE_RUNBOOK.md#phát-hành-python-và-c).
 
 ## Backend integration — 02/11/2026
@@ -53,3 +54,18 @@ CODE history uses its own endpoints; the QUIZ/ZIP history DTO remains unchanged.
 Verification for this integration is recorded in CODE progress, separately from
 earlier feature evidence. Local checks do not imply deployment or a real-runner
 acceptance run. No frontend changes or development/production database migrations.
+
+## Đồng bộ Git và server — 19/11/2026
+
+Theo yêu cầu trực tiếp của người dùng, đưa toàn bộ thay đổi local đã deploy vào
+nhánh `feat/phase7-python-csharp` của remote BE và FE2. Compiler được lưu riêng tại
+<https://github.com/Quanhpm/mindy-compiler-runner>, nhánh `main`, chế độ private.
+Không thay đổi API, flow chấm điểm, migration hoặc cấu hình production trong lượt
+đồng bộ này; Python/C# vẫn tuân theo điều kiện bật ngôn ngữ của mục phát hành ở trên.
+
+Đã đối chiếu checksum toàn bộ source với release `web-20261119T141416Z`;
+495 file JavaScript đã build trong API và 12 file trong runner trùng bản local
+đã kiểm thử. FE đang chạy đúng image đã nghiệm thu. Chỉ các ghi chép Markdown
+được bổ sung sau triển khai; server nhận thêm source Git và thông tin commit để
+đối chiếu. Kiểm chứng runtime ngày 19/11: năm dịch vụ healthy, HTTP public/auth
+đúng trạng thái, cả bốn ngôn ngữ compile và chạy đúng. Contract FE giữ nguyên.

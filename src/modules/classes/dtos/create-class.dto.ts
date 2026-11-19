@@ -40,6 +40,7 @@ export class CreateClassDto {
   @ApiProperty({ type: String, example: 'Web 101 — evening class', maxLength: 250 })
   @IsString()
   @Length(1, 250)
+  @Matches(/\S/, { message: 'name must contain at least one non-space character' })
   readonly name!: string;
 
   @ApiProperty({ type: String, format: 'date', example: '2026-11-02' })

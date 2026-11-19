@@ -19,6 +19,7 @@ import {
   InvalidRefreshTokenException,
 } from './exceptions/auth.exceptions.js';
 import { RefreshTokenEntity } from './refresh-token.entity.js';
+import { LoginAttempts } from './services/login-attempts.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { PasswordService } from './services/password.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
@@ -28,6 +29,8 @@ import { TokenService } from './services/token.service.js';
 
 @Injectable()
 export class AuthService {
+  private readonly loginAttempts = new LoginAttempts();
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
@@ -41,8 +44,12 @@ export class AuthService {
     input: LoginDto,
     context: AuthenticationContext,
   ): Promise<{ tokens: AuthTokens; userId: string }> {
-    const user = await this.usersService.findAuthenticationIdentity(normalizeEmail(input.email));
+    const email = normalizeEmail(input.email);
+    // Counted per email, known or not, so the limit does not reveal which accounts exist.
+    this.loginAttempts.assertAllowed(email);
+    const user = await this.usersService.findAuthenticationIdentity(email);
     if (user === null || user.status !== UserStatus.ACTIVE) {
+      this.loginAttempts.recordFailure(email);
       throw new InvalidCredentialsException();
     }
 
@@ -50,8 +57,10 @@ export class AuthService {
       user.passwordHash !== null &&
       (await this.passwordService.verifyPassword(input.password, user.passwordHash));
     if (!passwordValid) {
+      this.loginAttempts.recordFailure(email);
       throw new InvalidCredentialsException();
     }
+    this.loginAttempts.reset(email);
 
     const tokens = await this.dataSource.transaction((manager) =>
       this.sessionService.create(manager, user, context, AuthenticationMethod.PASSWORD, null),

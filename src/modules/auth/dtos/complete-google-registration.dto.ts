@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
+import { PHONE_MESSAGE, PHONE_PATTERN } from '../../users/phone.js';
 
 export class CompleteGoogleRegistrationDto {
   @ApiProperty({ type: String, example: 'Nguyen Van A', minLength: 1, maxLength: 150 })
@@ -12,6 +13,7 @@ export class CompleteGoogleRegistrationDto {
   @IsOptional()
   @IsString()
   @Length(7, 32)
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
   readonly phone?: string;
 
   @ApiPropertyOptional({ type: String, example: 'Chrome on Windows', maxLength: 150 })

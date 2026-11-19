@@ -87,6 +87,9 @@ describe('class DTO mapping', () => {
   it('reports available seats and never a negative number', () => {
     expect(new ClassDetailDto(buildView(3)).availableSeats).toBe(7);
     expect(new ClassDetailDto(buildView(12)).availableSeats).toBe(0);
+    // Makeup guests take seats at checkout, so the listing must not offer them.
+    expect(new ClassDetailDto({ ...buildView(3), guestSeats: 2 }).availableSeats).toBe(5);
+    expect(new ClassDetailDto({ ...buildView(9), guestSeats: 2 }).availableSeats).toBe(0);
   });
 
   it('includes meeting URLs and status in the management view', () => {

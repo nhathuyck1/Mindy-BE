@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
+import { PHONE_MESSAGE, PHONE_PATTERN } from '../../users/phone.js';
 
 export class RegisterDto {
   @ApiProperty({
@@ -43,5 +44,6 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   @Length(7, 32)
+  @Matches(PHONE_PATTERN, { message: PHONE_MESSAGE })
   readonly phone?: string;
 }

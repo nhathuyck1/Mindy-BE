@@ -29,7 +29,10 @@ import {
   ClassSessionTimeRangeInvalidException,
   ClassUnitNotFoundException,
 } from '../exceptions/class.exceptions.js';
-import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
+import {
+  SessionScheduleNotFutureException,
+  TeachingConflictException,
+} from '../exceptions/teaching.exceptions.js';
 
 import { MentorConflictService } from './mentor-conflict.service.js';
 
@@ -225,6 +228,8 @@ export class ClassScheduleService {
     if (startsAt.getTime() >= endsAt.getTime()) {
       throw new ClassSessionTimeRangeInvalidException();
     }
+    // A past session can never be started, and it would block completing the class.
+    if (startsAt <= new Date()) throw new SessionScheduleNotFutureException();
     if (!isSingleTeachingDay(startsAt, endsAt, this.timeZone())) {
       throw new ClassSessionOvernightNotAllowedException();
     }
@@ -296,6 +301,7 @@ export class ClassScheduleService {
       const endsAt = withLocalTime(session.endsAt, input.endTime, timeZone);
       if (!startsAt || !endsAt) throw new ClassSessionLocalTimeInvalidException();
       if (startsAt >= endsAt) throw new ClassSessionTimeRangeInvalidException();
+      if (startsAt <= new Date()) throw new SessionScheduleNotFutureException();
       if (!isSingleTeachingDay(startsAt, endsAt, timeZone))
         throw new ClassSessionOvernightNotAllowedException();
       if (!isWithinClassPeriod({ startsAt, endsAt }, classEntity, timeZone)) {

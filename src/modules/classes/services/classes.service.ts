@@ -28,6 +28,7 @@ import {
   ClassMentorNotEligibleException,
   ClassNotEditableException,
   ClassNotFoundException,
+  ClassStartDateInPastException,
 } from '../exceptions/class.exceptions.js';
 import { TeachingConflictException } from '../exceptions/teaching.exceptions.js';
 // biome-ignore lint/style/useImportType: Nest DI runtime token.
@@ -56,6 +57,9 @@ export class ClassesService {
   async create(input: CreateClassDto): Promise<ClassDetailView> {
     if (input.startDate > input.endDate) {
       throw new ClassDateRangeInvalidException();
+    }
+    if (input.startDate < this.readService.today()) {
+      throw new ClassStartDateInPastException();
     }
     await this.assertMentorEligible(input.mentorId, HttpStatus.UNPROCESSABLE_ENTITY);
     const code = normalizeCode(input.code);
@@ -131,12 +135,20 @@ export class ClassesService {
       if (input.meetingUrl !== undefined) {
         classEntity.meetingUrl = normalizeOptionalText(input.meetingUrl);
       }
+      const previousStartDate = classEntity.startDate;
       classEntity.startDate = input.startDate ?? classEntity.startDate;
       classEntity.endDate = input.endDate ?? classEntity.endDate;
       classEntity.maxStudents = input.maxStudents ?? classEntity.maxStudents;
       classEntity.deliveryMode = input.deliveryMode ?? classEntity.deliveryMode;
       if (classEntity.startDate > classEntity.endDate) {
         throw new ClassDateRangeInvalidException();
+      }
+      // Only a changed start date is checked: the edit form always resends the current one.
+      if (
+        classEntity.startDate !== previousStartDate &&
+        classEntity.startDate < this.readService.today()
+      ) {
+        throw new ClassStartDateInPastException();
       }
 
       await manager.getRepository(ClassEntity).save(classEntity);

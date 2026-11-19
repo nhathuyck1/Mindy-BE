@@ -30,6 +30,7 @@ export class UpdateClassDto {
   @ValidateIf(isProvided)
   @IsString()
   @Length(1, 250)
+  @Matches(/\S/, { message: 'name must contain at least one non-space character' })
   readonly name?: string;
 
   @ApiPropertyOptional({ type: String, format: 'uuid' })

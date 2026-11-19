@@ -71,7 +71,10 @@ export class ClassDto {
     this.endDate = classEntity.endDate;
     this.deliveryMode = classEntity.deliveryMode;
     this.maxStudents = classEntity.maxStudents;
-    this.availableSeats = Math.max(classEntity.maxStudents - view.occupiedSeats, 0);
+    this.availableSeats = Math.max(
+      classEntity.maxStudents - view.occupiedSeats - (view.guestSeats ?? 0),
+      0,
+    );
     this.mentor = new ClassMentorDto(classEntity.mentorId, view.mentorName);
   }
 }

@@ -327,3 +327,22 @@ Lượt này chỉ đọc source và viết tài liệu; không đổi code/API,
 - [Mentor leave](../../src/modules/teaching-operations/services/mentor-leave.service.ts), [mentor workspace flow](PHASE_4_6_FLOW.md), [quiz progress](../progress/phase%205/PHASE_5_PROGRESS.md).
 
 **Ôn trong 20 phút:** mục 1–3 để nắm mô hình; 6–8 để nắm tiền/quyền; 10–12 để nắm vận hành; tự trả lời mục 14 rồi kể lại mục 15 bằng lời mình.
+
+
+## 19/11/2026 — Audit nghiệp vụ toàn web FE2 + BE
+
+Chỉ review/test, không đổi API hoặc code nghiệp vụ. Báo cáo đầy đủ và cách tái hiện: [AUDIT_WEB_2026-11-19](../../../AUDIT_WEB_2026-11-19.md), bằng chứng JSON/log tại `../../../audit-evidence-2026-11-19/`.
+
+- Xác nhận 11 phát hiện, gồm 3 P1: refresh-token reuse revoke bị rollback, checkout giá 0 không có đường hoàn tất, khóa Admin cuối cùng; 8 P2 về expired holds, resend verification trên FE, tên trắng, phone, bulk quiz byte limit, link email mặc định, phân trang quá lớn và giới hạn thử mật khẩu.
+- Tách các khoảng trống tích hợp FE: cross-class makeup, dạy thay từng buổi, staff attendance recovery, reconcile command và quản lý tài khoản. Không coi các phần đã hoãn như Google FE/chứng chỉ là lỗi regression.
+- Local: BE 880 unit/integration đạt + 50 driver qua Docker runner thật đạt; 131 HTTP cases đều đạt qua lượt chạy và recheck 3 suites sau override scratch path chỉ cho process test; thêm CODE HTTP với runner thật đạt. FE 376 unit và 553 E2E đạt, 5 skip theo viewport; lint/format/types/build đạt, BE lint có 11 warning cũ.
+- Không deploy, gửi email hoặc thanh toán thật. Dùng PostgreSQL/MinIO/runner test riêng; không sửa `.env`. Danh sách phát hiện chưa được fix trong lượt audit.
+
+## 19/11/2026 — Triển khai production sau audit
+
+Theo yêu cầu SSH/deploy trực tiếp của người dùng, bản `web-20261119T141416Z` đã chạy trên production lúc 21:28, gồm toàn bộ thay đổi local của FE2/BE tại thời điểm đóng gói. Đây là lượt triển khai riêng sau audit; không khẳng định đã nghiệm thu lại từng phát hiện của báo cáo audit. Compiler hiện chạy trùng source mới nhất và được giữ nguyên image.
+
+- Web: <https://quanh123.id.vn>; API readiness: <https://api.quanh123.id.vn/api/v1/health/ready>. FE/API/compiler/database/storage đều healthy. Public pages/category proxy đạt; API riêng trả 401 khi chưa đăng nhập. Bốn ngôn ngữ JavaScript/Java/Python/C# chạy thật và trả đúng kết quả.
+- Build và kiểm tra migration đầy đủ: 42 artifact trùng production, không có migration chờ. Đã sao lưu PostgreSQL định dạng custom và kiểm tra `pg_restore --list`; giữ nguyên volume, cấu hình và dữ liệu server. Không seed hoặc hoàn tác database.
+- BE: 894 unit/integration + 131 HTTP đạt; 50 ca real-runner không bật trong lượt local này, được bổ sung smoke bốn ngôn ngữ trên server. FE: 376 unit; 553 E2E đạt qua lượt chính và recheck, 5 skip theo viewport, một flaky đạt ở retry. Lint/types/build đạt, BE còn 11 warning cũ. Hai fixture E2E cập nhật theo validation hiện tại; không sửa nghiệp vụ khi deploy.
+- Chi tiết release, bằng chứng và cách quay về bản trước: [DEPLOYMENT_2026-11-19](../../../DEPLOYMENT_2026-11-19.md). Chưa nghiệm thu thanh toán/gửi email thật hoặc đăng nhập bằng tài khoản production.

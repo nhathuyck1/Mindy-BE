@@ -229,7 +229,14 @@ export function paymentFixture(db: DataSource) {
     new TeachingReadService(db, config, users, new ScheduleReservationsService()),
     courses,
   );
-  const read = new ClassReadService(db, config, courses, users, enrollments);
+  const read = new ClassReadService(
+    db,
+    config,
+    courses,
+    users,
+    enrollments,
+    new ScheduleReservationsService(),
+  );
   const offers = new ClassOffersService(
     db,
     courses,
@@ -250,7 +257,7 @@ export function paymentFixture(db: DataSource) {
   const checkout = new CheckoutService(db, config, offers, enrollments, expiry);
   const orders = new OrderSettlementService();
   const settlement = new PaymentSettlementService(db, orders, offers, enrollments, provider);
-  const links = new PaymentLinksService(db, orders, config, provider);
+  const links = new PaymentLinksService(db, orders, config, provider, offers);
   let day = 1;
   const user = (role: UserRole = UserRole.STUDENT) =>
     users.createUser(

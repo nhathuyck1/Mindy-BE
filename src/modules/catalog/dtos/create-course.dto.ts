@@ -31,6 +31,7 @@ export class CreateCourseDto {
   @ApiProperty({ type: String, example: 'Web Development Fundamentals', maxLength: 250 })
   @IsString()
   @Length(1, 250)
+  @Matches(/\S/, { message: 'title must contain at least one non-space character' })
   readonly title!: string;
 
   @ApiPropertyOptional({ type: String, maxLength: 10000 })
@@ -54,12 +55,12 @@ export class CreateCourseDto {
   @ApiProperty({
     type: Number,
     example: 2_500_000,
-    minimum: 0,
+    minimum: 1,
     maximum: MAX_PRICE_AMOUNT,
     description: 'Integer VND amount',
   })
   @IsInt()
-  @Min(0)
+  @Min(1)
   @Max(MAX_PRICE_AMOUNT)
   readonly priceAmount!: number;
 }

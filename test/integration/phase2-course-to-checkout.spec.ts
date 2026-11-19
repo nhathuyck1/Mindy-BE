@@ -180,6 +180,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       coursesService,
       usersService,
       enrollmentsService,
+      new ScheduleReservationsService(),
     );
     classesService = new ClassesService(
       dataSource,

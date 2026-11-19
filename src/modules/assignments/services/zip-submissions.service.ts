@@ -143,6 +143,10 @@ export class ZipSubmissionsService {
         throw new AssignmentException(409, 'ASSIGNMENT_STATE_CONFLICT');
       const due = input.dueAt ? new Date(input.dueAt) : a.due_at;
       const attempts = input.maxAttempts ?? a.max_attempts;
+      const [clock]: { now: Date }[] = await m.query('SELECT clock_timestamp() AS now');
+      // A new deadline that has already passed would extend nothing.
+      if (input.dueAt && (!clock || due <= clock.now))
+        throw new AssignmentException(422, 'INVALID_ASSIGNMENT_DEADLINE');
       if (
         due < a.due_at ||
         attempts < a.max_attempts ||

@@ -187,3 +187,13 @@ export class ClassFullException extends AppHttpException {
     super(HttpStatus.CONFLICT, 'CLASS_FULL', 'The class has no seats left', [{ classId }]);
   }
 }
+
+export class ClassStartDateInPastException extends AppHttpException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'CLASS_START_DATE_IN_PAST',
+      'The class start date must not be before today',
+    );
+  }
+}
