@@ -1604,6 +1604,12 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
 - Reused completed quality gates for unchanged application files; checked source parity, compiled runtime parity, whitespace and new secret signatures before publication. Markdown deployment/progress records are the only changes after the tested runtime snapshot. Server source metadata is synchronized with published commits while retaining verified application artifacts, production configuration, database/storage and rollback backups.
 - Phase flow and progress updated; no new API/schema or real payment/email operation. Publication evidence is recorded separately from the earlier deployment evidence.
 
+### Final integration and fresh release verification
+
+- Before finalizing synchronization, merged the latest BE `origin/dev` (`829cad6`, seed-demo and whiteboard viewport) and FE2 `origin/main` (`a2c1c3d`, Student session details/viewport) into their feature branches. Preserved both sides of the progress-document conflict. Production seed commands were not run.
+- Release `sync-20261119T145234Z`: BE fresh lint/types/build PASS (11 existing lint warnings, 42 artifacts), 911 unit/integration PASS and 131 HTTP PASS; 50 Docker runner-driver tests skipped locally. FE Next.js/eslint-config-next patched to 16.4.6; lint/format/types/build and 379 unit PASS. Fixed Admin debounced search restoring stale status filters; added regression coverage. E2E has 565 distinct PASS across full run/recheck, 5 viewport skips; final Admin suite 32/32 PASS.
+- New runtime images are built from the integrated application source; final source/commit metadata and canonical Git checkouts are synchronized with remote branches. PostgreSQL/config backups and previous runtime images are retained. No new migration, seed, production language flag, real payment or email acceptance is claimed.
+
 ## 2026-11-19 — Seed thêm dữ liệu demo server ngày20/11 lúc09:20
 
 - Theo yêu cầu chỉ seed thêm vào server đang có data: thêm `seed:demo`, dùng chung

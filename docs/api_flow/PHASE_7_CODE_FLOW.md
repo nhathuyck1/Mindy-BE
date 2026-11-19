@@ -69,3 +69,19 @@ Không thay đổi API, flow chấm điểm, migration hoặc cấu hình produc
 được bổ sung sau triển khai; server nhận thêm source Git và thông tin commit để
 đối chiếu. Kiểm chứng runtime ngày 19/11: năm dịch vụ healthy, HTTP public/auth
 đúng trạng thái, cả bốn ngôn ngữ compile và chạy đúng. Contract FE giữ nguyên.
+
+### Tích hợp nhánh mới nhất trước khi chốt đồng bộ
+
+Release tiếp theo `sync-20261119T145234Z` gộp `origin/dev` đến `829cad6` và FE2
+`origin/main` đến `a2c1c3d`, giữ các thay đổi Python/C#, validation và auth đã deploy.
+Bao gồm seed demo mới, whiteboard presenter viewport và trang chi tiết buổi học
+Student. Contract viewport kế thừa [whiteboard flow](PHASE_7_FLOW.md) và
+[API breakdown](PHASE_7_flow-api-breakdown.md); không thêm migration, không chạy seed
+hoặc bật thêm ngôn ngữ trên production trong lượt phát hành này.
+
+Gate bản kết hợp: BE 911 unit/integration và 131 compiled HTTP đạt; FE 379 unit,
+565 E2E distinct đạt qua full run và recheck 32 ca Admin, 5 skip theo viewport.
+FE nâng Next.js/eslint-config-next lên 16.4.6 và sửa debounce giữ URL filter mới
+nhất, có regression desktop/mobile. Dockerfile FE được version control để build
+lại cùng cấu hình. Source Git và metadata commit được đồng bộ trên server;
+runtime nghiệm thu và backup được ghi riêng trong biên bản triển khai.
