@@ -1,5 +1,11 @@
 # BE Change — lịch tuần, khai giảng, dashboard và retention
 
+## 19/11/2026 — Bản đồ DB và đánh giá khả năng thu gọn
+
+- Bổ sung [DATABASE_MAP.md](DATABASE_MAP.md): sơ đồ nghiệp vụ/vận hành, inventory 80 bảng và 16 view dự kiến sau 42 migration source; phân loại 48 bảng nghiệp vụ/cấu hình và 32 bảng kỹ thuật/vận hành/bằng chứng. Số lượng chưa đối chiếu PostgreSQL/VPS đang chạy.
+- Đối chiếu caller cho view legacy, receipt bảng vẽ, Google registration, stored progress, khai giảng và chat. Chưa có bảng lưu trữ được xác nhận DROP ngay; đề xuất dọn view sau chuyển caller và khảo sát gộp receipt. Không sửa DB, migration, runtime, nghiệp vụ hoặc API. [API breakdown](PHASE_BE_CHANGE_flow-api-breakdown.md).
+- Kiểm local: inventory source khớp danh sách tài liệu, không thiếu/trùng tên; chưa đo dữ liệu/dung lượng/hiệu năng hoặc nghiệm thu deploy.
+
 Ngày 05/11/2026. Source đã triển khai ở BE và FE2; **chưa nghiệm thu PostgreSQL/MinIO, chưa migrate/deploy**. [Plan](../BE_CHANGE_PLAN.md) · [API breakdown](PHASE_BE_CHANGE_flow-api-breakdown.md) · [Progress](../progress/BE_CHANGE_PROGRESS.md).
 
 ## Lịch tuần và khai giảng
@@ -72,3 +78,29 @@ Không đổi endpoint/DTO/business rule, không tự gọi payOS/SMTP hoặc bo
 Test lịch local22/22 PASS và type-check PASS. Full gate/giới hạn runtime ghi tại
 [Progress](../progress/Progress.md). Chưa deploy/chạy seed hoặc dry-run trên server;
 PostgreSQL local không nghe5433 và Docker daemon chưa chạy.
+
+### 19/11 — Bổ sung lớp để đăng ký ngay, không cần CI/CD
+
+User đã gửi log server xác nhận batch7 lớp trước chạy thành công (evidence do user
+cung cấp, không phải truy cập VPS độc lập). Batch đó chỉ có React/HTML còn chỗ,
+Node full và JS chưa có lớp OPEN, nên bổ sung one-off
+`tools/seed-open-registration.mjs` chạy qua stdin của Node trong container API đã
+deploy. Không cần build/restart/deploy hoặc password seed. Chỉ insert6 lớp OPEN,
+0/25, class units/sessions/weekly schedule; dùng active course/mentor sẵn có. Phủ
+HTML/CSS, JS frontend, JS backend, React, Node, Python; giữ toàn bộ7 lớp cũ và tài
+khoản/order/enrollment. Mã `REG-20261123`, học từ tuần23/11, mở đăng ký ngày19/20.
+CalendarValidationService kiểm lịch/approved leave, lỗi rollback cả batch; rerun
+skip class code. Có `--dry-run` và `--plan`. Không thay endpoint/business rule.
+Local syntax/Biome/compiled plan và purchase policy cho19/20 PASS; chưa chạy
+script mới trên PostgreSQL/server. Lệnh thực hiện tại [README](../../README.md).
+
+### Bổ sung lớp OFFLINE cho frontend/backend
+
+User gửi log COMMITTED6 lớp đăng ký; trong6 lớp đó chỉ Python là OFFLINE,5 lớp
+của hai mentor chính ONLINE. Bổ sung `--offline` cho one-off script, không cần
+deploy: thêm5 OPEN/OFFLINE0/25, codes `REG-OFF-20261123`, gồm HTML/CSS FE,
+JS FE/BE, React FE, Node BE. Session có phòng Demo Frontend/Backend và meeting
+URL null; slot riêng tránh lịch cũ, vẫn kiểm calendar/leave trong transaction.
+Giữ codes/mode của6 lớp trước và giữ dữ liệu đã đăng ký. Không đổi API/rules/FE.
+Local syntax/Biome/plan PASS; kiểm purchase ngày19/20 và không trùng mentor/phòng
+trong các fixtures đã biết PASS. Chưa có server evidence cho5 lớp offline mới.

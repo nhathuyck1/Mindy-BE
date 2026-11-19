@@ -1,3 +1,14 @@
+## 19/11/2026 — Bản đồ database và đánh giá thu gọn
+
+- Tạo [bản đồ DB](../api_flow/DATABASE_MAP.md) gồm sơ đồ quan hệ đại diện, inventory 80 bảng/16 view theo 42 migration source, phân loại 48 nghiệp vụ/cấu hình và 32 kỹ thuật/vận hành/bằng chứng. Đã kiểm inventory khớp tên source, không thiếu/trùng.
+- Rà caller và phân biệt dọn view, gộp receipt, dọn trường legacy và bỏ hẳn tính năng. Chưa xác nhận bảng lưu trữ nào an toàn để DROP ngay. Không sửa DB/migration/runtime/API, không kiểm DB thật/dung lượng/VPS; đề xuất chưa phải thay đổi đã triển khai. Flow và API breakdown BE Change đã cập nhật.
+
+## 19/11/2026 — Ngữ cảnh danh sách tài liệu Manager
+
+- Đã implement local: list materials thêm courseId/courseTitle, courseUnitTitle/courseUnitNumber, sessionTitle/sessionNumber nullable và createdByName/createdByRole. Giữ provenance của người tạo khi Manager sửa; vẫn tra được tác giả bị vô hiệu hóa. DTO page dùng chung nên list Mentor cũng nhận nhãn sau khi lọc quyền hiện hữu.
+- Batch metadata trong cùng transaction read-only, giữ count/filter/pagination/order; không migration hay MinIO I/O. Detail/mutation giữ shape cũ. Flow và contract FE cập nhật trong docs/api_flow/PHASE_3_3_FLOW.md và PHASE_3_3_flow-api-breakdown.md.
+- Kiểm chứng local: Materials tests 98/98 pass (gồm 3 ca attribution/empty-page/authorization), type-check và build pass; lint 0 errors, 11 warnings có sẵn ngoài phần sửa. Thêm DB integration cho buổi học/null và người tạo bị vô hiệu hóa sau Manager edit; chưa chạy được do không có TEST_DATABASE_URL/PostgreSQL local. Chưa deploy VPS/Vercel; FE cần nhận các nhãn bổ sung khi tích hợp UI.
+
 ## 18/11/2026 — Whiteboard presenter viewport
 
 - Nhánh codex/whiteboard-viewport từ origin/dev a3001ad. Thêm board:viewport có epoch, world origin, CSS size/scale; chỉ canControl, strict finite/bounds, identity server và fanout reauthorize từng recipient. Ephemeral, giữ checkpoint/sequence/DB schema hiện hữu.
@@ -1609,3 +1620,39 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
   TEST_DATABASE_URL/MinIO. Build được chạy riêng và PASS sau khi full gate dừng
   ở bước test. Chưa chạy HTTP suite và không coi static/unit checks là evidence
   PostgreSQL seed preservation/idempotency/dry-run trên server.
+
+### 2026-11-19 — One-off thêm lớp OPEN để test đăng ký ngay, không qua CI/CD
+
+- User cung cấp screenshot server: batch7 lớp trước đã seed thành công. Đây là
+  evidence user cung cấp; agent không tự kết nối VPS. Sau đó user yêu cầu đủ lớp
+  còn chỗ để đăng ký ngay hôm nay/ngày mai và chạy được không cần CI/CD.
+- Thêm `tools/seed-open-registration.mjs`, chạy bằng Node stdin với compiled modules
+  trong container API hiện có, không cần rebuild/restart hoặc seed password.
+  Insert6 lớp OPEN0/25 phủ5 course active: HTML/CSS FE, JS FE/BE, React FE,
+  Node BE, Python; tạo đủ class units/sessions và weekly schedule, từ tuần23/11.
+  Giữ nguyên classes/users/orders/enrollments cũ; không tạo enrollment/paid order
+  cho6 lớp mới để student demo đăng ký qua luồng thật. Codes `REG-20261123`.
+- Giữ transaction/advisory seed lock, calendar/leave validation và skip existing
+  code; có `--plan`/`--dry-run`. Cấu hình mặc định đủ cho demo19/20, không đổi
+  business rules/API/FE/schema. README có lệnh chạy trên image đã deploy.
+- Local: Node syntax, scoped Biome PASS; compiled plan kiểm6 OPEN/25 chỗ trống,
+  phủ5 courses, purchase policy cho19/20, không trùng mentor với standard/demo
+  fixtures PASS. Script chỉ INSERT và các query lock/validation; chưa chạy trên
+  PostgreSQL, chưa upload/execute lên VPS. Không chạy lại full gate vốn bị6 suites
+  setup DB/MinIO ở lượt trước; thay đổi hiện tại là one-off JavaScript và tài liệu.
+
+### 2026-11-19 — Bổ sung lớp OFFLINE còn chỗ cho hai mentor chính
+
+- Screenshot user gửi xác nhận6 lớp đăng ký trước COMMITTED. Review mode cho thấy
+  Python OFFLINE,5 lớp còn lại ONLINE; thiếu lớp offline cho frontend/backend.
+  Thêm `--offline` vào script one-off, không cần CI/CD hoặc image mới.
+- Thêm5 lớp OPEN/OFFLINE0/25: HTML/CSS FE, JS FE, React FE, JS BE, Node BE.
+  Codes mới `REG-OFF-20261123`, lịch riêng từ tuần23/11; roomName Phòng Demo
+  Frontend/Backend, meetingUrl null. Chỉ insert, không đổi6 lớp trước hoặc account,
+  enrollment, order. Mode mặc định giữ nguyên6 codes/delivery modes cũ. Output
+  mới in deliveryMode và phòng để xác nhận offline sau COMMITTED.
+- Local syntax/Biome, Bash wrapper syntax, compiled plan/purchase19/20 PASS.
+  Kiểm5 OFFLINE có phòng/25 chỗ, codes khác batch trước, không trùng lịch mentor
+  với standard/demo/registration fixtures và không trùng phòng trong batch PASS.
+  Chưa chạy5 lớp mới trên PostgreSQL/server; giữ calendar conflict/rollback thật
+  khi user chạy trên VPS. Không thay API/FE/business rule, không rerun full suite.

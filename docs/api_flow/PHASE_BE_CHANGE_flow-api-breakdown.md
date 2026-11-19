@@ -1,5 +1,9 @@
 # BE Change — API cho frontend
 
+## 19/11/2026 — Bản đồ DB, không thay contract
+
+- [DATABASE_MAP.md](DATABASE_MAP.md) phân biệt bảng nghiệp vụ, kỹ thuật và view tương thích cùng ứng viên thu gọn. Đây là phân tích source; không có endpoint/request/response, quyền hoặc thứ tự gọi API nào thay đổi. FE tiếp tục dùng contract hiện hữu. Không thực hiện DROP/gộp bảng hoặc deploy. [Flow](PHASE_BE_CHANGE_FLOW.md).
+
 Ngày 05/11/2026. **Đã có source; chưa deploy/chưa xác minh DB/storage**. [Flow](PHASE_BE_CHANGE_FLOW.md) · [Progress](../progress/BE_CHANGE_PROGRESS.md).
 
 ## Quy ước chung
@@ -102,3 +106,25 @@ Server chưa được seed/deploy trong lượt này: chỉ chọn các lớp tr
 seed thành công. `--dry-run` rollback cho phép kiểm constraint/conflict trước ghi
 thật; không phải một endpoint. Lệnh production và cấu hình nằm ở
 [README](../../README.md), flow/giới hạn ở [flow](PHASE_BE_CHANGE_FLOW.md).
+
+### One-off bổ sung lớp đăng ký ngày19/20, không qua CI/CD
+
+Script `tools/seed-open-registration.mjs` dùng container đã deploy để insert6 lớp
+OPEN0/25, codes `HTML-CSS-101-FE-REG-20261123`, `JS-101-FE-REG-20261123`,
+`REACT-201-FE-REG-20261123`, `JS-101-BE-REG-20261123`,
+`NODE-201-BE-REG-20261123`, `PY-101-PY-REG-20261123`. Lịch học từ23/11,
+Python OFFLINE/các lớp khác ONLINE. Sau COMMITTED, dùng GET public courses/course
+classes hiện hữu để chọn lớp, cart/checkout như flow cũ; không cần sửa FE hoặc
+chờ API restart. Student an/binh/chi chưa được seed enrollment vào6 lớp mới nên
+có thể đăng ký theo policy hiện hữu. Không giả lập paid order trong script này.
+Không thay API/DTO; chưa có runtime PostgreSQL/server evidence cho6 lớp mới.
+
+### Lớp đăng ký OFFLINE của hai mentor chính
+
+One-off script mới hỗ trợ `--offline` để thêm5 lớp OPEN/OFFLINE0/25 với codes
+`HTML-CSS-101-FE-REG-OFF-20261123`, `JS-101-FE-REG-OFF-20261123`,
+`REACT-201-FE-REG-OFF-20261123`, `JS-101-BE-REG-OFF-20261123`,
+`NODE-201-BE-REG-OFF-20261123`. Sau COMMITTED có thể lọc `deliveryMode=OFFLINE`
+trên API public course/classes hiện hữu và checkout như cũ. Session roomName có
+phòng Demo Frontend/Backend, meetingUrl=null. Không sửa6 lớp đã tạo trước, trong
+đó Python vốn OFFLINE. Chưa có evidence server cho5 lớp này, không đổi endpoint.

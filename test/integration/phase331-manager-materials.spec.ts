@@ -79,6 +79,7 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
       courses,
       contexts,
       new MentorContentContextService(db, fixture.workspace, fixture.users, courses, contexts),
+      fixture.users,
     );
   }, 60000);
   afterAll(async () => {
@@ -203,6 +204,52 @@ describe('Phase 3.3.1 typed Manager materials + PostgreSQL', () => {
         contentText: '   ',
       }),
     ).rejects.toBeDefined();
+  });
+
+  it('lists course/unit/session labels and keeps original creator after Manager edits or suspension', async () => {
+    const { unit, order } = await setup();
+    const session = await db
+      .getRepository(ClassSessionEntity)
+      .findOneByOrFail({ classUnitId: unit.id });
+    await db.getRepository(UserEntity).update(order.mentor.id, { displayName: 'Mentor Lan' });
+    const actor = { userId: order.mentor.id, role: UserRole.MENTOR, sessionId: randomUUID() };
+    const material = await service.create(
+      actor,
+      unit.id,
+      { ...article(), sessionId: session.id },
+      {
+        classId: unit.classId,
+        classUnitId: unit.id,
+      },
+    );
+    await service.patch(principal, material.id, { expectedRevision: 1, title: 'Manager edited' });
+    await db.getRepository(UserEntity).update(actor.userId, { status: UserStatus.SUSPENDED });
+    const general = await service.create(principal, unit.courseUnitId, article());
+    const listing = await service.list(principal, {
+      page: 1,
+      pageSize: 20,
+      courseUnitId: unit.courseUnitId,
+    });
+    expect(listing.total).toBe(2);
+    expect(listing.items.find((item) => item.id === material.id)).toMatchObject({
+      courseTitle: 'Test course',
+      courseUnitTitle: 'Unit one',
+      courseUnitNumber: 1,
+      sessionId: session.id,
+      sessionTitle: session.title,
+      sessionNumber: session.sessionNumber,
+      createdBy: actor.userId,
+      createdByName: 'Mentor Lan',
+      createdByRole: UserRole.MENTOR,
+    });
+    expect(listing.items.find((item) => item.id === general.id)).toMatchObject({
+      sessionId: null,
+      sessionTitle: null,
+      sessionNumber: null,
+      createdBy: principal.userId,
+      createdByRole: UserRole.MANAGER,
+    });
+    expect(JSON.stringify(listing)).not.toMatch(/passwordHash|email|meetingUrl|objectKey/);
   });
 
   it('supports image-only and one image as both inline and attachment; shared files are allowed', async () => {

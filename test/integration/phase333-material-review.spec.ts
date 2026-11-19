@@ -95,6 +95,7 @@ describe('Phase 3.3.3 Review/publication + PostgreSQL', () => {
       courses,
       contexts,
       pickers,
+      fixture.users,
     );
   }, 60000);
   afterAll(async () => {

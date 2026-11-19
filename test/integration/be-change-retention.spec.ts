@@ -78,6 +78,7 @@ describe.skipIf(!separateTestUrl('retention'))(
         courses,
         contexts,
         new MentorContentContextService(db, f.workspace, f.users, courses, contexts),
+        f.users,
       );
       retention = new MaterialRetentionService(
         db,

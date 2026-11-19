@@ -1,5 +1,22 @@
 # Phase 3.3 — Flow Material management và release
 
+## 2026-11-19 — Nhãn ngữ cảnh trong danh sách tài liệu
+
+Đã implement local: `GET /api/v1/manager/materials` và list theo Course Unit
+trả thêm khóa học (`courseId`, `courseTitle`), chương (`courseUnitTitle`,
+`courseUnitNumber`), buổi học (`sessionTitle`, `sessionNumber`, nullable) và
+người tạo (`createdByName`, `createdByRole`). List Mentor dùng chung page DTO
+cũng nhận các nhãn này sau khi lọc quyền như trước. FE hiển thị trực tiếp các
+nhãn, không cần gọi detail từng khóa/chương/buổi/người dùng. Người tạo là
+`createdBy` ban đầu, không đổi khi Manager sửa hoặc duyệt tài liệu; tên/vai trò
+là thông tin hiện tại, kể cả tài khoản đã bị vô hiệu hóa. Tài liệu không gắn
+buổi học trả hai nhãn buổi học `null`; không suy ra buổi từ lịch lớp.
+
+Giữ pagination/filter/order, quyền và response detail/mutation hiện hữu.
+Metadata được lấy theo batch trong cùng read-only snapshot, không đổi schema
+hoặc gọi MinIO. Contract và ví dụ: [API breakdown](PHASE_3_3_flow-api-breakdown.md#2026-11-19--nhãn-ngữ-cảnh-trong-list-materials).
+Kiểm chứng local xem [Progress](../progress/Progress.md); chưa deploy VPS/Vercel.
+
 ## 2026-10-16 — Kiểm chứng migration sau đồng bộ dev
 
 Đã fetch origin; Feat/Phase4 chứa toàn bộ origin/dev (ahead5/behind0), không cần

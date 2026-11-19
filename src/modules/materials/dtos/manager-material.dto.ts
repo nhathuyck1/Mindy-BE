@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { UserRole } from '../../users/user-role.enum.js';
 import { MaterialReviewStatus } from '../domain/material-contract.js';
 import { MaterialContentType } from '../entities/material.entity.js';
 import { StudentMaterialFileDto } from './student-material.dto.js';
@@ -41,8 +42,21 @@ export class ManagerMaterialDetailDto extends ManagerMaterialDto {
   @ApiProperty({ type: () => [StudentMaterialFileDto] }) attachments!: StudentMaterialFileDto[];
 }
 
+export class ManagerMaterialListItemDto extends ManagerMaterialDto {
+  @ApiProperty({ format: 'uuid' }) courseId!: string;
+  @ApiProperty() courseTitle!: string;
+  @ApiProperty() courseUnitTitle!: string;
+  @ApiProperty() courseUnitNumber!: number;
+  @ApiProperty({ type: String, nullable: true }) sessionTitle!: string | null;
+  @ApiProperty({ type: Number, nullable: true }) sessionNumber!: number | null;
+  @ApiProperty({ description: 'Current display name of the original material creator' })
+  createdByName!: string;
+  @ApiProperty({ enum: UserRole, description: 'Current role of the original material creator' })
+  createdByRole!: UserRole;
+}
+
 export class ManagerMaterialPageDto {
-  @ApiProperty({ type: () => [ManagerMaterialDto] }) items!: ManagerMaterialDto[];
+  @ApiProperty({ type: () => [ManagerMaterialListItemDto] }) items!: ManagerMaterialListItemDto[];
   @ApiProperty() page!: number;
   @ApiProperty() pageSize!: number;
   @ApiProperty() total!: number;
