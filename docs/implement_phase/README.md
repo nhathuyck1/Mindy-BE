@@ -1,18 +1,5 @@
 # Implementation phases
 
-2026-11-20 — **Phase 8 R0/source review COMPLETE 4/4 AC**.
-Đã chốt catalog 17 business types, writer/policy matrix, FE mapping và unified
-API contract tách legacy chat. Phase 9–15 vẫn PLANNED; chưa business runtime.
-[Phase8](phase%208/PHASE_8_CONTRACTS_POLICY.md) · [Evidence](phase%208/R0_REVIEW.md).
-
-2026-11-20 — **Planning Phase 8–15: Notification nghiệp vụ ngoài message**.
-Inbox/worker chung → lịch học → bài tập → thanh toán → nghỉ/bù → tài liệu → FE/gates/ops.
-Tám phase độc lập (8–15), 32 tasks/32 AC; **PLANNED, chưa implement/migrate/deploy**.
-[Roadmap8–15](BUSINESS_NOTIFICATIONS_ROADMAP.md) ·
-[Flow8–15](../api_flow/BUSINESS_NOTIFICATIONS_FLOW.md) ·
-[API proposal8–15](../api_flow/BUSINESS_NOTIFICATIONS_flow-api-breakdown.md) ·
-[Progress8–15](../progress/BUSINESS_NOTIFICATIONS_PROGRESS.md).
-
 2026-11-02 — Phase7 BE local runtime implemented. `pnpm check`:724/724,82 suites; focused compiled HTTP/WS3/3. Full HTTP/FE acceptance in progress. [Progress7](../progress/phase%207/PHASE_7_PROGRESS.md). No deployment evidence.
 
 2026-11-02 — **Phase 7 Whiteboard: planning, chưa implement.** UI theo local

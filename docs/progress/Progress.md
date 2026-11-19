@@ -1,10 +1,3 @@
-## 20/11/2026 — Phase 8 notification: R0 review hoàn tất
-
-Đã hoàn thành catalog/writer inventory/recipient policy/API+FE mapping theo source,
-4/4 AC review PASS. Chưa thêm business runtime; Phase 9–15 còn 28 AC pending.
-[Evidence](../implement_phase/phase%208/R0_REVIEW.md) ·
-[Progress](BUSINESS_NOTIFICATIONS_PROGRESS.md).
-
 ## 19/11/2026 — Bản đồ database và đánh giá thu gọn
 
 - Tạo [bản đồ DB](../api_flow/DATABASE_MAP.md) gồm sơ đồ quan hệ đại diện, inventory 80 bảng/16 view theo 42 migration source, phân loại 48 nghiệp vụ/cấu hình và 32 kỹ thuật/vận hành/bằng chứng. Đã kiểm inventory khớp tên source, không thiếu/trùng.
@@ -15,14 +8,6 @@
 - Đã implement local: list materials thêm courseId/courseTitle, courseUnitTitle/courseUnitNumber, sessionTitle/sessionNumber nullable và createdByName/createdByRole. Giữ provenance của người tạo khi Manager sửa; vẫn tra được tác giả bị vô hiệu hóa. DTO page dùng chung nên list Mentor cũng nhận nhãn sau khi lọc quyền hiện hữu.
 - Batch metadata trong cùng transaction read-only, giữ count/filter/pagination/order; không migration hay MinIO I/O. Detail/mutation giữ shape cũ. Flow và contract FE cập nhật trong docs/api_flow/PHASE_3_3_FLOW.md và PHASE_3_3_flow-api-breakdown.md.
 - Kiểm chứng local: Materials tests 98/98 pass (gồm 3 ca attribution/empty-page/authorization), type-check và build pass; lint 0 errors, 11 warnings có sẵn ngoài phần sửa. Thêm DB integration cho buổi học/null và người tạo bị vô hiệu hóa sau Manager edit; chưa chạy được do không có TEST_DATABASE_URL/PostgreSQL local. Chưa deploy VPS/Vercel; FE cần nhận các nhãn bổ sung khi tích hợp UI.
-
-## 20/11/2026 — Planning notification nghiệp vụ Phase 8–15
-
-Đã soạn roadmap chung và tám phase độc lập (8–15) theo format implement Phase 6/7: inbox chung,
-lịch học, bài tập, thanh toán, mentor leave/placement, tài liệu và FE/gates/ops.
-32 tasks/32 AC đều PLANNED; chưa runtime tests/migration/deploy.
-[Roadmap8–15](../implement_phase/BUSINESS_NOTIFICATIONS_ROADMAP.md) ·
-[Progress8–15](BUSINESS_NOTIFICATIONS_PROGRESS.md).
 
 ## 18/11/2026 — Whiteboard presenter viewport
 
