@@ -149,6 +149,7 @@ export class TeachingAssignmentService {
   private async assertActor(m: EntityManager, actor: AuthenticatedUser): Promise<void> {
     if (!(await this.users.findActiveByRole(actor.userId, actor.role, m)))
       throw new SessionAssignmentRequiredException();
+    await m.query("SELECT set_config('mindy.actor_id',$1,true)", [actor.userId]);
   }
 
   private async assertMentor(m: EntityManager, id: string): Promise<void> {

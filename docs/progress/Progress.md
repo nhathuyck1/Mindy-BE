@@ -1,3 +1,45 @@
+## 20/11/2026 — Postman Phase16 bổ sung login
+
+Đã thêm Login Student/Login Mentor và GET /auth/me trước notification requests,
+cookie jar tự dùng actor đăng nhập gần nhất. Credentials trống, nhập environment
+local; không export secrets. Flow/API/progress Phase16 cập nhật; kiểm JSON/script
+syntax/diff, không đổi guard/runtime hoặc chạy lại BE suite cho thay đổi này.
+
+## 20/11/2026 — Phase 16 notification: backend implemented và kiểm chứng local
+
+Đã có chuông nghiệp vụ ngoài chat: shared durable inbox/outbox, 22 business types,
+worker/capture, reminder revisions, REST BUSINESS list/count/read/read-all và
+Socket.IO Mentor/Student `/notifications` qua `/ws/notifications`, độc lập CHAT.
+Flags mặc định OFF; migration additive bảo toàn chat; CLI activation/replay/retention,
+Swagger/Postman và runbook đã tạo. Không sửa FE hoặc deploy môi trường thật.
+
+Node22.20.0/pnpm12.6.0, DB/MinIO test riêng: `pnpm check` PASS **905 pass/50 skip**
+(50 compiler-runner round-trip ngoài phase), lint 0 errors/11 warnings cũ; full
+compiled HTTP/WS **151/151 PASS**, riêng Phase16 **20/20**. Backup/restore giữ
+10.036 events/10.159 snapshots/10.156 inbox và 0 duplicate. Local benchmark:
+102 recipients ~1.982ms; list/count p95 109/75ms với 10.000 rows/user.
+Chưa đóng toàn phase: dedicated producer race/boundary matrix và FE/VPS acceptance
+còn partial, ghi rõ tại [Progress16](phase%2016/PHASE_16_PROGRESS.md).
+[API/WS](../api_flow/PHASE_16_flow-api-breakdown.md) ·
+[Runbook](../PHASE_16_NOTIFICATIONS_RUNBOOK.md).
+
+## 20/11/2026 — Planning Phase 16 chuông notification Mentor/Student
+
+Đã soạn 6 slices/12 AC cho chuông ngoài chat: transport Socket.IO riêng,
+BUSINESS inbox/count/read-all, tích hợp nhóm Phase 10–14 và thêm ZIP chờ chấm,
+review tài liệu, nhắc buổi/hạn bài. Tái sử dụng Phase 9 chưa implement, không tạo
+foundation trùng. Chỉ tài liệu; kiểm diff/link, chưa BE tests/migrate/FE/deploy.
+[Plan16](../implement_phase/phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md) ·
+[Progress16](phase%2016/PHASE_16_PROGRESS.md) ·
+[Flow/API16](../api_flow/PHASE_16_FLOW.md).
+
+## 20/11/2026 — Phase 8 notification: R0 review hoàn tất
+
+Đã hoàn thành catalog/writer inventory/recipient policy/API+FE mapping theo source,
+4/4 AC review PASS. Chưa thêm business runtime; Phase 9–15 còn 28 AC pending.
+[Evidence](../implement_phase/phase%208/R0_REVIEW.md) ·
+[Progress](BUSINESS_NOTIFICATIONS_PROGRESS.md).
+
 ## 19/11/2026 — Bản đồ database và đánh giá thu gọn
 
 - Tạo [bản đồ DB](../api_flow/DATABASE_MAP.md) gồm sơ đồ quan hệ đại diện, inventory 80 bảng/16 view theo 42 migration source, phân loại 48 nghiệp vụ/cấu hình và 32 kỹ thuật/vận hành/bằng chứng. Đã kiểm inventory khớp tên source, không thiếu/trùng.
@@ -8,6 +50,14 @@
 - Đã implement local: list materials thêm courseId/courseTitle, courseUnitTitle/courseUnitNumber, sessionTitle/sessionNumber nullable và createdByName/createdByRole. Giữ provenance của người tạo khi Manager sửa; vẫn tra được tác giả bị vô hiệu hóa. DTO page dùng chung nên list Mentor cũng nhận nhãn sau khi lọc quyền hiện hữu.
 - Batch metadata trong cùng transaction read-only, giữ count/filter/pagination/order; không migration hay MinIO I/O. Detail/mutation giữ shape cũ. Flow và contract FE cập nhật trong docs/api_flow/PHASE_3_3_FLOW.md và PHASE_3_3_flow-api-breakdown.md.
 - Kiểm chứng local: Materials tests 98/98 pass (gồm 3 ca attribution/empty-page/authorization), type-check và build pass; lint 0 errors, 11 warnings có sẵn ngoài phần sửa. Thêm DB integration cho buổi học/null và người tạo bị vô hiệu hóa sau Manager edit; chưa chạy được do không có TEST_DATABASE_URL/PostgreSQL local. Chưa deploy VPS/Vercel; FE cần nhận các nhãn bổ sung khi tích hợp UI.
+
+## 20/11/2026 — Planning notification nghiệp vụ Phase 8–15
+
+Đã soạn roadmap chung và tám phase độc lập (8–15) theo format implement Phase 6/7: inbox chung,
+lịch học, bài tập, thanh toán, mentor leave/placement, tài liệu và FE/gates/ops.
+32 tasks/32 AC đều PLANNED; chưa runtime tests/migration/deploy.
+[Roadmap8–15](../implement_phase/BUSINESS_NOTIFICATIONS_ROADMAP.md) ·
+[Progress8–15](BUSINESS_NOTIFICATIONS_PROGRESS.md).
 
 ## 18/11/2026 — Whiteboard presenter viewport
 
@@ -1656,3 +1706,27 @@ Giới hạn: xác nhận chạy/rerun trên DB sạch; chưa nghiệm thu seed:
   với standard/demo/registration fixtures và không trùng phòng trong batch PASS.
   Chưa chạy5 lớp mới trên PostgreSQL/server; giữ calendar conflict/rollback thật
   khi user chạy trên VPS. Không thay API/FE/business rule, không rerun full suite.
+## 20/11/2026 — Seed demo vào backend local
+
+Theo yêu cầu user, chạy trên PostgreSQL local localhost:5433/mindy_center đang
+có 8 users/10 classes. `pnpm seed:admin` skipped vì admin đã tồn tại; chạy
+`pnpm seed:demo --dry-run` PASS rollback rồi `pnpm seed:demo` PASS commit.
+Chọn additive để giữ tài khoản/mật khẩu và lớp hiện hữu, không reset standard.
+Sau seed: 38 users, 17 classes, 153 sessions, 42 orders, 42 enrollments,
+36 materials và 4 assignments; đủ 7 lớp suffix DEMO-20261120. Mentor frontend/
+backend, Student An và Manager Ops đều ACTIVE. Mật khẩu tài khoản demo mới lấy
+từ SEED_ACCOUNT_PASSWORD trong .env, không ghi vào logs/docs. Không gọi payOS/mail,
+không migrate/deploy VPS, không bật notification producers hoặc chạy BE suite.
+## 20/11/2026 — Đổi lịch mentor demo để test notification local
+
+Đã activate SCHEDULE và dùng Manager Ops gọi API reschedule (200) cho
+JS-101-FE-DEMO-20261120, buổi 24/11 từ 09:30–11:00 sang 10:00–11:30 (+07).
+Worker DONE, 9 unread inbox rows cho mentor.frontend@example.com và Student
+An/s01–s07, last_error null. Chưa mark read hoặc nghiệm thu UI user. Chi tiết
+ở Progress16/flow/API; không đổi FE hoặc deploy VPS.
+## 20/11/2026 — Resolve conflict tài liệu notification với dev
+
+Merge origin/dev cc8489d vào feat/business-notifications, giữ bộ contract/planning
+Phase8–15 và runtime docs Phase16 đang được liên kết. Xử lý 16 conflict Markdown
+và 3 baseline docs auto-delete; không đổi runtime/API. Kiểm markers/link/diff,
+không chạy lại BE tests cho merge docs. Chi tiết tại Progress16 và flow/API16.

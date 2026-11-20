@@ -124,6 +124,19 @@ process.send?.({
   courseUnitId: view.units[0].unit.courseUnitId,
 });
 process.on('message', async (msg) => {
+  if (msg?.type === 'notification-flags') {
+    const config = app.get(ConfigService);
+    for (const key of ['CHAT_ENABLED', 'NOTIFICATIONS_ENABLED', 'NOTIFICATION_SOCKET_ENABLED'])
+      if (typeof msg[key] === 'boolean') config.set(key, msg[key]);
+    process.send?.({ notificationFlags: msg.id });
+  }
+  if (msg === 'notifications-tick') {
+    const { NotificationWorkerService } = await import(
+      '../../dist/modules/notifications/services/notification-worker.service.js'
+    );
+    await app.get(NotificationWorkerService).tick();
+    process.send?.({ notificationTick: true });
+  }
   if (msg === 'assignment-files-process') {
     const { AssignmentFilesService } = await import(
       '../../dist/modules/assignments/services/assignment-files.service.js'

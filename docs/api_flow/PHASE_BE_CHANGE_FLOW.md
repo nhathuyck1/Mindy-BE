@@ -1,5 +1,15 @@
 # BE Change — lịch tuần, khai giảng, dashboard và retention
 
+## 20/11/2026 — Chạy seed demo local theo yêu cầu
+
+Luồng vận hành: xác minh DATABASE_URL local → seed admin (existing, skipped) →
+seed:demo --dry-run (rollback) → seed:demo (commit) → đọc counts/role/status.
+Seed additive thêm 7 lớp DEMO-20261120, giữ users/passwords/data cũ. DB sau chạy
+có 38 users/17 classes/153 sessions/42 orders/42 enrollments/36 materials/4
+assignments. Không đổi API/flow auth: login demo dùng password từ .env theo
+[API breakdown](PHASE_BE_CHANGE_flow-api-breakdown.md). Không provider/mail/VPS,
+không chạy lại BE tests cho thao tác dữ liệu local này.
+
 ## 19/11/2026 — Bản đồ DB và đánh giá khả năng thu gọn
 
 - Bổ sung [DATABASE_MAP.md](DATABASE_MAP.md): sơ đồ nghiệp vụ/vận hành, inventory 80 bảng và 16 view dự kiến sau 42 migration source; phân loại 48 bảng nghiệp vụ/cấu hình và 32 bảng kỹ thuật/vận hành/bằng chứng. Số lượng chưa đối chiếu PostgreSQL/VPS đang chạy.

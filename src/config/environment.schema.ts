@@ -146,6 +146,14 @@ export const environmentSchema = Joi.object({
   SEED_ADMIN_CONFIRM: Joi.string().valid('YES', '').default(''),
   REDIS_ENABLED: Joi.boolean().default(false),
   WHITEBOARD_ENABLED: Joi.boolean().default(false),
+  NOTIFICATIONS_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_SOCKET_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_JOB_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_CURSOR_SECRET: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('NOTIFICATIONS_ENABLED', { is: true, then: Joi.string().min(32).required().invalid('') }),
   WHITEBOARD_WORKER_ENABLED: Joi.boolean().default(true),
   WHITEBOARD_PDF_ENABLED: Joi.boolean().default(false),
   WHITEBOARD_PDFTOPPM_PATH: Joi.string().min(1).default('pdftoppm'),

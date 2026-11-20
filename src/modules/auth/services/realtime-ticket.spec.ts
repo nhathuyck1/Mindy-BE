@@ -24,6 +24,19 @@ const actor = {
 const origin = 'https://frontend.test';
 afterEach(() => vi.useRealTimers());
 describe('Realtime handshake tickets', () => {
+  it('isolates notifications from chat and whiteboards and expires its ticket', () => {
+    vi.useFakeTimers();
+    const access = tokens.signAccessToken(actor),
+      issued = tokens.signRealtimeTicket(actor, access.expiresAt, origin, 'notifications');
+    expect(
+      tokens.verifySocketIdentity({ ticket: issued.ticket }, undefined, origin, 'notifications')
+        .principal,
+    ).toEqual(actor);
+    for (const channel of ['chat', 'whiteboards'] as const)
+      expect(() => tokens.verifyRealtimeTicket(issued.ticket, origin, channel)).toThrow();
+    vi.advanceTimersByTime(60001);
+    expect(() => tokens.verifyRealtimeTicket(issued.ticket, origin, 'notifications')).toThrow();
+  });
   it('is bounded to 60 seconds and cannot authenticate REST or a different origin/channel', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-04T12:00:00Z'));

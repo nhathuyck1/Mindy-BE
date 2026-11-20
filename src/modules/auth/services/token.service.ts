@@ -104,7 +104,7 @@ export class TokenService {
     user: AuthenticatedUser,
     accessExpiresAt: Date,
     origin: string,
-    channel: 'chat' | 'whiteboards',
+    channel: 'chat' | 'whiteboards' | 'notifications',
   ) {
     const now = Math.floor(Date.now() / 1000);
     const sessionExpiresAt = Math.floor(accessExpiresAt.getTime() / 1000);
@@ -135,7 +135,7 @@ export class TokenService {
   verifyRealtimeTicket(
     ticket: string,
     origin: string,
-    channel: 'chat' | 'whiteboards',
+    channel: 'chat' | 'whiteboards' | 'notifications',
   ): { principal: AuthenticatedUser; expiresAt: Date } {
     if (ticket.length > 4096) throw new Error('Invalid ticket');
     const parts = ticket.split('.');
@@ -179,7 +179,7 @@ export class TokenService {
     auth: Record<string, unknown>,
     cookie: string | undefined,
     origin: string | undefined,
-    channel: 'chat' | 'whiteboards',
+    channel: 'chat' | 'whiteboards' | 'notifications',
   ) {
     if (auth.ticket !== undefined) {
       if (typeof auth.ticket !== 'string' || !origin) throw new Error('Invalid realtime ticket');
