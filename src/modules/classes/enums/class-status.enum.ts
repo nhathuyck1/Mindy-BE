@@ -1,0 +1,7 @@
+export enum ClassStatus {
+  DRAFT = 'DRAFT',
+  OPEN = 'OPEN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}

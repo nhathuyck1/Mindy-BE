@@ -1,0 +1,171 @@
+name: Deploy
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-deploy
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/dev'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 45
+    env:
+      # Set the repository variable DEPLOY_DIR if the existing VPS checkout differs.
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/home/mindycode/mindycoding/Mindy-BE' }}
+      RELEASE_SHA: ${{ github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check VPS checkout and release
+        run: |
+          set -euo pipefail
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+          runner_sha="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" || fail "Cannot read runner checkout commit."
+          [[ "$runner_sha" = "$RELEASE_SHA" ]] || fail "Runner checkout does not match RELEASE_SHA."
+          [[ "$DEPLOY_DIR" = /* ]] || fail "DEPLOY_DIR must be an absolute path."
+          [[ -d "$DEPLOY_DIR/.git" ]] || fail "VPS Git checkout is missing at DEPLOY_DIR."
+          [[ -f "$DEPLOY_DIR/.env.production" ]] || fail "VPS .env.production is missing."
+          [[ -f "$DEPLOY_DIR/compose.production.yaml" ]] || fail "VPS compose.production.yaml is missing."
+          deploy_branch="$(git -C "$DEPLOY_DIR" branch --show-current)" || fail "Cannot read VPS checkout branch."
+          [[ "$deploy_branch" = dev ]] || fail "VPS checkout must be on dev; current branch: ${deploy_branch:-detached HEAD}."
+          checkout_changes="$(git -C "$DEPLOY_DIR" status --porcelain)" || fail "Cannot inspect VPS checkout status."
+          if [[ -n "$checkout_changes" ]]; then
+            printf '%s\n' "$checkout_changes"
+            fail "VPS checkout has local changes; preserve and review them before retrying."
+          fi
+          docker info >/dev/null || fail "Docker daemon is unavailable to the runner."
+          docker compose version || fail "Docker Compose is unavailable to the runner."
+
+          # Fetch from the checked-out commit on this runner, then fast-forward only.
+          git -C "$DEPLOY_DIR" fetch --no-tags "$GITHUB_WORKSPACE" HEAD || fail "Cannot fetch the checked release into the VPS checkout."
+          git -C "$DEPLOY_DIR" merge --ff-only FETCH_HEAD || fail "VPS checkout cannot fast-forward to the release; review its commit history."
+          deployed_sha="$(git -C "$DEPLOY_DIR" rev-parse HEAD)" || fail "Cannot read updated VPS checkout commit."
+          [[ "$deployed_sha" = "$RELEASE_SHA" ]] || fail "Updated VPS checkout does not match RELEASE_SHA."
+
+      - name: Build, back up, migrate and start API
+        id: rollout
+        run: |
+          set -euo pipefail
+          umask 077
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG="$RELEASE_SHA"
+          compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          # The VPS provisioning env marks Files rollout; retain its API scratch mount.
+          if [[ -f .env.minio.production ]]; then
+            compose+=(-f compose.files-production.yaml)
+            echo "Using the provisioned Files Compose override."
+          fi
+
+          # Retain the internal runner network once CODE execution is provisioned.
+          if grep -Eq '^CODE_RUNNER_URL=.+$' .env.production; then
+            compose+=(-f compose.code-runner.yaml)
+            echo "Using the provisioned compiler Compose override."
+          fi
+
+          # Quiet validation avoids printing interpolated production secrets.
+          "${compose[@]}" config --quiet
+          docker build --target runtime -t "mindy-center-api:$IMAGE_TAG" .
+
+          # Validate the new image's config before touching the DB or replacing the API.
+          # Only field names/error types are printed; never dump production env values.
+          "${compose[@]}" run --rm --no-deps -T migration node --input-type=module -e \
+            'import { environmentSchema } from "./dist/config/environment.schema.js";
+             import { verifyCompiledMigrations } from "./dist/database/migration-artifacts.js";
+             const artifacts = verifyCompiledMigrations();
+             console.log("Verified " + artifacts.length + " migration artifacts in the release image.");
+             const { error } = environmentSchema.validate(process.env, { abortEarly: false });
+             if (error) {
+               console.error("Production environment validation failed:");
+               for (const detail of error.details) console.error(detail.path.join(".") + ": " + detail.type);
+               process.exit(1);
+             }'
+          "${compose[@]}" up -d --wait --wait-timeout 120 postgres
+
+          backup_dir="$(dirname "$DEPLOY_DIR")/mindy-backups"
+          mkdir -p "$backup_dir"
+          backup_file="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_SHA:0:12}.dump"
+          "${compose[@]}" exec -T postgres sh -c \
+            'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_file"
+          test -s "$backup_file"
+          "${compose[@]}" exec -T postgres pg_restore -l < "$backup_file" > /dev/null
+
+          # Consolidation changes tables into compatibility views. Stop all API
+          # writers/background jobs after backup and before acquiring schema locks.
+          # On migration failure keep the API stopped; do not roll back the DB.
+          "${compose[@]}" stop --timeout 30 api
+          # Run the complete compiled catalog so both compatibility bridges execute
+          # in order; do not select migrations individually or rewrite old history.
+          "${compose[@]}" run --rm --no-deps -T migration
+          # Refuse to replace the API if the image has no migrations or any are pending.
+          "${compose[@]}" run --rm --no-deps -T migration node --input-type=module -e \
+            'import dataSource from "./dist/database/data-source.js";
+             await dataSource.initialize();
+             try {
+               if (dataSource.migrations.length === 0) throw new Error("Compiled migration catalog is empty.");
+               if (await dataSource.showMigrations()) throw new Error("Pending migrations remain after rollout.");
+               console.log("Verified " + dataSource.migrations.length + " compiled migrations; none pending.");
+             } finally {
+               await dataSource.destroy();
+             }'
+          "${compose[@]}" up -d --no-build --no-deps --wait --wait-timeout 120 api
+          "${compose[@]}" exec -T api node -e \
+            'fetch("http://127.0.0.1:3000/api/v1/health/ready", {signal: AbortSignal.timeout(5000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))'
+
+          echo "Deployed $RELEASE_SHA; PostgreSQL backup: $backup_file"
+
+      - name: Diagnose failed deployment
+        if: failure() && steps.rollout.outcome == 'failure'
+        run: |
+          set -uo pipefail
+          if [[ ! -d "$DEPLOY_DIR" ]] || [[ ! -f "$DEPLOY_DIR/.env.production" ]] || [[ ! -f "$DEPLOY_DIR/compose.production.yaml" ]]; then
+            echo "VPS checkout is unavailable; container diagnostics skipped."
+            exit 0
+          fi
+          cd "$DEPLOY_DIR"
+          export IMAGE_TAG="$RELEASE_SHA"
+          compose=(docker compose --env-file .env.production -f compose.production.yaml)
+
+          if [[ -f .env.minio.production ]]; then
+            compose+=(-f compose.files-production.yaml)
+          fi
+
+          if grep -Eq '^CODE_RUNNER_URL=.+$' .env.production; then
+            compose+=(-f compose.code-runner.yaml)
+          fi
+
+          # Do not print container config or expanded Compose/environment secrets.
+          "${compose[@]}" ps --all || true
+          if ! api_id="$("${compose[@]}" ps --all --quiet api)"; then
+            echo "Cannot locate the API container; check the original deployment error."
+            exit 0
+          fi
+          if [[ -z "$api_id" ]]; then
+            echo "No API container exists for this Compose project."
+            exit 0
+          fi
+          docker inspect --format '{{json .State}}' "$api_id" || true
+          docker logs --timestamps --tail 120 "$api_id" || true

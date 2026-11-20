@@ -1,20 +1,106 @@
 # Core business logic
 
+Updated 2026-10-05 against all of `document/Flow.txt`, implemented checkout and
+[Phase 2.2](./implement_phase/phase2/PHASE_2_2_PAYOS_BE_REAL_PAYMENT.md). VPS probe webhook
+confirmation passed; BE payments are implemented and locally tested; VPS release
+and real settlement remain pending user execution. Full payment and
+online confirmation email are required; pending cash preview and manager confirmation
+remain required in the later cash increment. Pending group chat/DM belongs to chat.
+
 This document defines the business rules for the first delivery scope: course/class management and the complete order-to-enrollment flow. It intentionally excludes whiteboard, compiler/judge, chat and notification behavior.
 
 ## 1. Domain boundaries
 
+### Admin activity tracking — 2026-10-22
+
+Migration `1792627200002` centralizes ordinary audit history in `audit_events`
+and four idempotency receipt stores in `mutation_receipts`. Existing names become
+compatibility views; there is one physical copy of each row. Recovery evidence
+keeps its dedicated relational tables and is also readable through tracking.
+`file_metadata` and `file_objects` remain separate. Active admins can list/filter
+events and inspect original details through `/admin/tracking/events`. This covers
+recorded domain audits, not every HTTP request or every account/payment mutation.
+See [Admin tracking and migration](api_flow/ADMIN_TRACKING.md).
+
 ### Identity
 
-Owns `users`, `auth_sessions` and `refresh_tokens`. Authentication uses cookie-based JWT access tokens and rotated refresh tokens. Other modules receive a user ID and role; they do not read cookies or JWTs directly.
+Owns `users`, `user_identities`, `registration_intents`,
+`email_verification_tokens`, `auth_sessions` and `refresh_tokens`. Public registration
+always creates a `STUDENT` through one of two paths: email/password remains pending
+until email verification, while Google OIDC uses a verified email and requires profile
+completion after prefill before creating the user. Both paths then use the same
+cookie-based JWT access tokens and rotated refresh tokens. Other modules receive a user
+ID and role; they do not read cookies, OAuth claims or JWTs directly.
+
+Google `sub` is the durable external identity key. Email is used only to prevent
+duplicate internal accounts during first link/registration. Google profile fields are
+untrusted suggestions for the registration form: verified email is read-only,
+display name may be edited, avatar is only previewed until the file module owns it.
+If Google completes an email that has a pending password registration, the unverified
+password hash is discarded before activation so an attacker cannot pre-register the
+victim's email and retain a password credential.
 
 ### Catalog
 
-Owns `course_categories`, `courses`, `course_units` and `materials`. It defines reusable course content and list price. A course is a template; it is not a scheduled class and does not itself grant learning access.
+Owns `course_categories`, `courses` and `course_units`. It defines reusable course
+content and list price. A course is a template; it is not a scheduled class and
+does not itself grant learning access.
+
+### Materials — policy + Student file-backed read slice implemented
+
+`MaterialsModule` now exports `MaterialPolicyService`; the domain layer implements
+access, draft/review/publication transitions, audit event output and the closed MVP
+file declaration contract. Catalog and Classes expose entity-free ancestry views;
+The facade uses current account roles/assignment and ACTIVE enrollment.
+Student FILE/VIDEO list/detail/download now have a controller and minimal
+`materials` persistence (2026-10-12); see [read flow](./api_flow/PHASE_3_4_FLOW.md).
+Authoring/review/release APIs, ARTICLE and references remain planned. Transitions must later run under
+row locks/expected-revision checks with durable audit in Phase 3.3. Server-owned
+file references/snapshots are inputs to policy, never raw client JSON.
+
+Owns planned `materials` and material review/audit. The user approved D1–D6 on
+2026-10-09 in [Phase 3.1](./implement_phase/phase%203/PHASE_3_1_POLICY_CONTRACT.md).
+One Course Unit has many Materials; every Material has a required Course Unit
+owner and is the main shared document of that unit across classes. Optional
+Session association does not change ownership or make that main document private
+to a class. Session assignment/Q&A/student code are separate features.
+
+`MANAGER` manages, edits and approves shared material. Assigned mentors may upload
+for a Course Unit taught in their class and submit drafts for Manager review;
+mentors cannot self-approve/publish or edit approved shared content. File `READY`
+only means binary validation passed, not that content was approved. Student reads
+require current-revision Manager approval/publication, ACTIVE enrollment, a
+non-cancelled class, elapsed material availability time
+and a READY file. Editing approved content invalidates approval/publication until
+reviewed again. Enrollment COMPLETED is not newly entitled; Class COMPLETED with
+ACTIVE enrollment uses the same material gates. No external-link material in MVP.
+
+As clarified by the user on 2026-10-22, there is no manual Class Unit lock or
+scheduled release. Pending CASH students remain in preview until payment is
+confirmed and enrollment becomes ACTIVE. Paid/ACTIVE students need no mentor
+unlock action. Legacy unit status/unlock_at fields do not restrict material reads.
+The Admin/Mentor PATCH unit release endpoints have been removed. Migration
+1792627200001 opens legacy LOCKED units, clears unit schedules, and defaults new
+units to OPEN while preserving COMPLETED units and historical release audits.
 
 ### Class operations
 
-Owns `classes`, `class_units`, `class_sessions`, `enrollments`, `class_unit_progress` and `attendance_records`. A class is a scheduled delivery of one course. Enrollment is the access entitlement for one student in one class.
+The assigned teaching mentor may update the meeting URL of their SCHEDULED or
+IN_PROGRESS session through `PATCH /mentor/class-sessions/:sessionId/meeting-url`.
+Substitute assignments and the started session's teaching mentor snapshot decide
+who can edit. Writes require the current session version; clearing the session URL
+falls back to the class URL. Cancelled/completed sessions or classes are read-only.
+See [mentor meeting API](api_flow/MENTOR_SESSION_MEETING.md).
+
+Owns `classes`, `class_units` and `class_sessions`. Phase4 AttendanceModule now
+owns ordinary attendance/audits (4.2 implemented local); cross-class guest records remain planned. Ordinary
+rows retain same-class ancestry. Teaching operations coordinates approved leave,
+replacement schedules and student conflicts. See the
+[reviewed Phase4 plan](./implement_phase/phase%204/PHASE_4_ATTENDANCE_OPERATIONS.md);
+Slices4.1–4.2 are implemented/tested local; leave/makeup/correction/history remain
+planned and deployment pending. See API breakdown §14–15 for the actual contract.
+A class is a scheduled delivery of one course. EnrollmentsModule separately owns
+`enrollments` and `class_unit_progress`, including checkout holds and learning access.
 
 ### Commerce
 
@@ -22,17 +108,28 @@ Owns `carts`, `cart_details`, `orders` and `order_details`. Cart data is mutable
 
 ### Payment
 
-Owns `payment_transactions` and `payos_payment_details`. It verifies provider callbacks and is the only domain allowed to move an order from `PENDING` to `PAID`.
+Owns `payment_transactions`, `payos_payment_details`,
+`payment_webhook_events` and `payment_confirmation_emails`. It verifies provider
+callbacks and coordinates settlement via exported Commerce/Enrollments providers.
+Only verified settlement or authorized manager cash confirmation can make an order PAID.
 
 ### Files
 
-Owns `file_objects` and `file_metadata`. The first course implementation only requires files for materials. Binary content is stored in MinIO; relational tables store identity, lifecycle and extracted metadata.
+Owns `file_objects`, `file_metadata` and `file_processing_jobs`. Phase 3.2 implements
+Manager/assigned Mentor uploads scoped to Course Unit, private versioned MinIO,
+complete/status and durable bounded validation. Owner/scope/declaration/provenance
+are immutable; READY pins verified bytes/version/hash and atomically creates
+metadata PENDING + one EXTRACT job. Only VALIDATE runs in 3.2; extraction/cleanup
+is 3.5. READY does not imply review/publication or Student access.
+Materials uses the Files upload policy facade and transactional
+`FilesService.assertReadyReference`; there is no Files → Materials dependency.
+See [setup and handoff](./PHASE_3_2_FILES_RUNBOOK.md).
 
 ## 2. Course management flow
 
 ### Create a course
 
-1. An admin or manager creates or selects an active category.
+1. An admin creates or selects an active category.
 2. The system validates that course code is unique and price is non-negative.
 3. The course is created inactive by default in the application flow, even if the database has a technical default.
 4. Units are added with a unique `unit_number` inside the course.
@@ -46,7 +143,7 @@ Updating the course price affects future checkouts only. Existing carts must rev
 1. An admin selects an active course and a mentor with an active account.
 2. Validate `start_date <= end_date`, `max_students > 0` and the mentor role.
 3. Create the class in `DRAFT`.
-4. Copy every current `course_unit` into `class_units` in one transaction. `class_units` links to the reusable course unit but owns delivery position, unlock time and state.
+4. Copy every current `course_unit` into `class_units` in one transaction. New units use `OPEN` with no unlock schedule. The unit links to the reusable course unit and owns delivery position and completion state; access follows enrollment.
 5. Add scheduled sessions. Every session must satisfy `starts_at < ends_at` and fall within the class period unless an authorized override is explicitly recorded later.
 6. Move the class to `OPEN` only when required units and sessions exist.
 
@@ -74,8 +171,8 @@ The use case validates:
 
 - The actor is an active student.
 - The class status is `OPEN`.
-- The class has not reached capacity, using active enrollment count.
-- The student is not already actively enrolled.
+- The class has not reached capacity, counting active enrollments and valid pending holds.
+- The student has no effective active enrollment or pending hold for the class.
 - The same class is not already in the cart.
 - `cart_details.price_snapshot` is recorded for display only and is not authoritative at checkout.
 
@@ -88,13 +185,16 @@ Checkout is a single database transaction:
 1. Lock or otherwise serialize the student's cart and selected class rows.
 2. Load the current course/class data and revalidate class status, capacity, existing enrollment and current price.
 3. Reject an empty cart or any invalid item; do not create a partial order.
-4. Create one `orders` row with status `PENDING` and a unique business `order_code`.
+4. Create one PAYOS order for the cart, or split CASH orders by mentor snapshot;
+   each order is PENDING with a unique business order_code and hold deadline.
 5. Create immutable `order_details` snapshots for every selected class.
 6. Set `orders.total_amount` from the sum of detail totals calculated by the server.
-7. Remove the checked-out cart details.
+7. Create PENDING_PAYMENT enrollment holds and remove the checked-out cart details.
 8. Commit before calling PayOS.
 
 Creating the remote PayOS payment link happens after the order transaction. If the provider call fails, the order remains `PENDING` and the client may retry idempotently with the same order ID. The retry must not create another order.
+The link API reserves/reuses an attempt and numeric provider code in a separate
+short transaction. Checkout does not create payment_transactions in this increment.
 
 ## 4. Payment and enrollment flow
 
@@ -115,16 +215,23 @@ Provider callbacks are untrusted until their signature and amount are verified. 
 3. If the order is already `PAID`, return success without duplicating side effects.
 4. Mark `payment_transactions.status = SUCCEEDED` and record `paid_at`.
 5. Mark `orders.status = PAID` and record `paid_at`.
-6. For every order detail, create an `ACTIVE` enrollment if one does not already exist.
+6. For every order detail, activate its existing PENDING_PAYMENT hold, after checking
+   the server deadline and class/order state under the shared lock order.
 7. Initialize `class_unit_progress` for every unit in the purchased class.
-8. Commit all database writes together.
-9. Publish email/notification work only after commit; use an outbox when that integration is introduced.
+8. Insert a unique payment confirmation email outbox event and commit all writes together.
+9. Send online confirmation email through a retryable worker after commit;
+   notifications/chat remain deferred. Email failures do not roll back payment.
 
-The unique `(student_id, class_id)` enrollment constraint is the final defense against duplicate callbacks or concurrent purchases.
+The partial unique student/class index for effective enrollments, unique order-detail
+mapping, provider reference/event key, enrollment/unit progress and outbox event
+constraints defend against duplicate callbacks/concurrent purchases. Expired or
+cancelled holds are never silently recreated; late/mismatched payments require review.
 
 ### Failed and expired payments
 
-- A failed payment marks only that payment transaction as `FAILED`; another payment attempt may be created while the order remains valid.
+- A confirmed failed payment affects only the attempt; retry policy must ensure the
+  old provider link cannot still settle before issuing another attempt. An ambiguous
+  timeout must query/reuse the same provider code, not create another active attempt.
 - An unpaid order becomes `EXPIRED` after `expires_at`.
 - Expiring an order never deletes it or its details.
 - A callback received after expiry requires an explicit reconciliation path; it must not silently create access without checking provider settlement.
@@ -134,13 +241,31 @@ The unique `(student_id, class_id)` enrollment constraint is the final defense a
 | Action | Allowed actors |
 |---|---|
 | Read public active courses/open classes | Public |
-| Manage categories/courses/units/materials | `ADMIN`, `MANAGER` |
-| Create classes and schedules | `ADMIN`, `MANAGER` |
-| Read assigned class operations | Assigned `MENTOR`, `ADMIN`, `MANAGER` |
+| Register through email/password or Google | Public; resulting role is always `STUDENT` |
+| Manage categories/courses/units | `ADMIN` |
+| Create managed accounts, including Manager | `ADMIN`; MANAGER role restored in source/new migration |
+| Manage/edit/review/publish Course Unit material | `MANAGER` (approved Phase 3 design, API pending) |
+| Upload/submit own material draft | Assigned `MENTOR`, or `MANAGER` for direct upload (Phase 3 API pending) |
+| Create classes and schedules | `ADMIN` |
+| Read assigned class operations | Assigned `MENTOR`, `ADMIN` |
+| Read class roster and payment status | Any `MANAGER` across all classes; assigned `MENTOR` retains read-only access; effective enrollments only |
 | Manage own cart and checkout | Active `STUDENT` |
 | Read own orders/payments | Order owner |
 | Process payment callback | Verified provider adapter only |
-| Manually confirm cash/bank transfer | Authorized `ADMIN` or `MANAGER`, with audit data |
+| Confirm full cash payment | Any active `MANAGER`, without class/order assignment, with collector audit data |
+| Inspect transactions/reconciliation | `ADMIN`; refund/manual bank-transfer scope is separate |
+
+`MANAGER` is a separate role restored by a new migration on 2026-10-09 for
+material management. It does not inherit ADMIN, MENTOR or STUDENT permissions.
+Public registration still creates STUDENT. Existing category/course/class/user
+and reconciliation routes retain their role checks; manager material routes are
+to be implemented in Phase 3. Historical removal migration is unchanged.
+
+Flow.txt's manager assignment wording is implemented by the existing Phase 2
+decision to activate class enrollment/progress automatically after verified PayOS
+settlement. It does not add a manual manager approval step or enroll students into
+course templates. For cash, pending students see only class-unit/session titles and
+timetable until manager confirmation; full learning content remains blocked.
 
 Role checks never replace ownership checks. A student must not access another student's cart, order, payment or enrollment by guessing an ID.
 

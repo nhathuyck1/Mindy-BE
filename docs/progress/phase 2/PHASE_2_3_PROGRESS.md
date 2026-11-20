@@ -1,0 +1,214 @@
+# Phase 2.3 — Tiến độ My Classes + Personal Schedule
+
+Cập nhật: **2026-10-12**.
+Kế hoạch: [PHASE_2_3_MY_CLASSES_SCHEDULE.md](../../implement_phase/phase2/PHASE_2_3_MY_CLASSES_SCHEDULE.md).
+Contract FE: [PHASE_2_3_FE_CONTRACT.md](../../PHASE_2_3_FE_CONTRACT.md).
+Flow: [PHASE_2_3_FLOW.md](../../api_flow/PHASE_2_3_FLOW.md).
+API breakdown: [PHASE_2_3_flow-api-breakdown.md](../../api_flow/PHASE_2_3_flow-api-breakdown.md).
+
+## Hiện trạng
+
+### Seed ba Course ngày 2026-10-12 (yêu cầu tiếp theo)
+
+- Đổi current demo seed thành ba lớp: HTML-CSS-101/JS-101 ONLINE 15:00–17:00,
+  PY-101 OFFLINE 09:00–11:00 Phòng Lab2; thứ3/thứ7,10 buổi/lớp,13/10–14/11.
+- Giữ HTML cohort đã có; local seed tạo thêm2 lớp JS/Python, mỗi lớp copy toàn
+  bộ Course Unit (5/6/4) và chia đủ10 session theo syllabus. Guard giữ current
+  cohort theo từng Course để rerun không sinh trùng. Slot generator nhận giờ
+  sáng/chiều; unit partition không mất/trùng slot khi số units khác nhau.
+- Query DB development xác minh3 lớp OPEN,2 ONLINE/1 OFFLINE,15 Class Unit,
+  30 Session và0 mentor conflict; rerun tạo0 lớp. Không seed Material/enrollment.
+- Unit helper **10/10 pass**; `pnpm check` **298/298 pass (27 suites)** trên DB
+  `_test` riêng, lint/type-check/build pass. Không chạy lại HTTP cho thay đổi seed;
+  HTTP23/23 ở lượt API sửa giờ trước vẫn là evidence riêng. Không deploy/VPS.
+
+### Bổ sung ngày 2026-10-12 — thứ, giờ và sửa giờ Session
+
+- GET `/api/v1/me/schedule` thêm `dayOfWeek` (Monday–Sunday), `startTime`/`endTime`
+  (`HH:mm`); tính theo response `timeZone`, giữ startsAt/endsAt đầy đủ. Test ngày
+  UTC lệch ngày địa phương, buổi qua đêm và timezone khác; không thêm cột/migration.
+- ADMIN: PATCH `/api/v1/admin/classes/:classId/sessions/:sessionId` và
+  `/sessions/bulk`, body startTime/endTime; bulk thêm 1–100 sessionIds không trùng.
+  Giữ từng ngày start/end theo APP_TIME_ZONE; chỉ Class DRAFT/OPEN/IN_PROGRESS,
+  Session SCHEDULED. Kiểm range, ownership theo class, overlap và mentor calendar;
+  class row lock + mentor advisory lock, bulk rollback toàn bộ.
+- Unit test clock conversion có DST gap/fold; PostgreSQL test single, bulk retry,
+  missing/foreign Session, state/range, overlap/adjacency, overnight và concurrent
+  edits giữa hai Class cùng Mentor. Không thay commerce/payment/access policy.
+- Seed thêm cohort HTML/CSS 10 buổi thứ 3/thứ 7 15:00–17:00 (+07), hai buổi/unit;
+  bỏ slot đã bắt đầu, giữ cohort còn trong period khi chạy lại để không trùng mentor.
+  Đã chạy trên DB development local: tạo `HTML-CSS-101-10S-20261013`, 13/10–14/11,
+  query xác minh 10 Session, positions 1–5 mỗi position hai Session; rerun tạo 0 lớp.
+  Không thêm enrollment, không xác nhận payment giả, không deploy/VPS.
+- Local: suite tập trung **36/36 pass**; full `pnpm check` **291/291 (27 suites)**,
+  lint/type-check/build pass trên dedicated `_test` DB. `pnpm test:http` **23/23**
+  pass (2 suites), gồm auth/DTO/routing/single/bulk/rollback và các field lịch.
+  Các thay đổi Materials/Files có sẵn trong checkout không thuộc
+  scope bổ sung lịch này.
+- Đã đồng bộ FE contract, flow/API breakdown, Phase 2 contract và README seed.
+
+**Đã implement và chạy pass các suite local hiện có, gồm PostgreSQL/HTTP; chưa review
+query plan trên fixture lớn, chưa deploy.**
+
+| Loại bằng chứng | Trạng thái |
+|---|---|
+| Plan/contract | Chốt contract 2.3.1, viết FE contract. |
+| Local checks | Sau đồng bộ dev/Phase 3, `pnpm check` pass: lint, type-check, **243/243 test (22 suites)**, build; không skip. |
+| PostgreSQL integration | Suite Phase 2.3 **6/6 pass**; các suite Phase 2/2.2 và Phase 3.1/3.2 cũng pass trong full gate. |
+| Built-app HTTP | `pnpm test:http` pass **20/20 (2 suites)** sau đồng bộ dev, gồm luồng Phase 2.3 CASH preview → FULL. |
+| VPS/staging | Chưa deploy, chưa smoke. |
+| Payment thật | Không liên quan; PayOS live vẫn là nghiệm thu Phase 2.2 riêng. |
+
+Ngày 2026-10-10 đã chạy các suite với DB `_test` riêng trên PostgreSQL local.
+Kết quả này không chứng minh staging/VPS hoặc thanh toán PayOS thật.
+
+## Quyết định 2.3.1 (diễn giải Flow.txt)
+
+Flow.txt: Student đăng ký → thanh toán toàn bộ → xem lịch (“Fap calendar”); CASH pending
+chỉ xem tiêu đề unit/session + thời khóa biểu, mentor confirm mới xem toàn bộ. Triển khai:
+
+- Nguồn danh sách là **enrollment** của principal, không phải Order PAID. Một dòng = một
+  enrollment; mua lại sinh dòng mới.
+- Access matrix đúng plan §3.1, giữ entitlement hiện có: FULL = ACTIVE; CASH_PREVIEW =
+  hold PENDING_PAYMENT của own order CASH `PENDING` và `expires_at > now`; còn lại NONE.
+  Class CANCELLED chặn mọi quyền. COMPLETED và pending PAYOS **không** được mở quyền.
+- Hold quá hạn bị chặn ngay khi đọc (`expires_at <= asOf`), không chờ job expiry; GET
+  không ghi DB, không gọi PayOS.
+- Hold PENDING_PAYMENT của order EXPIRED/CANCELLED → `HOLD_EXPIRED`; hold với order PAID
+  hoặc chuỗi `enrollment → order_detail → order` lệch student/class → `STATE_MISMATCH`
+  (fail closed, nằm ở history).
+- `view=current` gồm ACTIVE/COMPLETED + hold còn hạn của order PENDING (kể cả Class
+  CANCELLED, accessMode NONE); `history` là phần còn lại; `all` cả hai.
+- Lịch: chỉ FULL/CASH_PREVIEW, Class không CANCELLED, range `[from, to)` ≤ 31 ngày có
+  timezone, `includeCancelled` mặc định true; không meeting URL.
+- Lịch FULL yêu cầu chuỗi order nhất quán (fail closed); detail endpoint cũ chỉ kiểm tra
+  enrollment ACTIVE. Hai rule chỉ khác nhau với dữ liệu hỏng.
+- Hoãn: chat/DM CASH pending (phase chat), quyền học lại sau COMPLETED, workflow nghỉ/dạy
+  bù, materials/attendance/progress (Phase 3/4).
+
+## Điều phối và lịch sử planning
+
+- Cập nhật điều phối: user giao 2.3 cho người khác và phụ trách P3; hai phase làm
+  song song. Ghi chú ưu tiên 2.3 trước P3 bên dưới là lịch sử lượt planning trước;
+  điều kiện hiện hành là tích hợp trước nghiệm thu hành trình FE, không chặn code P3.
+
+- User ưu tiên hoàn thiện luồng đăng ký lớp → My Classes → detail → lịch trước
+  Phase 3 File + Materials; lượt này chỉ yêu cầu planning vào Markdown.
+- Đã đọc Flow.txt, FE contract, nguồn class/enrollment/CASH/order và đối chiếu
+  DBML/Course flow với progress hiện có.
+- Tái dùng full detail ACTIVE và CASH preview; đề xuất collection `/me/classes`,
+  calendar `/me/schedule`, current/history/all và access context.
+- Giữ entitlement hiện tại, không mở quyền enrollment COMPLETED hoặc pending
+  PAYOS; CASH pending còn hạn có title/timetable. Metadata/list lịch sử có quyền
+  riêng với private learning content, không dùng Order PAID thay enrollment.
+- Bước 2.3.1 còn cần chốt contract/policy đề xuất; plan không làm rule thành code.
+
+## Các bước
+
+| Bước | Trạng thái | Evidence/đầu ra |
+|---|---|---|
+| Planning | Hoàn tất | Plan + progress riêng. |
+| 2.3.1 Contract/policy | Hoàn tất (local) | Quyết định trên + `docs/PHASE_2_3_FE_CONTRACT.md`. |
+| 2.3.2 My Classes | Code + local tests pass | `GET /me/classes` trong `StudentLearningModule`. |
+| 2.3.3 Detail continuity | Code + local DB/HTTP tests pass | Field additive cho detail/preview. |
+| 2.3.4 Personal Schedule | Code + local tests pass | `GET /me/schedule`. |
+| 2.3.5 Quality gate/rollout | Một phần | Các suite local hiện có pass; còn query plan, staging smoke. |
+
+## Đã triển khai
+
+- `src/modules/student-learning/`: module mới, import trong `AppModule`; không sở hữu
+  entity, không ghi DB, không module nào import ngược.
+  - `domain/learning-access.ts`: evaluator access/view dùng chung (unit test 10 ca).
+  - `domain/schedule-range.ts` + `dtos/my-schedule-query.dto.ts`: validate timezone,
+    range, phân trang, `includeCancelled` (unit test).
+  - `services/my-classes.service.ts`: một read projection SQL (enrollment → class →
+    course → mentor → order detail → own order → payment 1-1), filter/view trước
+    count/page, `REPEATABLE READ` read-only snapshot, cùng `asOf`.
+  - `services/my-schedule.service.ts`: session giao range, join entitlement, lọc ở DB.
+- Classes: `StudentClassDto` thêm `classStatus`, `enrollmentId`, `enrollmentStatus`,
+  `enrolledAt`, `accessMode`; `EnrollmentsService.findActive` thay `hasActiveAccess`.
+- Payments/Commerce: preview trả `StudentClassPreviewDto` (kế thừa `ClassDetailDto`) có
+  `classStatus`, `enrollmentId`, `orderId`, `orderCode`, `expiresAt`, `accessMode`;
+  `pendingCashDetail` trả thêm order id/code/deadline; `findPendingHold` thay
+  `hasPendingHold`.
+- `Cache-Control: private, no-store` cho `/me/classes`, `/me/classes/:id`, `/preview`,
+  `/me/schedule`.
+- Postman folder `05 — Phase 2.3 My Classes + schedule`.
+- **Không migration**: dùng index sẵn có (`uq_enrollments_student_class_effective`,
+  `idx_enrollments_class_status`, `order_detail_id` unique, `payment_transactions.order_id`
+  unique, `idx_class_sessions_time_range`). Chưa có bằng chứng query plan để thêm index.
+
+## Việc còn lại trước nghiệm thu
+
+1. Review query plan (`EXPLAIN ANALYZE`) trên fixture đủ lớn; chỉ thêm index additive nếu
+   có bằng chứng (ứng viên: `enrollments(student_id, created_at, id)`).
+2. Deploy qua pipeline hiện có; smoke staging/VPS bằng tài khoản test: list, detail/preview,
+   lịch, 401/403/422, expiry, refresh sau settlement; kiểm tra Cloudflare không cache
+   `/api/v1/me/*`.
+
+## Kiểm chứng lượt implement
+
+- `pnpm check` (lint + type-check + test + build) pass ngày 2026-10-09; DB/HTTP skip.
+- Render SQL offline (không kết nối DB) để kiểm tra mapping cột, NULL-safe history
+  predicate, tham số bind và LIMIT/OFFSET; phát hiện và sửa lỗi `::text` không được
+  TypeORM đổi tên cột.
+- Chuẩn hóa line ending CRLF → LF cho file working tree lệch `.gitattributes`
+  (index vốn LF, không đổi nội dung git) để `pnpm lint` pass.
+
+## Kiểm chứng local ngày 2026-10-10
+
+- Log user: `pnpm migration:run` thực thi `PayosPayments1791158400000` thành công và
+  COMMIT; đây là migration Phase 2.2, không phải migration mới của Phase 2.3.
+- Log user: `pnpm test:http` ban đầu skip 5/5 do thiếu `TEST_DATABASE_URL`.
+- Kết nối PostgreSQL local `127.0.0.1:5433`, tạo DB riêng `mindy_center_test` và đặt
+  `TEST_DATABASE_URL` trong process chạy test. Suite dùng thêm `mindy_center_payments_test`,
+  `mindy_center_learning_test`, `mindy_center_http_test`; không reset DB development.
+- `pnpm test`: **18 file, 127 test pass**, không skip (60 unit + 67 PostgreSQL).
+- `pnpm test:http`: build pass, **1 file, 5 test pass**, không skip; fake provider,
+  không gọi merchant thật. Ca Phase 2.3 kiểm chứng list, preview, calendar, quyền role,
+  query validation, no-store và CASH confirmation → FULL.
+- Không sửa code nghiệp vụ; chưa EXPLAIN trên fixture lớn, deploy hoặc thanh toán thật.
+
+## Đồng bộ dev cho PR #9 ngày 2026-10-10
+
+- Resolve conflict docs/AppModule/payment fixture, giữ Phase 2.3 và Phase 3.1/3.2.
+- Giữ rename docs vào `implement_phase/phase2` và `progress/phase 2`; sửa liên kết
+  liên quan và giữ evidence local của cả hai phase.
+- Giữ public `hasActiveAccess` cho Materials bên cạnh `findActive` phục vụ detail;
+  giữ predicate ACTIVE và EntityManager của caller.
+- Frozen-lockfile install, `pnpm check` **243/243 tests (22 suites)** và
+  `pnpm test:http` **20/20 (2 suites)** pass; không skip. PostgreSQL test DB riêng,
+  MinIO test fixture tại `127.0.0.1:19000`; không migrate DB development/VPS.
+
+## Đồng bộ flow/API docs ngày 2026-10-10
+
+- Review xác nhận progress đã ghi implementation/local evidence; flow tổng hợp
+  còn ghi My Classes/calendar chưa implement. Sửa theo controller/DTO/service/test.
+- Thêm flow và API breakdown riêng 2.3 trong `docs/api_flow/`, đủ 4 endpoint,
+  request/response, error status/code, ownership/access, range/pagination/timezone,
+  UI/refetch/polling và điều kiện release. Liên kết contract/progress/flow tổng hợp.
+- Chỉ review và sửa tài liệu; kiểm JSON ví dụ, link local và diff, không chạy lại
+  BE tests/migration hoặc xác minh deploy/live. Giữ evidence runtime ở mục trên.
+
+## Admin class roster/student detail — 2026-10-13
+
+- Đã implement `GET /api/v1/admin/classes/:classId/students?page=1&pageSize=20`
+  và `GET /api/v1/admin/classes/:classId/students/:studentId`, role ADMIN.
+  API class list/detail đã có, không thêm route trùng. Controller mỏng, read service
+  điều phối exported EnrollmentsService/UsersService; batch users, sort/page/count ổn định.
+- DTO list: studentId/studentName/email/phone/studentStatus và enrollmentId/
+  enrollmentStatus/enrolledAt. Detail thêm classId/orderDetailId/registeredAt/
+  accountCreatedAt/lastLoginAt. Chỉ enrollment còn hiệu lực, không CANCELLED;
+  suspended account vẫn quản lý được. Missing class/student-in-class 404 với code riêng.
+- Changed-file Biome, type-check, production build pass. Built-app PostgreSQL HTTP
+  suite Phase2.2 13/13 pass, gồm 2 case mới: auth/roles/validation/Swagger;
+  roster/detail/page-empty/scope/status/privacy. Không real payment/network provider.
+- Full `pnpm test` với TEST_DATABASE_URL riêng: 357/359 pass, 2 failures ngoài roster
+  tại `test/integration/phase42-attendance.spec.ts` (staff recovery state expectation).
+  `pnpm check` dừng ở format ngoài phạm vi trong
+  `src/modules/payments/services/attendance-payment-evidence.service.ts`.
+  Không chỉnh feature attendance đang có để làm xanh increment này.
+- Đồng bộ [flow](../../api_flow/PHASE_2_3_FLOW.md),
+  [API breakdown §5.3](../../api_flow/PHASE_2_3_flow-api-breakdown.md#53-admin-danh-sách-và-chi-tiết-học-sinh-theo-lớp)
+  và [FE contract Phase2](../../PHASE_2_FE_CONTRACT.md). Không schema/migration,
+  không FE edits, không DB development/VPS migration hoặc deploy.

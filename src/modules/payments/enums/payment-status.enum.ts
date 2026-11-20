@@ -1,0 +1,6 @@
+export enum PaymentStatus {
+  CREATING = 'CREATING',
+  PENDING = 'PENDING',
+  SUCCEEDED = 'SUCCEEDED',
+  REQUIRES_REVIEW = 'REQUIRES_REVIEW',
+}

@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "07 — Phase 4.1 Teaching Assignments",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Cookie auth. Migrate first. Read class/session versions, find candidates, assign then login as the assigned mentor. Set idempotency_key to a UUID v4 for each intent; reuse the same key/body on a network retry, use a new key after refetch/change. GET does not reserve a slot. Roster/start/attendance, leave and makeup are later slices; substitute has no payment/material-authoring rights."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "staff_email",
+      "value": ""
+    },
+    {
+      "key": "staff_password",
+      "value": ""
+    },
+    {
+      "key": "mentor_email",
+      "value": ""
+    },
+    {
+      "key": "mentor_password",
+      "value": ""
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "mentor_id",
+      "value": ""
+    },
+    {
+      "key": "class_version",
+      "value": "1"
+    },
+    {
+      "key": "session_version",
+      "value": "1"
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "from",
+      "value": ""
+    },
+    {
+      "key": "to",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Login Manager/Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{staff_email}}\",\n  \"password\": \"{{staff_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Management classes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/management/classes?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Management timetable",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/management/classes/{{class_id}}?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Available mentors for session",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/management/class-sessions/{{session_id}}/available-mentors?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Available primary mentors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/management/classes/{{class_id}}/available-mentors?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Assign substitute",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/management/class-sessions/{{session_id}}/mentor",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mentorId\": \"{{mentor_id}}\",\n  \"reason\": \"Cover this session\",\n  \"expectedVersion\": {{session_version}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Clear override",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/management/class-sessions/{{session_id}}/mentor",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mentorId\": null,\n  \"reason\": \"Restore primary mentor\",\n  \"expectedVersion\": {{session_version}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Assign primary mentor",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/management/classes/{{class_id}}/mentor",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mentorId\": \"{{mentor_id}}\",\n  \"reason\": \"New primary mentor\",\n  \"expectedVersion\": {{class_version}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Login assigned mentor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{mentor_email}}\",\n  \"password\": \"{{mentor_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "My teaching schedule (default week)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/mentor/schedule?page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "My teaching schedule (range)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/mentor/schedule?from={{from}}&to={{to}}&page=1&pageSize=20"
+      }
+    },
+    {
+      "name": "Assigned session context",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/v1/class-sessions/{{session_id}}/context"
+      }
+    }
+  ]
+}

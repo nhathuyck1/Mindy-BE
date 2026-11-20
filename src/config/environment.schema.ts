@@ -1,6 +1,40 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import Joi from 'joi';
 
+const payosSecret = () =>
+  Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('PAYOS_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') });
+const payosUrl = () =>
+  Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default('')
+    .when('PAYOS_ENABLED', {
+      is: true,
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['http', 'https'] })
+        .required()
+        .invalid(''),
+    })
+    .when('NODE_ENV', {
+      is: 'production',
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['https'] })
+        .allow(''),
+    });
+
 export const environmentSchema = Joi.object({
+  CHAT_ENABLED: Joi.boolean().default(false),
+  CHAT_ATTACHMENTS_ENABLED: Joi.boolean().default(false),
+  CHAT_JOB_ENABLED: Joi.boolean().default(false),
+  CHAT_ENCRYPTION_ACTIVE_KEY_VERSION: Joi.number().integer().positive().default(1),
+  CHAT_ENCRYPTION_KEYS: Joi.string().allow('').default(''),
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'staging', 'production')
     .default('development'),
@@ -14,9 +48,115 @@ export const environmentSchema = Joi.object({
   COOKIE_SECURE: Joi.boolean().default(true),
   ACCESS_TOKEN_TTL_SECONDS: Joi.number().integer().positive().default(900),
   REFRESH_TOKEN_TTL_SECONDS: Joi.number().integer().positive().default(2_592_000),
-  JWT_PRIVATE_KEY_BASE64: Joi.string().allow('').default(''),
-  JWT_PUBLIC_KEY_BASE64: Joi.string().allow('').default(''),
+  JWT_PRIVATE_KEY_BASE64: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schemas use the then key intentionally.
+    .when('NODE_ENV', { is: 'production', then: Joi.string().min(1).required() }),
+  JWT_PUBLIC_KEY_BASE64: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schemas use the then key intentionally.
+    .when('NODE_ENV', { is: 'production', then: Joi.string().min(1).required() }),
+  GOOGLE_AUTH_ENABLED: Joi.boolean().default(false),
+  GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
+  GOOGLE_CLIENT_SECRET: Joi.string().allow('').default(''),
+  GOOGLE_REDIRECT_URI: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default(''),
+  GOOGLE_OAUTH_STATE_TTL_SECONDS: Joi.number().integer().positive().max(900).default(600),
+  REGISTRATION_INTENT_TTL_SECONDS: Joi.number().integer().positive().max(3600).default(900),
+  FRONTEND_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3001'),
+  GOOGLE_REGISTRATION_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/register/complete'),
+  GOOGLE_AUTH_SUCCESS_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/'),
+  GOOGLE_AUTH_ERROR_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/login'),
+  MAIL_ENABLED: Joi.boolean().default(false),
+  SMTP_HOST: Joi.string().hostname().default('localhost'),
+  SMTP_PORT: Joi.number().integer().min(1).max(65_535).default(1025),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow('').default(''),
+  SMTP_PASSWORD: Joi.string().allow('').default(''),
+  MAIL_FROM: Joi.string().min(3).default('Mindy Center <no-reply@mindy.local>'),
+  EMAIL_VERIFICATION_TTL_SECONDS: Joi.number().integer().positive().max(86_400).default(1800),
+  EMAIL_RESEND_COOLDOWN_SECONDS: Joi.number().integer().positive().max(3600).default(60),
+  EMAIL_VERIFICATION_PATH: Joi.string()
+    .pattern(/^\/(?!\/)/)
+    .default('/verify-email'),
+  ORDER_DETAILS_PATH: Joi.string()
+    .pattern(/^\/(?!\/)[^\\\r\n]*:orderId(?=\/|[?&#]|$)[^\\\r\n]*$/)
+    .default('/orders/:orderId'),
+  APP_TIME_ZONE: Joi.string()
+    .custom((value: string, helpers) => {
+      try {
+        new Intl.DateTimeFormat('en-CA', { timeZone: value });
+        return value;
+      } catch {
+        return helpers.error('any.invalid');
+      }
+    })
+    .default('Asia/Ho_Chi_Minh'),
+  ORDER_PAYOS_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(86_400).default(900),
+  ORDER_CASH_HOLD_TTL_SECONDS: Joi.number().integer().min(60).max(2_592_000).default(172_800),
+  ORDER_EXPIRY_JOB_ENABLED: Joi.boolean().default(true),
+  CLASS_OPENING_JOB_ENABLED: Joi.boolean().default(true),
+  MATERIAL_TRACKING_JOB_ENABLED: Joi.boolean().default(true),
+  MATERIAL_CLEANUP_JOB_ENABLED: Joi.boolean().default(false),
+  ASSIGNMENT_TIMEOUT_JOB_ENABLED: Joi.boolean().default(true),
+  ASSIGNMENT_ZIP_ENABLED: Joi.boolean().default(false),
+  ASSIGNMENT_FILE_JOB_ENABLED: Joi.boolean().default(true),
+  ASSIGNMENT_FILE_CLEANUP_GRACE_HOURS: Joi.number().integer().min(1).max(8760).default(24),
+  // Phase 7: compiler-runner v2 (internal network). Empty URL disables code runs/validation (503).
+  CODE_RUNNER_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default(''),
+  CODE_RUNNER_TOKEN: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi's conditional schema uses the `then` option.
+    .when('CODE_RUNNER_URL', { is: Joi.string().min(1), then: Joi.string().min(32).required() }),
+  CODE_RUNNER_TIMEOUT_MS: Joi.number().integer().min(5_000).max(600_000).default(120_000),
+  CODE_JUDGE_JOB_ENABLED: Joi.boolean().default(true),
+  CODE_JUDGE_CONCURRENCY: Joi.number().integer().min(1).max(8).default(2),
+  CODE_RUN_PER_MINUTE: Joi.number().integer().min(1).max(120).default(10),
+  CODE_RUN_PER_DAY: Joi.number().integer().min(1).max(5_000).default(300),
+  PAYOS_ENABLED: Joi.boolean().default(false),
+  PAYOS_CREATE_LINK_ENABLED: Joi.boolean().default(true),
+  PAYOS_CLIENT_ID: payosSecret(),
+  PAYOS_API_KEY: payosSecret(),
+  PAYOS_CHECKSUM_KEY: payosSecret(),
+  PAYOS_RETURN_URL: payosUrl(),
+  PAYOS_CANCEL_URL: payosUrl(),
+  PAYOS_WEBHOOK_URL: payosUrl(),
+  PAYMENT_MAIL_JOB_ENABLED: Joi.boolean().default(true),
+  PAYMENT_MAIL_JOB_INTERVAL_SECONDS: Joi.number().integer().min(5).max(3600).default(30),
+  ORDER_EXPIRY_JOB_INTERVAL_SECONDS: Joi.number().integer().min(5).max(3600).default(60),
+  SEED_ADMIN_EMAIL: Joi.string().email().allow('').default(''),
+  SEED_ADMIN_PASSWORD: Joi.string().allow('').default(''),
+  SEED_ADMIN_DISPLAY_NAME: Joi.string().allow('').default(''),
+  SEED_ADMIN_CONFIRM: Joi.string().valid('YES', '').default(''),
   REDIS_ENABLED: Joi.boolean().default(false),
+  WHITEBOARD_ENABLED: Joi.boolean().default(false),
+  NOTIFICATIONS_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_SOCKET_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_JOB_ENABLED: Joi.boolean().default(false),
+  NOTIFICATION_CURSOR_SECRET: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('NOTIFICATIONS_ENABLED', { is: true, then: Joi.string().min(32).required().invalid('') }),
+  WHITEBOARD_WORKER_ENABLED: Joi.boolean().default(true),
+  WHITEBOARD_PDF_ENABLED: Joi.boolean().default(false),
+  WHITEBOARD_PDFTOPPM_PATH: Joi.string().min(1).default('pdftoppm'),
   REDIS_URL: Joi.string()
     .uri({ scheme: ['redis', 'rediss'] })
     .default('redis://localhost:6379'),
@@ -24,7 +164,39 @@ export const environmentSchema = Joi.object({
   MINIO_ENDPOINT: Joi.string().hostname().default('localhost'),
   MINIO_PORT: Joi.number().integer().min(1).max(65_535).default(9000),
   MINIO_USE_SSL: Joi.boolean().default(false),
-  MINIO_ACCESS_KEY: Joi.string().allow('').default(''),
-  MINIO_SECRET_KEY: Joi.string().allow('').default(''),
-  MINIO_BUCKET: Joi.string().min(3).default('edtech-center'),
-}).unknown(false);
+  MINIO_ACCESS_KEY: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('MINIO_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') }),
+  MINIO_SECRET_KEY: Joi.string()
+    .allow('')
+    .default('')
+    // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+    .when('MINIO_ENABLED', { is: true, then: Joi.string().min(1).required().invalid('') }),
+  MINIO_BUCKET: Joi.string().min(3).default('mindy-center'),
+  MINIO_PUBLIC_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .allow('')
+    .default('')
+    .when('NODE_ENV', {
+      is: 'production',
+      // biome-ignore lint/suspicious/noThenProperty: Joi conditional schema.
+      then: Joi.string()
+        .uri({ scheme: ['https'] })
+        .allow(''),
+    }),
+  FILE_PUT_TTL_SECONDS: Joi.number().integer().min(30).max(600).default(600),
+  FILE_GET_TTL_SECONDS: Joi.number().integer().min(1).max(60).default(60),
+  FILE_INTENT_TTL_SECONDS: Joi.number().integer().min(600).max(3600).default(1800),
+  FILE_MAX_OPEN_INTENTS: Joi.number().integer().min(1).max(100).default(20),
+  FILE_JOB_ENABLED: Joi.boolean().default(true),
+  FILE_JOB_POLL_SECONDS: Joi.number().integer().min(1).max(60).default(5),
+  FILE_JOB_CONCURRENCY: Joi.number().integer().min(1).max(4).default(2),
+  FILE_JOB_LEASE_SECONDS: Joi.number().integer().min(60).max(600).default(300),
+  FILE_JOB_HEARTBEAT_SECONDS: Joi.number().integer().min(5).max(30).default(30),
+  FILE_JOB_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  FILE_JOB_TIMEOUT_SECONDS: Joi.number().integer().min(30).max(240).default(180),
+  FILE_VALIDATION_TIMEOUT_SECONDS: Joi.number().integer().min(5).max(120).default(60),
+  FILE_SCRATCH_DIRECTORY: Joi.string().min(1).default(join(tmpdir(), 'mindy-file-validation')),
+}).unknown(true);

@@ -1,0 +1,188 @@
+# VPS deployment
+
+The production stack builds one immutable backend image, runs database migrations once,
+then starts the API only after PostgreSQL is healthy and the migration job succeeds.
+PostgreSQL is private to Docker. The API bind address is configurable: use `0.0.0.0`
+to expose Swagger directly on the VPS port, or `127.0.0.1` when Nginx/Caddy provides
+the public HTTPS endpoint.
+
+## 1. Prepare `.env.production`
+
+Create `.env.production` on the VPS. Do not commit it. Start from
+`.env.production.example`, then
+set production values for every item below:
+
+```dotenv
+# Values consumed by Compose
+POSTGRES_DB=mindy_center
+POSTGRES_USER=mindy
+POSTGRES_PASSWORD=CHANGE_TO_A_LONG_RANDOM_PASSWORD
+API_BIND_ADDRESS=0.0.0.0
+API_PORT=3000
+IMAGE_TAG=latest
+
+# Application
+NODE_ENV=production
+PORT=3000
+CORS_ORIGINS=https://app.example.com
+SWAGGER_ENABLED=true
+DATABASE_URL=postgresql://mindy:URL_ENCODED_PASSWORD@postgres:5432/mindy_center
+DATABASE_LOGGING=false
+COOKIE_SECURE=true
+
+# Authentication
+JWT_PRIVATE_KEY_BASE64=CHANGE_ME
+JWT_PUBLIC_KEY_BASE64=CHANGE_ME
+ACCESS_TOKEN_TTL_SECONDS=900
+REFRESH_TOKEN_TTL_SECONDS=2592000
+
+# Google OIDC
+GOOGLE_AUTH_ENABLED=false
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=https://api.example.com/api/v1/auth/google/callback
+GOOGLE_OAUTH_STATE_TTL_SECONDS=600
+REGISTRATION_INTENT_TTL_SECONDS=900
+FRONTEND_BASE_URL=https://app.example.com
+GOOGLE_REGISTRATION_PATH=/register/complete
+GOOGLE_AUTH_SUCCESS_PATH=/
+GOOGLE_AUTH_ERROR_PATH=/login
+
+# Email
+MAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=sender@example.com
+SMTP_PASSWORD=CHANGE_ME
+MAIL_FROM=Mindy Center <sender@example.com>
+EMAIL_VERIFICATION_TTL_SECONDS=1800
+EMAIL_RESEND_COOLDOWN_SECONDS=60
+EMAIL_VERIFICATION_PATH=/verify-email
+
+# Optional services
+REDIS_ENABLED=false
+REDIS_URL=redis://localhost:6379
+MINIO_ENABLED=false
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_ACCESS_KEY=
+MINIO_SECRET_KEY=
+MINIO_BUCKET=mindy-center
+```
+
+If the PostgreSQL password contains reserved URL characters, percent-encode it in
+`DATABASE_URL`. Keep the original value in `POSTGRES_PASSWORD`.
+
+Generate a dedicated RSA key pair for production instead of copying development keys:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+openssl rsa -pubout -in private.pem -out public.pem
+base64 -w 0 private.pem
+base64 -w 0 public.pem
+rm private.pem public.pem
+```
+
+Put the two one-line Base64 outputs into `JWT_PRIVATE_KEY_BASE64` and
+`JWT_PUBLIC_KEY_BASE64`. Rotate any credential that has ever been committed, pasted in
+chat, or shared outside the VPS secret store.
+
+## 2. Build and start
+
+Run from the repository directory on the VPS:
+
+```bash
+cp .env.production.example .env.production
+# Edit every CHANGE_ME value and all public URLs before continuing.
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
+docker compose --env-file .env.production -f compose.production.yaml up -d --build
+docker compose --env-file .env.production -f compose.production.yaml ps
+docker compose --env-file .env.production -f compose.production.yaml logs migration
+docker compose --env-file .env.production -f compose.production.yaml logs -f api
+```
+
+With `API_BIND_ADDRESS=0.0.0.0`, allow TCP port `API_PORT` in the VPS firewall/security
+group. Swagger is then available at `http://VPS_IP:3000/docs` and readiness at
+`http://VPS_IP:3000/api/v1/health/ready`.
+
+Direct HTTP publishing is useful for a short smoke test, but authentication cookies
+configured with `COOKIE_SECURE=true` require HTTPS. For a normal public deployment,
+set `API_BIND_ADDRESS=127.0.0.1`, keep `COOKIE_SECURE=true`, and use the reverse proxy
+configuration below.
+
+## 3. Reverse proxy
+
+Configure Nginx or Caddy to proxy the public API hostname to `127.0.0.1:3000` and issue
+an HTTPS certificate. Only ports 22, 80 and 443 should normally be public. Do not expose
+PostgreSQL port 5432. Swagger will be available at `https://api.example.com/docs` when
+`SWAGGER_ENABLED=true`.
+
+## 4. Updating
+
+The dev CI/CD workflow builds all migrations into the release image and verifies
+their checksums against `dist/database/migration-manifest.json` before DB access.
+After a verified backup it stops API writers, runs the compiled migration runner,
+checks that none remain pending, and then replaces/health-checks the API. A failed
+migration leaves the API stopped for investigation; it never automatically reverts
+the database or re-seeds it. Expect a brief maintenance window for consolidation.
+The CI check also runs the compiled migration runner twice on an isolated test DB.
+
+Back up PostgreSQL before applying a release, then run:
+
+```bash
+git pull --ff-only
+IMAGE_TAG=$(git rev-parse --short HEAD) docker compose --env-file .env.production -f compose.production.yaml up -d --build
+```
+
+The migration container must finish successfully before the API is started.
+
+### GitHub Actions runner
+
+`.github/workflows/deploy.yml` runs when `dev` receives a push (including a
+merge). It calls the reusable `Check` workflow first, then deploys on a
+**Linux self-hosted runner on the VPS** only if all checks pass. It can also be
+started manually from `dev` once the workflow file is also on the repository's
+default branch (GitHub requirement for the manual Run workflow button). The
+runner user needs Git write access to the existing BE checkout, Docker access
+and permission to create a backup beside that checkout.
+The default checkout path is `/home/mindycode/mindycoding/Mindy-BE`; set the GitHub
+repository variable `DEPLOY_DIR` if the real path differs. Keep `.env.production`
+only in that VPS checkout, outside Git. The workflow does not copy it into the
+Actions workspace or print the expanded Compose configuration.
+
+The workflow requires a clean `dev` checkout, fast-forwards it to the exact
+commit that passed the checks, builds one image, starts PostgreSQL, saves and
+validates a `pg_dump` in `../mindy-backups`, runs the one-off migration, then
+updates the API and checks readiness. It preserves the existing Compose project
+name and PostgreSQL volume by running from the same directory. If the migration
+fails, the old API remains running. An API failure after migration needs manual
+diagnosis or a forward fix; the workflow does not revert a database with payment
+history. It does not change Cloudflare routing, confirm the payOS webhook or
+initiate a real payment.
+
+Checkout checks report named errors for missing files, wrong branch, local Git
+changes, Docker access and fast-forward/SHA failures. Local changes are reported
+as status paths only and never discarded automatically. Container diagnostics
+run only if the build/migrate/API rollout step fails, not on checkout failures.
+
+After building, the workflow validates the production environment against the
+new image's schema before backup/migrations or replacing the API. Invalid config
+fails the rollout while the old API remains running; output contains field names
+and error types only. Failed deploys also report container status, API State and
+the last 120 API log lines without dumping container configuration/environment.
+For the Phase 3.2 empty MinIO credentials incident and recovery commands, see
+[the Files VPS runbook](./PHASE_3_2_VPS_MINIO_RUNBOOK.md).
+
+When `.env.minio.production` exists in the VPS checkout, rollout and diagnostics
+also use `compose.files-production.yaml`, preserving the API scratch mount after
+Files provisioning. This marker requires valid MinIO root/backend configuration.
+MinIO build/provision/tunnel routing remain explicit runbook steps; CI/CD does
+not automatically start or provision storage.
+
+## Phase 2.2 payment release
+
+For payOS migration, exact Cloudflare callback routing, BE re-confirmation, live smoke
+and rollback while retaining pending settlements, follow the
+[Phase 2.2 deployment runbook](./PAYOS_PHASE_2_2_DEPLOYMENT.md).

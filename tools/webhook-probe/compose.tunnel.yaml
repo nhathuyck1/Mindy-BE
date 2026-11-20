@@ -1,0 +1,12 @@
+# VPS: cloudflare-mindy and the API already share mindy-be_backend.
+services:
+  probe:
+    networks:
+      mindy-backend:
+        aliases:
+          - mindy-payos-probe
+
+networks:
+  mindy-backend:
+    external: true
+    name: mindy-be_backend

@@ -1,0 +1,87 @@
+# Phase 7 — Flow bảng vẽ
+
+## 18/11/2026 — Theo viewport giảng viên (đã implement local)
+
+1. Mentor và Student join board qua xác thực/ticket hiện có. Mentor có canControl phát board:viewport theo thay đổi pan/zoom/kích thước; FE throttle 150 ms và refresh 2 giây để người vào sau nhận cả khi Mentor đứng yên.
+2. BE validate payload, kiểm auth + board scope + canControl + epoch; chỉ relay đến socket cùng board sau khi kiểm quyền từng recipient, identity được gắn từ server. Student không thể làm presenter bằng dữ liệu client.
+3. Student dùng world origin, CSS dimensions và scale để fit toàn bộ FOV, con trỏ dùng board:awareness hiện có. Student có thể dừng/theo lại; tự pan/zoom dừng theo. FOV không cập nhật document/checkpoint/sequence, không cần migration. Nhiều presenter hợp lệ sử dụng FOV đến sau cùng.
+4. Sai epoch bị từ chối 409, payload lỗi 422, Student phát viewport bị 403 và ngắt theo command policy hiện hữu. Recipient mất quyền bị ngắt trước fanout. FE xóa presenter khi offline/revoked/đổi epoch và expire sau 6 giây im lặng.
+
+Chi tiết contract ở [API breakdown](PHASE_7_flow-api-breakdown.md). Local socket tests 4/4 qua Socket.IO thật + DI doubles, type-check/build pass. Full suite: 375 tests pass, 559 skipped; 6 suites thiếu TEST_DATABASE_URL/MinIO. Chưa deploy hoặc kiểm tài khoản thật.
+
+## 16/11/2026 — Code block Python và C#
+
+Mentor có thể dùng `python3` và `csharp` cho code block. Backend giữ key khi nhận
+update, chiếu snapshot và tạo bản xuất. Bản xuất ghi nhãn Python hoặc C# và tô
+cú pháp theo ngôn ngữ. Xem [API bảng vẽ](PHASE_7_flow-api-breakdown.md).
+
+## 04/11/2026 — Kết nối realtime trực tiếp BE
+
+Source hỗ trợ vé từ POST /api/v1/auth/realtime-ticket để browser không phụ thuộc proxy WebSocket ở host FE. Origin/channel/session kiểm ở gateway, permissions nghiệp vụ giữ nguyên; cookie client cũ vẫn hỗ trợ. Chat path chuẩn hóa /socket.io không trailing slash, bảng /ws/whiteboards. Reconnect cần vé mới; xem PHASE_1_FLOW.md và PHASE_1_flow-api-breakdown.md. Local transport/browser fixtures PASS; chưa deploy.
+
+02/11/2026 integration: giữ nguyên runtime Whiteboard trên `dev`, bổ sung CODE
+assignments theo [flow riêng](PHASE_7_CODE_FLOW.md). Các đoạn planning dưới đây
+là lịch sử; trạng thái runtime/evidence hiện hành ở progress và Whiteboard runbook.
+Không đổi protocol, quyền hoặc route Whiteboard trong lượt gộp backend này.
+
+**02/11/2026 — PLANNED, chưa có runtime/API triển khai hoặc deployment evidence.**
+
+[Plan](../implement_phase/phase%207/PHASE_7_WHITEBOARD.md) ·
+[API proposal](PHASE_7_flow-api-breakdown.md) ·
+[Progress](../progress/phase%207/PHASE_7_PROGRESS.md)
+
+## Ghi nhận lượt planning
+
+User yêu cầu UI theo `E:/Documents/WDP/miro-demo`. Đã đọc source demo và Mindy,
+mở UI demo local để xem bố cục màn hẹp; desktop đối chiếu source/CSS. Chưa test
+thao tác realtime/upload/snapshot, chưa kiểm trực quan desktop. Chỉ thêm tài liệu
+BE; không sửa FE/demo, contract runtime, schema DB hoặc quyền đang chạy.
+
+## Luồng chính dự kiến
+
+1. Mentor mở buổi học → đọc context bảng/capabilities. Chưa có thì hiện “Tạo bảng”;
+   lệnh tạo có idempotency và unique session chống hai tab tạo trùng.
+2. Student đi từ buổi học trong learning workspace, chỉ mount board khi FULL
+   access. Chưa có board thì hiện “Mentor chưa tạo bảng”, không tự tạo.
+3. Mở workspace riêng toàn vùng nhìn → kiểm session/entitlement → WSS cùng origin
+   → sync document đúng board/epoch → chỉ bật tool theo capabilities server.
+4. Mentor chuẩn bị nội dung trong PRESENTATION. Student thấy read-only có lý do.
+   Khi buổi IN_PROGRESS, Mentor bật COLLABORATIVE cho lớp cùng vẽ.
+5. Mỗi update hợp lệ được server kiểm quyền/schema/quota, ghi durable rồi ACK và
+   fanout. FE hiển thị Đang đồng bộ/Đã lưu theo ACK commit, không theo socket connect.
+6. Ảnh đi qua upload scope board và validation; chỉ file READY đã bind đúng board
+   mới thành phần tử. State dùng assetId; browser lấy URL private khi cần render.
+7. Mentor lưu mốc hoặc hệ thống nhận session-end event để lưu mốc cuối buổi.
+   Student sau COMPLETED chỉ xem; sửa bảng không làm đổi điểm danh/trạng thái buổi.
+8. Mentor mở lịch sử → preview → xác nhận restore/reset → lưu BEFORE_RESET →
+   thay epoch → mọi peer resync và xóa undo cũ. Không replay pending epoch cũ.
+9. Xuất PNG trước; PDF ở slice tiếp. Export là file đầu ra, lịch sử là bản có
+   thể khôi phục; UI phân biệt hai ý định.
+
+## Nhánh lỗi và race phải kiểm
+
+- Hết auth: dừng sync/ghi; REST dùng recovery hiện có, WS đóng và chỉ reconnect
+  sau session được xác nhận. Không refresh vô hạn hoặc mang pending qua tài khoản.
+- Mode/assignment/entitlement thay đổi giữa lúc vẽ: server từ chối update tới sau
+  barrier, FE khóa tool và tải capabilities; không giữ quyền bằng room membership.
+- Mất kết nối: giữ state đã nhìn và pending trong RAM; khóa sửa mới. Chỉ replay
+  sau reauthorize và kiểm epoch. UI không nói “Đã lưu” cho pending chưa commit.
+- Server crash/DB lỗi: checkpoint + journal phục hồi state đã ACK; updateId
+  chống lặp. Không có durable ACK trước commit.
+- Reset/restore trong khi client offline: epoch cũ bị từ chối; không merge lại
+  nội dung cũ vào bảng mới. Giữ thông báo phần chưa lưu cần xem lại.
+- Upload lỗi hoặc signed URL hết hạn: có retry riêng; không thêm shape trỏ URL
+  hỏng hoặc cấp quyền qua đường upload materials cũ.
+- Session finalize bị retry: mốc SESSION_END theo lifecycle event duy nhất;
+  không dùng GET bảng hoặc cursor event để tạo mốc lịch sử.
+
+## Giả định cần giữ rõ khi triển khai
+
+Policy đề xuất chi tiết tại plan mục 3; chưa là quyết định user xác nhận. Bản đầu
+cộng tác sửa chung, chưa owner-only/grant cá nhân/follow presenter. CASH_PREVIEW
+không có board access. Guest makeup cần policy session đích đã kiểm chứng.
+
+## Kiểm chứng trong lượt này
+
+Đối chiếu source + quan sát UI demo + kiểm tài liệu/link/diff. Không chạy test
+BE/FE runtime cho thay đổi chỉ tài liệu; không xác nhận API live, deploy hoặc load.

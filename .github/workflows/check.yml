@@ -1,0 +1,92 @@
+name: Check
+
+on:
+  workflow_call:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mindy_center_test
+          POSTGRES_USER: mindy
+          POSTGRES_PASSWORD: mindy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mindy -d mindy_center_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # Integration tests use only this dedicated database and derived *_test databases.
+      TEST_DATABASE_URL: postgresql://mindy:mindy@localhost:5432/mindy_center_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.6.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install locked ffprobe for media validation
+        timeout-minutes: 1
+        run: |
+          set -euo pipefail
+          # ffprobe-static is already pinned in pnpm-lock.yaml and ships Linux binaries.
+          # Linux validation uses /usr/bin/ffprobe; avoid a separate apt/FFmpeg download.
+          ffprobe_path="$(node -p 'require("ffprobe-static").path')"
+          sudo install -m 755 "$ffprobe_path" /usr/bin/ffprobe
+          /usr/bin/ffprobe -version
+      - name: Install Poppler for whiteboard PDF integration tests
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y poppler-utils
+          pdftoppm -v
+      - run: pnpm lint
+      - run: pnpm type-check
+      - name: Verify Materials and attendance migration compatibility
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          # Fail instead of silently skipping database tests when the URL is missing.
+          : "${TEST_DATABASE_URL:?A dedicated PostgreSQL test database is required.}"
+          # Current catalog: 24 migrations, including compatibility bridges
+          # 1791849599999 (before attendance) and 1791856799999 (before release audit).
+          # Rehearse clean install, dev 22 -> 24, Materials 16 -> 22 and Phase 4 17 -> 22 histories,
+          # preserving data/FK indexes and checking down/up plus zero pending migrations.
+          pnpm exec vitest run test/integration/phase33-phase4-migration-compatibility.spec.ts
+      - name: Start MinIO for file integration tests
+        run: |
+          pnpm files:local:up
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 --max-time 5 \
+            http://127.0.0.1:19000/minio/health/ready
+      - run: pnpm test
+      - run: pnpm build
+      - name: Verify compiled tracking migration in release artifacts
+        run: |
+          node --input-type=module -e '
+            import { verifyCompiledMigrations } from "./dist/database/migration-artifacts.js";
+            const files = verifyCompiledMigrations();
+            if (!files.includes("1792627200002-consolidate-tracking.js"))
+              throw new Error("Tracking migration is missing from release artifacts.");
+            console.log("Verified " + files.length + " migration artifacts, including tracking consolidation.");'
+      - name: Smoke test compiled migration rollout and repeat deploy
+        timeout-minutes: 5
+        run: node tools/check-migration-rollout.mjs
+      - run: pnpm test:http
+      - name: Show MinIO logs on failure
+        if: failure()
+        run: docker compose -p mindy-files-test -f compose.files-test.yaml logs --no-color
+      - name: Stop MinIO test fixture
+        if: always()
+        run: docker compose -p mindy-files-test -f compose.files-test.yaml down --volumes

@@ -1,13 +1,40 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
 import { environmentSchema } from './config/environment.schema.js';
 import { createTypeOrmOptions } from './database/typeorm-options.js';
+import { AssignmentsModule } from './modules/assignments/assignments.module.js';
+import { AttendanceModule } from './modules/attendance/attendance.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
+import { ClassesModule } from './modules/classes/classes.module.js';
+import { CommerceModule } from './modules/commerce/commerce.module.js';
+import { CourseBrowseModule } from './modules/course-browse/course-browse.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { EnrollmentsModule } from './modules/enrollments/enrollments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { ManagerOperationsModule } from './modules/manager-operations/manager-operations.module.js';
+import { MaterialsModule } from './modules/materials/materials.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
+import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module.js';
+import { TeachingOperationsModule } from './modules/teaching-operations/teaching-operations.module.js';
+import { TrackingModule } from './modules/tracking/tracking.module.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
 
 @Module({
   imports: [
+    NotificationsModule,
+    SystemSettingsModule,
+    DashboardModule,
+    WhiteboardsModule,
+    ChatModule,
+    AssignmentsModule,
+    TrackingModule,
+    TeachingOperationsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
@@ -21,7 +48,20 @@ import { HealthModule } from './modules/health/health.module.js';
       inject: [ConfigService],
       useFactory: createTypeOrmOptions,
     }),
+    ManagerOperationsModule,
     HealthModule,
+    DashboardModule,
+    UsersModule,
+    AuthModule,
+    AttendanceModule,
+    CatalogModule,
+    EnrollmentsModule,
+    ClassesModule,
+    CourseBrowseModule,
+    CommerceModule,
+    PaymentsModule,
+    StudentLearningModule,
+    MaterialsModule,
   ],
 })
 export class AppModule {}

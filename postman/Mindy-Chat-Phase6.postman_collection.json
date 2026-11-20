@@ -1,0 +1,1076 @@
+{
+  "info": {
+    "name": "Phase 6 — Chat / Notifications",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Phase6 backend local. Có5 nhóm test; mỗi nhóm có Login Student, Login Mentor và GET auth/me. Điền student_email/student_password/mentor_email/mentor_password trong Postman environment local. CHỌN MỘT login phù hợp rồi chạy API của nhóm; cookie jar theo host dùng actor đăng nhập gần nhất. Không chạy toàn collection như một kịch bản liên tục (login đổi actor, edit/delete cần cùng author, IDs/keys cần dữ liệu thực). CHAT_ENABLED/keyring/CHAT_JOB_ENABLED cần cấu hình; attachments thêm CHAT_ATTACHMENTS_ENABLED/private versioned MinIO. Giữ client_message_id/idempotency_key cho exact retry. Không lưu JWT/cookie/keyring trong variables, không export password. Xem docs/api_flow/PHASE_6_flow-api-breakdown.md."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "class_id",
+      "value": ""
+    },
+    {
+      "key": "conversation_id",
+      "value": ""
+    },
+    {
+      "key": "peer_user_id",
+      "value": ""
+    },
+    {
+      "key": "message_id",
+      "value": ""
+    },
+    {
+      "key": "client_message_id",
+      "value": ""
+    },
+    {
+      "key": "notification_id",
+      "value": ""
+    },
+    {
+      "key": "file_id",
+      "value": ""
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "through_sequence",
+      "value": "0"
+    },
+    {
+      "key": "student_email",
+      "value": "",
+      "description": "Tài khoản student của bạn. Điền giá trị local trong Postman environment; không export password."
+    },
+    {
+      "key": "student_password",
+      "value": "",
+      "description": "Tài khoản student của bạn. Điền giá trị local trong Postman environment; không export password."
+    },
+    {
+      "key": "mentor_email",
+      "value": "",
+      "description": "Tài khoản mentor của bạn. Điền giá trị local trong Postman environment; không export password."
+    },
+    {
+      "key": "mentor_password",
+      "value": "",
+      "description": "Tài khoản mentor của bạn. Điền giá trị local trong Postman environment; không export password."
+    }
+  ],
+  "item": [
+    {
+      "name": "01 — Hội thoại (6.2)",
+      "description": "C1–C5: discovery, DM, class chat, detail và members. Mở folder đăng nhập và CHỌN MỘT vai trò trước khi test; đây là collection manual, không chạy cả hai login liên tiếp nếu không muốn đổi actor.",
+      "item": [
+        {
+          "name": "00 — Đăng nhập (chọn một vai trò)",
+          "description": "Chỉ chạy Login Student hoặc Login Mentor, rồi kiểm tra tài khoản. Cookie jar dùng chung theo host: login sau cùng quyết định actor cho các request tiếp theo.",
+          "item": [
+            {
+              "name": "Login Student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò STUDENT', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{student_email}}\",\r\n  \"password\": \"{{student_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập STUDENT hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Login Mentor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò MENTOR', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{mentor_email}}\",\r\n  \"password\": \"{{mentor_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập MENTOR hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Kiểm tra tài khoản hiện tại",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": "{{base_url}}/api/v1/auth/me",
+                "description": "Trả user.role/user.id để kiểm tra actor đang giữ cookie trước khi chạy API của nhóm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Chat actor is active Student/Mentor', () => { const body = pm.response.json(); pm.expect(['STUDENT', 'MENTOR']).to.include(body.user.role); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "C1 List conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations?limit=20"
+          }
+        },
+        {
+          "name": "C2 Ensure direct",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/direct",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"peerUserId\": \"{{peer_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "C3 Class chat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/classes/{{class_id}}/chat"
+          }
+        },
+        {
+          "name": "C4 Conversation detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}"
+          }
+        },
+        {
+          "name": "C5 Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/members?limit=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Tin nhắn (6.2 / 6.4)",
+      "description": "M1–M4: history, gửi, sửa, xóa. Sửa/xóa bằng đúng tài khoản đã gửi tin; giữ key cho exact retry. Mở folder đăng nhập và CHỌN MỘT vai trò trước khi test; đây là collection manual, không chạy cả hai login liên tiếp nếu không muốn đổi actor.",
+      "item": [
+        {
+          "name": "00 — Đăng nhập (chọn một vai trò)",
+          "description": "Chỉ chạy Login Student hoặc Login Mentor, rồi kiểm tra tài khoản. Cookie jar dùng chung theo host: login sau cùng quyết định actor cho các request tiếp theo.",
+          "item": [
+            {
+              "name": "Login Student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò STUDENT', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{student_email}}\",\r\n  \"password\": \"{{student_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập STUDENT hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Login Mentor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò MENTOR', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{mentor_email}}\",\r\n  \"password\": \"{{mentor_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập MENTOR hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Kiểm tra tài khoản hiện tại",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": "{{base_url}}/api/v1/auth/me",
+                "description": "Trả user.role/user.id để kiểm tra actor đang giữ cookie trước khi chạy API của nhóm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Chat actor is active Student/Mentor', () => { const body = pm.response.json(); pm.expect(['STUDENT', 'MENTOR']).to.include(body.user.role); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "M1 History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/messages?limit=20"
+          }
+        },
+        {
+          "name": "M2 Send TEXT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/messages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientMessageId\": \"{{client_message_id}}\",\n  \"type\": \"TEXT\",\n  \"body\": \"Em chào thầy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "M3 Edit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/messages/{{message_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedVersion\": 1,\n  \"body\": \"Nội dung sửa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "M4 Delete",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/messages/{{message_id}}?expectedVersion=1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Read và recovery (6.3 / 6.4)",
+      "description": "R1/E1: mark read và catchup. Dùng conversation_id actor đang có quyền đọc. Mở folder đăng nhập và CHỌN MỘT vai trò trước khi test; đây là collection manual, không chạy cả hai login liên tiếp nếu không muốn đổi actor.",
+      "item": [
+        {
+          "name": "00 — Đăng nhập (chọn một vai trò)",
+          "description": "Chỉ chạy Login Student hoặc Login Mentor, rồi kiểm tra tài khoản. Cookie jar dùng chung theo host: login sau cùng quyết định actor cho các request tiếp theo.",
+          "item": [
+            {
+              "name": "Login Student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò STUDENT', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{student_email}}\",\r\n  \"password\": \"{{student_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập STUDENT hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Login Mentor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò MENTOR', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{mentor_email}}\",\r\n  \"password\": \"{{mentor_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập MENTOR hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Kiểm tra tài khoản hiện tại",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": "{{base_url}}/api/v1/auth/me",
+                "description": "Trả user.role/user.id để kiểm tra actor đang giữ cookie trước khi chạy API của nhóm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Chat actor is active Student/Mentor', () => { const body = pm.response.json(); pm.expect(['STUDENT', 'MENTOR']).to.include(body.user.role); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "R1 Read conversation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/read",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"throughSequence\": \"{{through_sequence}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "E1 Catchup",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/events?afterSequence=0&limit=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Thông báo (6.5)",
+      "description": "N1–N4: inbox thuộc tài khoản hiện đang đăng nhập. Đổi actor phải chọn notification_id của actor đó. Mở folder đăng nhập và CHỌN MỘT vai trò trước khi test; đây là collection manual, không chạy cả hai login liên tiếp nếu không muốn đổi actor.",
+      "item": [
+        {
+          "name": "00 — Đăng nhập (chọn một vai trò)",
+          "description": "Chỉ chạy Login Student hoặc Login Mentor, rồi kiểm tra tài khoản. Cookie jar dùng chung theo host: login sau cùng quyết định actor cho các request tiếp theo.",
+          "item": [
+            {
+              "name": "Login Student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò STUDENT', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{student_email}}\",\r\n  \"password\": \"{{student_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập STUDENT hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Login Mentor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò MENTOR', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{mentor_email}}\",\r\n  \"password\": \"{{mentor_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập MENTOR hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Kiểm tra tài khoản hiện tại",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": "{{base_url}}/api/v1/auth/me",
+                "description": "Trả user.role/user.id để kiểm tra actor đang giữ cookie trước khi chạy API của nhóm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Chat actor is active Student/Mentor', () => { const body = pm.response.json(); pm.expect(['STUDENT', 'MENTOR']).to.include(body.user.role); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "N1 Inbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications?unreadOnly=false&limit=20"
+          }
+        },
+        {
+          "name": "N2 Unread count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications/unread-count"
+          }
+        },
+        {
+          "name": "N3 Read notification",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications/{{notification_id}}/read",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "N4 Read all",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/notifications/read-all",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — File và ảnh (6.6)",
+      "description": "F1–F4: uploader giữ nguyên tài khoản khi intent/complete/status/send. Download dùng message_id visible; signed URL gửi tới storage không kèm cookie API. Mở folder đăng nhập và CHỌN MỘT vai trò trước khi test; đây là collection manual, không chạy cả hai login liên tiếp nếu không muốn đổi actor.",
+      "item": [
+        {
+          "name": "00 — Đăng nhập (chọn một vai trò)",
+          "description": "Chỉ chạy Login Student hoặc Login Mentor, rồi kiểm tra tài khoản. Cookie jar dùng chung theo host: login sau cùng quyết định actor cho các request tiếp theo.",
+          "item": [
+            {
+              "name": "Login Student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò STUDENT', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{student_email}}\",\r\n  \"password\": \"{{student_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập STUDENT hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Login Mentor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Login returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Đúng vai trò MENTOR', () => { const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"email\": \"{{mentor_email}}\",\r\n  \"password\": \"{{mentor_password}}\",\r\n  \"deviceName\": \"Postman Phase 6\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": "{{base_url}}/api/v1/auth/login",
+                "description": "Đăng nhập MENTOR hiện hữu, đủ quyền conversation/class đang test. Postman tự cập nhật cookie jar; không chép token. Chạy một login theo vai trò muốn test. Login lần sau thay cookie actor của host này."
+              }
+            },
+            {
+              "name": "Kiểm tra tài khoản hiện tại",
+              "request": {
+                "method": "GET",
+                "auth": {
+                  "type": "noauth"
+                },
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "{{origin}}"
+                  }
+                ],
+                "url": "{{base_url}}/api/v1/auth/me",
+                "description": "Trả user.role/user.id để kiểm tra actor đang giữ cookie trước khi chạy API của nhóm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Current user returns 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Chat actor is active Student/Mentor', () => { const body = pm.response.json(); pm.expect(['STUDENT', 'MENTOR']).to.include(body.user.role); pm.expect(body.user.status).to.eql('ACTIVE'); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "F1 Upload intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotency_key}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/attachments/upload-intents",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originalFilename\": \"image.png\",\n  \"declaredMimeType\": \"image/png\",\n  \"declaredSizeBytes\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "F2 Complete upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/attachments/{{file_id}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "F3 File status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/attachments/{{file_id}}"
+          }
+        },
+        {
+          "name": "F4 File access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/chat/conversations/{{conversation_id}}/messages/{{message_id}}/file-access",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
