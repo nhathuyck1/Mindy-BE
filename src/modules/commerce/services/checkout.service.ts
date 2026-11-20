@@ -23,6 +23,8 @@ import { CartEmptyException } from '../exceptions/commerce.exceptions.js';
 import { lockOrCreateCart } from './cart.service.js';
 // biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
 import { OrderExpiryService } from './order-expiry.service.js';
+// biome-ignore lint/style/useImportType: Nest dependency injection needs runtime constructor tokens.
+import { OrderSettlementService } from './order-settlement.service.js';
 
 export interface OrderWithDetails {
   readonly order: OrderEntity;
@@ -42,12 +44,14 @@ export class CheckoutService {
     private readonly offersService: ClassOffersService,
     private readonly enrollmentsService: EnrollmentsService,
     private readonly expiryService: OrderExpiryService,
+    private readonly settlementService: OrderSettlementService,
   ) {}
 
   /**
-   * Turns the whole cart into PENDING order(s) and seat holds in one transaction: any invalid
+   * Turns the whole cart into orders and seat holds in one transaction: any invalid
    * item rolls everything back. Prices and totals come from the current course price, never
-   * from the client or the cart snapshot. Payment is a separate step after this commit.
+   * from the client or the cart snapshot. Zero-total orders activate their holds immediately;
+   * positive totals require a separate payment after this commit.
    */
   async checkout(studentId: string, paymentType: PaymentType): Promise<OrderWithDetails[]> {
     const now = new Date();
@@ -82,6 +86,21 @@ export class CheckoutService {
           details.map((detail) => ({ classId: detail.classId, orderDetailId: detail.id })),
         ),
       );
+      for (const { order, details } of created) {
+        if (order.totalAmount !== 0) continue;
+        const holds = await Promise.all(
+          details.map(async (detail) => ({
+            classId: detail.classId,
+            orderDetailId: detail.id,
+            unitIds: await this.offersService.unitIds(manager, detail.classId),
+          })),
+        );
+        const paidAt = new Date();
+        await this.enrollmentsService.activateHolds(manager, studentId, holds, paidAt);
+        await this.settlementService.markPaid(manager, order.id, paidAt);
+        order.status = OrderStatus.PAID;
+        order.paidAt = paidAt;
+      }
       await cartDetails.delete({ cartId: cart.id });
       return created;
     });

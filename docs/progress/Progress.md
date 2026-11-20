@@ -1,3 +1,15 @@
+## 20/11/2026 — Checkout khóa học miễn phí
+
+Từ dev 6d9a497: checkout tính giá server như cũ, sau giữ chỗ tự xác nhận các đơn tổng
+0 thành PAID/paidAt và activateHolds/progress trong cùng transaction. Đơn tổng dương,
+grouping PAYOS/CASH, kiểm capacity/duplicate/expiry giữ nguyên. Không tạo payment
+transaction, PayOS request hoặc email thanh toán cho đơn 0đ; không thêm enum/migration.
+Swagger checkout và contract FE được cập nhật, FE đi kèm trên main.
+
+Kiểm chứng: type-check/build PASS; PostgreSQL riêng chạy 71 ca PASS trên free-checkout,
+phase2-course-to-checkout và phase22-payments (8 ca mới cho miễn phí, giá đổi, CASH
+hỗn hợp, rollback và double submit). Chưa deploy hoặc ghi DB thật.
+
 ## 20/11/2026 — Postman Phase16 bổ sung login
 
 Đã thêm Login Student/Login Mentor và GET /auth/me trước notification requests,
