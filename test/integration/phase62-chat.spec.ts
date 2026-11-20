@@ -647,6 +647,48 @@ describe.skipIf(!separateTestUrl('phase6'))(
       await chat.mutate(s.student, s.conversation.id, sent.message.id, randomUUID(), 2, null);
       expect((await chat.get(s.mentor, s.conversation.id)).unreadCount).toBe(0);
     });
+    it('caps conversation unread at 100 and returns exact counts again after reading', async () => {
+      const s = await setup();
+      // Bulk fixture bypasses only the HTTP/WS send budget, keeping real
+      // encryption, access, sequence allocation, events and read cursors.
+      const rate = vi.spyOn(ChatRateService.prototype, 'send').mockImplementation(() => {});
+      const messages = [];
+      try {
+        for (let i = 1; i <= 150; i++) {
+          messages.push(
+            (
+              await chat.send(s.student, s.conversation.id, {
+                clientMessageId: randomUUID(),
+                type: 'TEXT',
+                body: `Unread badge ${i}`,
+              })
+            ).message,
+          );
+          if ([99, 100, 150].includes(i))
+            expect((await chat.get(s.mentor, s.conversation.id)).unreadCount).toBe(
+              Math.min(i, 100),
+            );
+        }
+        const page = await chat.list(s.mentor, { limit: 20 });
+        expect(page.data.find((c) => c.id === s.conversation.id)?.unreadCount).toBe(100);
+        expect((await chat.get(s.student, s.conversation.id)).unreadCount).toBe(0);
+        await chat.send(s.mentor, s.conversation.id, {
+          clientMessageId: randomUUID(),
+          type: 'TEXT',
+          body: 'Own messages do not count',
+        });
+        const read = await chat.read(s.mentor, s.conversation.id, messages[50]?.sequence ?? '');
+        expect(read.unreadCount).toBe(99);
+        expect((await chat.get(s.mentor, s.conversation.id)).unreadCount).toBe(99);
+        const last = messages.at(-1);
+        if (!last) throw new Error('Missing bulk fixture message');
+        await chat.mutate(s.student, s.conversation.id, last.id, randomUUID(), 1, null);
+        expect((await chat.get(s.mentor, s.conversation.id)).unreadCount).toBe(98);
+        expect((await chat.read(s.mentor, s.conversation.id, last.sequence)).unreadCount).toBe(0);
+      } finally {
+        rate.mockRestore();
+      }
+    }, 30000);
     it('keeps concurrent device reads monotonic and preserves the timestamp on no-op reads', async () => {
       const s = await setup();
       const messages = [];

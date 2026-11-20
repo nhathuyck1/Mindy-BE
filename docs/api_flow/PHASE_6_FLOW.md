@@ -1,5 +1,22 @@
 # Phase 6 — Flow chat realtime và notification
 
+## 20/11/2026 — Unread badge dừng ở 99+
+
+Theo user, unreadCount của conversation list/detail/class-chat và read response
+(cả socket conversation:read) nằm trong 0..100: 0..99 chính xác, 100 nghĩa là
+ít nhất 100 và FE hiển thị 99+. SQL giới hạn 100 rows trước COUNT, không đếm toàn
+bộ rồi clamp. Đọc bớt tin trả lại số chính xác khi còn dưới 100; deleted/self/
+history cutoff và source policy giữ nguyên. Không đổi kiểu number, không migrate;
+không thay bộ đếm thông báo nghiệp vụ hoặc notification inbox legacy.
+
+## 20/11/2026 — Dữ liệu local kiểm badge 99+
+
+Seed theo user: mentor.frontend@example.com nhận 100 tin nhóm
+JS-101-FE-DEMO-20261120 và 100 tin cá nhân từ student.an@example.com. API
+conversation.unreadCount dùng read cursor hiện hữu, không mark read khi kiểm.
+Domain projection xác nhận 100/100 và decrypt đúng. Không đổi API/schema hay
+deploy; chưa kiểm UI. Script/local evidence tại Progress Phase6.
+
 ## 04/11/2026 — Kết nối realtime trực tiếp BE
 
 Source hỗ trợ vé từ POST /api/v1/auth/realtime-ticket để browser không phụ thuộc proxy WebSocket ở host FE. Origin/channel/session kiểm ở gateway, permissions nghiệp vụ giữ nguyên; cookie client cũ vẫn hỗ trợ. Chat path chuẩn hóa /socket.io không trailing slash, bảng /ws/whiteboards. Reconnect cần vé mới; xem PHASE_1_FLOW.md và PHASE_1_flow-api-breakdown.md. Local transport/browser fixtures PASS; chưa deploy.

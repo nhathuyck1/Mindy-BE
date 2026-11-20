@@ -1,3 +1,24 @@
+## 20/11/2026 — Contract unread badge theo conversation
+
+`ConversationDto.unreadCount` trên GET `/api/v1/chat/conversations`, GET
+`/api/v1/chat/conversations/:conversationId`, class-chat projection và response
+đánh đọc (HTTP/socket conversation:read): number 0..100. 0..99 là số chính xác;
+100 đại diện >=100, FE render `unreadCount >= 100 ? '99+' : unreadCount`.
+Server LIMIT100 trong subquery trước COUNT; không query tổng chính xác khi vượt
+ngưỡng. Sau read/refetch nếu còn <100, hiển thị số chính xác mới. Không suy lượng
+tin đã đọc bằng phép trừ badge, luôn dùng read cursor. Swagger conversation/read
+đã khai maximum100. Legacy `/notifications/unread-count` và business bell count
+không thuộc thay đổi này; chúng có semantics riêng.
+
+## 20/11/2026 — Fixture local badge 99+
+
+Đăng nhập mentor.frontend@example.com trên localhost; GET
+`/api/v1/chat/conversations` trả `unreadCount=100` cho DM với student.an và nhóm
+JS-101-FE-DEMO-20261120 theo domain projection đã kiểm. FE có thể hiển thị 99+
+cho mỗi cuộc trò chuyện; chưa kiểm UI. Seed không advance read cursor, không đổi
+contract; message/event/outbox dùng mã hóa local hiện hữu. Chạy lại seed ngay sau
+lượt đầu không nhân tin nhờ client IDs cố định. Production không bị tác động.
+
 ## Kiểm tra môi trường integration test — 2026-10-27
 
 ## 04/11/2026 — Xác thực socket portable
@@ -119,7 +140,7 @@ runtime,6.7 tổng hợp kiểm đủ. Không route/event nào đã implement do
 `{id,displayName,avatarUrl}`, GROUP peer=null. Không contact/payment/secret.
 accessMode CASH_PENDING/ACTIVE/HISTORY_READ_ONLY. lastMessage=authorized MessageDto
 hoặc null, activityAt là last activity hoặc createdAt. unreadCount>=0 chỉ tin người
-khác chưa xóa trong history scope. highWatermark là conversation event sequence.
+khác chưa xóa trong history scope, tối đa100 (100 biểu thị 99+). highWatermark là conversation event sequence.
 
 ```json
 {

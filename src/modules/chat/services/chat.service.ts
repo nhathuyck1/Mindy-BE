@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import { ClassReadService } from '../../classes/services/class-read.service.js';
 // biome-ignore lint/style/useImportType: Nest DI token.
 import { UsersService } from '../../users/users.service.js';
+import { CHAT_LIMITS } from '../chat.contracts.js';
 import type {
   ChatEventQuery,
   ChatPage,
@@ -645,8 +646,11 @@ export class ChatService {
     read: string,
   ): Promise<number> {
     const rows: { count: string }[] = await m.query(
-      `SELECT count(*)::text AS count FROM chat_messages
-      WHERE conversation_id=$1 AND sequence>=$2 AND sequence>$3 AND sender_id<>$4 AND deleted_at IS NULL`,
+      `SELECT count(*)::text AS count FROM (
+        SELECT 1 FROM chat_messages
+        WHERE conversation_id=$1 AND sequence>=$2 AND sequence>$3 AND sender_id<>$4 AND deleted_at IS NULL
+        LIMIT ${CHAT_LIMITS.unreadBadgeCount}
+      ) unread`,
       [id, visible, read, actor.userId],
     );
     return Number(rows[0]?.count ?? 0);

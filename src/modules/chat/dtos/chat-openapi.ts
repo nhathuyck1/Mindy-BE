@@ -1,6 +1,7 @@
 import { applyDecorators, Header } from '@nestjs/common';
 import { ApiHeader, ApiResponse, type SchemaObject } from '@nestjs/swagger';
 import { ApiErrors } from '../../../decorators/api-errors.decorator.js';
+import { CHAT_LIMITS } from '../chat.contracts.js';
 
 const uuid: SchemaObject = { type: 'string', format: 'uuid' },
   sequence: SchemaObject = { type: 'string', pattern: '^(0|[1-9][0-9]*)$' };
@@ -69,7 +70,12 @@ const conversation: SchemaObject = {
     accessMode: { type: 'string', enum: ['ACTIVE', 'CASH_PENDING', 'HISTORY_READ_ONLY'] },
     lastReadSequence: sequence,
     highWatermark: sequence,
-    unreadCount: { type: 'integer' },
+    unreadCount: {
+      type: 'integer',
+      minimum: 0,
+      maximum: CHAT_LIMITS.unreadBadgeCount,
+      description: 'Unread messages capped at 100; display 100 as 99+.',
+    },
     lastMessage: { ...message, nullable: true },
     activityAt: time,
   },
@@ -140,7 +146,12 @@ const schemas: Record<string, SchemaObject> = {
       conversationId: uuid,
       lastReadSequence: sequence,
       lastReadAt: nullableTime,
-      unreadCount: { type: 'integer' },
+      unreadCount: {
+        type: 'integer',
+        minimum: 0,
+        maximum: CHAT_LIMITS.unreadBadgeCount,
+        description: 'Unread messages capped at 100; display 100 as 99+.',
+      },
     },
   },
   events: page({

@@ -1,5 +1,40 @@
 # Progress Phase 16 — Chuông notification Mentor/Student
 
+## 20/11/2026 — Điều tra độ trễ danh sách notification-inbox
+
+- User xác nhận GET danh sách chậm trên server. Chưa có authenticated request,
+  query plan hoặc log VPS để kết luận nguyên nhân production. Coolify hiện kết
+  nối không có application Mindy; không deploy hay thay cấu hình server.
+- Local xác nhận batch đầu luôn 100 dù limit mặc định 20; chat authorize và đọc
+  message lặp theo mỗi notification. Sửa batch đầu limit+1, tiếp tục scan 100 khi
+  rows bị ẩn; read-all vẫn batch 1000. Không thay cursor/filter/retention/read state.
+- Chat authorize một lần/hội thoại/batch và query message bằng ANY(ids), vẫn kiểm
+  deleted_at/conversation/visible_from_seq với BigInt; cache trong batch, request
+  sau kiểm lại quyền. 403/404 ẩn rows, lỗi provisioning/DB vẫn fail closed 503.
+- Business lookup Map thay find lặp; material cache key thêm context_id để không
+  dùng chung kết quả giữa context tác giả khác nhau. Không thêm migration/package.
+- User chốt chat chỉ cần số unread theo người/lớp, không từng message notice.
+  Conversation API đã trả unreadCount cho DIRECT/GROUP. Đổi default category
+  list/count/read-all sang BUSINESS (Swagger đồng bộ); explicit ALL/CHAT giữ
+  tương thích. FE đang truyền ALL cho chuông phải đổi BUSINESS; chưa sửa FE.
+- Node 22.20.0: unit notification 10/10 + PostgreSQL migration compatibility 1/1
+  PASS; type-check/build PASS (43 artifacts); lint toàn repo không lỗi, 11 warning
+  baseline assignments. HTTP/WS final **21/21 PASS** (0 skip, 34.48s), gồm default
+  BUSINESS list/count, explicit CHAT/ALL, pagination, deletion và member failure.
+- Benchmark cũ trước sửa: 10.000 business rows/7 samples list p95 154ms, count
+  p95 170ms; sau sửa lượt đầu 88ms/72ms. Lượt đo sequential local có khác biệt
+  cache/tải máy, không phải production speedup hoặc SLA. Thêm HTTP regression
+  100 chat messages, CHAT/ALL pagination, message deletion và member provisioning.
+- Final source/default BUSINESS: 10.000 business rows/7 samples, list p95 **91ms**,
+  count p95 **137ms**, fanout 102 recipients **2418ms**. Fixture 100 chat messages:
+  explicit CHAT **40ms**, explicit ALL **103ms** (mỗi scope một sample; không gọi
+  đây là p95). Lượt test fixture đầu thất bại do delete chưa clear crypto fields
+  và assertion nhầm member-left thành empty; đã sửa fixture/assertion theo constraint
+  và CHAT_PROVISIONING hiện hữu, không đổi production policy để làm test pass.
+- Log local: tmp/notification-http-before.log, tmp/notification-http-final.log,
+  tmp/notification-lint.log. Không commit/push/deploy; cần smoke và đo authenticated
+  list trên VPS sau rollout để xác nhận triệu chứng user đã hết.
+
 ## 20/11/2026 — Resolve Markdown conflicts với dev
 
 Merge origin/dev cc8489d (revert tài liệu R0) vào feat/business-notifications.

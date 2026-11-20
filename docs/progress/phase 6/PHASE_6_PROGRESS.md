@@ -1,5 +1,34 @@
 # Phase 6 progress — Chat realtime / Notification
 
+## 20/11/2026 — Giới hạn đếm unread conversation cho badge 99+
+
+Theo user không cần đếm chính xác >99. ChatService.unread dùng SELECT COUNT từ
+subquery LIMIT100, dùng chung list/get/class-chat/read và socket read projection.
+CHAT_LIMITS.unreadBadgeCount=100; number0..99 chính xác,100 nghĩa >=100 để FE
+hiển thị99+. OpenAPI conversation/read và DTO/flow/API docs đã đồng bộ.
+Giữ read cursor, deleted/self/visibility/source policies; không đổi schema hoặc
+legacy/business notification count. Bổ sung PostgreSQL regression 150 tin: mốc
+99/100/150, list/detail, self excluded, đọc còn99, xóa còn98, đọc hết0. Kết quả
+local Node22.20.0: `phase62-chat.spec.ts` **18/18 PASS**, 0 skip, gồm ca150 tin
+(8.83s) trên database `_test` riêng, tổng suite37.64s. Type-check/build PASS
+(43 migration artifacts); lint toàn repo không lỗi,11 warning baseline assignments;
+git diff --check PASS. Logs tmp/chat-unread-cap-test.log và
+tmp/chat-unread-cap-lint.log. Không deploy hoặc đổi FE; không thay seed messages
+hay read cursor tài khoản mentor.frontend trong database dev.
+
+## 20/11/2026 — Seed 99+ unread cho mentor.frontend local
+
+Theo user chọn localhost, chạy `node tools/seed-mentor-unread.mjs` với Node22 và
+build hiện hành, database `mindy_center` trên localhost:5433. Tạo 100 messages
+nhóm JS-101-FE-DEMO-20261120 và 100 DM từ student.an@example.com tới
+mentor.frontend@example.com. Nội dung có prefix [SEED 99+], mã hóa bằng keyring
+local hiện hữu; cấp sequence/event/outbox qua ChatCryptoService/ChatEventService,
+kiểm source access trước insert trong transaction. Không sửa password/read cursor.
+Domain ChatService.get xác nhận GROUP100 + DIRECT100 unread, lastReadSequence0,
+decrypt nội dung đúng; không mở/read thay user. Không phải HTTP/browser evidence.
+Client IDs cố định theo scope/index để chạy lại không nhân tin; seed chỉ cho
+localhost/127.0.0.1 database mindy_center, không dùng production. Không đổi API.
+
 ## Kiểm tra sáu integration suites failed — 2026-10-27
 
 Tái hiện pnpm test không có TEST_DATABASE_URL:6 suites failed trong beforeAll,

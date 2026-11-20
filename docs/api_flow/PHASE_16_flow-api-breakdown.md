@@ -1,5 +1,19 @@
 # Phase 16 — API và WebSocket cho chuông ngoài chat
 
+20/11/2026 — GET `/api/v1/notification-inbox` tối ưu batch đầu limit+1 và chat
+policy theo hội thoại/batch. Theo yêu cầu user, list/count/read-all mặc định
+category=BUSINESS; explicit ALL/CHAT vẫn hỗ trợ để tương thích. Response shape,
+unread/cursor, hasMore và read state giữ nguyên. Quyền kiểm lại ở request sau,
+message đã xóa/cutoff vẫn bị ẩn; policy unavailable vẫn 503. Không thay schema
+hoặc deploy; kết quả local tại [progress](../progress/phase%2016/PHASE_16_PROGRESS.md).
+
+Chat dùng `GET /api/v1/chat/conversations` → `data[].unreadCount`, nhóm theo
+`id`; `type=DIRECT` xác định người qua `peer`, `type=GROUP` xác định lớp qua
+`classId`/`name`. Chỉ render số unread theo người/lớp; không dùng notification row
+để đếm tin hoặc render mỗi tin trong chuông. API conversation hiện hữu vẫn có
+lastMessage phục vụ màn chat; không cần tải messages history để hiện badge.
+Chuông gọi BUSINESS (hoặc bỏ category); caller đang gửi ALL cần đổi sang BUSINESS.
+
 20/11/2026 — Merge conflict tài liệu với origin/dev cc8489d đã xử lý bằng giữ
 contract nền Phase8–15 cùng extension Phase16. Không đổi endpoint/DTO/auth/WS;
 kiểm link/diff, không có runtime test hoặc deployment mới trong lượt merge docs.
@@ -56,9 +70,9 @@ của Phase 9 giữ nguyên. Không có public create/broadcast/retry API.
 | API đầy đủ | FE gọi và input | Success/side effect |
 | --- | --- | --- |
 | GET /api/v1/notification-inbox | Khi mở/reconnect/focus; category=BUSINESS (mới), limit 1–100 default 20, cursor <=2048, unreadOnly boolean default false | 200 `{data: NotificationInboxV1[], meta:{hasMore,nextCursor}}`; business visible, keyset createdAt/id DESC; no mutation |
-| GET /api/v1/notification-inbox/unread-count | Cùng list; category=BUSINESS (mới, optional; mặc định ALL tương thích Phase 8) | 200 `{unreadCount:3}`; tổng unread visible business, cùng retention/policy list |
+| GET /api/v1/notification-inbox/unread-count | Cùng list; category=BUSINESS (optional; mặc định BUSINESS) | 200 `{unreadCount:3}`; tổng unread visible business, cùng retention/policy list |
 | PATCH /api/v1/notification-inbox/:notificationId/read | UUIDv4 từ row người dùng click; body rỗng | 200 `NotificationInboxV1` theo base contract; readAt ISO UTC, repeat giữ timestamp; emit own read invalidation sau commit |
-| POST /api/v1/notification-inbox/read-all | category=BUSINESS (query mới, optional; mặc định ALL), body rỗng | 200 `{readAt:"2026-11-20T03:00:00.000Z",resyncRequired:true}`; snapshot visible unread business IDs, không đọc CHAT hoặc late fanout |
+| POST /api/v1/notification-inbox/read-all | category=BUSINESS (query optional; mặc định BUSINESS), body rỗng | 200 `{readAt:"2026-11-20T03:00:00.000Z",resyncRequired:true}`; snapshot visible unread business IDs, không đọc CHAT hoặc late fanout |
 
 Đề xuất query category cho count/read-all chỉ chấp nhận ALL/BUSINESS; list giữ
 category enum Phase 8 và thêm BUSINESS. Cursor bind category, owner và unreadOnly,
@@ -156,7 +170,7 @@ contract/endpoint; không chứng minh frontend đã nhận live socket packet.
   Guards AccessTokenGuard/RolesGuard/RequestOriginGuard; bốn role cho REST,
   Mentor/Student cho socket; API OFF trả 503 NOTIFICATIONS_DISABLED.
   GET no-store và không tự đọc; PATCH/POST chỉ nhận body rỗng, field lạ 422.
-- Query category count/read-all chỉ ALL/BUSINESS, default ALL. List thêm BUSINESS
+- Query category count/read-all chỉ ALL/BUSINESS, default BUSINESS. List thêm BUSINESS
   vào enum Phase 8; cursor owner/category/unreadOnly bound, TTL 24h. DTO query/body
   validation 422, UUID path 400; foreign/hidden id trả cùng 404. Cursor invalid 422,
   expired 410. Provider infrastructure error trả 503 NOTIFICATION_POLICY_UNAVAILABLE.
