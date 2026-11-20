@@ -247,8 +247,8 @@ export function paymentFixture(db: DataSource) {
   );
   const expiry = new OrderExpiryService(db, enrollments);
   const cart = new CartService(db, offers);
-  const checkout = new CheckoutService(db, config, offers, enrollments, expiry);
   const orders = new OrderSettlementService();
+  const checkout = new CheckoutService(db, config, offers, enrollments, expiry, orders);
   const settlement = new PaymentSettlementService(db, orders, offers, enrollments, provider);
   const links = new PaymentLinksService(db, orders, config, provider);
   let day = 1;

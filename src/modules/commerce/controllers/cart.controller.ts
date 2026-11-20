@@ -82,10 +82,11 @@ export class CartController {
 
   @Post('checkout')
   @ApiOperation({
-    summary: 'Check out the whole cart into pending order(s) and hold the seats',
+    summary: 'Check out the whole cart and confirm free orders immediately',
     description:
       'PayOS creates one order for the cart; cash creates one order per mentor. All orders ' +
-      'are created in one transaction, or none is. Payment is a separate step.',
+      'are created in one transaction, or none is. Zero-total orders are PAID immediately ' +
+      'with active enrollments and no payment transaction. Positive totals need payment separately.',
   })
   @ApiCreatedResponse({ type: CheckoutResultDto })
   @ApiErrors(HttpStatus.CONFLICT, HttpStatus.UNPROCESSABLE_ENTITY)

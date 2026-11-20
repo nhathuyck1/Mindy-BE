@@ -1,5 +1,26 @@
 # Contract FE — kết thúc Phase 2
 
+## Cập nhật 20/11/2026 — Đăng ký miễn phí
+
+POST `/me/cart/checkout` giữ input `{paymentType:"PAYOS"|"CASH"}` và response
+`{orders:OrderDto[]}`. Backend dùng giá course hiện tại trong transaction. Đơn có
+totalAmount=0 được chuyển PAID, có paidAt, enrollment ACTIVE và progress ngay trong
+cùng transaction; không tạo payment transaction, PayOS link/QR hoặc email thanh toán.
+PAYOS trên đơn 0đ chỉ là metadata tương thích; không có tiền được thu.
+
+Đơn có tổng dương giữ PENDING và cần thanh toán theo flow cũ. PAYOS vẫn gộp toàn giỏ
+thành một đơn, CASH vẫn nhóm mentor; CASH có thể trả cả PAID 0đ và PENDING có phí.
+Lớp 0đ nằm trong đơn tổng dương vẫn theo trạng thái của đơn chung.
+
+FE giỏ 0đ hiện Xác nhận đăng ký, ẩn phương thức thanh toán; chỉ báo thành công và mở
+Khóa học của tôi khi backend trả PAID. Không suy quyền từ giá client hay badge học thử.
+Nếu giá server tăng thành tổng dương, tiếp tục luồng thanh toán thật. Đơn 0đ cũ còn
+PENDING không được tự kích hoạt, không được gọi PayOS; đọc trạng thái hoặc liên hệ
+trung tâm. Không migrate hay tự thay đổi đơn lịch sử.
+
+Triển khai FE từ main và BE từ dev cùng bản sửa này. Kiểm thử dùng PostgreSQL riêng,
+không giao dịch tiền thật hoặc ghi dữ liệu production.
+
 Phạm vi theo yêu cầu ngày 2026-10-05: Course Catalog, Class Registration, Cart,
 Full Payment và Enrollment. Materials thuộc Phase 3; attendance và operational
 queries thuộc Phase 4. Không coi các API backlog bên dưới là đã tồn tại.

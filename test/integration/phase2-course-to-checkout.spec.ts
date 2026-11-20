@@ -57,6 +57,7 @@ import { CartService } from '../../src/modules/commerce/services/cart.service.js
 import { CheckoutService } from '../../src/modules/commerce/services/checkout.service.js';
 import { OrderExpiryService } from '../../src/modules/commerce/services/order-expiry.service.js';
 import { OrderExpiryWorker } from '../../src/modules/commerce/services/order-expiry.worker.js';
+import { OrderSettlementService } from '../../src/modules/commerce/services/order-settlement.service.js';
 import { OrdersService } from '../../src/modules/commerce/services/orders.service.js';
 import { PublicCourseDetailDto } from '../../src/modules/course-browse/dtos/public-course-detail.dto.js';
 import { EnrollmentEntity } from '../../src/modules/enrollments/entities/enrollment.entity.js';
@@ -204,6 +205,7 @@ describe.skipIf(!isTestDatabase)('Phase 2: course to checkout (PostgreSQL)', () 
       offersService,
       enrollmentsService,
       expiryService,
+      new OrderSettlementService(),
     );
     ordersService = new OrdersService(dataSource);
   });
