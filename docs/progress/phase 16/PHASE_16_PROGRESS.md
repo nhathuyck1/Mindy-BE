@@ -1,5 +1,14 @@
 # Progress Phase 16 — Chuông notification Mentor/Student
 
+## 20/11/2026 — Resolve Markdown conflicts với dev
+
+Merge origin/dev cc8489d (revert tài liệu R0) vào feat/business-notifications.
+Giữ 16 file conflict theo bản notification hiện hành và khôi phục thêm 3 file
+baseline bị auto-delete: Phase8 contract plan/R0 review và Phase15 handoff, vì
+Phase16/roadmap còn tham chiếu. Chỉ thay đổi tài liệu; không đổi source/API/DB.
+Kiểm không còn unmerged paths/merge markers, relative links và git diff --check;
+không chạy lại backend suite cho merge tài liệu, không suy thành deployed evidence.
+
 ## 20/11/2026 — Đổi lịch demo để user test chuông
 
 Theo yêu cầu user, trên backend local localhost:3000 + mindy_center, đăng nhập

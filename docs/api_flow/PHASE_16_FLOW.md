@@ -1,5 +1,10 @@
 # Phase 16 — Flow chuông notification Mentor/Student
 
+20/11/2026 — Merge origin/dev cc8489d vào nhánh notification: xử lý modify/delete
+và content conflict do dev revert tài liệu R0. Giữ bộ Phase8–15 cùng cập nhật
+Phase16 và các file contract/review được liên kết, tránh dangling references.
+Không đổi API/runtime; kiểm merge markers, relative links và diff, không chạy lại BE tests.
+
 20/11/2026 — **BE implemented local; FE/browser/deploy chưa nghiệm thu**.
 
 [Plan](../implement_phase/phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md) ·

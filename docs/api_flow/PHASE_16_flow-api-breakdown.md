@@ -1,5 +1,9 @@
 # Phase 16 — API và WebSocket cho chuông ngoài chat
 
+20/11/2026 — Merge conflict tài liệu với origin/dev cc8489d đã xử lý bằng giữ
+contract nền Phase8–15 cùng extension Phase16. Không đổi endpoint/DTO/auth/WS;
+kiểm link/diff, không có runtime test hoặc deployment mới trong lượt merge docs.
+
 20/11/2026 — **IMPLEMENTED LOCAL: REST/WS/extensions bên dưới đã có source; chưa deploy/FE sign-off**.
 
 Source: src/modules/notifications/, auth/realtime-ticket.controller.ts và migration

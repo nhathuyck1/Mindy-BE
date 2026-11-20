@@ -1724,3 +1724,9 @@ JS-101-FE-DEMO-20261120, buổi 24/11 từ 09:30–11:00 sang 10:00–11:30 (+07
 Worker DONE, 9 unread inbox rows cho mentor.frontend@example.com và Student
 An/s01–s07, last_error null. Chưa mark read hoặc nghiệm thu UI user. Chi tiết
 ở Progress16/flow/API; không đổi FE hoặc deploy VPS.
+## 20/11/2026 — Resolve conflict tài liệu notification với dev
+
+Merge origin/dev cc8489d vào feat/business-notifications, giữ bộ contract/planning
+Phase8–15 và runtime docs Phase16 đang được liên kết. Xử lý 16 conflict Markdown
+và 3 baseline docs auto-delete; không đổi runtime/API. Kiểm markers/link/diff,
+không chạy lại BE tests cho merge docs. Chi tiết tại Progress16 và flow/API16.
