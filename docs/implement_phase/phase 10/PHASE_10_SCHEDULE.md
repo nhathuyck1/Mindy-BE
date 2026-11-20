@@ -1,5 +1,8 @@
 # Phase 10 — Lịch học và mentor
 
+20/11/2026: schedule producers đã có BE local qua [Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md).
+Baseline PLANNED bên dưới và AC10 giữ nghiệm thu formal riêng; source/tests hiện hành xem Progress16.
+
 Ngày lập: **20/11/2026**. Trạng thái: **PLANNED**.
 
 [Roadmap chung](../BUSINESS_NOTIFICATIONS_ROADMAP.md) ·

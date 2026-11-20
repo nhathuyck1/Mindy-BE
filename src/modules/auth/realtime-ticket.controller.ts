@@ -29,9 +29,9 @@ import { RolesGuard } from './guards/roles.guard.js';
 import { TokenService } from './services/token.service.js';
 
 export class RealtimeTicketInput {
-  @ApiProperty({ enum: ['chat', 'whiteboards'] })
-  @IsIn(['chat', 'whiteboards'])
-  channel!: 'chat' | 'whiteboards';
+  @ApiProperty({ enum: ['chat', 'whiteboards', 'notifications'] })
+  @IsIn(['chat', 'whiteboards', 'notifications'])
+  channel!: 'chat' | 'whiteboards' | 'notifications';
 }
 export class RealtimeTicketDto {
   @ApiProperty({
@@ -76,10 +76,19 @@ export class RealtimeTicketController {
       .filter(Boolean);
     if (!origin || !allowed.includes(origin)) throw new InsufficientRoleException();
     const enabled = this.config.get<boolean>(
-      input.channel === 'chat' ? 'CHAT_ENABLED' : 'WHITEBOARD_ENABLED',
+      input.channel === 'chat'
+        ? 'CHAT_ENABLED'
+        : input.channel === 'whiteboards'
+          ? 'WHITEBOARD_ENABLED'
+          : 'NOTIFICATION_SOCKET_ENABLED',
       false,
     );
-    if (!enabled) throw new ServiceUnavailableException('Realtime channel is disabled');
+    if (
+      !enabled ||
+      (input.channel === 'notifications' &&
+        !this.config.get<boolean>('NOTIFICATIONS_ENABLED', false))
+    )
+      throw new ServiceUnavailableException('Realtime channel is disabled');
     const accessToken = request.cookies?.access_token;
     if (!accessToken) throw new AuthenticationRequiredException();
     try {

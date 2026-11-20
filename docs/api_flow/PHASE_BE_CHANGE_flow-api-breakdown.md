@@ -128,3 +128,14 @@ One-off script mới hỗ trợ `--offline` để thêm5 lớp OPEN/OFFLINE0/25 
 trên API public course/classes hiện hữu và checkout như cũ. Session roomName có
 phòng Demo Frontend/Backend, meetingUrl=null. Không sửa6 lớp đã tạo trước, trong
 đó Python vốn OFFLINE. Chưa có evidence server cho5 lớp này, không đổi endpoint.
+## 20/11/2026 — Seed demo local và login
+
+Đã chạy additive `pnpm seed:demo` thành công trên localhost:5433/mindy_center,
+thêm 7 lớp DEMO-20261120; không đổi endpoint/schema/DTO. Dùng Auth hiện hữu
+POST /api/v1/auth/login với email/password, nhận HttpOnly cookies rồi GET
+/api/v1/auth/me. Các tài khoản mới: mentor.frontend@example.com,
+mentor.backend@example.com, student.an@example.com, manager.ops@example.com;
+password lấy SEED_ACCOUNT_PASSWORD trong .env local. Không export/log password.
+Tài khoản cũ giữ password, admin seed skipped vì đã tồn tại. Kiểm DB counts và
+ACTIVE roles; chưa test browser/login request trong lượt seed này. Xem
+[flow](PHASE_BE_CHANGE_FLOW.md) và Progress.md để phân biệt local/VPS evidence.

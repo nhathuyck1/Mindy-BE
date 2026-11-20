@@ -1,5 +1,19 @@
 # Implementation phases
 
+2026-11-20 — **Phase 16 BE implemented local**: shared durable inbox/outbox,
+business producers, reminder revisions, bốn REST routes và Socket.IO Mentor/Student
+độc lập chat. Flags mặc định OFF; chưa FE/deploy. Evidence và giới hạn tại
+[Progress16](../progress/phase%2016/PHASE_16_PROGRESS.md) và
+[runbook](../PHASE_16_NOTIFICATIONS_RUNBOOK.md). Planning log bên dưới giữ lịch sử.
+
+2026-11-20 — **Phase 16: planning chuông notification Mentor/Student qua WebSocket, ngoài chat**.
+6 slices/12 AC; tái sử dụng foundation Phase 9 và producers Phase 10–14; bổ sung
+ZIP chờ chấm, kết quả review tài liệu và reminders. Chỉ tài liệu, chưa runtime.
+[Plan16](phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md) ·
+[Flow16](../api_flow/PHASE_16_FLOW.md) ·
+[API/WS16](../api_flow/PHASE_16_flow-api-breakdown.md) ·
+[Progress16](../progress/phase%2016/PHASE_16_PROGRESS.md).
+
 2026-11-20 — **Phase 8 R0/source review COMPLETE 4/4 AC**.
 Đã chốt catalog 17 business types, writer/policy matrix, FE mapping và unified
 API contract tách legacy chat. Phase 9–15 vẫn PLANNED; chưa business runtime.

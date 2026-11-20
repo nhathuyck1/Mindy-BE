@@ -1,5 +1,8 @@
 # Phase 11 — Bài tập và công bố điểm
 
+20/11/2026: publish/deadline/ZIP grade producers đã có BE local qua [Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md).
+Baseline PLANNED bên dưới và AC11 giữ nghiệm thu formal riêng; source/tests hiện hành xem Progress16.
+
 Ngày lập: **20/11/2026**. Trạng thái: **PLANNED**.
 
 [Roadmap chung](../BUSINESS_NOTIFICATIONS_ROADMAP.md) ·

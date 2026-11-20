@@ -1,0 +1,212 @@
+{
+  "info": {
+    "name": "Mindy — Phase 16 business bell notifications",
+    "description": "Start with Authentication: choose Login Student OR Login Mentor, then Get current user before notification requests. Set student_email/student_password or mentor_email/mentor_password in your local Postman environment; keep credentials private and do not export them. The cookie jar uses the most recently logged-in account for the host; do not run both logins expecting separate sessions. Requires Phase 16 migration, NOTIFICATIONS_ENABLED and activated producers. Business WebSocket: namespace /notifications, path /ws/notifications, websocket only. Never store tickets or access tokens in collection variables/files.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "origin", "value": "http://localhost:3001" },
+    { "key": "notificationId", "value": "" },
+    { "key": "student_email", "value": "", "description": "Set locally in Postman environment." },
+    {
+      "key": "student_password",
+      "value": "",
+      "description": "Private local value only; do not export credentials."
+    },
+    { "key": "mentor_email", "value": "", "description": "Set locally in Postman environment." },
+    {
+      "key": "mentor_password",
+      "value": "",
+      "description": "Private local value only; do not export credentials."
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication — choose one login",
+      "description": "Choose the intended role, then Get current user. Postman automatically retains access_token/refresh_token in its cookie jar for the same host. Switching login switches the actor for subsequent inbox requests.",
+      "item": [
+        {
+          "name": "Login Student",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Origin", "value": "{{origin}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\",\n  \"deviceName\": \"Postman Phase 16\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Logged in as STUDENT', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.user.role).to.eql('STUDENT'); pm.expect(body.accessTokenExpiresAt).to.be.a('string'); });",
+                  "pm.test('Session cookies returned', () => { const cookies = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value); pm.expect(cookies.some(c => c.startsWith('access_token='))).to.eql(true); pm.expect(cookies.some(c => c.startsWith('refresh_token='))).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Mentor",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Origin", "value": "{{origin}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{mentor_email}}\",\n  \"password\": \"{{mentor_password}}\",\n  \"deviceName\": \"Postman Phase 16\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Logged in as MENTOR', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.user.role).to.eql('MENTOR'); pm.expect(body.accessTokenExpiresAt).to.be.a('string'); });",
+                  "pm.test('Session cookies returned', () => { const cookies = pm.response.headers.all().filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value); pm.expect(cookies.some(c => c.startsWith('access_token='))).to.eql(true); pm.expect(cookies.some(c => c.startsWith('refresh_token='))).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get current user",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cookie session is authenticated', () => { pm.response.to.have.status(200); const user = pm.response.json(); pm.expect(user.id).to.be.a('string'); pm.expect(['STUDENT', 'MENTOR']).to.include(user.role); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Business inbox",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/notification-inbox?category=BUSINESS&limit=20&unreadOnly=false"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 with business rows', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.data).to.be.an('array'); body.data.forEach(n => pm.expect(n.type).not.to.eql('CHAT_MESSAGE')); pm.expect(body.meta.hasMore).to.be.a('boolean'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Business unread count",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/notification-inbox/unread-count?category=BUSINESS"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Nonnegative visible unread count', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().unreadCount).to.be.at.least(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read own notification",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/notification-inbox/{{notificationId}}/read",
+        "header": [
+          { "key": "Origin", "value": "{{origin}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Read timestamp saved', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().readAt).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read all business (preserve chat unread)",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/notification-inbox/read-all?category=BUSINESS",
+        "header": [
+          { "key": "Origin", "value": "{{origin}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Read snapshot requires resync', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().resyncRequired).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue memory-only notification ticket",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/realtime-ticket",
+        "header": [
+          { "key": "Origin", "value": "{{origin}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"channel\":\"notifications\"}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Short lived ticket returned without persistence', () => { pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.ticket).to.be.a('string'); pm.expect(Date.parse(body.expiresAt) - Date.now()).to.be.at.most(61000); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

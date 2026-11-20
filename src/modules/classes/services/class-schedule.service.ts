@@ -201,6 +201,8 @@ export class ClassScheduleService {
     c: ClassEntity,
     actorId: string | null,
   ): Promise<void> {
+    // The notification persistence trigger captures one class notice before guest cascades.
+    await m.query("SELECT set_config('mindy.notification_class_cancel',$1,true)", [c.id]);
     const sessions = await m
       .getRepository(ClassSessionEntity)
       .createQueryBuilder('s')

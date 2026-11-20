@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:http": "pnpm build && vitest run --config vitest.http.config.ts",
     "chat:maintenance": "node dist/operations/chat-maintenance.js",
+    "notifications:maintenance": "node dist/operations/notifications-maintenance.js",
     "chat:restore:rehearsal": "node tools/chat/restore-rehearsal.mjs",
     "test:chat": "vitest run src/modules/chat test/integration/phase61-chat-storage.spec.ts test/integration/phase62-chat.spec.ts test/integration/phase66-chat-files.spec.ts test/integration/phase6-upgrade.spec.ts",
     "test:chat:socket": "pnpm build && vitest run --config vitest.http.config.ts test/http/phase63-chat.spec.ts",

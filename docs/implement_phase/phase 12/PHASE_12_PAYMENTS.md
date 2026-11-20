@@ -1,5 +1,8 @@
 # Phase 12 — Thanh toán và hạn đơn
 
+20/11/2026: order/payment producers và expiry reminders đã có BE local qua [Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md).
+Baseline PLANNED bên dưới và AC12 giữ nghiệm thu formal riêng; không suy test fake provider thành giao dịch thật.
+
 Ngày lập: **20/11/2026**. Trạng thái: **PLANNED**.
 
 [Roadmap chung](../BUSINESS_NOTIFICATIONS_ROADMAP.md) ·

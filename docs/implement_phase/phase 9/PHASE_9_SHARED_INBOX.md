@@ -1,5 +1,11 @@
 # Phase 9 — Inbox và worker dùng chung
 
+Cập nhật 20/11/2026: foundation inbox/outbox/worker và REST đã có source qua
+[Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md); dùng lại bảng
+notifications và shared read state. Trạng thái PLANNED bên dưới là baseline.
+Không tự đóng AC9: unified CHAT-created adapter/review toàn bộ compatibility và
+release chung vẫn cần gate riêng; evidence business local xem Progress16.
+
 Ngày lập: **20/11/2026**. Trạng thái: **PLANNED**.
 
 [Roadmap chung](../BUSINESS_NOTIFICATIONS_ROADMAP.md) ·

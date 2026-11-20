@@ -1,5 +1,17 @@
 # Roadmap Phase 8–15 — Notification nghiệp vụ ngoài message
 
+**Cập nhật runtime 20/11/2026:** [Phase 16](phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md)
+đã triển khai local foundation dùng chung và các producer nghiệp vụ tại persistence
+boundary, bổ sung 5 types/reminders và transport Mentor/Student riêng. Contract
+hiện hành có [override Phase 16](../api_flow/PHASE_16_flow-api-breakdown.md#5-runtime-hiện-hành--20112026).
+Các mô tả chưa-runtime/PLANNED của baseline bên dưới và 32 AC cũ không phải trạng
+thái nghiệm thu Phase 16; formal gates/FE/production vẫn theo progress riêng.
+
+Extension planning 20/11/2026: [Phase 16 — chuông Mentor/Student qua WebSocket](phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md)
+tái sử dụng Phase 9–14, đề xuất transport độc lập chat và ZIP/review/reminders mới.
+Đây là phạm vi riêng 6 slices/12 AC PLANNED, không đổi 32 AC hoặc trạng thái
+Phase 8–15; extension contract được mô tả tại [API/WS16](../api_flow/PHASE_16_flow-api-breakdown.md).
+
 Ngày lập: **20/11/2026**. Trạng thái: **Phase 8 hoàn tất R0/source review; Phase 9–15 PLANNED — chưa có business runtime/migration/deploy**.
 
 Yêu cầu: mở rộng notification ngoài message; ưu tiên lịch học → bài tập → thanh toán

@@ -1,5 +1,25 @@
 # Phase 8 — Event catalog đã chốt cho implementation
 
+Runtime extension 20/11/2026 — [Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md)
+đã có source local. Giữ N01–N17, thêm N18–N22 dưới đây; trạng thái/chữ ký R0 bên
+dưới là baseline review, không phải kết luận chưa-runtime hiện hành. Title/body
+runtime lấy từ notification-catalog.ts; các câu chữ generic R0 là baseline thiết kế.
+
+| ID | Type mới | Recipient / target |
+| --- | --- | --- |
+| N18 | ZIP_SUBMISSION_REVIEW_REQUIRED | Mentor có quyền chấm, SUBMISSION + assignment context; attempt mới dùng cùng type |
+| N19 | MATERIAL_REVIEW_APPROVED | Mentor tác giả, MATERIAL + created-in-class context nếu current detail cho phép |
+| N20 | MATERIAL_REVIEW_REJECTED | Như N19, không lộ rejection reason |
+| N21 | SESSION_STARTING_SOON | Schedule Student/effective Mentor, SESSION, cửa sổ 30 phút |
+| N22 | ASSIGNMENT_DUE_SOON | Student có quyền bài published, chưa nộp hợp lệ; ASSIGNMENT, cửa sổ 24h |
+
+Revision override: reminders dùng notification_schedule_revision,
+notification_deadline_revision, notification_expiry_revision trong DB, chỉ tăng
+khi thời gian thực sự đổi. N01 giữ semantic change + session version; cause_id
+UUID chia sẻ trong transaction, dedupe key thêm activation epoch. N19/N20 giữ
+terminal generic cho tác giả khi mất scope, target luôn qua owning material policy.
+Không thêm CHAT_MESSAGE vào business outbox. Evidence tại Progress16.
+
 Ngày review: **20/11/2026**. BE: `757be19f401ab212686f3348e795dd89619b6670`.
 Trạng thái: **R0 SOURCE REVIEW COMPLETE — chưa có business producer runtime**.
 [Phase 8](PHASE_8_CONTRACTS_POLICY.md) · [Writers](WRITER_INVENTORY.md) ·

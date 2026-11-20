@@ -1,5 +1,14 @@
 # Phase 8–15 — Flow notification nghiệp vụ
 
+Runtime 20/11/2026: [Phase 16 flow](PHASE_16_FLOW.md) đã có BE local cho business
+capture → durable inbox → own socket/read refetch. Foundation/producers không còn
+chỉ là proposal ở source; evidence/gaps xem Progress16. Phần R0 bên dưới giữ baseline.
+
+20/11/2026 — Extension planning [Phase 16](PHASE_16_FLOW.md): chuông ngoài chat
+cho Mentor/Student, transport riêng, ZIP/review/reminders và BUSINESS scope.
+[Contract extension](PHASE_16_flow-api-breakdown.md) chưa implement, không thay
+trạng thái runtime hoặc nghiệm thu Phase 8–15.
+
 Ngày: **20/11/2026**. **R0 CONTRACT READY — business runtime chưa implement**.
 [Plan](../implement_phase/BUSINESS_NOTIFICATIONS_ROADMAP.md) ·
 [API proposal](BUSINESS_NOTIFICATIONS_flow-api-breakdown.md) ·

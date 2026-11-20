@@ -27,6 +27,7 @@ export class AssignmentAccessService {
       !(await this.users.findActiveByRole(actor.userId, actor.role, m, write))
     )
       throw new AssignmentException(403, 'ASSIGNMENT_SCOPE_REQUIRED');
+    if (write) await m.query("SELECT set_config('mindy.actor_id',$1,true)", [actor.userId]);
   }
 
   async session(

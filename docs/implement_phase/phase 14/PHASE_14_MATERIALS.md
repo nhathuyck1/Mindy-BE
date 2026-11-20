@@ -1,5 +1,8 @@
 # Phase 14 — Tài liệu phát hành
 
+20/11/2026: publication/review producers và delayed delivery đã có BE local qua [Phase16](../phase%2016/PHASE_16_BELL_NOTIFICATIONS_WEBSOCKET.md).
+Baseline PLANNED bên dưới và AC14 giữ nghiệm thu formal riêng; source/tests hiện hành xem Progress16.
+
 Ngày lập: **20/11/2026**. Trạng thái: **PLANNED**.
 
 [Roadmap chung](../BUSINESS_NOTIFICATIONS_ROADMAP.md) ·

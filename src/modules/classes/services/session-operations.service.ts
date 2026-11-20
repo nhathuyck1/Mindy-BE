@@ -217,6 +217,7 @@ export class SessionOperationsService {
       const { session: s, classEntity: c } = await this.read.loadSession(m, id, true);
       if (!(await this.users.findActiveByRole(actor.userId, actor.role, m)))
         throw new SessionAssignmentRequiredException();
+      await m.query("SELECT set_config('mindy.actor_id',$1,true)", [actor.userId]);
       const rows: { payload_hash: string; outcome: T }[] = await m.query(
         'SELECT payload_hash,outcome FROM teaching_mutation_receipts WHERE actor_id=$1 AND route=$2 AND key=$3',
         [actor.userId, route, key],

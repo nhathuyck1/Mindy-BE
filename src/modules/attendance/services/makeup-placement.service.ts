@@ -457,6 +457,7 @@ export class MakeupPlacementService {
       !(await this.users.findActiveByRole(actor.userId, actor.role, m))
     )
       throw new SessionAssignmentRequiredException();
+    await m.query("SELECT set_config('mindy.actor_id',$1,true)", [actor.userId]);
   }
   private async conflict(m: EntityManager, id: string): Promise<ConflictRow> {
     const rows: ConflictRow[] = await m.query(

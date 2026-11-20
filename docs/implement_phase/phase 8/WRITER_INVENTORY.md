@@ -1,5 +1,24 @@
 # Phase 8 — Writer inventory và transaction boundary
 
+Runtime 20/11/2026 qua Phase16: migration 1795132800000 đặt capture tại persistence
+boundary, không cần nối từng publisher sau HTTP response. Source chính:
+
+| Persistence writer | Capture hiện hành |
+| --- | --- |
+| class_sessions / classes | BEFORE snapshot đổi giờ/mentor/hủy, successor insert; class-cancel marker suppress cascade; không phát lịch DRAFT |
+| assignments | BEFORE publish/deadline semantic change; deadline revision riêng, giữ QUIZ/CODE privacy |
+| assignment_zip_submissions | AFTER SUBMITTED/released_version; upload/draft/grade draft không gửi grade release |
+| orders | BEFORE PENDING→PAID/EXPIRED, expiry revision; mọi CASH/payOS/expiry writer cùng boundary |
+| mentor_leave_requests / makeup_placements | Leave status/placement create-cancel; không giả NEEDS_REASSIGNMENT thành CANCELLED |
+| materials | AFTER review và approved publication; notBefore và current material policy |
+| Reminder worker | Bounded DB-clock scan, snapshot + capture cùng transaction, không bắt kịp cửa sổ đã qua |
+
+Actor được truyền qua transaction-local mindy.actor_id khi writer có principal,
+hoặc lấy từ reviewed_by/student submission; legacy bulk/worker không có actor
+được ghi null, không đoán actor từ owner. Business actor không expose ra DTO.
+Plan/progress Phase16 ghi quyết định SQL projection, tests và phần chưa nghiệm thu.
+Inventory R0 bên dưới giữ source review lịch sử.
+
 Review BE `757be19`, 20/11/2026. **Source review; capture mới chưa implement.**
 [Catalog](EVENT_CATALOG.md) · [Policy](RECIPIENT_POLICY.md) · [Phase 8](PHASE_8_CONTRACTS_POLICY.md).
 

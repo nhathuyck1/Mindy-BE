@@ -1,5 +1,13 @@
 # Progress Phase 8–15 — Notification nghiệp vụ
 
+## 20/11/2026 — Runtime business foundation/producers được triển khai qua Phase 16
+
+NotificationsModule, migration additive 1795132800000, inbox/outbox/snapshots,
+worker và producers Phase 10–14 đã có source local trong phạm vi
+[Phase16](phase%2016/PHASE_16_PROGRESS.md). Thêm 5 types/reminders và transport
+độc lập chat. Không tự tick/đóng 32 AC phase cũ; adapter chat-created, formal
+producer gates, FE và production giữ nghiệm thu riêng. Planning/R0 bên dưới là lịch sử.
+
 ## 20/11/2026 — Lập kế hoạch theo implement files hiện có
 
 **Phase 8 COMPLETE (source/contract review); Phase 9–15 PLANNED — chưa business runtime/migration/deploy.**

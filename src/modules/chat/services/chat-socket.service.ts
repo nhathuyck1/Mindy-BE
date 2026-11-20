@@ -58,6 +58,14 @@ export class ChatSocketService implements OnApplicationBootstrap, OnApplicationS
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
   private poll: ReturnType<typeof setInterval> | undefined;
   private auditing = false;
+  private notificationReadListener?: (userId: string, readAt: string) => Promise<void>;
+
+  /** Optional one-way composition hook; chat does not depend on the business inbox module. */
+  onNotificationRead(
+    listener: ((userId: string, readAt: string) => Promise<void>) | undefined,
+  ): void {
+    this.notificationReadListener = listener;
+  }
   constructor(
     private readonly config: ConfigService,
     private readonly http: HttpAdapterHost,
@@ -279,6 +287,16 @@ export class ChatSocketService implements OnApplicationBootstrap, OnApplicationS
     );
   }
   async own(userId: string, event: string, data: unknown, conversationId?: string): Promise<void> {
+    if (event === 'notifications:read' && this.notificationReadListener) {
+      const readAt =
+        typeof data === 'object' &&
+        data !== null &&
+        'readAt' in data &&
+        typeof data.readAt === 'string'
+          ? data.readAt
+          : new Date().toISOString();
+      await this.notificationReadListener(userId, readAt);
+    }
     for (const socket of [...this.sockets.values()]) {
       if (socket.data.principal.userId !== userId) continue;
       try {

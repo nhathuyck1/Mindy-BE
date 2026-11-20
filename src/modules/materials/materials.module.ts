@@ -48,6 +48,6 @@ import { StudentMaterialsService } from './services/student-materials.service.js
     MaterialAuthoringService,
     MaterialOriginGuard,
   ],
-  exports: [MaterialPolicyService],
+  exports: [MaterialPolicyService, StudentMaterialsService, MaterialAuthoringService],
 })
 export class MaterialsModule {}

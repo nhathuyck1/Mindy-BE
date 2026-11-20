@@ -1,5 +1,16 @@
 # Phase 8 — Recipient và visibility policy
 
+Runtime 20/11/2026: Phase16 đã có immutable recipient rows (user/role/terminal,
+context candidates, relation_keys). Student enrollment entitlement revision tăng
+khi revoke/complete; old snapshot không khớp relation được khôi phục/đăng ký lại.
+Worker/list/count/read/socket dùng cùng batch policy. Chat và material gọi owning
+exported services; các domain còn lại dùng SQL projections đã ghi quyết định ở
+plan Phase16. Account/role current phải còn hợp lệ; socket thêm current Auth session.
+N18 chỉ mentor đang có scope chấm bài ungraded; N19/N20 terminal cho mentor tác
+giả, detail qua MaterialAuthoringService; N21/N22 và N10 bỏ stale revision/window.
+Review matrix P01–P14 bên dưới không tự được đánh toàn bộ PASS từ implementation;
+evidence local theo từng case tại Progress16, FE/production riêng.
+
 Review 20/11/2026, BE `757be19`. **R0 contract; providers mới chưa implement.**
 [Phase 8](PHASE_8_CONTRACTS_POLICY.md) · [Catalog](EVENT_CATALOG.md).
 

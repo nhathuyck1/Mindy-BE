@@ -16,6 +16,7 @@ import { EnrollmentsModule } from './modules/enrollments/enrollments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ManagerOperationsModule } from './modules/manager-operations/manager-operations.module.js';
 import { MaterialsModule } from './modules/materials/materials.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { StudentLearningModule } from './modules/student-learning/student-learning.module.js';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module.js';
@@ -26,6 +27,7 @@ import { WhiteboardsModule } from './modules/whiteboards/whiteboards.module.js';
 
 @Module({
   imports: [
+    NotificationsModule,
     SystemSettingsModule,
     DashboardModule,
     WhiteboardsModule,

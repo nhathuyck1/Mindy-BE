@@ -1,5 +1,14 @@
 # Phase 8 — FE target mapping và compatibility
 
+Extension Phase16 20/11/2026: backend đã có N18 ZIP mentor review, N19/N20 material
+review và N21/N22 reminders. SUBMISSION/mentor target.id=submissionId,
+contextId=assignmentId; MATERIAL/mentor target.id=materialId,
+contextId=createdInClassId chỉ khi owning detail authorize. Reminders dùng mapping
+SESSION/ASSIGNMENT sẵn bên dưới. MAKEUP contextId=targetSessionId khi còn quyền.
+Đây là typed payload/đề xuất route mapping; chưa kiểm lại FE route hoặc sửa FE.
+Mentor review queue/material focus cần FE sign-off; nếu không có route dùng generic
+unavailable/fallback theo role, không mở nhầm trang Student/Manager.
+
 Review read-only FE2 tại `D:/FPT_University/FA26/WDP301/Mindy-FE2`,
 HEAD `0171717`, 20/11/2026. Checkout FE có thay đổi local ngoài notification;
 không sửa FE trong Phase 8. Route inventory kiểm theo file page.tsx và component

@@ -1,5 +1,12 @@
 # Phase 8–15 — Contract notification nghiệp vụ v1
 
+**Runtime override 20/11/2026:** unified routes đã implement local qua
+[Phase 16 contract](PHASE_16_flow-api-breakdown.md#5-runtime-hiện-hành--20112026):
+BUSINESS list/count/read-all, catalog 22 types, notification socket riêng, DTO
+validation 422/path UUID 400. Legacy routes/read state giữ tương thích. Các nhãn
+chưa-implement và /chat-only transport bên dưới là baseline R0; adapter unified
+CHAT-created trên /chat chưa được suy thành completed từ Phase 16 ngoài chat.
+
 Ngày chốt R0: **20/11/2026**. **CONTRACT READY — business API chưa implement**.
 [Roadmap](../implement_phase/BUSINESS_NOTIFICATIONS_ROADMAP.md) ·
 [Catalog](../implement_phase/phase%208/EVENT_CATALOG.md) ·
