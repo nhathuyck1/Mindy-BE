@@ -6,7 +6,7 @@ import { AppHttpException } from '../../../common/http/app-http.exception.js';
 import type { AuthenticatedUser } from '../../auth/auth.types.js';
 import { ChatException } from '../../chat/exceptions/chat.exceptions.js';
 // biome-ignore lint/style/useImportType: Exported domain policy provider.
-import { ChatAccessService } from '../../chat/services/chat-access.service.js';
+import { type AuthorizedChat, ChatAccessService } from '../../chat/services/chat-access.service.js';
 // biome-ignore lint/style/useImportType: Exported domain read provider.
 import { MaterialAuthoringService } from '../../materials/services/material-authoring.service.js';
 // biome-ignore lint/style/useImportType: Exported domain read provider.
@@ -75,8 +75,9 @@ export class NotificationPolicyService {
           this.config.get<boolean>('ASSIGNMENT_ZIP_ENABLED', false),
         ])
       : [];
+    const availabilityById = new Map(values.map((v) => [v.id, v.available]));
     for (const row of simple) {
-      const available = values.find((v) => v.id === row.id)?.available === true;
+      const available = availabilityById.get(row.id) === true;
       result.set(row.id, {
         visible: available || row.terminal === true,
         available,
@@ -87,15 +88,22 @@ export class NotificationPolicyService {
           : {}),
       });
     }
+    await this.checkChatBatch(
+      m,
+      actor,
+      eligible.filter((r) => r.type === 'CHAT_MESSAGE'),
+      result,
+    );
     const cached = new Map<string, { available: boolean; contextId?: string }>();
     for (const row of eligible.filter(
-      (r) => r.type === 'CHAT_MESSAGE' || r.resource_kind === 'MATERIAL',
+      (r) => r.type !== 'CHAT_MESSAGE' && r.resource_kind === 'MATERIAL',
     )) {
       const key = JSON.stringify([
         row.type,
         row.conversation_id,
         row.message_id,
         row.resource_id,
+        row.context_id,
         row.context_ids,
         row.relation_keys,
       ]);
@@ -111,38 +119,59 @@ export class NotificationPolicyService {
     }
     return result;
   }
+
+  private async checkChatBatch(
+    m: EntityManager,
+    actor: AuthenticatedUser,
+    rows: NotificationRow[],
+    result: Map<string, NotificationVisibility>,
+  ): Promise<void> {
+    if (!rows.length) return;
+    const contexts = new Map<string, AuthorizedChat | null>();
+    if (
+      this.config.get<boolean>('CHAT_ENABLED', false) &&
+      ['MENTOR', 'STUDENT'].includes(actor.role)
+    ) {
+      for (const row of rows) {
+        if (!row.conversation_id || !row.message_id || contexts.has(row.conversation_id)) continue;
+        try {
+          contexts.set(
+            row.conversation_id,
+            await this.chat.authorize(m, actor, row.conversation_id),
+          );
+        } catch (error) {
+          if (!(error instanceof ChatException) || ![403, 404].includes(error.getStatus()))
+            throw error;
+          contexts.set(row.conversation_id, null);
+        }
+      }
+    }
+    const candidates = rows.filter((r) => r.message_id && contexts.get(r.conversation_id ?? ''));
+    const messages: { id: string; conversation_id: string; sequence: string }[] = candidates.length
+      ? await m.query(
+          'SELECT id,conversation_id,sequence FROM chat_messages WHERE id=ANY($1::uuid[]) AND deleted_at IS NULL',
+          [[...new Set(candidates.map((r) => r.message_id))]],
+        )
+      : [];
+    const byId = new Map(messages.map((message) => [message.id, message]));
+    for (const row of rows) {
+      const context = contexts.get(row.conversation_id ?? ''),
+        message = byId.get(row.message_id ?? ''),
+        available = Boolean(
+          context &&
+            message &&
+            message.conversation_id === row.conversation_id &&
+            BigInt(message.sequence) >= BigInt(context.member.visible_from_seq),
+        );
+      result.set(row.id, { visible: available || row.terminal === true, available });
+    }
+  }
+
   private async available(
     m: EntityManager,
     actor: AuthenticatedUser,
     r: NotificationRow,
   ): Promise<{ available: boolean; contextId?: string }> {
-    const yes = async (sql: string, params: unknown[]): Promise<{ available: boolean }> => {
-      const rows: { allowed: boolean }[] = await m.query(
-        `SELECT EXISTS(${sql}) AS allowed`,
-        params,
-      );
-      return { available: rows[0]?.allowed === true };
-    };
-    if (r.type === 'CHAT_MESSAGE') {
-      if (
-        !this.config.get<boolean>('CHAT_ENABLED', false) ||
-        !r.conversation_id ||
-        !r.message_id ||
-        !['MENTOR', 'STUDENT'].includes(actor.role)
-      )
-        return { available: false };
-      try {
-        const context = await this.chat.authorize(m, actor, r.conversation_id);
-        return yes(
-          'SELECT 1 FROM chat_messages WHERE id=$1 AND deleted_at IS NULL AND sequence >= $2',
-          [r.message_id, context.member.visible_from_seq],
-        );
-      } catch (error) {
-        if (error instanceof ChatException && [403, 404].includes(error.getStatus()))
-          return { available: false };
-        throw error;
-      }
-    }
     const id = r.resource_id;
     if (!id) return { available: false };
     if (r.resource_kind === 'MATERIAL') {

@@ -1044,5 +1044,69 @@ describe.skipIf(!separateTestUrl('phase16_http'))(
       expect(p95(lists)).toBeLessThan(500);
       expect(p95(counts)).toBeLessThan(500);
     }, 30000);
+    it('paginates a 100-message chat inbox and rechecks deletion and membership', async () => {
+      const [{ id: conv }] = await db.query(
+        `SELECT c.id FROM chat_conversations c JOIN classes cl ON cl.id=c.class_id
+        WHERE cl.code='PHASE16-TARGET'`,
+      );
+      await db.query(
+        `WITH messages AS (
+          INSERT INTO chat_messages(conversation_id,sender_id,client_message_id,sequence,last_changed_seq,
+            ciphertext,iv,tag,key_version,crypto_version)
+          SELECT $1,$2,gen_random_uuid(),g,g,$4,$5,$6,1,1 FROM generate_series(2,101) g RETURNING id)
+        INSERT INTO notifications(user_id,actor_id,conversation_id,message_id)
+          SELECT $3,$2,$1,id FROM messages`,
+        [conv, mentorId, studentId, Buffer.from('fixture'), Buffer.alloc(12), Buffer.alloc(16)],
+      );
+      const samples: number[] = [];
+      expect((await list(student, '')).data.every((n) => n.type !== 'CHAT_MESSAGE')).toBe(true);
+      const defaultCount = await request('/notification-inbox/unread-count');
+      const businessCount = await request('/notification-inbox/unread-count?category=BUSINESS');
+      expect(defaultCount.status).toBe(200);
+      expect(await defaultCount.json()).toEqual(await businessCount.json());
+      for (const category of ['CHAT', 'ALL']) {
+        const start = performance.now();
+        const first = await list(student, `category=${category}`);
+        samples.push(performance.now() - start);
+        expect(first.data).toHaveLength(20);
+        expect(first.data.every((n) => n.type === 'CHAT_MESSAGE')).toBe(true);
+        expect(first.meta.hasMore).toBe(true);
+        const second = await list(
+          student,
+          `category=${category}&cursor=${encodeURIComponent(first.meta.nextCursor ?? '')}`,
+        );
+        expect(second.data).toHaveLength(20);
+        expect(second.data.every((n) => !first.data.some((previous) => previous.id === n.id))).toBe(
+          true,
+        );
+      }
+      console.info(
+        'Phase16 chat inbox benchmark',
+        JSON.stringify({
+          node: process.version,
+          messages: 100,
+          chatMs: Math.round(samples[0] ?? 0),
+          allMs: Math.round(samples[1] ?? 0),
+        }),
+      );
+      expect(Math.max(...samples)).toBeLessThan(500);
+      const page = await list(student, 'category=CHAT');
+      const deleted = page.data[0];
+      await db.query(
+        `UPDATE chat_messages SET deleted_at=clock_timestamp(),ciphertext=NULL,iv=NULL,tag=NULL,
+        key_version=NULL,crypto_version=NULL WHERE id=$1`,
+        [deleted?.messageId],
+      );
+      expect((await list(student, 'category=CHAT')).data.some((n) => n.id === deleted?.id)).toBe(
+        false,
+      );
+      await db.query(
+        'UPDATE chat_members SET left_at=clock_timestamp() WHERE conversation_id=$1 AND user_id=$2',
+        [conv, studentId],
+      );
+      // An entitled user without a current member is still CHAT_PROVISIONING;
+      // the policy must propagate the failure rather than reuse cached access.
+      expect((await request('/notification-inbox?category=CHAT')).status).toBe(503);
+    });
   },
 );

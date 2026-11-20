@@ -139,6 +139,7 @@ export interface ConversationDto {
   accessMode: 'ACTIVE' | 'CASH_PENDING' | 'HISTORY_READ_ONLY';
   lastReadSequence: string;
   highWatermark: string;
+  /** 0..99 is exact; 100 means 99+ unread messages. */
   unreadCount: number;
   lastMessage: MessageDto | null;
   activityAt: string;

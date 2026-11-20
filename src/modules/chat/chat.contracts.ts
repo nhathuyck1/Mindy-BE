@@ -33,6 +33,7 @@ export interface EncryptedChatBody {
   readonly cryptoVersion: number;
 }
 export const CHAT_LIMITS = {
+  unreadBadgeCount: 100,
   textCharacters: 4000,
   textBytes: 16384,
   packetBytes: 32768,

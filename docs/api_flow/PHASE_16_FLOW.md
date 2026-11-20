@@ -1,5 +1,14 @@
 # Phase 16 — Flow chuông notification Mentor/Student
 
+20/11/2026 — Tối ưu GET danh sách: batch đầu limit+1, chỉ mở rộng scan 100 khi
+policy ẩn rows. Chat authorize theo hội thoại trong từng batch rồi đọc messages
+bằng một query; không cache quyền qua request. Giữ deleted/cutoff/revoke checks,
+cursor và read state; lỗi policy vẫn 503. Default category list/count/read-all đổi
+sang BUSINESS theo user: chat chỉ hiện unreadCount theo người/lớp từ conversation
+API hiện hữu, không cần từng tin trong chuông. Caller explicit ALL cần chuyển
+BUSINESS. Không đổi response shape/schema, chưa deploy hoặc sửa FE.
+Kiểm chứng local và benchmark xem [progress](../progress/phase%2016/PHASE_16_PROGRESS.md).
+
 20/11/2026 — Merge origin/dev cc8489d vào nhánh notification: xử lý modify/delete
 và content conflict do dev revert tài liệu R0. Giữ bộ Phase8–15 cùng cập nhật
 Phase16 và các file contract/review được liên kết, tránh dangling references.

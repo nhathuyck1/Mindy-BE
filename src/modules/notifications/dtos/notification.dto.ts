@@ -7,9 +7,9 @@ import {
 } from '../domain/notification-catalog.js';
 
 export class NotificationQuery {
-  @ApiPropertyOptional({ enum: NOTIFICATION_CATEGORIES, default: 'ALL' })
+  @ApiPropertyOptional({ enum: NOTIFICATION_CATEGORIES, default: 'BUSINESS' })
   @IsIn(NOTIFICATION_CATEGORIES)
-  category: NotificationCategory = 'ALL';
+  category: NotificationCategory = 'BUSINESS';
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
   @Type(() => Number)
@@ -33,9 +33,9 @@ export class NotificationQuery {
 }
 
 export class NotificationScopeQuery {
-  @ApiPropertyOptional({ enum: ['ALL', 'BUSINESS'], default: 'ALL' })
+  @ApiPropertyOptional({ enum: ['ALL', 'BUSINESS'], default: 'BUSINESS' })
   @IsIn(['ALL', 'BUSINESS'])
-  category: 'ALL' | 'BUSINESS' = 'ALL';
+  category: 'ALL' | 'BUSINESS' = 'BUSINESS';
 }
 
 export class EmptyNotificationInput {}

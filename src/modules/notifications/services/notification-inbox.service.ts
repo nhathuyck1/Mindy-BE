@@ -217,7 +217,8 @@ export class NotificationInboxService {
   ): Promise<NotificationDto[]> {
     const result: NotificationDto[] = [];
     let position = after;
-    const batchSize = take > 100 ? 1000 : 100;
+    // Start with the requested page; only widen the scan when policy hides rows.
+    let batchSize = take > 100 ? 1000 : take;
     const types = Object.entries(NOTIFICATION_CATALOG)
       .filter(([, v]) => category === 'ALL' || category === 'BUSINESS' || v[0] === category)
       .map(([key]) => key);
@@ -250,6 +251,7 @@ export class NotificationInboxService {
       const last = rows.at(-1);
       if (rows.length < batchSize || !last) return result;
       position = `${last.created_at.toISOString()}|${last.id}`;
+      batchSize = take > 100 ? 1000 : 100;
     }
   }
 }

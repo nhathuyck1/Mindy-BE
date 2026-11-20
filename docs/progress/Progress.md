@@ -1,3 +1,30 @@
+## 20/11/2026 — Unread conversation tối đa100 cho badge99+
+
+SQL dừng ở100 rows trước COUNT theo yêu cầu user;0..99 chính xác,100 là99+.
+Dùng chung conversation list/detail/class-chat/read/socket read, Swagger/DTO và
+docs Phase6 đồng bộ. Không đổi cursor/quyền/schema hoặc notification business.
+Regression PostgreSQL150 tin kiểm threshold/read/delete/self; kết quả tại
+progress Phase6. Chưa deploy hoặc sửa FE.
+
+## 20/11/2026 — Seed mentor.frontend 99+ unread trên localhost
+
+Đã tạo 100 tin nhóm JS-101-FE-DEMO-20261120 + 100 DM từ student.an cho
+mentor.frontend@example.com, database local mindy_center. Mã hóa/sequence/events
+đúng service hiện hành; giữ read cursor. Domain projection xác nhận unread100
+mỗi scope, decrypt đúng. Script tools/seed-mentor-unread.mjs chỉ cho local;
+không đổi API hoặc production. Chi tiết tại progress Phase6 và flow/API Phase6.
+
+## 20/11/2026 — Tối ưu GET notification-inbox
+
+Giảm batch đầu từ 100 xuống limit+1 (mặc định 21), mở rộng lại 100 khi phải
+quét tiếp do policy ẩn rows. Chat authorize một lần/hội thoại/batch và đọc message
+bằng một query, không cache qua request; dùng bigint chính xác cho visibility
+cutoff. Business lookup dùng Map; material cache bổ sung context_id vào key.
+Theo user, chat chỉ hiện số unread theo người/lớp qua conversation.unreadCount;
+list/count/read-all chuông mặc định BUSINESS, explicit ALL/CHAT vẫn tương thích.
+Không đổi schema, không migrate dev/prod hoặc deploy. Kết quả local và giới
+hạn VPS ghi tại [progress Phase16](phase%2016/PHASE_16_PROGRESS.md).
+
 ## 20/11/2026 — Postman Phase16 bổ sung login
 
 Đã thêm Login Student/Login Mentor và GET /auth/me trước notification requests,
